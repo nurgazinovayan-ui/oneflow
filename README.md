@@ -1,5 +1,8 @@
 # Node AI Studio
 
+> Настраиваешь проект на новом компьютере? См. [SETUP.md](SETUP.md) — пошаговая
+> инструкция (Node.js, Git, Claude Code, клонирование, .env).
+
 Windows-приложение (Electron + React + TypeScript) для генерации фото и видео через
 нейросети, соединённые в виде нод — по образцу ComfyUI. Генерация выполняется через
 [Replicate API](https://replicate.com/account/api-tokens), что даёт доступ сразу к
