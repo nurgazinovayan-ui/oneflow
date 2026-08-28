@@ -1,0 +1,4623 @@
+:root {
+  /* Dark theme rebuilt to match framer.com/ai (computed styles pulled straight from the live
+     site): pure black canvas, flat solid-gray panels — no blur/glass, no neon glow — and a
+     single restrained blue accent instead of the earlier pink/purple "Glow kit" gradient.
+     --c-pink keeps its name (47 call sites reference it) but holds Framer's #0099ff in dark
+     mode; light theme restores the original pink explicitly below so it's unaffected. */
+  --c-bg: #000000;
+  --c-panel: #111111;
+  --c-panel-2: #1a1a1a;
+  --c-panel-3: #242424;
+  --c-card: #111111;
+  --c-card-hover: #1a1a1a;
+  --c-text: #f2f2f4;
+  --c-text-muted: #8f8f97;
+  --c-text-dim: #5c5c63;
+  --c-accent: #f2f2f4;
+  --c-accent-text: #0a0a0c;
+  --c-accent-hover: #d6d6da;
+  --c-divider: rgba(255, 255, 255, 0.08);
+  --c-error: #e5484d;
+  --c-error-bg: rgba(229, 72, 77, 0.12);
+  --c-pink: #0099ff;
+  --c-pink-hover: #33aaff;
+  --c-pink-dim: rgba(0, 153, 255, 0.45);
+
+  /* Primary CTA — Framer's "Publish" button is a flat solid fill with no box-shadow at all, so
+     glow-shadow is empty here (kept as a var, not deleted, since light theme still glows). */
+  --glow-gradient: #0099ff;
+  --glow-shadow: none;
+  --glow-shadow-hover: none;
+  --glow-text: #ffffff;
+
+  /* Shared by .canvas-area and .text-work-panel — both "working modes" (node canvas /
+     Работа с текстом) read as one system rather than a jarring light/dark swap on toggle. */
+  --c-canvas-bg: #d9d9dd;
+
+  /* Signal palette — node cards are colour-coded by role so a busy graph reads at a
+     glance: cyan for raw input, pink for generation, amber for transform/adapt. */
+  --c-node-input: #5ec8e0;
+  --c-node-generate: var(--c-pink);
+  --c-node-transform: #e0a95e;
+
+  /* sm = control radius (buttons/inputs/chips), md/lg = container radius
+     (cards/panels/modals) — one consistent container value rather than an
+     arbitrary bigger tier, so containers stop competing with each other.
+     Bumped up as part of the "Glow" kit pass — softer, more rounded surfaces
+     everywhere, matching the reference kit's cards/menus/pricing panel. */
+  --radius-sm: 10px;
+  --radius-md: 18px;
+  --radius-lg: 20px;
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 14px 34px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 26px 64px rgba(0, 0, 0, 0.58);
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --font-mono: ui-monospace, 'Cascadia Code', 'Consolas', 'SFMono-Regular', Menlo, monospace;
+}
+
+/* Light theme — toggled from Личный кабинет (see src/theme.ts), applied as data-theme on
+   <html>. Only the chrome/surface tokens flip; node signal colors and the node-editor's
+   paper-white canvas stay put so they read the same in both themes. --c-pink is restored to
+   the original ONEFLOW brand pink here explicitly — the dark theme's base :root now holds
+   Framer's blue instead (see the comment up there), and light mode was never asked to change. */
+:root[data-theme='light'] {
+  --c-bg: #f3f3f5;
+  --c-panel: #ffffff;
+  --c-panel-2: #eeeef1;
+  --c-panel-3: #e3e3e8;
+  --c-card: #ffffff;
+  --c-card-hover: #f6f6f9;
+  --c-text: #17171b;
+  --c-text-muted: #6b6b74;
+  --c-text-dim: #a3a3ab;
+  --c-accent: #17171b;
+  --c-accent-text: #ffffff;
+  --c-accent-hover: #303036;
+  --c-divider: rgba(0, 0, 0, 0.09);
+  --c-error-bg: rgba(229, 72, 77, 0.1);
+  --c-pink: #ff2d78;
+  --c-pink-hover: #ff4d8f;
+  --c-pink-dim: rgba(255, 45, 120, 0.45);
+
+  /* Light-mode "Glow" accent — the kit's own light theme is a soft sky blue rather than the
+     dark neon pink/purple, so the primary pill controls swap palette here too. */
+  --glow-gradient: linear-gradient(135deg, #dbeefc 0%, #a9d8f5 100%);
+  --glow-shadow: 0 4px 14px rgba(90, 169, 230, 0.35);
+  --glow-shadow-hover: 0 6px 22px rgba(90, 169, 230, 0.5);
+  --glow-text: #10293f;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--c-pink);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-panel-3) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--c-panel-3);
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--c-pink);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background: var(--c-bg);
+  color: var(--c-text);
+}
+
+.brand-logo {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.btn-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+/* Grid rather than flex+spacer so the logo sits truly centered regardless of how wide the
+   left (menus) and right (action buttons) groups are — two flex spacers only center content
+   when both side groups happen to match in width. */
+/* Not truly transparent: .top-toolbar is a flex-row sibling ABOVE .canvas-area (not an overlay
+   on top of it), so a see-through background would just expose .app-shell's own --c-bg — which
+   in dark theme is near-black, i.e. still reads as "a dark bar up top", not a transparent one.
+   Filled with --c-canvas-bg instead — the same flat paper-gray the node canvas itself uses (see
+   the --c-canvas-bg comment near its definition) — so the header sits flush with zero visible
+   seam against the canvas below it, which is what "logo on a transparent background" actually
+   looks like given this DOM structure. .topbar (project tabs + mode switcher, just below) shares
+   the same treatment so the whole chrome above the canvas reads as one continuous surface. */
+.top-toolbar,
+.topbar {
+  background-color: var(--c-canvas-bg);
+}
+
+.top-toolbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  padding-right: 150px;
+  border-bottom: 1px solid color-mix(in srgb, var(--c-pink) 14%, transparent);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+  -webkit-app-region: drag;
+}
+
+/* Only lit while the node canvas (with its own dot-grid, gap 20) is the active mode — App.tsx
+   toggles this class on .top-toolbar/.topbar based on mainView. Other modes (Генерация/Работа с
+   текстом/Оценка/...) render their panels as flat --c-canvas-bg with no dots (see
+   .text-work-panel etc.), so the chrome stays flat to match them instead of always showing dots.
+   Same radial-gradient recipe already used by .web-auth-gate for the same "paper canvas"
+   backdrop, kept identical here for a consistent look. */
+.dot-grid-bg {
+  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.15) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+  -webkit-app-region: no-drag;
+}
+
+/* The 150px padding-right above reserves room for the desktop window's native traffic-light/
+   minimize-maximize-close buttons — nothing occupies that space in a browser tab, so it would
+   otherwise pull the grid's centered logo visibly off-center to the left on web. */
+.web-mode .top-toolbar {
+  padding-right: 14px;
+}
+
+.toolbar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: transparent;
+  -webkit-app-region: no-drag;
+}
+
+.toolbar-logo {
+  height: 26px;
+  width: auto;
+  display: block;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+/* No plaque at all now — just the bare buttons, same as the left menu group. .top-toolbar's own
+   background is always the light --c-canvas-bg regardless of app theme (see above), so the
+   ghost-style icons (settings/about/avatar), which otherwise follow --c-text and turn near-white
+   in dark theme, need a fixed-dark override here to stay legible against that light backdrop in
+   both themes. */
+.toolbar-right {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.toolbar-right .toolbar-icon-btn-ghost,
+.toolbar-right .toolbar-avatar-btn {
+  color: #17171b;
+}
+
+.toolbar-right .toolbar-icon-btn-ghost:hover,
+.toolbar-right .toolbar-avatar-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.toolbar-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 2px;
+  background: var(--c-divider);
+  flex-shrink: 0;
+}
+
+/* Fully circular, matching the reference kit's round icon buttons (Figma/moon/check/arrow). */
+.toolbar-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--c-panel-2);
+  border: none;
+  color: var(--c-text);
+  flex-shrink: 0;
+  transition:
+    background 0.15s var(--ease),
+    transform 0.15s var(--ease);
+}
+
+.toolbar-icon-btn:hover {
+  background: var(--c-panel-3);
+  transform: translateY(-1px);
+}
+
+.toolbar-icon-btn:active {
+  transform: translateY(0);
+}
+
+/* DSP/settings/about/avatar/budget in the app's own top-right chrome read as plain icons at
+   rest, background appearing only on hover — kept as a modifier (not a change to the base
+   rule) since .toolbar-icon-btn is shared with the canvas-toolbar's node buttons, which stay
+   as solid chips. */
+.toolbar-icon-btn-ghost {
+  background: transparent;
+}
+
+.toolbar-icon-btn-ghost:hover {
+  background: var(--c-panel-2);
+}
+
+.toolbar-label-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--c-panel-2);
+  border: none;
+  color: var(--c-text);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition:
+    background 0.15s var(--ease),
+    transform 0.15s var(--ease);
+}
+
+.toolbar-label-btn:hover {
+  background: var(--c-panel-3);
+  transform: translateY(-1px);
+}
+
+.toolbar-label-btn:active {
+  transform: translateY(0);
+}
+
+/* "Ghost" pill from the reference kit — thin outline, transparent until hovered, rather than
+   the previous radius-sm/transparent-to-solid-fill treatment. */
+.toolbar-dsp-btn {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--c-pink-dim);
+  color: var(--c-pink);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 0 rgba(255, 45, 120, 0);
+  transition:
+    background 0.15s var(--ease),
+    border-color 0.15s var(--ease),
+    color 0.15s var(--ease),
+    box-shadow 0.2s var(--ease),
+    transform 0.15s var(--ease);
+}
+
+.toolbar-dsp-btn:hover {
+  background: var(--c-pink);
+  border-color: var(--c-pink);
+  color: #fff;
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--c-pink) 35%, transparent);
+  transform: translateY(-1px);
+}
+
+.toolbar-dsp-btn:active {
+  transform: translateY(0);
+}
+
+/* Unpaid-subscription indicator — always lit (unlike .toolbar-dsp-btn, which is a ghost
+   button that only lights on hover) so it stays noticeable without blocking the rest of the
+   toolbar. Gradient + ambient glow matches the reference kit's "Get Started" pill; the pulse
+   on top keeps it from fading into the background chrome. */
+.toolbar-pay-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--glow-gradient);
+  border: none;
+  color: var(--glow-text);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  box-shadow: var(--glow-shadow);
+  animation: pay-btn-pulse 2.4s ease-in-out infinite;
+  transition: transform 0.15s var(--ease);
+}
+
+.toolbar-pay-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--glow-shadow-hover);
+}
+
+.toolbar-pay-btn:active {
+  transform: translateY(0);
+}
+
+@keyframes pay-btn-pulse {
+  0%,
+  100% {
+    box-shadow: var(--glow-shadow);
+  }
+  50% {
+    box-shadow: var(--glow-shadow-hover);
+  }
+}
+
+.payment-benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.payment-benefit-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--c-panel-2);
+  color: var(--c-text);
+  font-size: 12.5px;
+}
+
+.payment-benefit-row svg {
+  color: var(--c-pink);
+  flex-shrink: 0;
+}
+
+.toolbar-avatar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--c-text);
+  flex-shrink: 0;
+  transition:
+    background 0.15s var(--ease),
+    transform 0.15s var(--ease);
+}
+
+.toolbar-avatar-btn:hover {
+  background: var(--c-panel-3);
+  transform: translateY(-1px);
+}
+
+.toolbar-avatar-btn:active {
+  transform: translateY(0);
+}
+
+.toolbar-menu-wrapper {
+  position: relative;
+  -webkit-app-region: no-drag;
+}
+
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* No fill of its own beyond the shared --c-canvas-bg set alongside .top-toolbar above — the
+   project tabs, "+" button and mode-switch pill all carry their own background already, so
+   nothing here needs a dark strip behind them. */
+.topbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  padding-right: 150px;
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+}
+
+.project-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+  -webkit-app-region: no-drag;
+}
+
+.project-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  font-size: 12.5px;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  max-width: 200px;
+}
+
+.project-tab:hover {
+  background: var(--c-panel-2);
+}
+
+.project-tab.active {
+  background: var(--c-panel-2);
+  color: var(--c-text);
+  font-weight: 600;
+}
+
+.project-tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-tab-input {
+  width: 110px;
+  padding: 2px 4px;
+  font-size: 12.5px;
+}
+
+.project-tab-close {
+  background: none;
+  border: none;
+  color: var(--c-text-dim);
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.project-tab-close:hover {
+  color: var(--c-error);
+}
+
+.project-tab-add {
+  background: var(--c-panel-2);
+  border: none;
+  color: var(--c-text-muted);
+  border-radius: var(--radius-sm);
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.project-tab-add:hover {
+  background: var(--c-panel-3);
+  color: var(--c-text);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+.budget-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  padding: 7px 12px;
+  flex-shrink: 0;
+  transition: background 0.15s var(--ease);
+}
+
+.budget-bar:hover {
+  background: var(--c-panel-2);
+}
+
+.budget-bar-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+
+.budget-bar-track {
+  width: 70px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--c-panel-3);
+  overflow: hidden;
+}
+
+.budget-bar-fill {
+  height: 100%;
+  background: var(--c-pink);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.budget-bar-fill.over {
+  background: var(--c-error);
+}
+
+.canvas-area {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  background: var(--c-canvas-bg);
+}
+
+/* Switches the whole main area between the node canvas and Работа с текстом — lives in the
+   persistent .topbar (not floating over the canvas), same small radius as the other toolbar
+   buttons rather than a bordered pill. */
+.mode-switch-pill {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: stretch;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  -webkit-app-region: no-drag;
+}
+
+.mode-switch-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: none;
+  background: var(--c-panel-2);
+  color: var(--c-text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+
+.mode-switch-tab:not(:first-child) {
+  border-left: 1px solid var(--c-divider);
+}
+
+.mode-switch-tab:hover {
+  color: var(--c-text);
+}
+
+.mode-switch-tab.active {
+  background: var(--c-pink);
+  color: #fff;
+}
+
+/* One of the top menus that keeps its shadow (see App.tsx toolbar-usage sites) — and, unlike
+   .top-toolbar/.topbar, keeps its own matte-glass plaque too: it floats directly over the
+   node canvas rather than sitting in a chrome row, so it needs a fill of its own to read as a
+   control surface distinct from whatever's under it as the canvas pans. */
+.canvas-toolbar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: var(--radius-md);
+  background: rgba(15, 15, 18, 0.62);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: var(--shadow-md);
+}
+
+.react-flow__panel.bottom {
+  bottom: 132px;
+}
+
+/* Web has no .archive-strip (see App.tsx — it's desktop-only), so nothing reserves that
+   132px of space at the bottom of the canvas; drop these back down near the true edge. */
+.web-mode .react-flow__panel.bottom {
+  bottom: 16px;
+}
+
+.web-mode .hotkey-hint {
+  bottom: 16px;
+}
+
+/* Plain text, no plaque — sits just above .archive-strip (132px, matching the same offset
+   used for docked chat panels/react-flow's own bottom controls) so it never overlaps it.
+   Fixed gray rather than var(--c-text-dim): the canvas backdrop stays the same paper-light
+   color in both themes (see --c-canvas-bg), so the text needs a color tuned to that, not one
+   that flips with the surrounding chrome. */
+.hotkey-hint {
+  position: absolute;
+  left: 56px;
+  bottom: 132px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  user-select: none;
+}
+
+.archive-strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 116px;
+  background: var(--c-panel);
+  display: flex;
+  flex-direction: column;
+  z-index: 5;
+}
+
+.archive-strip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  flex-shrink: 0;
+}
+
+.archive-strip-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.archive-strip-open-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--c-panel-2);
+  border: none;
+  color: var(--c-text-muted);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+.archive-strip-open-btn:hover {
+  background: var(--c-panel-3);
+  color: var(--c-text);
+}
+
+.archive-strip-items {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.archive-strip-empty {
+  font-size: 11.5px;
+  color: var(--c-text-dim);
+  padding: 8px 0;
+}
+
+.archive-item {
+  position: relative;
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--c-divider);
+  background: var(--c-card);
+}
+
+.archive-item-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.archive-item-badge {
+  position: absolute;
+  left: 3px;
+  bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  padding: 2px 5px;
+}
+
+.node {
+  --node-accent: transparent;
+  min-width: 260px;
+  background: var(--c-card);
+  border: none;
+  border-radius: var(--radius-lg);
+  /* Outline only, no drop shadow/glow — shadows are reserved for dropdown/context/node-style
+     menus (see .dropdown-menu, .context-menu, .node-modal, .canvas-toolbar), not cards. */
+  box-shadow: 0 0 0 1px var(--c-divider);
+  overflow: visible;
+  font-size: 13px;
+  color: var(--c-text);
+  transition:
+    box-shadow 0.2s var(--ease),
+    transform 0.15s var(--ease);
+}
+
+/* React Flow puts .selected on the node's own wrapper, one level above .node. */
+.react-flow__node.selected .node {
+  box-shadow: 0 0 0 2px var(--c-pink);
+}
+
+/* Role colour-coding so a busy graph reads at a glance: input vs. generate vs.
+   transform — a soft gradient wash lit from the card's top-left corner rather
+   than a flat rail down the side. */
+.node-prompt,
+.node-input {
+  --node-accent: color-mix(in srgb, var(--c-node-input) 55%, transparent);
+}
+
+.node-image,
+.node-video,
+.node-video-pro,
+.node-vector {
+  --node-accent: color-mix(in srgb, var(--c-node-generate) 55%, transparent);
+}
+
+.node-adapt {
+  --node-accent: color-mix(in srgb, var(--c-node-transform) 55%, transparent);
+}
+
+/* While a node is generating, its corner glow breathes instead of the UI relying on a
+   button label alone — visible even when the card is small or off to the side. */
+@keyframes node-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.node:has(.generate-btn:disabled) .node-header {
+  animation: node-glow-pulse 1.6s var(--ease) infinite;
+}
+
+/* Business-template Image nodes start empty on purpose — the prompt needs a real photo to do
+   anything — so they pulse pink with a callout until the user attaches one (see
+   ImageInputNode's highlightUntilFilled). Once outputs is non-empty the condition driving both
+   classes goes false and this whole block just stops applying. */
+@keyframes node-attachment-pulse {
+  0%,
+  100% {
+    box-shadow:
+      var(--shadow-md),
+      0 0 0 1.5px var(--c-pink),
+      0 0 0 0 color-mix(in srgb, var(--c-pink) 35%, transparent);
+  }
+  50% {
+    box-shadow:
+      var(--shadow-md),
+      0 0 0 1.5px var(--c-pink),
+      0 0 16px 5px color-mix(in srgb, var(--c-pink) 35%, transparent);
+  }
+}
+
+.node-needs-attachment {
+  position: relative;
+  animation: node-attachment-pulse 2s ease-in-out infinite;
+}
+
+.node-attach-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--c-pink);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.node-attach-hint::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--c-pink);
+}
+
+.node-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--c-divider);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  color: var(--c-text);
+  background:
+    radial-gradient(90px 64px at 0% 0%, var(--node-accent) 0%, transparent 75%),
+    var(--c-panel-2);
+}
+
+/* Leading header icon reads as a small colored badge — same "icon in a tinted circle"
+   language the reference kit uses on its menu items and component cards. */
+.node-header svg:first-child {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 5px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: var(--node-accent);
+}
+
+.node-adapt {
+  min-width: 300px;
+}
+
+.react-flow__handle {
+  width: 10px;
+  height: 10px;
+  background: var(--c-pink);
+  border: 2px solid var(--c-card);
+  box-shadow: 0 0 0 0 var(--c-pink-dim);
+  transition:
+    background 0.15s var(--ease),
+    box-shadow 0.15s var(--ease);
+}
+
+.react-flow__handle:hover {
+  background: var(--c-pink-hover);
+  box-shadow: 0 0 0 5px var(--c-pink-dim);
+}
+
+.react-flow__handle.connectingfrom,
+.react-flow__handle.connectingto {
+  background: var(--c-pink-hover);
+}
+
+.react-flow__edge-path,
+.react-flow__connection-path {
+  stroke: var(--c-pink-dim);
+  stroke-width: 2;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--c-pink);
+}
+
+.node-video-pro {
+  min-width: 300px;
+}
+
+.ref-media-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ref-media-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ref-media-header .field-label {
+  margin: 0;
+}
+
+.ref-media-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  background: var(--c-panel-2);
+  border: none;
+  color: var(--c-text-muted);
+  flex-shrink: 0;
+}
+
+.ref-media-add-btn:hover:not(:disabled) {
+  background: var(--c-panel-3);
+  color: var(--c-text);
+}
+
+.ref-media-add-btn:disabled {
+  opacity: 0.4;
+}
+
+.ref-media-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ref-media-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--c-panel-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.ref-media-tag {
+  background: none;
+  border: none;
+  color: var(--c-pink);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 6px;
+}
+
+.ref-media-tag:hover {
+  background: var(--c-panel-3);
+}
+
+.ref-media-remove-btn {
+  background: none;
+  border: none;
+  color: var(--c-text-dim);
+  font-size: 12px;
+  line-height: 1;
+  padding: 4px 6px;
+}
+
+.ref-media-remove-btn:hover {
+  color: var(--c-error);
+}
+
+.node-resizable {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.node-resizable .node-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.node-resizable .preview-area {
+  flex: 1;
+  min-height: 0;
+}
+
+.node-resizable .preview-image {
+  height: 100%;
+  min-height: 60px;
+  object-fit: cover;
+}
+
+.node-resize-handle {
+  width: 9px !important;
+  height: 9px !important;
+  border-radius: 3px !important;
+  background: var(--c-pink) !important;
+  border: none !important;
+}
+
+.node-resize-line {
+  border-color: var(--c-pink) !important;
+  opacity: 0.5;
+}
+
+.format-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.format-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.format-label-input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 6px;
+  font-size: 11.5px;
+}
+
+.format-dim-input {
+  width: 56px;
+  padding: 5px 6px;
+  font-size: 11.5px;
+}
+
+.format-x {
+  color: var(--c-text-dim);
+  font-size: 11px;
+}
+
+.format-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c-error-bg);
+  border: none;
+  color: var(--c-error);
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  border-radius: 50%;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.add-format-btn {
+  align-self: flex-start;
+  padding: 6px 10px;
+  font-size: 11.5px;
+}
+
+.format-caption {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  font-weight: 600;
+}
+
+.node-body {
+  padding: 12px 14px 14px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.node-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 8px;
+  resize: vertical;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.node-textarea.small {
+  min-height: 56px;
+}
+
+.field-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-text-dim);
+  margin-top: 4px;
+}
+
+.node-select,
+.node-number {
+  width: 100%;
+  padding: 6px 14px;
+  font-size: 12.5px;
+}
+
+.size-row {
+  display: flex;
+  gap: 8px;
+}
+
+.size-row > div {
+  flex: 1;
+}
+
+.connected-hint {
+  font-size: 11.5px;
+  color: var(--c-text-muted);
+  font-weight: 500;
+  background: var(--c-panel-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  word-break: break-word;
+}
+
+.ref-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--c-panel-2);
+  border-radius: var(--radius-sm);
+  padding: 4px 0;
+}
+
+.ref-slot-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 22px;
+  padding: 0 8px 0 14px;
+}
+
+.ref-slot-handle {
+  left: -6px !important;
+}
+
+.ref-slot-label {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  font-weight: 500;
+}
+
+.ref-slot-thumb {
+  width: 18px;
+  height: 18px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+/* App-wide primary CTA — every "Войти"/"Сгенерировать"/"Купить"/"Сохранить" button shares this
+   class, so the gradient-glow pill from the reference kit's "Get Started" button rolls out
+   everywhere it's used without touching each call site. */
+.generate-btn {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--glow-gradient);
+  border: none;
+  color: var(--glow-text);
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  box-shadow: var(--glow-shadow);
+  transition:
+    transform 0.15s var(--ease),
+    box-shadow 0.15s var(--ease);
+}
+
+.generate-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--glow-shadow-hover);
+}
+
+.generate-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.generate-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* "Ghost" pill from the reference kit — outline instead of the previous solid-gray fill. */
+.secondary-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid var(--c-divider);
+  color: var(--c-text);
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  transition:
+    background 0.15s var(--ease),
+    border-color 0.15s var(--ease),
+    transform 0.15s var(--ease);
+}
+
+.secondary-btn:hover:not(:disabled) {
+  background: var(--c-panel-2);
+  border-color: var(--c-text-dim);
+  transform: translateY(-1px);
+}
+
+.secondary-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.secondary-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.duration-slider {
+  width: 100%;
+  accent-color: var(--c-accent);
+}
+
+.error-text {
+  color: var(--c-error);
+  font-size: 11.5px;
+  background: var(--c-error-bg);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+}
+
+.preview-area {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preview-image,
+.preview-video {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  border: none;
+  box-shadow: 0 0 0 1px var(--c-divider);
+}
+
+/* Wraps just the media (not the caption/actions around it in AdaptNode) so the download
+   button floats in the media's own corner regardless of what else sits in .preview-item. */
+.preview-media-wrap {
+  position: relative;
+}
+
+.preview-media-wrap .preview-image,
+.preview-media-wrap .preview-video {
+  display: block;
+}
+
+.preview-download-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: rgba(10, 10, 12, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  transition: background 0.15s var(--ease);
+}
+
+.preview-download-btn:hover:not(:disabled) {
+  background: rgba(10, 10, 12, 0.8);
+}
+
+.preview-download-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.save-all-btn {
+  margin-top: 2px;
+}
+
+.preview-item-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.preview-item-actions .regenerate-btn {
+  flex: 1;
+}
+
+.regenerate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--c-divider);
+  color: var(--c-text);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  flex-shrink: 0;
+}
+
+.regenerate-btn:hover:not(:disabled) {
+  background: var(--c-panel-2);
+  border-color: var(--c-text-dim);
+}
+
+.regenerate-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.regenerate-btn.spinning svg {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  backdrop-filter: blur(2px);
+}
+
+.modal {
+  background: var(--c-panel);
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--c-text);
+  box-shadow: 0 0 0 1px var(--c-divider);
+}
+
+.modal h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: var(--c-text);
+}
+
+.modal-hint {
+  font-size: 11.5px;
+  color: var(--c-text-muted);
+  line-height: 1.5;
+}
+
+.crash-screen {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 60px;
+  background: var(--c-bg);
+  color: var(--c-text);
+}
+
+.crash-screen h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.crash-screen p {
+  margin: 0;
+  max-width: 520px;
+  color: var(--c-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.crash-message {
+  max-width: 100%;
+  overflow-x: auto;
+  background: var(--c-panel-2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 11.5px;
+  color: var(--c-error);
+  white-space: pre-wrap;
+}
+
+/* Ported from electron/splash.html — same video background + frosted glass panel as the
+   desktop login window, but laid out as two cards side by side rather than the panel floating
+   on top of the video: a full browser tab has room a fixed 640×400 app window doesn't, and
+   keeping the video fully visible reads better than covering a corner of it. The page around
+   the pair uses the same light dot-grid backdrop as the node canvas (.canvas-area/--c-canvas-bg)
+   rather than plain black, since a full browser tab reads as a page, not a borderless app
+   window. */
+.web-auth-gate {
+  position: relative;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--c-canvas-bg);
+  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.15) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.web-auth-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  max-width: 92vw;
+  max-height: 80vh;
+}
+
+.web-auth-window {
+  position: relative;
+  width: 640px;
+  max-width: min(640px, 60vw);
+  height: 400px;
+  max-height: 80vh;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #000;
+}
+
+.web-auth-bg-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.web-auth-toast {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  z-index: 3;
+  max-width: 360px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: rgba(20, 20, 24, 0.92);
+  color: #f2f2f4;
+  font-size: 12.5px;
+  line-height: 1.4;
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, -10px);
+  pointer-events: none;
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
+}
+
+.web-auth-toast.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.web-auth-panel {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 240px;
+  padding: 20px;
+  border-radius: 14px;
+  /* Half the panel's own width, pulled left past .web-auth-row's 16px gap — lands the panel
+     straddling the video's right edge, half over the video and half past it, rather than
+     sitting fully beside it. */
+  margin-left: -136px;
+  /* Sits partly over the video again, so back to the lighter on-video tint (relies on the
+     video showing through the blur) rather than the more opaque flat-card treatment used when
+     it sat entirely off to the side. */
+  background: rgba(18, 18, 22, 0.55);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+}
+
+.web-auth-panel .login-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f2f2f4;
+  letter-spacing: 0.02em;
+}
+
+.web-auth-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.web-auth-input {
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f2f2f4;
+  font-size: 12.5px;
+  outline: none;
+}
+
+.web-auth-input::placeholder {
+  color: #8f8f97;
+}
+
+.web-auth-input:hover,
+.web-auth-input:focus {
+  border: none;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.web-auth-submit {
+  margin-top: 2px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #e5157e;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.web-auth-submit:hover:not(:disabled) {
+  background: #ff2d8f;
+}
+
+.web-auth-submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.web-auth-register-toggle {
+  padding: 9px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #f0e4c8;
+  color: #2b2419;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.web-auth-register-toggle:hover {
+  background: #f7edd8;
+}
+
+.web-auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #8f8f97;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.web-auth-divider::before,
+.web-auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.web-auth-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #fff;
+  color: #3c4043;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.web-auth-google-btn:hover {
+  background: #f2f2f2;
+}
+
+.web-auth-panel .login-error {
+  min-height: 14px;
+  font-size: 11.5px;
+  color: #ff6b6b;
+  line-height: 1.4;
+}
+
+.web-auth-hint {
+  color: #a6a6ad;
+  font-size: 11px;
+}
+
+.web-auth-demo-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #ff6fa8;
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+  text-align: left;
+}
+
+.web-auth-demo-link:hover {
+  color: #ff96c2;
+}
+
+/* Post-login onboarding — a small floating window over the working canvas (not a takeover),
+   using the exact frosted-glass material as .canvas-toolbar ("плашка с кнопками нод") so it
+   reads as the same chrome system. The outer layer only catches clicks (transparent) so the
+   canvas stays visible around the window; the glass look lives on .start-screen-inner. */
+.start-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.start-screen-inner {
+  width: 100%;
+  max-width: 600px;
+  padding: 20px 22px;
+  border-radius: var(--radius-lg);
+  background: rgba(15, 15, 18, 0.62);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Fixed light text throughout — the glass window stays dark in both app themes (same as
+   .canvas-toolbar), so theme-following colors like var(--c-text) would go near-invisible in
+   light mode. */
+.start-screen-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #f2f2f4;
+  text-align: left;
+  margin: 0;
+}
+
+/* Быстрый старт / Для бизнеса side nav + content, side by side inside the same glass window. */
+.start-screen-layout {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.start-screen-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 130px;
+  flex-shrink: 0;
+  padding-right: 14px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.start-screen-nav-item {
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: rgba(242, 242, 244, 0.6);
+  font-size: 12px;
+  font-weight: 600;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+
+.start-screen-nav-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f2f2f4;
+}
+
+.start-screen-nav-item.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f2f2f4;
+}
+
+.start-screen-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.start-screen-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.start-screen-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  text-align: left;
+  transition:
+    background 0.15s var(--ease),
+    border-color 0.15s var(--ease),
+    transform 0.15s var(--ease);
+}
+
+.start-screen-tile-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #f2f2f4;
+}
+
+.start-screen-tile-hint {
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: rgba(242, 242, 244, 0.55);
+}
+
+.start-screen-tile:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.start-screen-tile:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.start-screen-auto {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.start-screen-auto .field-label {
+  color: rgba(242, 242, 244, 0.55);
+}
+
+.start-screen-auto-row {
+  display: flex;
+  gap: 8px;
+}
+
+.start-screen-auto-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #f2f2f4;
+}
+
+.start-screen-auto-input::placeholder {
+  color: rgba(242, 242, 244, 0.45);
+}
+
+.start-screen-auto-btn {
+  margin-top: 0;
+  flex-shrink: 0;
+  width: 40px;
+  padding: 0;
+}
+
+/* «Генерация» mode — a third canvas-area layer alongside ReactFlow and .text-work-panel,
+   toggled the same way (display:none rather than unmount, so drafts/results survive switching
+   modes). Results scroll at the top; the composer is a wide glass plaque pinned to the bottom,
+   same frosted material as .canvas-toolbar / .start-screen-inner. */
+.quick-gen-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-canvas-bg);
+}
+
+.quick-gen-hidden {
+  display: none;
+}
+
+.quick-gen-results {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 20px;
+  /* Room for the docked composer so the last row of tiles never sits underneath it. */
+  padding-bottom: 140px;
+  overflow-y: auto;
+}
+
+.quick-gen-tile {
+  position: relative;
+  width: 160px;
+  max-width: 100%;
+  border: none;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--c-panel-2);
+  box-shadow: 0 0 0 1px var(--c-divider);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.quick-gen-tile:disabled {
+  cursor: default;
+}
+
+/* Loading state reads as a plain flat tile — no colored pulse, no shadow — with just a small
+   spinning loader in the corner, rather than the earlier full-tile shimmer animation. */
+.quick-gen-tile.loading {
+  box-shadow: none;
+  background: var(--c-panel-2);
+}
+
+.quick-gen-tile-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.quick-gen-tile-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-error);
+  font-size: 20px;
+  font-weight: 700;
+  background: var(--c-error-bg);
+}
+
+.quick-gen-tile-spinner {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--c-text-muted);
+}
+
+.quick-gen-tile-spinner svg {
+  animation: spin 0.9s linear infinite;
+}
+
+/* Starts as a centered "landing prompt" (empty canvas, nothing generated yet) and animates
+   down into a bottom-docked composer the moment the first generation kicks off — same
+   left/width the whole time, only top/bottom/transform change, so it reads as one card
+   sliding rather than two different elements swapping. */
+.quick-gen-composer {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  bottom: auto;
+  width: min(640px, calc(100% - 40px));
+  transform: translate(-50%, -50%);
+  padding: 14px 16px 12px;
+  border-radius: 26px;
+  background: rgba(15, 15, 18, 0.7);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition:
+    top 0.5s var(--ease),
+    bottom 0.5s var(--ease),
+    transform 0.5s var(--ease);
+}
+
+.quick-gen-composer.docked {
+  top: auto;
+  bottom: 20px;
+  transform: translate(-50%, 0);
+}
+
+.quick-gen-attach-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* "Glow kit" circular icon button — dark with a thin light ring, matching the Figma/moon/check
+   icon buttons in the reference kit, rather than the earlier plain light-gray dot. */
+.quick-gen-attach-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f2f2f4;
+  flex-shrink: 0;
+  transition:
+    background 0.15s var(--ease),
+    border-color 0.15s var(--ease),
+    transform 0.15s var(--ease);
+}
+
+.quick-gen-attach-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.32);
+  transform: translateY(-1px);
+}
+
+.quick-gen-attach-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.quick-gen-attach-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #f2f2f4;
+  font-size: 11px;
+  overflow: hidden;
+}
+
+.quick-gen-attach-chip img {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  object-fit: cover;
+  margin: 0 -4px;
+}
+
+.quick-gen-attach-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: rgba(242, 242, 244, 0.55);
+}
+
+.quick-gen-attach-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f2f2f4;
+}
+
+.quick-gen-input-row {
+  position: relative;
+}
+
+.quick-gen-input {
+  width: 100%;
+  min-height: 44px;
+  max-height: 120px;
+  padding: 8px 30px 8px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.32);
+  color: #f2f2f4;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.quick-gen-clear-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: rgba(242, 242, 244, 0.7);
+}
+
+.quick-gen-clear-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #f2f2f4;
+}
+
+.quick-gen-input::placeholder {
+  color: rgba(242, 242, 244, 0.45);
+}
+
+.quick-gen-input:hover,
+.quick-gen-input:focus {
+  border: none;
+  outline: none;
+}
+
+.quick-gen-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Segmented pill track — same "Monthly / Annual" language as the reference kit's toggle:
+   a rounded capsule track with a soft ring, active side gets a light pill fill. */
+.quick-gen-kind-toggle {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.quick-gen-kind-toggle button {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: transparent;
+  border: none;
+  color: rgba(242, 242, 244, 0.55);
+  font-size: 12px;
+  font-weight: 600;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+
+.quick-gen-kind-toggle button.active {
+  background: rgba(255, 255, 255, 0.16);
+  color: #f2f2f4;
+}
+
+.quick-gen-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(242, 242, 244, 0.3);
+  flex-shrink: 0;
+}
+
+/* Slim outline pills — matches the reference kit's "Menu ⌄" dropdown language instead of the
+   app's usual boxed .node-select. Native <select> chrome is suppressed and IconChevronDown is
+   overlaid via the wrapping .quick-gen-pill-select-wrap so it still reads as a pill dropdown. */
+.quick-gen-pill-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.quick-gen-pill-select-wrap svg {
+  position: absolute;
+  right: 8px;
+  color: rgba(242, 242, 244, 0.5);
+  pointer-events: none;
+}
+
+.quick-gen-pill-select {
+  appearance: none;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(242, 242, 244, 0.85);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 24px 5px 10px;
+  border-radius: 999px;
+  width: auto;
+  min-width: 0;
+}
+
+.quick-gen-pill-select:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #f2f2f4;
+}
+
+/* The <select> itself sits transparent on the dark composer, but its native options popup is
+   a separate OS-rendered layer — it needs an opaque background of its own or the browser falls
+   back to white, making light-colored option text unreadable. */
+.quick-gen-pill-select option {
+  background: #1a1a1a;
+  color: #f2f2f4;
+}
+
+.quick-gen-controls-spacer {
+  flex: 1;
+}
+
+/* "Get Started ›" pill from the reference kit — pink→purple→blue gradient with an ambient
+   glow, replacing the plain solid-pink round button. */
+.quick-gen-generate-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: none;
+  background: var(--glow-gradient);
+  color: var(--glow-text);
+  font-size: 12.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+  box-shadow: var(--glow-shadow);
+  transition:
+    transform 0.15s var(--ease),
+    box-shadow 0.15s var(--ease);
+}
+
+.quick-gen-generate-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--glow-shadow-hover);
+}
+
+.quick-gen-generate-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  box-shadow: none;
+}
+
+.quick-gen-result-modal {
+  width: auto;
+  max-width: min(80vw, 720px);
+  align-items: stretch;
+}
+
+.quick-gen-result-media {
+  max-width: 100%;
+  max-height: 65vh;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+  align-self: center;
+}
+
+.quick-gen-result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--c-text-muted);
+}
+
+.quick-gen-result-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.quick-gen-result-prompt-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.quick-gen-result-prompt-row p {
+  flex: 1;
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--c-text-muted);
+  line-height: 1.5;
+}
+
+.quick-gen-result-prompt-row button {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--c-text-muted);
+}
+
+.quick-gen-result-prompt-row button:hover {
+  background: var(--c-panel-2);
+  color: var(--c-text);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.account-row .connected-hint {
+  flex: 1;
+}
+
+.about-modal {
+  align-items: center;
+  text-align: center;
+}
+
+.profile-modal {
+  width: 460px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.profile-modal h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.profile-email {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.profile-sub-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.profile-sub-badge.active {
+  background: rgba(80, 200, 120, 0.15);
+  color: #4ade80;
+}
+
+.profile-sub-badge.inactive {
+  background: var(--c-error-bg);
+  color: var(--c-error);
+}
+
+.profile-sub-badge.muted {
+  background: var(--c-panel-2);
+  color: var(--c-text-muted);
+}
+
+.profile-session-count {
+  font-size: 11.5px;
+  color: var(--c-text-muted);
+}
+
+.profile-preferences {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.profile-preference-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.profile-preference-label {
+  font-size: 12.5px;
+  color: var(--c-text-muted);
+}
+
+.yandex-disk-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.yandex-disk-connected-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.yandex-disk-code-row {
+  display: flex;
+  gap: 8px;
+}
+
+.yandex-disk-code-row input {
+  flex: 1;
+}
+
+/* Reusable two/three-way toggle — used for language and theme in Личный кабинет. */
+.segmented-control {
+  display: flex;
+  gap: 2px;
+  background: var(--c-panel-2);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  flex-shrink: 0;
+}
+
+.segmented-control button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--c-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+
+.segmented-control button:hover {
+  color: var(--c-text);
+}
+
+.segmented-control button.active {
+  background: var(--c-pink);
+  color: #fff;
+}
+
+.profile-date-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--c-text-muted);
+}
+
+.profile-date-range .node-select {
+  flex: 1;
+}
+
+.profile-totals {
+  font-size: 12.5px;
+  color: var(--c-text-muted);
+  padding: 8px 10px;
+  background: var(--c-panel-2);
+  border-radius: var(--radius-sm);
+}
+
+.profile-totals strong {
+  color: var(--c-text);
+}
+
+.profile-model-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.profile-model-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--c-panel-2);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.profile-model-name {
+  flex: 1;
+  font-family: var(--font-mono);
+  color: var(--c-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-model-count {
+  font-family: var(--font-mono);
+  color: var(--c-text-muted);
+  font-weight: 600;
+}
+
+.profile-model-cost {
+  font-family: var(--font-mono);
+  color: var(--c-pink);
+  font-weight: 600;
+  min-width: 52px;
+  text-align: right;
+}
+
+.about-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--c-text);
+  margin: 8px 0;
+}
+
+.context-menu {
+  position: fixed;
+  z-index: 100;
+  background: var(--c-panel-2);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  min-width: 200px;
+  box-shadow: var(--shadow-md), 0 0 0 1px var(--c-divider);
+}
+
+.context-menu-title {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--c-text-dim);
+  padding: 6px 10px 4px;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--c-text);
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  text-align: left;
+  position: relative;
+  transition:
+    background 0.12s var(--ease),
+    padding-left 0.12s var(--ease);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  /* Higher than .quick-gen-panel / .text-work-panel (both z-index: 20, absolute-covering
+     .canvas-area) — those sit later in the DOM than .top-toolbar, so on an exact z-index tie
+     they'd paint over an open Файл/Шаблоны menu whenever a non-canvas mode was active. */
+  z-index: 30;
+  background: var(--c-panel-2);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  min-width: 220px;
+  box-shadow: var(--shadow-md), 0 0 0 1px var(--c-divider);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dropdown-align-left {
+  left: 0;
+}
+
+.dropdown-align-right {
+  right: 0;
+}
+
+/* Label-left/icon-right + a left accent bar on hover — matches the reference kit's
+   Browse/Pricing/Billing… menu rather than the earlier icon-left plain-highlight item. */
+.dropdown-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--c-text);
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  text-align: left;
+  white-space: nowrap;
+  position: relative;
+  transition:
+    background 0.12s var(--ease),
+    padding-left 0.12s var(--ease);
+}
+
+.dropdown-menu-item:hover {
+  background: var(--c-panel-3);
+  padding-left: 18px;
+}
+
+.dropdown-menu-item:hover::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--c-pink);
+}
+
+.dropdown-menu-header {
+  padding: 8px 10px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-text-dim);
+  white-space: nowrap;
+}
+
+.dropdown-menu-header:not(:first-child) {
+  margin-top: 4px;
+  border-top: 1px solid var(--c-divider);
+  padding-top: 10px;
+}
+
+.context-menu-item:hover {
+  background: var(--c-panel-3);
+  padding-left: 18px;
+}
+
+.context-menu-item:hover::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--c-pink);
+}
+
+.ai-assistant-btn {
+  background: var(--c-pink);
+  color: #fff;
+}
+
+.ai-assistant-btn:hover {
+  background: var(--c-pink-hover);
+}
+
+.ai-panel {
+  position: absolute;
+  width: 360px;
+  height: 440px;
+  min-width: 280px;
+  min-height: 260px;
+  max-width: 90%;
+  max-height: 90%;
+  resize: both;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-panel);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 1px var(--c-divider);
+  z-index: 60;
+}
+
+.ai-panel.dragging {
+  opacity: 0.75;
+}
+
+.ai-panel.dock-bottom-left {
+  left: 16px;
+  bottom: 132px;
+}
+
+.ai-panel.dock-bottom-right {
+  right: 16px;
+  bottom: 132px;
+}
+
+.ai-panel.dock-top-left {
+  left: 16px;
+  top: 16px;
+}
+
+.ai-panel.dock-top-right {
+  right: 16px;
+  top: 16px;
+}
+
+.ai-panel-header {
+  cursor: move;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--c-divider);
+  flex-shrink: 0;
+}
+
+.ai-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--c-pink);
+}
+
+.ai-panel-header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.ai-panel-header-actions button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--c-text-muted);
+  padding: 5px 7px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+}
+
+.ai-panel-header-actions button:hover:not(:disabled) {
+  background: var(--c-panel-2);
+  color: var(--c-text);
+}
+
+.ai-panel-header-actions button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ai-panel-body {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 10px 12px 12px;
+}
+
+.chat-log {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  padding: 4px 2px;
+}
+
+.chat-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  line-height: 1.4;
+  max-width: 88%;
+}
+
+.chat-bubble-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-user {
+  align-self: flex-end;
+  background: var(--c-accent);
+  color: var(--c-accent-text);
+  /* Near-white bubble barely separates from the light --c-canvas-bg behind Работа с текстом
+     (the dark ai-panel backdrop never needed this) — a faint shadow keeps its edge visible
+     in both places. */
+  box-shadow: var(--shadow-sm);
+}
+
+.chat-assistant {
+  align-self: flex-start;
+  background: var(--c-panel-2);
+  color: var(--c-text);
+}
+
+.chat-typing {
+  opacity: 0.6;
+}
+
+.chat-copy-btn {
+  align-self: flex-end;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  font-size: 10px;
+  padding: 2px;
+}
+
+.chat-copy-btn:hover {
+  opacity: 1;
+}
+
+.chat-deliverable-btn {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--c-pink);
+  border: none;
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  transition: background 0.15s var(--ease);
+}
+
+.chat-deliverable-btn:hover:not(:disabled) {
+  background: var(--c-pink-hover);
+}
+
+.chat-deliverable-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+
+.chat-input {
+  flex: 1;
+  min-height: 40px;
+  max-height: 100px;
+}
+
+.chat-send-btn {
+  margin-top: 0;
+  padding: 9px 12px;
+  flex-shrink: 0;
+}
+
+.chat-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.chat-attachment-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--c-panel-2);
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  max-width: 140px;
+}
+
+.chat-attachment-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.chat-attachment-doc {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.chat-attachment-name {
+  font-size: 10.5px;
+  color: var(--c-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-attachment-remove {
+  background: none;
+  border: none;
+  color: var(--c-text-dim);
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 0 0 2px;
+  flex-shrink: 0;
+}
+
+.chat-attachment-remove:hover {
+  color: var(--c-error);
+}
+
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+
+.chat-suggestion-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--c-pink-dim);
+  color: var(--c-pink-hover);
+  font-size: 11.5px;
+  font-weight: 600;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease),
+    border-color 0.15s var(--ease);
+}
+
+.chat-suggestion-chip:hover {
+  background: var(--c-pink);
+  border-color: var(--c-pink);
+  color: #fff;
+}
+
+.text-work-suggestions {
+  max-width: 780px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Online-users picker inside AdminSendMessageModal — a scrollable list of plain rows (same
+   "line, not a button" spirit as .text-work-thread) so it reads as a live roster rather than
+   a form control. */
+.admin-online-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 140px;
+  overflow-y: auto;
+  border-radius: var(--radius-sm);
+}
+
+.admin-online-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--c-text-muted);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+
+.admin-online-row:hover {
+  background: var(--c-panel-2);
+  color: var(--c-text);
+}
+
+.admin-online-row.active {
+  background: var(--c-panel-2);
+  color: var(--c-pink);
+  font-weight: 600;
+}
+
+.admin-online-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.2);
+}
+
+.admin-online-email {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-online-time {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  color: var(--c-text-dim);
+}
+
+/* Targeted admin announcements — always mounted, popping up from the bottom of the screen
+   regardless of which view (canvas / Работа с текстом) or modal is currently open. */
+.admin-toast-stack {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+}
+
+.admin-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: min(420px, 90vw);
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--c-panel);
+  box-shadow: 0 0 0 1px var(--c-divider);
+  animation: admin-toast-in 0.3s var(--ease);
+}
+
+.admin-toast-icon {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--c-pink), #8e0045);
+  color: #fff;
+}
+
+.admin-toast-body {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--c-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding-top: 4px;
+}
+
+.admin-toast-close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--c-text-dim);
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.admin-toast-close:hover {
+  color: var(--c-text);
+  background: var(--c-panel-2);
+}
+
+@keyframes admin-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-panel-body.file-drop-active {
+  outline: 2px dashed var(--c-pink);
+  outline-offset: -6px;
+  border-radius: var(--radius-md);
+}
+
+.chat-drop-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 5, 6, 0.72);
+  color: var(--c-text);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Работа с текстом — a full-size mode that replaces the canvas rather than a floating
+   overlay, so it stays mounted (visibility toggled via display:none) to keep thread state
+   alive when the user flips back to the node canvas and returns. Shares --c-canvas-bg with
+   .canvas-area so switching modes doesn't jump between a light and a dark background. */
+.text-work-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-canvas-bg);
+}
+
+.text-work-hidden {
+  display: none;
+}
+
+.text-work-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.text-work-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--c-panel);
+  border-right: 1px solid var(--c-divider);
+  padding: 14px 10px;
+}
+
+.text-work-new-btn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  height: 30px;
+  padding: 0 4px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--c-text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  flex-shrink: 0;
+  transition: color 0.15s var(--ease);
+}
+
+.text-work-new-btn:hover {
+  color: var(--c-pink);
+}
+
+.text-work-thread-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.text-work-thread {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 7px 26px 7px 4px;
+  cursor: pointer;
+}
+
+.text-work-thread-title {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--c-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.15s var(--ease);
+}
+
+.text-work-thread:hover .text-work-thread-title {
+  color: var(--c-text);
+}
+
+.text-work-thread.active .text-work-thread-title {
+  color: var(--c-pink);
+  font-weight: 600;
+}
+
+.text-work-thread-input {
+  width: 100%;
+  font-size: 12.5px;
+  padding: 3px 5px;
+}
+
+.text-work-thread-delete {
+  position: absolute;
+  right: 2px;
+  top: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--c-text-dim);
+  padding: 4px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.15s var(--ease);
+}
+
+.text-work-thread:hover .text-work-thread-delete {
+  opacity: 1;
+}
+
+.text-work-thread-delete:hover {
+  color: var(--c-error);
+  background: var(--c-error-bg);
+}
+
+.text-work-chat {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 24px;
+}
+
+.text-work-log {
+  max-width: 780px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.text-work-input-row {
+  max-width: 780px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Web-only "Оценка" tab (see App.tsx — gated behind VITE_WEB_MODE) — a heuristic design read
+   on 1-3 uploaded creative variants, laid out the same way as .text-work-panel/.quick-gen-panel
+   (a third canvas-area layer toggled via display:none). */
+.evaluation-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-canvas-bg);
+  overflow-y: auto;
+}
+
+.evaluation-hidden {
+  display: none;
+}
+
+.evaluation-top {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px 24px 16px;
+}
+
+/* Same material as a canvas node card (.node) — theme-following --c-card background plus the
+   node kit's soft role-colored glow — rather than a plaque of its own, so the composer reads
+   as part of the same visual system as the rest of the app instead of a one-off design. */
+.evaluation-composer {
+  flex: 1;
+  min-width: 0;
+  background: var(--c-card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 1px var(--c-divider);
+  padding: 20px 22px;
+}
+
+.evaluation-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.evaluation-header-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c-panel-2);
+  color: var(--c-pink);
+}
+
+.evaluation-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.evaluation-subtitle {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--c-text-dim);
+}
+
+.evaluation-section {
+  padding-top: 16px;
+  border-top: 1px solid var(--c-divider);
+}
+
+.evaluation-header + .evaluation-section {
+  padding-top: 0;
+  border-top: none;
+}
+
+.evaluation-section-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-text-dim);
+  margin-bottom: 8px;
+}
+
+.evaluation-slots {
+  display: flex;
+  gap: 10px;
+}
+
+.evaluation-slot {
+  width: 88px;
+  height: 88px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.evaluation-slot.filled {
+  border: 1px solid var(--c-divider);
+}
+
+.evaluation-slot.filled img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.evaluation-slot-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.evaluation-slot-remove:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.evaluation-slot.empty {
+  border: 1.5px dashed var(--c-divider);
+  background: var(--c-panel-2);
+  color: var(--c-text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.evaluation-slot.empty:hover {
+  border-color: var(--c-pink);
+  color: var(--c-pink);
+}
+
+.evaluation-hint {
+  margin: 8px 0 0;
+  font-size: 10.5px;
+  color: var(--c-text-dim);
+}
+
+.evaluation-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.evaluation-platform-select {
+  max-width: 180px;
+}
+
+.evaluation-evaluate-btn {
+  margin-top: 0;
+}
+
+/* The explanatory side column: same fixed dark "glow kit" matte-glass material as
+   .canvas-toolbar (the node-adding button strip) — a plaque of its own rather than a
+   theme-following panel, so it reads as chrome/caption rather than another content card.
+   Fixed light text colors follow from the fixed-dark background. */
+.evaluation-note {
+  flex-shrink: 0;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(15, 15, 18, 0.62);
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  padding: 16px;
+  align-self: stretch;
+}
+
+.evaluation-note-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #f2f2f4;
+}
+
+.evaluation-note p {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #a3a3ab;
+}
+
+.evaluation-note-label {
+  font-weight: 700;
+  color: #f2f2f4;
+}
+
+.evaluation-note-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.evaluation-note-block p {
+  margin: 0;
+}
+
+.evaluation-note-list {
+  margin: 0;
+  padding: 0 0 0 16px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #a3a3ab;
+}
+
+.evaluation-note-list li {
+  margin-bottom: 2px;
+}
+
+.evaluation-results {
+  flex: 1;
+  max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 8px 24px 32px;
+}
+
+.evaluation-verdict {
+  background: var(--c-panel-2);
+  border: 1px solid var(--c-divider);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--c-text);
+  margin-bottom: 16px;
+}
+
+.evaluation-verdict-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-pink);
+  margin-bottom: 4px;
+}
+
+.evaluation-variant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.evaluation-variant-card {
+  background: var(--c-panel);
+  border: 1px solid var(--c-divider);
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+
+.evaluation-variant-card.winner {
+  border-color: var(--c-pink);
+  box-shadow: 0 0 0 1px var(--c-pink);
+}
+
+/* Fixed height (not max-height) so every card's thumbnail occupies exactly the same vertical
+   space regardless of the source image's own aspect ratio — otherwise a wide/short upload and
+   a square one would push their score/strengths/weaknesses text to different heights across
+   cards in the same row. */
+.evaluation-variant-thumb {
+  position: relative;
+  height: 150px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.evaluation-variant-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.evaluation-winner-badge {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  background: var(--c-pink);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+/* Loading placeholder card — same shape as a finished result card so the grid doesn't jump
+   when real results replace it, with a cycling status badge in the thumb's top corner (see
+   EvaluationPanel's loadingMessages rotation) and pulsing bars standing in for the text. */
+.evaluation-variant-card.loading {
+  border-style: dashed;
+}
+
+.evaluation-loading-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 999px;
+}
+
+.evaluation-loading-badge svg {
+  animation: spin 1.1s linear infinite;
+}
+
+.evaluation-skeleton-line {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--c-panel-2);
+  margin-top: 8px;
+  animation: evaluation-skeleton-pulse 1.3s ease-in-out infinite;
+}
+
+.evaluation-skeleton-line.wide {
+  width: 40%;
+  height: 22px;
+  margin-top: 0;
+}
+
+.evaluation-skeleton-line.short {
+  width: 60%;
+}
+
+@keyframes evaluation-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.evaluation-score {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--c-text);
+  margin-bottom: 8px;
+}
+
+.evaluation-score-suffix {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text-dim);
+}
+
+.evaluation-feedback-group {
+  margin-top: 8px;
+}
+
+.evaluation-feedback-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-text-dim);
+  margin-bottom: 4px;
+}
+
+.evaluation-strengths,
+.evaluation-weaknesses {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.evaluation-strengths li,
+.evaluation-weaknesses li {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--c-text);
+  padding-left: 16px;
+  position: relative;
+}
+
+.evaluation-strengths li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #2f9e44;
+  font-weight: 700;
+}
+
+.evaluation-weaknesses li::before {
+  content: '!';
+  position: absolute;
+  left: 2px;
+  color: var(--c-error);
+  font-weight: 700;
+}
+
+/* "One Launch" (product photo → full ad campaign) — web-only, see App.tsx. Same third-canvas-
+   layer pattern as .evaluation-panel/.text-work-panel/.quick-gen-panel. */
+/* Dark, theme-following background (var(--c-bg), the same token the app's own chrome sits on)
+   rather than the light dotted node-canvas tone the other secondary tabs use — One Launch is
+   meant to read as a flagship flow, not a utility panel. */
+/* Same light dot-grid backdrop as the node canvas (.canvas-area/--c-canvas-bg) — matches the
+   "как у режима нод" look: a light working surface with dark matte-glass chrome floating on
+   top of it, same relationship as .canvas-area + .canvas-toolbar. */
+.onelaunch-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-canvas-bg);
+  overflow-y: auto;
+}
+
+.onelaunch-hidden {
+  display: none;
+}
+
+.onelaunch-panel > .onelaunch-composer {
+  flex-shrink: 0;
+  max-width: 780px;
+  width: 100%;
+  margin: 32px auto 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.onelaunch-hero {
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.onelaunch-beta-tag {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--c-pink);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Canvas-bg stays paper-light in both themes (see the --c-canvas-bg comment elsewhere in this
+   file), so text sitting directly on it — not inside a step card — needs a fixed dark color
+   rather than the theme-following var(--c-text), which would turn near-white and disappear in
+   dark mode. */
+.onelaunch-hero-title {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  color: #17171b;
+}
+
+.onelaunch-hero-subtitle {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+/* Each step is its own frosted-glass plaque — same fixed dark "glow kit" material as
+   .canvas-toolbar (the node-adding button strip) — rather than one continuous card, with real
+   gaps between them (.onelaunch-composer's gap above) so the sequence reads as distinct
+   moments. Fixed light text/control colors follow from the fixed-dark background. */
+.onelaunch-step {
+  background: rgba(15, 15, 18, 0.62);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  padding: 22px 24px;
+  transition: opacity 0.2s var(--ease);
+}
+
+.onelaunch-step.locked {
+  opacity: 0.4;
+}
+
+.onelaunch-step-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.onelaunch-step-badge {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  color: #a3a3ab;
+}
+
+.onelaunch-step-badge.done {
+  background: var(--c-pink);
+  color: #fff;
+}
+
+.onelaunch-step-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f2f2f4;
+}
+
+.onelaunch-step-body {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.onelaunch-photo-slot {
+  width: 110px;
+  height: 110px;
+}
+
+.onelaunch-step .evaluation-slot.empty {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  color: #a3a3ab;
+}
+
+.onelaunch-step .evaluation-slot.filled {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.onelaunch-name-input {
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #f2f2f4 !important;
+  border: none !important;
+}
+
+.onelaunch-advantages-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.onelaunch-advantages-input {
+  flex: 1;
+  min-height: 64px;
+  resize: vertical;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #f2f2f4 !important;
+  border: none !important;
+}
+
+.onelaunch-improve-btn {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  font-size: 11.5px;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  color: #f2f2f4 !important;
+}
+
+.onelaunch-improve-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+
+.onelaunch-formats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.onelaunch-format-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: #f2f2f4;
+  cursor: pointer;
+}
+
+.onelaunch-format-check input {
+  accent-color: var(--c-pink);
+}
+
+.onelaunch-style-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.onelaunch-style-tab {
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #a3a3ab;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.onelaunch-style-tab:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #f2f2f4;
+}
+
+.onelaunch-style-tab.active {
+  background: var(--c-pink);
+  color: #fff;
+}
+
+.onelaunch-style-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 10px;
+}
+
+.onelaunch-style-tile {
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radius-sm);
+  border: 1.5px dashed rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+  color: #5c5c63;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.onelaunch-style-tile:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #a3a3ab;
+}
+
+.onelaunch-style-tile.selected {
+  border-style: solid;
+  border-color: var(--c-pink);
+  color: var(--c-pink);
+}
+
+.onelaunch-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.onelaunch-swatch {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.onelaunch-swatch:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.onelaunch-swatch.selected {
+  border-color: var(--c-pink);
+}
+
+.onelaunch-swatch-colors {
+  display: flex;
+  width: 100%;
+  height: 20px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.onelaunch-swatch-colors span {
+  flex: 1;
+  height: 100%;
+}
+
+.onelaunch-swatch-colors-placeholder {
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  color: #a3a3ab;
+}
+
+.onelaunch-swatch-name {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #f2f2f4;
+  line-height: 1.3;
+}
+
+.onelaunch-swatch-badge {
+  position: absolute;
+  top: -7px;
+  right: -6px;
+  background: var(--c-pink);
+  color: #fff;
+  font-size: 8.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.onelaunch-swatch.custom {
+  position: relative;
+  overflow: hidden;
+}
+
+.onelaunch-color-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.onelaunch-launch-btn {
+  margin-top: 4px;
+  width: 100%;
+}
+
+/* Abstract "computing" indicator shown while the multi-step generation pipeline runs — three
+   staggered pulsing orbs in the app's pink accent rather than a plain spinner, since this is
+   meant to read as a flagship moment, not a routine wait. */
+.onelaunch-loading {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.onelaunch-loading-orbs {
+  display: flex;
+  gap: 8px;
+}
+
+.onelaunch-loading-orbs span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--c-pink);
+  animation: onelaunch-orb-pulse 1.2s ease-in-out infinite;
+}
+
+.onelaunch-loading-orbs span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.onelaunch-loading-orbs span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes onelaunch-orb-pulse {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+.onelaunch-loading-text {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.onelaunch-card-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.onelaunch-download-btn {
+  position: static;
+  background: var(--c-panel-2);
+  color: var(--c-text);
+}
+
+.onelaunch-download-btn:hover {
+  background: var(--c-panel-3);
+}
+
+.onelaunch-captions {
+  max-width: 780px;
+  margin: 24px auto 0;
+  background: var(--c-panel);
+  border: 1px solid var(--c-divider);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+}
+
+.onelaunch-captions-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-text-dim);
+  margin-bottom: 8px;
+}
+
+.onelaunch-captions-text {
+  margin: 0;
+  font-family: inherit;
+  white-space: pre-wrap;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--c-text);
+}
+
+/* "Инструменты" toolbar menu popups — styled like a canvas node card (.node/.node-header)
+   rather than the app's generic .modal, per that menu's design brief. --node-accent is set
+   inline per instance (see NodeStyleModal.tsx) the same way individual node types set it. */
+.node-modal {
+  width: 420px;
+  max-width: 92vw;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--c-divider), 0 0 40px -14px var(--node-accent);
+  overflow: hidden;
+}
+
+.node-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  font-weight: 600;
+  font-size: 12.5px;
+  letter-spacing: 0.03em;
+  color: var(--c-text);
+  border-bottom: 1px solid var(--c-divider);
+  background:
+    radial-gradient(90px 64px at 0% 0%, var(--node-accent) 0%, transparent 75%),
+    var(--c-panel-2);
+  flex-shrink: 0;
+}
+
+.node-modal-title {
+  flex: 1;
+}
+
+.node-modal-close {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--c-text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.node-modal-close:hover {
+  background: var(--c-panel-3);
+  color: var(--c-text);
+}
+
+.node-modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.tool-modal-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.tool-modal-slot {
+  width: 96px;
+  height: 96px;
+}
+
+.tool-modal-slot-lg {
+  width: 100%;
+  height: 160px;
+}
+
+.tool-modal-run-btn {
+  width: 100%;
+  margin-top: 0;
+}
+
+.tool-modal-scale-hint {
+  font-size: 11.5px;
+  color: var(--c-text-dim);
+}
+
+.tool-modal-result {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Checkerboard behind the background-remover's result so a transparent PNG actually reads as
+   transparent rather than looking identical to an opaque white/black background. */
+.tool-modal-result-checker {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background-image: linear-gradient(45deg, #888 25%, transparent 25%), linear-gradient(-45deg, #888 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #888 75%), linear-gradient(-45deg, transparent 75%, #888 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+  background-color: #ccc;
+}
+
+.tool-modal-result-checker img,
+.tool-modal-result-img {
+  width: 100%;
+  display: block;
+  border-radius: var(--radius-sm);
+}
+
+.tool-modal-download-btn {
+  width: 100%;
+}
+
+.photo-editor-canvas-wrap {
+  width: 100%;
+  max-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c-panel-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  padding: 8px;
+}
+
+.photo-editor-canvas {
+  max-width: 100%;
+  max-height: 300px;
+  display: block;
+}
+
+.photo-editor-controls {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.photo-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.photo-editor-btn {
+  padding: 7px 11px;
+  font-size: 13px;
+}
+
+.photo-editor-btn.active {
+  background: var(--c-pink);
+  border-color: var(--c-pink);
+  color: #fff;
+}
+
+.photo-editor-mirrored-icon {
+  display: inline-flex;
+  transform: scaleX(-1);
+}
+
+.photo-editor-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.photo-editor-slider-row .field-label {
+  width: 70px;
+  flex-shrink: 0;
+  margin-top: 0;
+}
+
+.photo-editor-slider-row input[type='range'] {
+  flex: 1;
+  accent-color: var(--c-pink);
+}
+
+.photo-editor-crop-btn {
+  padding: 6px 12px;
+  font-size: 11.5px;
+}
+
+.photo-editor-crop-btn.active {
+  background: var(--c-pink);
+  border-color: var(--c-pink);
+  color: #fff;
+}
+
+/* "Музыка и аудио" — web-only (see App.tsx). Same light dot-grid canvas backdrop as the node
+   mode, with a node-card-styled side panel (same material as .node) holding the controls, and
+   the generated/loading audio to its right. */
+.musicaudio-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-canvas-bg);
+  overflow-y: auto;
+}
+
+.musicaudio-hidden {
+  display: none;
+}
+
+.musicaudio-layout {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.musicaudio-side {
+  flex-shrink: 0;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--c-card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 1px var(--c-divider);
+  padding: 18px;
+}
+
+.musicaudio-mode-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--c-panel-2);
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+
+.musicaudio-mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--c-text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.musicaudio-mode-btn.active {
+  background: var(--c-pink);
+  color: #fff;
+}
+
+.musicaudio-textarea {
+  min-height: 56px;
+  resize: vertical;
+}
+
+.musicaudio-lyrics {
+  min-height: 100px;
+}
+
+.musicaudio-voice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+  margin-bottom: 4px;
+}
+
+.musicaudio-voice-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--c-panel-2);
+  border: 1.5px solid transparent;
+  font-size: 12px;
+  color: var(--c-text);
+  cursor: pointer;
+}
+
+.musicaudio-voice-row:hover {
+  background: var(--c-panel-3);
+}
+
+.musicaudio-voice-row.selected {
+  border-color: var(--c-pink);
+}
+
+.musicaudio-voice-preview-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: var(--c-panel-3);
+  color: var(--c-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.musicaudio-voice-preview-btn:hover:not(:disabled) {
+  background: var(--c-pink);
+  color: #fff;
+}
+
+.musicaudio-voice-preview-btn:disabled svg {
+  animation: spin 0.9s linear infinite;
+}
+
+.musicaudio-generate-btn {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.musicaudio-result-area {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The "elongated rectangle" loading placeholder — a gray audio-player-shaped bar with the
+   cycling status text pinned to its corner, standing in for the real player until the track
+   comes back. */
+.musicaudio-loading-bar {
+  position: relative;
+  flex: 1;
+  min-height: 140px;
+  border-radius: var(--radius-lg);
+  background: var(--c-panel-3);
+}
+
+.musicaudio-loading-corner {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-text-dim);
+}
+
+.musicaudio-player {
+  background: var(--c-panel);
+  border: 1px solid var(--c-divider);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.musicaudio-player-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.musicaudio-player-type-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--c-panel-2);
+  color: var(--c-pink);
+}
+
+.musicaudio-download-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: var(--c-panel-2);
+  color: var(--c-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.musicaudio-download-btn:hover {
+  background: var(--c-panel-3);
+}
+
+.musicaudio-player-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.musicaudio-play-btn {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: var(--c-pink);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.musicaudio-scrubber {
+  flex: 1;
+  accent-color: var(--c-pink);
+}
+
+.musicaudio-time {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--c-text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.musicaudio-empty-hint {
+  max-width: 320px;
+  align-self: center;
+  margin: auto;
+  text-align: center;
+}

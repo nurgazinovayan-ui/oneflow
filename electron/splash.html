@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ONEFLOW</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+      }
+
+      .splash {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        font-family:
+          'Segoe UI Variable Text',
+          'Segoe UI',
+          -apple-system,
+          BlinkMacSystemFont,
+          system-ui,
+          sans-serif;
+      }
+
+      .bg-video {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 0;
+      }
+
+      .author {
+        position: absolute;
+        left: 24px;
+        bottom: 20px;
+        z-index: 2;
+        font-size: 11px;
+        color: #a6919b;
+        letter-spacing: 0.02em;
+      }
+
+      .login-panel {
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+        position: absolute;
+        right: 24px;
+        bottom: 24px;
+        width: 190px;
+        z-index: 3;
+        padding: 14px;
+        border-radius: 12px;
+        background: rgba(12, 12, 16, 0.4);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(20px) saturate(140%);
+        -webkit-backdrop-filter: blur(20px) saturate(140%);
+      }
+
+      .login-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: #f2f2f4;
+        letter-spacing: 0.02em;
+        margin-bottom: 1px;
+      }
+
+      .login-input {
+        width: 100%;
+        padding: 6px 9px;
+        border-radius: 6px;
+        border: none;
+        background: rgba(255, 255, 255, 0.08);
+        color: #f2f2f4;
+        font-size: 11.5px;
+        outline: none;
+      }
+
+      .login-input::placeholder {
+        color: #8f8f97;
+      }
+
+      .login-input:focus {
+        background: rgba(255, 255, 255, 0.14);
+      }
+
+      .login-submit {
+        margin-top: 1px;
+        padding: 7px 9px;
+        border: none;
+        border-radius: 6px;
+        background: #e5157e;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .login-submit:hover:not(:disabled) {
+        background: #ff2d8f;
+      }
+
+      .login-submit:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+
+      .register-toggle-btn {
+        padding: 7px 9px;
+        border: none;
+        border-radius: 6px;
+        background: #f0e4c8;
+        color: #2b2419;
+        font-size: 11.5px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .register-toggle-btn:hover:not(:disabled) {
+        background: #f7edd8;
+      }
+
+      .register-toggle-btn:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+
+      .login-error {
+        min-height: 14px;
+        font-size: 11px;
+        color: #ff6b6b;
+        line-height: 1.4;
+      }
+
+      .login-remember {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: #c9c9ce;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .login-remember input[type='checkbox'] {
+        width: 13px;
+        height: 13px;
+        margin: 0;
+        accent-color: #e5157e;
+        cursor: pointer;
+      }
+
+      .close-btn {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        z-index: 4;
+        width: 26px;
+        height: 26px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.08);
+        color: #d0d0d4;
+        font-size: 14px;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-app-region: no-drag;
+      }
+
+      .close-btn:hover {
+        background: rgba(255, 255, 255, 0.16);
+        color: #fff;
+      }
+
+      .buy-subscription-link {
+        background: none;
+        border: none;
+        padding: 0;
+        color: #ff6fa8;
+        font-size: 11px;
+        text-decoration: underline;
+        cursor: pointer;
+        text-align: left;
+        display: none;
+      }
+
+      .buy-subscription-link:hover {
+        color: #ff96c2;
+      }
+
+      .demo-link {
+        background: none;
+        border: none;
+        padding: 0;
+        color: #ff6fa8;
+        font-size: 11px;
+        text-decoration: underline;
+        cursor: pointer;
+        text-align: left;
+      }
+
+      .demo-link:hover {
+        color: #ff96c2;
+      }
+
+      .register-toast {
+        position: absolute;
+        top: 24px;
+        left: 50%;
+        z-index: 6;
+        max-width: 320px;
+        padding: 10px 16px;
+        border-radius: 10px;
+        background: rgba(20, 20, 24, 0.92);
+        color: #f2f2f4;
+        font-size: 12px;
+        line-height: 1.4;
+        text-align: center;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+        opacity: 0;
+        transform: translate(-50%, -10px);
+        pointer-events: none;
+        transition:
+          opacity 0.35s ease,
+          transform 0.35s ease;
+      }
+
+      .register-toast.visible {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="splash">
+      <video class="bg-video" src="./assets/splash-bg.mp4" autoplay loop muted playsinline></video>
+      <button class="close-btn" id="close-btn" type="button" title="Закрыть">✕</button>
+      <div class="author">Автор программы — Нургазинов Аян</div>
+      <div class="register-toast" id="register-toast"></div>
+      <form class="login-panel" id="login-panel">
+        <div class="login-title" id="panel-title">Вход в ONEFLOW</div>
+        <div class="panel-fields" id="login-fields" style="display: flex; flex-direction: column; gap: 8px">
+          <input class="login-input" id="login-email" type="email" placeholder="Email" autocomplete="username" />
+          <input class="login-input" id="login-password" type="password" placeholder="Пароль" autocomplete="current-password" />
+          <label class="login-remember">
+            <input type="checkbox" id="login-remember" />
+            Запомнить меня
+          </label>
+        </div>
+        <div class="panel-fields" id="register-fields" style="display: none; flex-direction: column; gap: 8px">
+          <input class="login-input" id="register-email" type="email" placeholder="E-mail" autocomplete="username" />
+          <input class="login-input" id="register-password" type="password" placeholder="Пароль" autocomplete="new-password" />
+          <input class="login-input" id="register-password-confirm" type="password" placeholder="Повтор пароля" autocomplete="new-password" />
+        </div>
+        <button class="login-submit" id="login-submit" type="submit">Войти</button>
+        <button class="register-toggle-btn" id="register-toggle-btn" type="button">Регистрация</button>
+        <div class="login-error" id="login-error"></div>
+        <a class="buy-subscription-link" id="buy-subscription-btn" href="#">Купить подписку</a>
+        <button class="demo-link" id="demo-link" type="button">Демо режим</button>
+      </form>
+    </div>
+    <script>
+      (function () {
+        var loginPanel = document.getElementById('login-panel');
+        var emailInput = document.getElementById('login-email');
+        var passwordInput = document.getElementById('login-password');
+        var rememberInput = document.getElementById('login-remember');
+        var errorEl = document.getElementById('login-error');
+        var submitBtn = document.getElementById('login-submit');
+
+        var closeBtn = document.getElementById('close-btn');
+        var demoLink = document.getElementById('demo-link');
+        var buySubscriptionBtn = document.getElementById('buy-subscription-btn');
+
+        var panelTitle = document.getElementById('panel-title');
+        var loginFields = document.getElementById('login-fields');
+        var registerFields = document.getElementById('register-fields');
+        var registerToggleBtn = document.getElementById('register-toggle-btn');
+        var registerEmailInput = document.getElementById('register-email');
+        var registerPasswordInput = document.getElementById('register-password');
+        var registerPasswordConfirmInput = document.getElementById('register-password-confirm');
+        var registerToast = document.getElementById('register-toast');
+        var mode = 'login';
+
+        if (!window.authApi) return;
+
+        function setMode(next) {
+          mode = next;
+          errorEl.textContent = '';
+          if (mode === 'login') {
+            loginFields.style.display = 'flex';
+            registerFields.style.display = 'none';
+            panelTitle.textContent = 'Вход в ONEFLOW';
+            submitBtn.textContent = 'Войти';
+            submitBtn.disabled = false;
+            registerToggleBtn.textContent = 'Регистрация';
+            demoLink.style.display = '';
+            buySubscriptionBtn.style.display = buySubscriptionBtn.dataset.enabled === '1' ? 'inline-block' : 'none';
+          } else {
+            loginFields.style.display = 'none';
+            registerFields.style.display = 'flex';
+            panelTitle.textContent = 'Регистрация в ONEFLOW';
+            submitBtn.textContent = 'Зарегистрироваться';
+            submitBtn.disabled = false;
+            registerToggleBtn.textContent = 'Назад ко входу';
+            demoLink.style.display = 'none';
+            buySubscriptionBtn.style.display = 'none';
+          }
+        }
+
+        registerToggleBtn.addEventListener('click', function () {
+          setMode(mode === 'login' ? 'register' : 'login');
+        });
+
+        var toastTimer = null;
+        function showToast(text) {
+          registerToast.textContent = text;
+          registerToast.classList.add('visible');
+          if (toastTimer) clearTimeout(toastTimer);
+          toastTimer = setTimeout(function () {
+            registerToast.classList.remove('visible');
+          }, 5000);
+        }
+
+        closeBtn.addEventListener('click', function () {
+          window.authApi.closeApp();
+        });
+
+        if (window.authApi.getCheckoutUrl) {
+          window.authApi.getCheckoutUrl().then(function (url) {
+            if (!url) return;
+            buySubscriptionBtn.dataset.enabled = '1';
+            if (mode === 'login') buySubscriptionBtn.style.display = 'inline-block';
+            buySubscriptionBtn.addEventListener('click', function (e) {
+              e.preventDefault();
+              var email = emailInput.value.trim();
+              var finalUrl = url;
+              if (email) {
+                var sep = finalUrl.indexOf('?') === -1 ? '?' : '&';
+                finalUrl += sep + 'checkout[email]=' + encodeURIComponent(email);
+              }
+              window.authApi.openCheckout(finalUrl);
+            });
+          });
+        }
+
+        demoLink.addEventListener('click', function () {
+          window.authApi.enterDemoMode();
+        });
+
+        window.authApi.onShowLogin(function () {
+          loginPanel.style.display = 'flex';
+          emailInput.focus();
+        });
+
+        window.authApi.onLoginResult(function (result) {
+          if (result.ok) {
+            errorEl.textContent = '';
+            submitBtn.textContent = 'Готово';
+            return;
+          }
+          errorEl.textContent = result.error || 'Не удалось войти';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Войти';
+        });
+
+        loginPanel.addEventListener('submit', function (e) {
+          e.preventDefault();
+          if (mode === 'register') {
+            var rEmail = registerEmailInput.value.trim();
+            var rPassword = registerPasswordInput.value;
+            var rPasswordConfirm = registerPasswordConfirmInput.value;
+            errorEl.textContent = '';
+            if (!rEmail || !rPassword || !rPasswordConfirm) {
+              errorEl.textContent = 'Заполните все поля.';
+              return;
+            }
+            if (rPassword !== rPasswordConfirm) {
+              errorEl.textContent = 'Пароли не совпадают.';
+              return;
+            }
+            if (rPassword.length < 6) {
+              errorEl.textContent = 'Пароль должен быть не короче 6 символов.';
+              return;
+            }
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Регистрация...';
+            window.authApi.register(rEmail, rPassword);
+            return;
+          }
+          var email = emailInput.value.trim();
+          var password = passwordInput.value;
+          if (!email || !password) return;
+          errorEl.textContent = '';
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Проверка...';
+          window.authApi.login(email, password, rememberInput.checked);
+        });
+
+        if (window.authApi.onRegisterResult) {
+          window.authApi.onRegisterResult(function (result) {
+            if (result.ok) {
+              var registeredEmail = registerEmailInput.value.trim();
+              registerEmailInput.value = '';
+              registerPasswordInput.value = '';
+              registerPasswordConfirmInput.value = '';
+              setMode('login');
+              emailInput.value = registeredEmail;
+              passwordInput.value = '';
+              passwordInput.focus();
+              showToast(
+                result.needsConfirmation
+                  ? 'Регистрация почти завершена — подтвердите email по ссылке из письма, затем сможете войти.'
+                  : 'Регистрация прошла успешно, можете войти под своим паролем.'
+              );
+            } else {
+              errorEl.textContent = result.error || 'Не удалось зарегистрироваться';
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Зарегистрироваться';
+            }
+          });
+        }
+      })();
+    </script>
+  </body>
+</html>

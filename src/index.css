@@ -1,0 +1,62 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  /* Inter Variable — self-hosted via @fontsource-variable/inter (imported in main.tsx), same
+     face framer.com uses for body text. Falls back to the OS UI font while it loads/if it
+     somehow fails, rather than to a generic sans-serif. */
+  font-family:
+    'Inter Variable',
+    'Segoe UI Variable Text',
+    'Segoe UI',
+    -apple-system,
+    BlinkMacSystemFont,
+    system-ui,
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  background: var(--c-bg);
+  color: var(--c-text);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  color: var(--c-text);
+  background: var(--c-panel-2);
+  border: 1px solid var(--c-divider);
+  border-radius: 6px;
+  transition: border-color 0.15s ease;
+}
+
+/* "Glow" kit look — single-line fields read as pills (Search/Email address in the reference
+   kit); textarea keeps a normal rounded rect since a multi-line box can't read as a pill.
+   Radius only, no padding here — an earlier version also set padding-left/right, which (via
+   :not()'s specificity) outranked and silently overrode the deliberately tighter padding on
+   small fields like .project-tab-input, breaking their layout. Components that want more
+   breathing room set their own padding (see .node-select). */
+input:not([type='range']),
+select {
+  border-radius: 999px;
+}
+
+input:hover,
+textarea:hover,
+select:hover {
+  border-color: var(--c-text-dim);
+}

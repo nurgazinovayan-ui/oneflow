@@ -1,0 +1,14 @@
+# GDN — Google Display Network (стандартные IAB-размеры)
+# Формат строки: Название,Ширина,Высота
+Medium Rectangle,300,250
+Large Rectangle,336,280
+Leaderboard,728,90
+Half Page,300,600
+Wide Skyscraper,160,600
+Mobile Banner,320,50
+Large Mobile Banner,320,100
+Billboard,970,250
+Large Leaderboard,970,90
+Square,250,250
+Small Square,200,200
+Banner,468,60
