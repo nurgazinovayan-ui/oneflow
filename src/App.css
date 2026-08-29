@@ -470,9 +470,6 @@
 /* No fill of its own beyond the shared --c-canvas-bg set alongside .top-toolbar above — the
    project tabs, "+" button and mode-switch pill all carry their own background already, so
    nothing here needs a dark strip behind them. */
-/* min-height keeps the row tall enough for the absolutely-positioned .mode-switch-pill (68px
-   tall + this row's 8px padding); without it the topbar collapses to the height of the project
-   tabs and the mode buttons spill over the canvas below. */
 .topbar {
   position: relative;
   display: flex;
@@ -481,7 +478,6 @@
   gap: 12px;
   padding: 8px 12px;
   padding-right: 150px;
-  min-height: 84px;
   flex-shrink: 0;
   -webkit-app-region: drag;
 }
@@ -622,10 +618,8 @@
 }
 
 /* Switches the whole main area between the node canvas and Работа с текстом — lives in the
-   persistent .topbar (not floating over the canvas). Each mode is its own fully-rounded
-   standalone pill rather than segments sharing one clipped container, sitting in a tight row
-   so they still read as one control group. At this scale the row is wider than most viewports,
-   so it scrolls horizontally instead of pushing the page sideways. */
+   persistent .topbar (not floating over the canvas), same small radius as the other toolbar
+   buttons rather than a bordered pill. */
 .mode-switch-pill {
   position: absolute;
   left: 50%;
@@ -633,31 +627,31 @@
   transform: translate(-50%, -50%);
   display: flex;
   align-items: stretch;
-  gap: 4px;
-  max-width: calc(100vw - 24px);
-  overflow-x: auto;
+  height: 34px;
   flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
   -webkit-app-region: no-drag;
 }
 
 .mode-switch-tab {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 28px;
-  height: 68px;
+  gap: 6px;
+  padding: 0 14px;
   border: none;
-  border-radius: 999px;
   background: var(--c-panel-2);
   color: var(--c-text-muted);
-  font-size: 37.5px;
-  font-weight: 800;
-  text-transform: uppercase;
+  font-size: 12.5px;
+  font-weight: 600;
   white-space: nowrap;
-  flex-shrink: 0;
   transition:
     background 0.15s var(--ease),
     color 0.15s var(--ease);
+}
+
+.mode-switch-tab:not(:first-child) {
+  border-left: 1px solid var(--c-divider);
 }
 
 .mode-switch-tab:hover {
