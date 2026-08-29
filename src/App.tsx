@@ -993,26 +993,26 @@ function Canvas() {
               className={`mode-switch-tab ${mainView === 'canvas' ? 'active' : ''}`}
               onClick={() => setMainView('canvas')}
             >
-              <IconFlow size={13} /> {t.modeSwitch.nodesAndAdapt}
+              <IconFlow size={26} /> {t.modeSwitch.nodesAndAdapt}
             </button>
             <button
               className={`mode-switch-tab ${mainView === 'generate' ? 'active' : ''}`}
               onClick={() => setMainView('generate')}
             >
-              <IconSparkles size={13} /> {t.modeSwitch.quickGeneration}
+              <IconSparkles size={26} /> {t.modeSwitch.quickGeneration}
             </button>
             <button
               className={`mode-switch-tab ${mainView === 'text' ? 'active' : ''}`}
               onClick={() => setMainView('text')}
             >
-              <IconChat size={13} /> {t.modeSwitch.textWork}
+              <IconChat size={26} /> {t.modeSwitch.textWork}
             </button>
             {import.meta.env.VITE_WEB_MODE === '1' && (
               <button
                 className={`mode-switch-tab ${mainView === 'evaluate' ? 'active' : ''}`}
                 onClick={() => setMainView('evaluate')}
               >
-                <IconGauge size={13} /> {t.modeSwitch.evaluation}
+                <IconGauge size={26} /> {t.modeSwitch.evaluation}
               </button>
             )}
             {import.meta.env.VITE_WEB_MODE === '1' && (
@@ -1020,7 +1020,7 @@ function Canvas() {
                 className={`mode-switch-tab ${mainView === 'onelaunch' ? 'active' : ''}`}
                 onClick={() => setMainView('onelaunch')}
               >
-                <IconRocket size={13} /> {t.modeSwitch.oneLaunch}
+                <IconRocket size={26} /> {t.modeSwitch.oneLaunch}
               </button>
             )}
             {import.meta.env.VITE_WEB_MODE === '1' && (
@@ -1028,7 +1028,7 @@ function Canvas() {
                 className={`mode-switch-tab ${mainView === 'musicaudio' ? 'active' : ''}`}
                 onClick={() => setMainView('musicaudio')}
               >
-                <IconMusic size={13} /> {t.modeSwitch.musicAudio}
+                <IconMusic size={26} /> {t.modeSwitch.musicAudio}
               </button>
             )}
           </div>
