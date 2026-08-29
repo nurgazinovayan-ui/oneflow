@@ -486,13 +486,21 @@
   -webkit-app-region: drag;
 }
 
+/* Sits below .topbar as its own row now (moved out from beside .mode-switch-pill so the pill
+   can be centered on its own), centered rather than pinned left. */
+.project-tabs-row {
+  display: flex;
+  justify-content: center;
+  padding: 4px 12px 8px;
+  -webkit-app-region: drag;
+}
+
 .project-tabs {
   display: flex;
   align-items: center;
   gap: 4px;
   overflow-x: auto;
-  flex: 1;
-  min-width: 0;
+  max-width: 100%;
   -webkit-app-region: no-drag;
 }
 
@@ -564,11 +572,22 @@
   color: var(--c-text);
 }
 
+/* Floats over the bottom-right corner of the viewport instead of sharing .topbar's row — taken
+   out of that row's flex flow, so .topbar now just centers .mode-switch-pill. z-index sits
+   above the canvas/panels (max 30) but below modals (100+). */
 .topbar-right {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 4px;
+  background: var(--c-panel);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
   flex-shrink: 0;
+  z-index: 40;
   -webkit-app-region: no-drag;
 }
 

@@ -938,56 +938,6 @@ function Canvas() {
       </div>
       <div className="main-area">
         <div className={`topbar${mainView === 'canvas' ? ' dot-grid-bg' : ''}`}>
-          {mainView === 'canvas' && (
-          <div className="project-tabs">
-            {projects.map((p) => (
-              <div
-                key={p.id}
-                className={`project-tab ${p.id === activeProjectId ? 'active' : ''}`}
-                onClick={() => switchProject(p.id)}
-                onDoubleClick={() => setEditingTabId(p.id)}
-              >
-                {editingTabId === p.id ? (
-                  <input
-                    className="project-tab-input"
-                    autoFocus
-                    defaultValue={p.name}
-                    onClick={(e) => e.stopPropagation()}
-                    onBlur={(e) => {
-                      renameProject(p.id, e.target.value.trim() || p.name);
-                      setEditingTabId(null);
-                    }}
-                    onKeyDown={(e) => {
-                      e.stopPropagation();
-                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                    }}
-                  />
-                ) : (
-                  <span className="project-tab-label">{p.name}</span>
-                )}
-                {projects.length > 1 && (
-                  <button
-                    className="project-tab-close"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeProjectTab(p.id);
-                    }}
-                    title={t.toolbar.closeProjectTooltip}
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
-            <button
-              className="project-tab-add"
-              onClick={addProjectTab}
-              title={t.toolbar.newProjectTooltip}
-            >
-              +
-            </button>
-          </div>
-          )}
           <div className="mode-switch-pill">
             <button
               className={`mode-switch-tab ${mainView === 'canvas' ? 'active' : ''}`}
@@ -1036,6 +986,58 @@ function Canvas() {
             <BudgetBar />
           </div>
         </div>
+        {mainView === 'canvas' && (
+          <div className="project-tabs-row">
+          <div className="project-tabs">
+            {projects.map((p) => (
+              <div
+                key={p.id}
+                className={`project-tab ${p.id === activeProjectId ? 'active' : ''}`}
+                onClick={() => switchProject(p.id)}
+                onDoubleClick={() => setEditingTabId(p.id)}
+              >
+                {editingTabId === p.id ? (
+                  <input
+                    className="project-tab-input"
+                    autoFocus
+                    defaultValue={p.name}
+                    onClick={(e) => e.stopPropagation()}
+                    onBlur={(e) => {
+                      renameProject(p.id, e.target.value.trim() || p.name);
+                      setEditingTabId(null);
+                    }}
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                    }}
+                  />
+                ) : (
+                  <span className="project-tab-label">{p.name}</span>
+                )}
+                {projects.length > 1 && (
+                  <button
+                    className="project-tab-close"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeProjectTab(p.id);
+                    }}
+                    title={t.toolbar.closeProjectTooltip}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              className="project-tab-add"
+              onClick={addProjectTab}
+              title={t.toolbar.newProjectTooltip}
+            >
+              +
+            </button>
+          </div>
+          </div>
+        )}
         <div className="canvas-area" onDragOver={onCanvasDragOver} onDrop={onCanvasDrop}>
           <div className="canvas-toolbar">
             <div className="toolbar-group">
@@ -1098,7 +1100,7 @@ function Canvas() {
             >
               <Background gap={20} />
               <Controls />
-              <MiniMap pannable zoomable />
+              <MiniMap pannable zoomable position="top-right" />
             </ReactFlow>
             {aiAssistantOpen && mainView === 'canvas' && (
               <AiAssistantPanel
