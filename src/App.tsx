@@ -938,56 +938,7 @@ function Canvas() {
       </div>
       <div className="main-area">
         <div className={`topbar${mainView === 'canvas' ? ' dot-grid-bg' : ''}`}>
-          <div className="mode-switch-pill">
-            <button
-              className={`mode-switch-tab ${mainView === 'canvas' ? 'active' : ''}`}
-              onClick={() => setMainView('canvas')}
-            >
-              <IconFlow size={26} /> {t.modeSwitch.nodesAndAdapt}
-            </button>
-            <button
-              className={`mode-switch-tab ${mainView === 'generate' ? 'active' : ''}`}
-              onClick={() => setMainView('generate')}
-            >
-              <IconSparkles size={26} /> {t.modeSwitch.quickGeneration}
-            </button>
-            <button
-              className={`mode-switch-tab ${mainView === 'text' ? 'active' : ''}`}
-              onClick={() => setMainView('text')}
-            >
-              <IconChat size={26} /> {t.modeSwitch.textWork}
-            </button>
-            {import.meta.env.VITE_WEB_MODE === '1' && (
-              <button
-                className={`mode-switch-tab ${mainView === 'evaluate' ? 'active' : ''}`}
-                onClick={() => setMainView('evaluate')}
-              >
-                <IconGauge size={26} /> {t.modeSwitch.evaluation}
-              </button>
-            )}
-            {import.meta.env.VITE_WEB_MODE === '1' && (
-              <button
-                className={`mode-switch-tab ${mainView === 'onelaunch' ? 'active' : ''}`}
-                onClick={() => setMainView('onelaunch')}
-              >
-                <IconRocket size={26} /> {t.modeSwitch.oneLaunch}
-              </button>
-            )}
-            {import.meta.env.VITE_WEB_MODE === '1' && (
-              <button
-                className={`mode-switch-tab ${mainView === 'musicaudio' ? 'active' : ''}`}
-                onClick={() => setMainView('musicaudio')}
-              >
-                <IconMusic size={26} /> {t.modeSwitch.musicAudio}
-              </button>
-            )}
-          </div>
-          <div className="topbar-right">
-            <BudgetBar />
-          </div>
-        </div>
-        {mainView === 'canvas' && (
-          <div className="project-tabs-row">
+          {mainView === 'canvas' && (
           <div className="project-tabs">
             {projects.map((p) => (
               <div
@@ -1036,8 +987,55 @@ function Canvas() {
               +
             </button>
           </div>
+          )}
+          <div className="mode-switch-pill">
+            <button
+              className={`mode-switch-tab ${mainView === 'canvas' ? 'active' : ''}`}
+              onClick={() => setMainView('canvas')}
+            >
+              <IconFlow size={26} /> {t.modeSwitch.nodesAndAdapt}
+            </button>
+            <button
+              className={`mode-switch-tab ${mainView === 'generate' ? 'active' : ''}`}
+              onClick={() => setMainView('generate')}
+            >
+              <IconSparkles size={26} /> {t.modeSwitch.quickGeneration}
+            </button>
+            <button
+              className={`mode-switch-tab ${mainView === 'text' ? 'active' : ''}`}
+              onClick={() => setMainView('text')}
+            >
+              <IconChat size={26} /> {t.modeSwitch.textWork}
+            </button>
+            {import.meta.env.VITE_WEB_MODE === '1' && (
+              <button
+                className={`mode-switch-tab ${mainView === 'evaluate' ? 'active' : ''}`}
+                onClick={() => setMainView('evaluate')}
+              >
+                <IconGauge size={26} /> {t.modeSwitch.evaluation}
+              </button>
+            )}
+            {import.meta.env.VITE_WEB_MODE === '1' && (
+              <button
+                className={`mode-switch-tab ${mainView === 'onelaunch' ? 'active' : ''}`}
+                onClick={() => setMainView('onelaunch')}
+              >
+                <IconRocket size={26} /> {t.modeSwitch.oneLaunch}
+              </button>
+            )}
+            {import.meta.env.VITE_WEB_MODE === '1' && (
+              <button
+                className={`mode-switch-tab ${mainView === 'musicaudio' ? 'active' : ''}`}
+                onClick={() => setMainView('musicaudio')}
+              >
+                <IconMusic size={26} /> {t.modeSwitch.musicAudio}
+              </button>
+            )}
           </div>
-        )}
+          <div className="topbar-right">
+            <BudgetBar />
+          </div>
+        </div>
         <div className="canvas-area" onDragOver={onCanvasDragOver} onDrop={onCanvasDrop}>
           <div className="canvas-toolbar">
             <div className="toolbar-group">
@@ -1100,7 +1098,7 @@ function Canvas() {
             >
               <Background gap={20} />
               <Controls />
-              <MiniMap pannable zoomable position="top-right" />
+              <MiniMap pannable zoomable />
             </ReactFlow>
             {aiAssistantOpen && mainView === 'canvas' && (
               <AiAssistantPanel
