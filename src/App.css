@@ -34,6 +34,15 @@
      Работа с текстом) read as one system rather than a jarring light/dark swap on toggle. */
   --c-canvas-bg: #d9d9dd;
 
+  /* Chrome-only neutral borders for the three fixed top rows (.top-toolbar/.topbar/
+     .project-tabs-row) — fixed grays rather than theme- or accent-tinted, matching the UI kit's
+     always-light shell (these rows already ignore the dark/light toggle via --c-canvas-bg). */
+  --chrome-border: #d7dade;
+  --chrome-border-strong: #c7cbd1;
+  --chrome-text: #1c1e21;
+  --chrome-text-muted: #4b4f56;
+  --chrome-surface-muted: #c9ccd1;
+
   /* Signal palette — node cards are colour-coded by role so a busy graph reads at a
      glance: cyan for raw input, pink for generation, amber for transform/adapt. */
   --c-node-input: #5ec8e0;
@@ -151,25 +160,24 @@
   flex-shrink: 0;
 }
 
-/* Grid rather than flex+spacer so the logo sits truly centered regardless of how wide the
-   left (menus) and right (action buttons) groups are — two flex spacers only center content
-   when both side groups happen to match in width. */
 /* Not truly transparent: .top-toolbar is a flex-row sibling ABOVE .canvas-area (not an overlay
    on top of it), so a see-through background would just expose .app-shell's own --c-bg — which
    in dark theme is near-black, i.e. still reads as "a dark bar up top", not a transparent one.
    Filled with --c-canvas-bg instead — the same flat paper-gray the node canvas itself uses (see
    the --c-canvas-bg comment near its definition) — so the header sits flush with zero visible
-   seam against the canvas below it, which is what "logo on a transparent background" actually
-   looks like given this DOM structure. .topbar (project tabs + mode switcher, just below) shares
-   the same treatment so the whole chrome above the canvas reads as one continuous surface. */
+   seam against the canvas below it. .topbar and .project-tabs-row (below) share the same
+   treatment, plus a --chrome-border hairline between each, so the three fixed rows read as one
+   continuous light shell over the canvas, per the UI kit reference. */
 .top-toolbar,
-.topbar {
+.topbar,
+.project-tabs-row {
   background-color: var(--c-canvas-bg);
+  border-bottom: 1px solid var(--chrome-border);
 }
 
-/* Logo now lives in .toolbar-left next to the File/Templates/Tools menus rather than in a
-   centered grid column, so this is a plain two-group flex row (left menus+logo, right
-   budget/DSP/icons) instead of the old 1fr-auto-1fr grid. */
+/* Logo lives in .toolbar-left next to the File/Templates/Tools menus rather than in a
+   centered grid column — a plain two-group flex row (left menus+logo, right
+   budget/DSP/icons). */
 .top-toolbar {
   display: flex;
   align-items: center;
@@ -177,7 +185,6 @@
   gap: 10px;
   padding: 8px 14px;
   padding-right: 150px;
-  border-bottom: 1px solid color-mix(in srgb, var(--c-pink) 14%, transparent);
   flex-shrink: 0;
   position: relative;
   z-index: 2;
@@ -244,12 +251,14 @@
 }
 
 .toolbar-right .toolbar-icon-btn-ghost,
-.toolbar-right .toolbar-avatar-btn {
+.toolbar-right .toolbar-avatar-btn,
+.project-fixed-actions .toolbar-icon-btn-ghost {
   color: #17171b;
 }
 
 .toolbar-right .toolbar-icon-btn-ghost:hover,
-.toolbar-right .toolbar-avatar-btn:hover {
+.toolbar-right .toolbar-avatar-btn:hover,
+.project-fixed-actions .toolbar-icon-btn-ghost:hover {
   background: rgba(0, 0, 0, 0.08);
 }
 
@@ -299,32 +308,45 @@
   background: var(--c-panel-2);
 }
 
+/* Flat text menu (File/Templates/Tools) per the UI kit's ".text-menu" — transparent until
+   hovered, no pill fill. .canvas-toolbar overrides this below to look like a bordered chip
+   instead, for the business-preset buttons that share this class there. */
 .toolbar-label-btn {
   display: flex;
   align-items: center;
   gap: 6px;
   height: 34px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: var(--c-panel-2);
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  background: transparent;
   border: none;
-  color: var(--c-text);
-  font-size: 12.5px;
-  font-weight: 500;
+  color: var(--chrome-text);
+  font-size: 13.5px;
+  font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
-  transition:
-    background 0.15s var(--ease),
-    transform 0.15s var(--ease);
+  transition: background 0.15s var(--ease);
 }
 
 .toolbar-label-btn:hover {
-  background: var(--c-panel-3);
-  transform: translateY(-1px);
+  background: var(--chrome-surface-muted);
 }
 
-.toolbar-label-btn:active {
-  transform: translateY(0);
+/* Business-preset chips (BYYD/Discovery/GDN/...) — bordered light chip per the UI kit's
+   ".provider-chip", not the flat text-menu look the same class gets in .toolbar-left. */
+.canvas-toolbar .toolbar-label-btn {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--chrome-border);
+  background: var(--c-panel-2);
+  color: var(--c-text);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.canvas-toolbar .toolbar-label-btn:hover {
+  border-color: var(--chrome-border-strong);
+  background: var(--c-panel-3);
 }
 
 /* "Ghost" pill from the reference kit — thin outline, transparent until hovered, rather than
@@ -472,33 +494,58 @@
 /* No fill of its own beyond the shared --c-canvas-bg set alongside .top-toolbar above — the
    project tabs, "+" button and mode-switch pill all carry their own background already, so
    nothing here needs a dark strip behind them. */
+/* Fixed height (rather than padding-driven auto height) so .mode-switch-tab and .canvas-toolbar
+   can stretch to fill the row — the UI kit's feature items span the full bar height with
+   dividers reaching top and bottom, not a shorter pill floating inside it. */
 .topbar {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
+  height: 52px;
   gap: 12px;
-  padding: 8px 12px;
+  padding: 0 12px;
   padding-right: 150px;
   flex-shrink: 0;
   -webkit-app-region: drag;
 }
 
 /* Its own row below .topbar now (previously shared that row with .mode-switch-pill), left-
-   aligned same as before — just no longer competing for space with the mode tabs. */
+   aligned same as before — just no longer competing for space with the mode tabs. The scroll
+   viewport (.project-tabs) and the fixed prev/next/overflow actions are separate flex children
+   per the UI kit spec, so adding tabs only ever grows the scrollable child. */
 .project-tabs-row {
   display: flex;
-  padding: 4px 12px 8px;
-  background-color: var(--c-canvas-bg);
+  align-items: stretch;
+  justify-content: space-between;
+  min-width: 0;
+  padding-left: 12px;
   -webkit-app-region: drag;
 }
 
 .project-tabs {
   display: flex;
   align-items: center;
-  gap: 4px;
-  overflow-x: auto;
+  gap: 8px;
+  flex: 1 1 auto;
   min-width: 0;
+  overflow-x: auto;
+  padding: 8px 12px 8px 0;
+  scrollbar-width: none;
+  -webkit-app-region: no-drag;
+}
+
+.project-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.project-fixed-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 8px 8px 8px 12px;
+  border-left: 1px solid var(--chrome-border);
   -webkit-app-region: no-drag;
 }
 
@@ -508,8 +555,8 @@
   gap: 6px;
   padding: 7px 12px;
   border-radius: var(--radius-sm);
-  background: transparent;
-  border: none;
+  background: var(--c-panel-2);
+  border: 1px solid transparent;
   font-size: 12.5px;
   color: var(--c-text-muted);
   cursor: pointer;
@@ -518,12 +565,16 @@
 }
 
 .project-tab:hover {
-  background: var(--c-panel-2);
+  border-color: var(--chrome-border-strong);
 }
 
+/* Blue top inset line + blue label rather than a filled pill, matching the UI kit's
+   "Project tab: active/selected" state. */
 .project-tab.active {
-  background: var(--c-panel-2);
-  color: var(--c-text);
+  background: var(--c-panel-3);
+  border-color: color-mix(in srgb, var(--c-pink) 45%, transparent);
+  box-shadow: inset 0 2px 0 var(--c-pink);
+  color: var(--c-pink);
   font-weight: 600;
 }
 
@@ -621,27 +672,29 @@
 }
 
 /* Switches the whole main area between the node canvas and Работа с текстом — lives in the
-   persistent .topbar (not floating over the canvas), same small radius as the other toolbar
-   buttons rather than a bordered pill. */
+   persistent .topbar (not floating over the canvas). Per the UI kit reference, this is a plain
+   full-height nav (feature items separated by dividers, no pill/rounded container), sitting
+   left in the row with its own right border separating it from .canvas-toolbar. */
 .mode-switch-pill {
   display: flex;
   align-items: stretch;
-  height: 34px;
+  height: 100%;
   flex-shrink: 0;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  border-right: 1px solid var(--chrome-border);
   -webkit-app-region: no-drag;
 }
 
 .mode-switch-tab {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 14px;
+  gap: 8px;
+  height: 100%;
+  padding: 0 16px;
   border: none;
-  background: var(--c-panel-2);
-  color: var(--c-text-muted);
-  font-size: 12.5px;
+  border-right: 1px solid var(--chrome-border);
+  background: transparent;
+  color: var(--chrome-text-muted);
+  font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
   transition:
@@ -649,32 +702,29 @@
     color 0.15s var(--ease);
 }
 
-.mode-switch-tab:not(:first-child) {
-  border-left: 1px solid var(--c-divider);
-}
-
 .mode-switch-tab:hover {
-  color: var(--c-text);
+  background: var(--chrome-surface-muted);
+  color: var(--chrome-text);
 }
 
+/* Pale accent-tinted background + accent text + inset ring, rather than a solid fill —
+   matches the UI kit's "Feature item: active" state. */
 .mode-switch-tab.active {
-  background: var(--c-pink);
-  color: #fff;
+  background: color-mix(in srgb, var(--c-pink) 12%, transparent);
+  color: var(--c-pink);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c-pink) 45%, transparent);
+  font-weight: 700;
 }
 
 /* Sits inline in .topbar next to .mode-switch-pill (canvas mode only) rather than floating over
-   the canvas — still keeps its own matte-glass plaque so it reads as a distinct control
-   surface against the topbar's flat --c-canvas-bg. */
+   the canvas — no panel/backdrop of its own now, just an inline full-height group so it reads
+   as part of the same row instead of a separate plaque. */
 .canvas-toolbar {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px;
-  border-radius: var(--radius-md);
-  background: rgba(15, 15, 18, 0.62);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  box-shadow: var(--shadow-md);
+  height: 100%;
+  padding: 0 14px;
   overflow-x: auto;
   min-width: 0;
 }

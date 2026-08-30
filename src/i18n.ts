@@ -48,6 +48,9 @@ export interface Translations {
     profileTooltip: string;
     newProjectTooltip: string;
     closeProjectTooltip: string;
+    prevProjectsTooltip: string;
+    nextProjectsTooltip: string;
+    projectOptionsTooltip: string;
     projectName: (n: number) => string;
     importedProjectName: string;
     templates: string;
@@ -512,6 +515,9 @@ export const ru: Translations = {
     profileTooltip: 'Личный кабинет',
     newProjectTooltip: 'Новый проект',
     closeProjectTooltip: 'Закрыть проект',
+    prevProjectsTooltip: 'Предыдущие проекты',
+    nextProjectsTooltip: 'Следующие проекты',
+    projectOptionsTooltip: 'Опции проекта',
     projectName: (n) => `Проект ${n}`,
     importedProjectName: 'Импортированный проект',
     templates: 'Шаблоны',
@@ -1033,6 +1039,9 @@ export const en: Translations = {
     profileTooltip: 'Account',
     newProjectTooltip: 'New project',
     closeProjectTooltip: 'Close project',
+    prevProjectsTooltip: 'Previous projects',
+    nextProjectsTooltip: 'Next projects',
+    projectOptionsTooltip: 'Project options',
     projectName: (n) => `Project ${n}`,
     importedProjectName: 'Imported project',
     templates: 'Templates',

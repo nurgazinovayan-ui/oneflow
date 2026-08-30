@@ -232,6 +232,24 @@ export function IconChevronRight({ size = 15 }: IconProps) {
   );
 }
 
+export function IconChevronLeft({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
+      <path d="m15 5-7 7 7 7" />
+    </svg>
+  );
+}
+
+export function IconDotsVertical({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <circle cx="12" cy="5" r="1.6" />
+      <circle cx="12" cy="12" r="1.6" />
+      <circle cx="12" cy="19" r="1.6" />
+    </svg>
+  );
+}
+
 export function IconChevronDown({ size = 15 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
