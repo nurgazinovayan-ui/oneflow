@@ -87,13 +87,10 @@ main.sphere-main {
 .item__image {
   position: absolute;
   display: block;
-  /* Grid cell size is unchanged (same --radius, same segments), so shrinking the visible image
-     to ~1/3 its previous size (300.9px -> ~100px, given this instance's 1900px radius/35
-     segments) and growing the gap around it are both just this one inset value pulling
-     against a fixed cell: 20px -> 120px shrinks the image ~3x and grows the total gap between
-     neighboring tiles from 40px to 240px (a bigger jump than a literal 3x, since the cell
-     itself didn't grow to compensate — that's the tradeoff of not touching segments/radius). */
-  inset: 120px;
+  /* Gap between neighboring tiles = 2 * inset. Was 120px (240px gap); -30% on the gap
+     (240 * 0.7 = 168px) means inset only needs to drop to 84px, growing the visible image
+     back up somewhat as a side effect (grid cell size is still unchanged). */
+  inset: 84px;
   border-radius: var(--tile-radius, 12px);
   background: var(--overlay-blur-color, #120f17);
   overflow: hidden;

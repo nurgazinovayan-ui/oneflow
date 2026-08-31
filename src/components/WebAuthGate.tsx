@@ -182,7 +182,14 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
   return (
     <div className="web-auth-gate">
       <div className="web-auth-gate-bg">
-        <DomeGallery grayscale fit={1} minRadius={1900} autoRotate autoRotateSpeed={0.02} />
+        <DomeGallery
+          grayscale
+          fit={1}
+          minRadius={1900}
+          autoRotate
+          autoRotateSpeed={0.02}
+          overlayBlurColor="#eceef1"
+        />
       </div>
       <div className={`web-auth-toast ${toastVisible ? 'visible' : ''}`}>{toast}</div>
       <div className="web-auth-row">
