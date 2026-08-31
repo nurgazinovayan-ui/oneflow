@@ -34,17 +34,14 @@
      Работа с текстом) read as one system rather than a jarring light/dark swap on toggle. */
   --c-canvas-bg: #d9d9dd;
 
-  /* Chrome-only fixed tokens for the three top rows (.top-toolbar/.topbar/.project-tabs-row) —
-     neutral grays independent of theme/accent, matching the UI kit's always-light shell.
-     --chrome-surface is deliberately lighter/near-white vs. --c-canvas-bg below so the chrome
-     reads as a distinct surface sitting above the canvas, per the kit reference, instead of the
-     two blending into one flat gray. */
-  --chrome-surface: #f8f9fa;
+  /* Chrome-only neutral borders for the three fixed top rows (.top-toolbar/.topbar/
+     .project-tabs-row) — fixed grays rather than theme- or accent-tinted, matching the UI kit's
+     always-light shell (these rows already ignore the dark/light toggle via --c-canvas-bg). */
   --chrome-border: #d7dade;
   --chrome-border-strong: #c7cbd1;
   --chrome-text: #1c1e21;
   --chrome-text-muted: #4b4f56;
-  --chrome-surface-muted: #eef0f3;
+  --chrome-surface-muted: #c9ccd1;
 
   /* Signal palette — node cards are colour-coded by role so a busy graph reads at a
      glance: cyan for raw input, pink for generation, amber for transform/adapt. */
@@ -165,15 +162,16 @@
 
 /* Not truly transparent: .top-toolbar is a flex-row sibling ABOVE .canvas-area (not an overlay
    on top of it), so a see-through background would just expose .app-shell's own --c-bg — which
-   in dark theme is near-black. Filled with --chrome-surface instead — the UI kit reference's
-   near-white shell color, deliberately lighter than --c-canvas-bg so the chrome reads as its
-   own surface sitting above the canvas rather than blending into it. .topbar and
-   .project-tabs-row (below) share the same treatment, plus a --chrome-border hairline between
-   each, so the three fixed rows read as one continuous light shell over the canvas. */
+   in dark theme is near-black, i.e. still reads as "a dark bar up top", not a transparent one.
+   Filled with --c-canvas-bg instead — the same flat paper-gray the node canvas itself uses (see
+   the --c-canvas-bg comment near its definition) — so the header sits flush with zero visible
+   seam against the canvas below it. .topbar and .project-tabs-row (below) share the same
+   treatment, plus a --chrome-border hairline between each, so the three fixed rows read as one
+   continuous light shell over the canvas, per the UI kit reference. */
 .top-toolbar,
 .topbar,
 .project-tabs-row {
-  background-color: var(--chrome-surface);
+  background-color: var(--c-canvas-bg);
   border-bottom: 1px solid var(--chrome-border);
 }
 
