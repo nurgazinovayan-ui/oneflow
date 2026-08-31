@@ -26,8 +26,9 @@ export interface AudioGenParams {
   language?: string;
 }
 
-// Real Gemini TTS voice names (Google's Gemini API "Speech generation" voice list) — used as-is
-// since google/gemini-3.1-flash-tts is presumed to accept the same voice catalog.
+// Real Gemini TTS voice names (Google's Gemini API "Speech generation" voice list, all 30
+// prebuilt voices) — used as-is since google/gemini-3.1-flash-tts is presumed to accept the
+// same voice catalog.
 export const TTS_VOICES = [
   'Zephyr',
   'Puck',
@@ -37,6 +38,50 @@ export const TTS_VOICES = [
   'Leda',
   'Orus',
   'Aoede',
+  'Callirrhoe',
+  'Autonoe',
+  'Enceladus',
+  'Iapetus',
+  'Umbriel',
+  'Algieba',
+  'Despina',
+  'Erinome',
+  'Algenib',
+  'Rasalgethi',
+  'Laomedeia',
+  'Achernar',
+  'Alnilam',
+  'Schedar',
+  'Gacrux',
+  'Pulcherrima',
+  'Achird',
+  'Zubenelgenubi',
+  'Vindemiatrix',
+  'Sadachbia',
+  'Sadaltager',
+  'Sulafat',
+] as const;
+
+// Genre tags for the "Музыка" mode's genre picker — folded into the style prompt sent to
+// minimax/music-2.5 (see MusicAudioPanel.handleGenerate), same approach as how the speech
+// mode's tone prompt gets folded into its text field server-side. Plain genre words rather than
+// localized strings since they're used internationally as-is (including in Russian).
+export const MUSIC_GENRES = [
+  'Pop',
+  'Rock',
+  'Hip-Hop',
+  'Electronic',
+  'Jazz',
+  'Classical',
+  'Lo-fi',
+  'Ambient',
+  'Folk',
+  'R&B',
+  'Metal',
+  'Reggae',
+  'Country',
+  'Blues',
+  'Funk',
 ] as const;
 
 export const TTS_LANGUAGES = [

@@ -259,6 +259,7 @@ export interface Translations {
     musicPromptPlaceholder: string;
     lyricsLabel: string;
     lyricsPlaceholder: string;
+    genreLabel: string;
     formatLabel: string;
     phraseLabel: string;
     phrasePlaceholder: string;
@@ -767,6 +768,7 @@ export const ru: Translations = {
     musicPromptPlaceholder: 'Например: энергичный поп-рок с яркими гитарами',
     lyricsLabel: 'Слова песни',
     lyricsPlaceholder: 'Введите текст песни',
+    genreLabel: 'Жанр',
     formatLabel: 'Формат аудио',
     phraseLabel: 'Фраза',
     phrasePlaceholder: 'Что озвучить',
@@ -1298,6 +1300,7 @@ export const en: Translations = {
     musicPromptPlaceholder: 'e.g. energetic pop-rock with bright guitars',
     lyricsLabel: 'Lyrics',
     lyricsPlaceholder: 'Enter the song lyrics',
+    genreLabel: 'Genre',
     formatLabel: 'Audio format',
     phraseLabel: 'Phrase',
     phrasePlaceholder: 'What to say',

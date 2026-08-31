@@ -4571,33 +4571,81 @@
   padding: 18px;
 }
 
-.musicaudio-mode-toggle {
+/* Same visual language as the canvas topbar's .mode-switch-pill/.mode-switch-tab (dark divided
+   pill, pink active tab) — kept as its own rule set rather than sharing those classes directly
+   since that pill relies on being absolutely centered over its own topbar parent, a positioning
+   context this panel doesn't have; centered here via align-self on a column flex parent instead. */
+.musicaudio-mode-pill {
+  align-self: center;
+  margin: 20px 0 0;
   display: flex;
-  gap: 4px;
-  padding: 3px;
-  background: var(--c-panel-2);
-  border-radius: 999px;
-  margin-bottom: 8px;
+  align-items: stretch;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--c-divider);
+  overflow: hidden;
 }
 
-.musicaudio-mode-btn {
-  flex: 1;
+.musicaudio-mode-tab {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 6px;
-  padding: 7px 0;
+  padding: 0 16px;
   border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--c-text-dim);
-  font-size: 12px;
+  background: var(--c-panel-2);
+  color: var(--c-text-muted);
+  font-size: 12.5px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
 }
 
-.musicaudio-mode-btn.active {
+.musicaudio-mode-tab:not(:first-child) {
+  border-left: 1px solid var(--c-divider);
+}
+
+.musicaudio-mode-tab:hover {
+  color: var(--c-text);
+}
+
+.musicaudio-mode-tab.active {
   background: var(--c-pink);
+  color: #fff;
+}
+
+.musicaudio-genre-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.musicaudio-genre-btn {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  background: var(--c-panel-2);
+  color: var(--c-text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.15s var(--ease),
+    border-color 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+
+.musicaudio-genre-btn:hover {
+  background: var(--c-panel-3);
+}
+
+.musicaudio-genre-btn.active {
+  background: var(--c-pink);
+  border-color: var(--c-pink);
   color: #fff;
 }
 
@@ -4614,7 +4662,9 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 160px;
+  /* Taller now that TTS_VOICES carries Gemini's full 30-voice catalog rather than a curated 8 —
+     still scrolls past this, just shows more of the list before it needs to. */
+  max-height: 240px;
   overflow-y: auto;
   margin-bottom: 4px;
 }

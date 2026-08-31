@@ -7,7 +7,7 @@ import {
   IconPlay,
   IconRefresh,
 } from './Icons';
-import { AUDIO_FORMATS, TTS_LANGUAGES, TTS_VOICES, type AudioMode } from '../types';
+import { AUDIO_FORMATS, MUSIC_GENRES, TTS_LANGUAGES, TTS_VOICES, type AudioMode } from '../types';
 import { formatGenerationError } from '../errorMessages';
 import { useT } from '../i18n';
 
@@ -39,6 +39,7 @@ export default function MusicAudioPanel({ active }: MusicAudioPanelProps) {
   const t = useT();
   const [mode, setMode] = useState<AudioMode>('music');
   const [musicPrompt, setMusicPrompt] = useState('');
+  const [genre, setGenre] = useState<string | null>(null);
   const [lyrics, setLyrics] = useState('');
   const [format, setFormat] = useState<string>(AUDIO_FORMATS[0]);
   const [phrase, setPhrase] = useState('');
@@ -111,9 +112,10 @@ export default function MusicAudioPanel({ active }: MusicAudioPanelProps) {
     setError('');
     setResult(null);
     try {
+      const musicStylePrompt = [genre, musicPrompt.trim()].filter(Boolean).join(', ');
       const url = await window.api.generateAudio(
         mode === 'music'
-          ? { mode, prompt: musicPrompt.trim(), lyrics: lyrics.trim(), format }
+          ? { mode, prompt: musicStylePrompt, lyrics: lyrics.trim(), format }
           : { mode, text: phrase.trim(), prompt: speechPrompt.trim(), voice, language }
       );
       setResult({ url, mode });
@@ -144,23 +146,22 @@ export default function MusicAudioPanel({ active }: MusicAudioPanelProps) {
 
   return (
     <div className={`musicaudio-panel ${active ? '' : 'musicaudio-hidden'}`}>
+      <div className="musicaudio-mode-pill">
+        <button
+          className={`musicaudio-mode-tab ${mode === 'music' ? 'active' : ''}`}
+          onClick={() => switchMode('music')}
+        >
+          <IconMusic size={13} /> {t.musicAudio.modeToggleMusic}
+        </button>
+        <button
+          className={`musicaudio-mode-tab ${mode === 'speech' ? 'active' : ''}`}
+          onClick={() => switchMode('speech')}
+        >
+          <IconMic size={13} /> {t.musicAudio.modeToggleSpeech}
+        </button>
+      </div>
       <div className="musicaudio-layout">
         <div className="musicaudio-side">
-          <div className="musicaudio-mode-toggle">
-            <button
-              className={`musicaudio-mode-btn ${mode === 'music' ? 'active' : ''}`}
-              onClick={() => switchMode('music')}
-            >
-              <IconMusic size={13} /> {t.musicAudio.modeToggleMusic}
-            </button>
-            <button
-              className={`musicaudio-mode-btn ${mode === 'speech' ? 'active' : ''}`}
-              onClick={() => switchMode('speech')}
-            >
-              <IconMic size={13} /> {t.musicAudio.modeToggleSpeech}
-            </button>
-          </div>
-
           {mode === 'music' ? (
             <>
               <span className="field-label">{t.musicAudio.musicPromptLabel}</span>
@@ -170,6 +171,19 @@ export default function MusicAudioPanel({ active }: MusicAudioPanelProps) {
                 onChange={(e) => setMusicPrompt(e.target.value)}
                 placeholder={t.musicAudio.musicPromptPlaceholder}
               />
+              <span className="field-label">{t.musicAudio.genreLabel}</span>
+              <div className="musicaudio-genre-grid">
+                {MUSIC_GENRES.map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    className={`musicaudio-genre-btn ${genre === g ? 'active' : ''}`}
+                    onClick={() => setGenre(genre === g ? null : g)}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
               <span className="field-label">{t.musicAudio.lyricsLabel}</span>
               <textarea
                 className="node-textarea musicaudio-textarea musicaudio-lyrics"
