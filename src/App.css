@@ -1783,16 +1783,15 @@
   overflow: hidden;
 }
 
-/* Left-side video insert, cropped to the source clip's own 400:508 aspect ratio rather than
-   whatever height the text column ends up needing. */
+/* Left-side video insert, flush against the card's left/top/bottom edges (no margin/gap) —
+   stretches to the card's full height rather than centering at its own aspect-ratio height, so
+   there's no blank strip above/below it either. object-fit: cover on the video crops the
+   source clip to fill that box, same as before. .start-screen-inner's own overflow: hidden +
+   border-radius clips this panel's outer corners, so it needs no radius of its own. */
 .start-screen-video-panel {
   width: 200px;
   flex-shrink: 0;
-  aspect-ratio: 400 / 508;
-  align-self: center;
-  margin: 16px 0 16px 16px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
+  align-self: stretch;
   background: #000;
 }
 
