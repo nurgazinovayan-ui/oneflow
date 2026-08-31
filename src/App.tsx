@@ -378,27 +378,42 @@ function Canvas() {
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const [bgRemoverOpen, setBgRemoverOpen] = useState(false);
 
-  // Dock-style hover magnification for the canvas-toolbar's node-add icons — icons scale up as
-  // the cursor nears them and taper off with distance, like a macOS dock. Applied by writing
-  // `transform` directly on the DOM nodes on every mousemove rather than through React state, so
-  // the effect stays smooth at pointer-move frequency without re-rendering the tree; the actual
-  // spring-back easing lives in the `.canvas-toolbar .toolbar-icon-btn` transition in App.css.
-  const NODE_MENU_MAGNIFY_RADIUS = 90;
-  const NODE_MENU_MAGNIFY_SCALE = 0.32;
-  const handleNodeMenuMouseMove = (e: ReactMouseEvent<HTMLDivElement>) => {
-    const icons = e.currentTarget.querySelectorAll<HTMLButtonElement>('.toolbar-icon-btn');
-    icons.forEach((icon) => {
-      const rect = icon.getBoundingClientRect();
+  // Dock-style hover magnification for the canvas-toolbar's node-add icons and adaptation
+  // preset chips — items scale up as the cursor nears them and taper off with distance, like a
+  // macOS dock. Applied by writing `transform`/`margin` directly on the DOM nodes on every
+  // mousemove rather than through React state, so the effect stays smooth at pointer-move
+  // frequency without re-rendering the tree. The margin push (equal to half the extra visual
+  // width the scale-up adds) reserves the matching amount of flex-row space so neighbors get
+  // shouldered apart instead of being overlapped by the growing item — mirrors how a real dock
+  // grows an item's actual box size to make room, without us having to animate width/font-size
+  // separately for icon-only vs. text+icon buttons. Any element marked `data-dock-item` inside
+  // a container using these handlers participates; when it's wrapped in a `data-dock-wrap`
+  // (used by the icon buttons so a name label can float below without affecting item spacing),
+  // the margin compensation is applied to that wrapper instead of the item itself. The actual
+  // spring-back easing lives in the `.canvas-toolbar` transition rules in App.css.
+  const DOCK_MAGNIFY_RADIUS = 90;
+  const DOCK_MAGNIFY_SCALE = 0.32;
+  const handleDockMouseMove = (e: ReactMouseEvent<HTMLDivElement>) => {
+    const items = e.currentTarget.querySelectorAll<HTMLElement>('[data-dock-item]');
+    items.forEach((item) => {
+      const rect = item.getBoundingClientRect();
       const center = rect.left + rect.width / 2;
       const distance = Math.abs(e.clientX - center);
-      const proximity = Math.max(0, 1 - distance / NODE_MENU_MAGNIFY_RADIUS);
-      const scale = 1 + proximity * NODE_MENU_MAGNIFY_SCALE;
-      icon.style.transform = `translateY(${-proximity * 5}px) scale(${scale})`;
+      const proximity = Math.max(0, 1 - distance / DOCK_MAGNIFY_RADIUS);
+      const scale = 1 + proximity * DOCK_MAGNIFY_SCALE;
+      item.style.transform = `translateY(${-proximity * 5}px) scale(${scale})`;
+      const spacer = item.closest<HTMLElement>('[data-dock-wrap]') ?? item;
+      const extraHalfWidth = (rect.width * (scale - 1)) / 2;
+      spacer.style.marginLeft = `${extraHalfWidth}px`;
+      spacer.style.marginRight = `${extraHalfWidth}px`;
     });
   };
-  const handleNodeMenuMouseLeave = (e: ReactMouseEvent<HTMLDivElement>) => {
-    e.currentTarget.querySelectorAll<HTMLButtonElement>('.toolbar-icon-btn').forEach((icon) => {
-      icon.style.transform = '';
+  const handleDockMouseLeave = (e: ReactMouseEvent<HTMLDivElement>) => {
+    e.currentTarget.querySelectorAll<HTMLElement>('[data-dock-item]').forEach((item) => {
+      item.style.transform = '';
+      const spacer = item.closest<HTMLElement>('[data-dock-wrap]') ?? item;
+      spacer.style.marginLeft = '';
+      spacer.style.marginRight = '';
     });
   };
   const [upscalerOpen, setUpscalerOpen] = useState(false);
@@ -1087,37 +1102,49 @@ function Canvas() {
           <div className="canvas-toolbar">
             <div
               className="toolbar-group"
-              onMouseMove={handleNodeMenuMouseMove}
-              onMouseLeave={handleNodeMenuMouseLeave}
+              onMouseMove={handleDockMouseMove}
+              onMouseLeave={handleDockMouseLeave}
             >
               {SIDEBAR_ADD_NODE_OPTIONS.map((opt) => {
                 const Icon = opt.icon;
                 return (
-                  <button
-                    key={opt.type}
-                    className="toolbar-icon-btn"
-                    onClick={() => addNode(opt.type)}
-                    title={opt.label}
-                  >
-                    <Icon />
-                  </button>
+                  <div key={opt.type} className="toolbar-icon-wrap" data-dock-wrap>
+                    <button
+                      className="toolbar-icon-btn"
+                      onClick={() => addNode(opt.type)}
+                      title={opt.label}
+                      data-dock-item
+                    >
+                      <Icon />
+                    </button>
+                    <span className="toolbar-icon-label">{opt.label}</span>
+                  </div>
                 );
               })}
-              <button
-                className="toolbar-icon-btn ai-assistant-btn"
-                onClick={() => setAiAssistantOpen(true)}
-                title={t.nodeLabels.aiAssistantTooltip}
-              >
-                <IconChat />
-              </button>
+              <div className="toolbar-icon-wrap" data-dock-wrap>
+                <button
+                  className="toolbar-icon-btn ai-assistant-btn"
+                  onClick={() => setAiAssistantOpen(true)}
+                  title={t.nodeLabels.aiAssistantTooltip}
+                  data-dock-item
+                >
+                  <IconChat />
+                </button>
+                <span className="toolbar-icon-label">{t.nodeLabels.aiAssistantTooltip}</span>
+              </div>
             </div>
             <div className="toolbar-divider" />
-            <div className="toolbar-group">
+            <div
+              className="toolbar-group"
+              onMouseMove={handleDockMouseMove}
+              onMouseLeave={handleDockMouseLeave}
+            >
               {ADAPT_PRESETS.map((preset) => (
                 <button
                   key={preset.key}
                   className="toolbar-label-btn"
                   onClick={() => addAdaptWithPreset(preset.key)}
+                  data-dock-item
                 >
                   <IconCrop size={13} />{' '}
                   {preset.key === 'RSYA' ? t.nodes.modelMeta.yandexNetwork : preset.label}

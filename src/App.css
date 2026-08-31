@@ -294,16 +294,61 @@
   transform: translateY(0);
 }
 
-/* Dock-style hover magnification (canvas-toolbar's node-add icons only — see App.tsx
-   handleNodeMenuMouseMove/handleNodeMenuMouseLeave, which drive `transform` directly).
-   Spring-like overshoot on the way up, faster settle on the way back down; transform-origin
-   anchors growth to the bottom of the icon so it reads as "growing up" like a dock rather than
-   growing from its center. */
-.canvas-toolbar .toolbar-icon-btn {
+/* Dock-style hover magnification (canvas-toolbar's node-add icons and adaptation preset chips
+   only — see App.tsx handleDockMouseMove/handleDockMouseLeave, which drive `transform`/`margin`
+   directly). Spring-like overshoot on the way up, faster settle on the way back down;
+   transform-origin anchors growth to the bottom of the item so it reads as "growing up" like a
+   dock rather than growing from its center. The margin transition matches the transform's
+   timing so the space reserved for a growing neighbor opens up in step with it, instead of the
+   neighbor jumping into place. */
+.canvas-toolbar .toolbar-icon-btn,
+.canvas-toolbar .toolbar-label-btn {
   transform-origin: center bottom;
   transition:
     background 0.15s var(--ease),
     transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.canvas-toolbar .toolbar-icon-wrap,
+.canvas-toolbar .toolbar-label-btn {
+  transition: margin 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Flex item in place of the button itself so .toolbar-icon-label can float below without being
+   counted in the button's own size (which the hover-magnify JS reads via getBoundingClientRect
+   to compute how much extra space to reserve). */
+.toolbar-icon-wrap {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+}
+
+/* The button's name, hidden until hover — see the "снизу" (from below) placement the user asked
+   for: it sits just under the icon rather than above it, since this toolbar already sits at the
+   very top of the canvas and a label above would spill into the topbar. */
+.toolbar-icon-label {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translate(-50%, -6px);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(15, 15, 18, 0.92);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 0.15s var(--ease),
+    transform 0.15s var(--ease);
+  z-index: 10;
+}
+
+.toolbar-icon-wrap:hover .toolbar-icon-label {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 /* DSP/settings/about/avatar/budget in the app's own top-right chrome read as plain icons at
