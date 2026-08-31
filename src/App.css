@@ -1753,45 +1753,26 @@
   color: #ff96c2;
 }
 
-/* Post-login onboarding — a small floating window over the working canvas (not a takeover).
-   The outer layer only catches clicks (transparent) so the canvas stays visible around the
-   window; the panel itself is a solid dark surface (the app's dark-theme panel color, #111111
-   — same shade as --c-panel's dark-theme value, but a fixed hex rather than the variable) so
-   it stays dark even when the app's own theme toggle is set to light. This isn't just cosmetic:
-   every text color inside (.start-screen-title, tile labels/hints, nav items) is a hardcoded
-   light color built for a dark backdrop, replacing the old translucent glass tint that stayed
-   dark in both themes for the same reason — a theme-following background here would turn white
-   in light mode and make that text unreadable. */
+/* Post-login onboarding — a small floating window over the working canvas (not a takeover),
+   now paired with a full-height video strip pinned to the left edge of the whole viewport
+   (outside/independent of the modal card) rather than a cropped insert inside it. The video
+   side is a solid opaque fill — it deliberately blocks the canvas behind it, unlike
+   .start-screen-content-area, which stays transparent so the canvas is still visible around
+   the floating card, same as before this side panel existed. */
 .start-screen {
   position: fixed;
   inset: 0;
   z-index: 60;
   display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.start-screen-inner {
-  width: 100%;
-  max-width: 760px;
-  border-radius: var(--radius-lg);
-  background: #111111;
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  flex-direction: row;
   align-items: stretch;
-  overflow: hidden;
 }
 
-/* Left-side video insert, cropped to the source clip's own 400:508 aspect ratio rather than
-   whatever height the text column ends up needing. */
-.start-screen-video-panel {
-  width: 200px;
+/* Fixed width rather than the source clip's own 400:508 ratio — "fills the side solidly" means
+   cropping the video to whatever height the viewport has, not letterboxing/pillarboxing it. */
+.start-screen-video-side {
+  width: 400px;
   flex-shrink: 0;
-  aspect-ratio: 400 / 508;
-  align-self: center;
-  margin: 16px 0 16px 16px;
-  border-radius: var(--radius-md);
+  height: 100%;
   overflow: hidden;
   background: #000;
 }
@@ -1803,10 +1784,28 @@
   display: block;
 }
 
-.start-screen-main {
+.start-screen-content-area {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Solid dark surface (the app's dark-theme panel color, #111111 — same shade as --c-panel's
+   dark-theme value, but a fixed hex rather than the variable) so it stays dark even when the
+   app's own theme toggle is set to light. This isn't just cosmetic: every text color inside
+   (.start-screen-title, tile labels/hints, nav items) is a hardcoded light color built for a
+   dark backdrop — a theme-following background here would turn white (and that text
+   unreadable) in light mode. */
+.start-screen-inner {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 24px;
   padding: 20px 22px;
+  border-radius: var(--radius-lg);
+  background: #111111;
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   gap: 16px;

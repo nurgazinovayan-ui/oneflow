@@ -50,18 +50,18 @@ export default function StartScreen({ onChoose, onChooseBusiness, onAutoCreate }
 
   return (
     <div className="start-screen">
-      <div className="start-screen-inner">
-        <div className="start-screen-video-panel">
-          <video
-            className="start-screen-video"
-            src="/start-screen-video.mp4"
-            autoPlay
-            loop
-            muted
-            playsInline
-          />
-        </div>
-        <div className="start-screen-main">
+      <div className="start-screen-video-side">
+        <video
+          className="start-screen-video"
+          src="/start-screen-video.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+        />
+      </div>
+      <div className="start-screen-content-area">
+        <div className="start-screen-inner">
           <h1 className="start-screen-title">{t.startScreen.greeting}</h1>
           <div className="start-screen-layout">
             <div className="start-screen-sidebar">
