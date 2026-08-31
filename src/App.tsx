@@ -62,9 +62,6 @@ import {
   IconRocket,
   IconTool,
   IconMusic,
-  IconChevronLeft,
-  IconChevronRight,
-  IconDotsVertical,
 } from './components/Icons';
 import {
   VIDEO_MODEL_META,
@@ -389,7 +386,6 @@ function Canvas() {
     flowPosition: { x: number; y: number };
   } | null>(null);
   const positionRef = useRef({ x: 300, y: 300 });
-  const projectTabsRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition, fitView } = useReactFlow();
 
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? projects[0];
@@ -1029,7 +1025,7 @@ function Canvas() {
         </div>
         {mainView === 'canvas' && (
         <div className="project-tabs-row">
-          <div className="project-tabs" ref={projectTabsRef}>
+          <div className="project-tabs">
             {projects.map((p) => (
               <div
                 key={p.id}
@@ -1075,28 +1071,6 @@ function Canvas() {
               title={t.toolbar.newProjectTooltip}
             >
               +
-            </button>
-          </div>
-          <div className="project-fixed-actions">
-            <button
-              className="toolbar-icon-btn toolbar-icon-btn-ghost"
-              onClick={() => projectTabsRef.current?.scrollBy({ left: -220, behavior: 'smooth' })}
-              title={t.toolbar.prevProjectsTooltip}
-            >
-              <IconChevronLeft size={16} />
-            </button>
-            <button
-              className="toolbar-icon-btn toolbar-icon-btn-ghost"
-              onClick={() => projectTabsRef.current?.scrollBy({ left: 220, behavior: 'smooth' })}
-              title={t.toolbar.nextProjectsTooltip}
-            >
-              <IconChevronRight size={16} />
-            </button>
-            <button
-              className="toolbar-icon-btn toolbar-icon-btn-ghost"
-              title={t.toolbar.projectOptionsTooltip}
-            >
-              <IconDotsVertical size={17} />
             </button>
           </div>
         </div>
