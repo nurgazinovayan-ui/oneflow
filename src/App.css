@@ -294,21 +294,6 @@
   transform: translateY(-1px);
 }
 
-/* Add-node icons — light bordered circle per the UI kit's ".round-tools .icon-button" (white
-   fill, not a dark chip), matching the provider chips' .canvas-toolbar override just below.
-   Excludes .ai-assistant-btn, which keeps its own solid accent highlight (see that rule). */
-.canvas-toolbar .toolbar-icon-btn:not(.ai-assistant-btn) {
-  background: #ffffff;
-  border: 1px solid var(--chrome-border);
-  color: var(--chrome-text);
-}
-
-.canvas-toolbar .toolbar-icon-btn:not(.ai-assistant-btn):hover {
-  background: var(--chrome-surface-muted);
-  border-color: var(--chrome-border-strong);
-  transform: none;
-}
-
 .toolbar-icon-btn:active {
   transform: translateY(0);
 }
@@ -350,22 +335,20 @@
 }
 
 /* Business-preset chips (BYYD/Discovery/GDN/...) — bordered light chip per the UI kit's
-   ".provider-chip" (white fill, not the flat text-menu look the same class gets in
-   .toolbar-left, and not a dark chip either — the kit's own live demo, not just its mockup
-   screenshot, keeps these white). */
+   ".provider-chip", not the flat text-menu look the same class gets in .toolbar-left. */
 .canvas-toolbar .toolbar-label-btn {
   height: 32px;
   padding: 0 10px;
   border: 1px solid var(--chrome-border);
-  background: #ffffff;
-  color: var(--chrome-text);
+  background: var(--c-panel-2);
+  color: var(--c-text);
   font-size: 11.5px;
   font-weight: 700;
 }
 
 .canvas-toolbar .toolbar-label-btn:hover {
   border-color: var(--chrome-border-strong);
-  background: var(--chrome-surface-muted);
+  background: var(--c-panel-3);
 }
 
 /* "Ghost" pill from the reference kit — thin outline, transparent until hovered, rather than
