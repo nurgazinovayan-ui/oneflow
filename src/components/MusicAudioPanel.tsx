@@ -10,6 +10,7 @@ import {
 import { AUDIO_FORMATS, MUSIC_GENRES, TTS_LANGUAGES, TTS_VOICES, type AudioMode } from '../types';
 import { formatGenerationError } from '../errorMessages';
 import { useT } from '../i18n';
+import { handleDockMouseMove, handleDockMouseLeave } from '../dockHover';
 
 interface MusicAudioPanelProps {
   active: boolean;
@@ -146,16 +147,22 @@ export default function MusicAudioPanel({ active }: MusicAudioPanelProps) {
 
   return (
     <div className={`musicaudio-panel ${active ? '' : 'musicaudio-hidden'}`}>
-      <div className="musicaudio-mode-pill">
+      <div
+        className="musicaudio-mode-toolbar"
+        onMouseMove={handleDockMouseMove}
+        onMouseLeave={handleDockMouseLeave}
+      >
         <button
-          className={`musicaudio-mode-tab ${mode === 'music' ? 'active' : ''}`}
+          className={`toolbar-label-btn ${mode === 'music' ? 'active' : ''}`}
           onClick={() => switchMode('music')}
+          data-dock-item
         >
           <IconMusic size={13} /> {t.musicAudio.modeToggleMusic}
         </button>
         <button
-          className={`musicaudio-mode-tab ${mode === 'speech' ? 'active' : ''}`}
+          className={`toolbar-label-btn ${mode === 'speech' ? 'active' : ''}`}
           onClick={() => switchMode('speech')}
+          data-dock-item
         >
           <IconMic size={13} /> {t.musicAudio.modeToggleSpeech}
         </button>

@@ -294,15 +294,16 @@
   transform: translateY(0);
 }
 
-/* Dock-style hover magnification (canvas-toolbar's node-add icons and adaptation preset chips
-   only — see App.tsx handleDockMouseMove/handleDockMouseLeave, which drive `transform`/`margin`
-   directly). Spring-like overshoot on the way up, faster settle on the way back down;
-   transform-origin anchors growth to the bottom of the item so it reads as "growing up" like a
-   dock rather than growing from its center. The margin transition matches the transform's
-   timing so the space reserved for a growing neighbor opens up in step with it, instead of the
-   neighbor jumping into place. */
+/* Dock-style hover magnification (canvas-toolbar's node-add icons and adaptation preset chips,
+   plus MusicAudioPanel's Music/Speech switch on its own matte plaque — see src/dockHover.ts,
+   which drives `transform`/`margin` directly). Spring-like overshoot on the way up, faster
+   settle on the way back down; transform-origin anchors growth to the bottom of the item so it
+   reads as "growing up" like a dock rather than growing from its center. The margin transition
+   matches the transform's timing so the space reserved for a growing neighbor opens up in step
+   with it, instead of the neighbor jumping into place. */
 .canvas-toolbar .toolbar-icon-btn,
-.canvas-toolbar .toolbar-label-btn {
+.canvas-toolbar .toolbar-label-btn,
+.musicaudio-mode-toolbar .toolbar-label-btn {
   transform-origin: center bottom;
   transition:
     background 0.15s var(--ease),
@@ -310,7 +311,8 @@
 }
 
 .canvas-toolbar .toolbar-icon-wrap,
-.canvas-toolbar .toolbar-label-btn {
+.canvas-toolbar .toolbar-label-btn,
+.musicaudio-mode-toolbar .toolbar-label-btn {
   transition: margin 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -4571,49 +4573,28 @@
   padding: 18px;
 }
 
-/* Same visual language as the canvas topbar's .mode-switch-pill/.mode-switch-tab (dark divided
-   pill, pink active tab) — kept as its own rule set rather than sharing those classes directly
-   since that pill relies on being absolutely centered over its own topbar parent, a positioning
-   context this panel doesn't have; centered here via align-self on a column flex parent instead. */
-.musicaudio-mode-pill {
+/* Same matte-glass plaque as the canvas topbar's .canvas-toolbar, and its buttons reuse
+   .toolbar-label-btn directly (same chip look, same dock-hover magnify treatment below) — kept
+   as its own container class rather than reusing .canvas-toolbar itself since that one is
+   absolutely positioned over the canvas area, a positioning context this panel doesn't have;
+   centered here via align-self on a column flex parent instead, sitting in normal flow. */
+.musicaudio-mode-toolbar {
   align-self: center;
   margin: 20px 0 0;
   display: flex;
-  align-items: stretch;
-  height: 34px;
-  flex-shrink: 0;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--c-divider);
-  overflow: hidden;
-}
-
-.musicaudio-mode-tab {
-  display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 16px;
-  border: none;
-  background: var(--c-panel-2);
-  color: var(--c-text-muted);
-  font-size: 12.5px;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    background 0.15s var(--ease),
-    color 0.15s var(--ease);
+  padding: 6px;
+  border-radius: var(--radius-md);
+  background: rgba(15, 15, 18, 0.62);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: var(--shadow-md);
 }
 
-.musicaudio-mode-tab:not(:first-child) {
-  border-left: 1px solid var(--c-divider);
-}
-
-.musicaudio-mode-tab:hover {
-  color: var(--c-text);
-}
-
-.musicaudio-mode-tab.active {
+.musicaudio-mode-toolbar .toolbar-label-btn.active {
   background: var(--c-pink);
+  border-color: var(--c-pink);
   color: #fff;
 }
 
