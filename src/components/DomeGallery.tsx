@@ -34,6 +34,8 @@ interface DomeGalleryProps {
   imageBorderRadius?: string;
   openedImageBorderRadius?: string;
   grayscale?: boolean;
+  autoRotate?: boolean;
+  autoRotateSpeed?: number;
 }
 
 const DEFAULT_IMAGES: ImageItem[] = [
@@ -157,6 +159,8 @@ export default function DomeGallery({
   imageBorderRadius = '30px',
   openedImageBorderRadius = '30px',
   grayscale = true,
+  autoRotate = false,
+  autoRotateSpeed = 0.02,
 }: DomeGalleryProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
@@ -330,6 +334,28 @@ export default function DomeGallery({
     },
     [dragDampening, maxVerticalRotationDeg, stopInertia]
   );
+
+  // Slow idle spin around Y — pauses whenever the user is actually driving the sphere (drag,
+  // drag-release inertia, or an enlarged tile) so it never fights those refs' own writes to
+  // rotationRef, then just resumes from wherever rotation was left off.
+  const autoRotateRAF = useRef<number | null>(null);
+  useEffect(() => {
+    if (!autoRotate || autoRotateSpeed === 0) return;
+    const step = () => {
+      if (!draggingRef.current && !inertiaRAF.current && !focusedElRef.current) {
+        const nextY = wrapAngleSigned(rotationRef.current.y + autoRotateSpeed);
+        rotationRef.current = { x: rotationRef.current.x, y: nextY };
+        applyTransform(rotationRef.current.x, nextY);
+      }
+      autoRotateRAF.current = requestAnimationFrame(step);
+    };
+    autoRotateRAF.current = requestAnimationFrame(step);
+    return () => {
+      if (autoRotateRAF.current) cancelAnimationFrame(autoRotateRAF.current);
+      autoRotateRAF.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRotate, autoRotateSpeed]);
 
   useGesture(
     {
