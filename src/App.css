@@ -1753,10 +1753,15 @@
   color: #ff96c2;
 }
 
-/* Post-login onboarding — a small floating window over the working canvas (not a takeover),
-   using the exact frosted-glass material as .canvas-toolbar ("плашка с кнопками нод") so it
-   reads as the same chrome system. The outer layer only catches clicks (transparent) so the
-   canvas stays visible around the window; the glass look lives on .start-screen-inner. */
+/* Post-login onboarding — a small floating window over the working canvas (not a takeover).
+   The outer layer only catches clicks (transparent) so the canvas stays visible around the
+   window; the panel itself is a solid dark surface (the app's dark-theme panel color, #111111
+   — same shade as --c-panel's dark-theme value, but a fixed hex rather than the variable) so
+   it stays dark even when the app's own theme toggle is set to light. This isn't just cosmetic:
+   every text color inside (.start-screen-title, tile labels/hints, nav items) is a hardcoded
+   light color built for a dark backdrop, replacing the old translucent glass tint that stayed
+   dark in both themes for the same reason — a theme-following background here would turn white
+   in light mode and make that text unreadable. */
 .start-screen {
   position: fixed;
   inset: 0;
@@ -1768,13 +1773,40 @@
 
 .start-screen-inner {
   width: 100%;
-  max-width: 600px;
-  padding: 20px 22px;
+  max-width: 760px;
   border-radius: var(--radius-lg);
-  background: rgba(15, 15, 18, 0.62);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
+  background: #111111;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+/* Left-side video insert, cropped to the source clip's own 400:508 aspect ratio rather than
+   whatever height the text column ends up needing. */
+.start-screen-video-panel {
+  width: 200px;
+  flex-shrink: 0;
+  aspect-ratio: 400 / 508;
+  align-self: center;
+  margin: 16px 0 16px 16px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #000;
+}
+
+.start-screen-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.start-screen-main {
+  flex: 1;
+  min-width: 0;
+  padding: 20px 22px;
   display: flex;
   flex-direction: column;
   gap: 16px;
