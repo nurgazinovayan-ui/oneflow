@@ -246,14 +246,18 @@
   flex-wrap: wrap;
 }
 
+/* Send/settings/info/avatar — plain white icons, no border, so they stay visible against the
+   top-toolbar's dark background (the #17171b fixed dark color here was tuned for that row's old
+   light background and had gone invisible once it turned dark). */
 .toolbar-right .toolbar-icon-btn-ghost,
 .toolbar-right .toolbar-avatar-btn {
-  color: #17171b;
+  color: #ffffff;
+  border: none;
 }
 
 .toolbar-right .toolbar-icon-btn-ghost:hover,
 .toolbar-right .toolbar-avatar-btn:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .toolbar-divider {
@@ -321,6 +325,13 @@
     transform 0.15s var(--ease);
 }
 
+/* File/Templates/Tools specifically go flat (no resting fill, still bordered) — the same
+   .toolbar-label-btn class is also used for canvas-toolbar's business-preset chips, which keep
+   their solid background. */
+.toolbar-menu-wrapper .toolbar-label-btn {
+  background: transparent;
+}
+
 .toolbar-label-btn:hover {
   background: var(--c-panel-3);
   transform: translateY(-1px);
@@ -339,7 +350,7 @@
   padding: 0 16px;
   border-radius: 999px;
   background: transparent;
-  border: 1px solid var(--c-pink-dim);
+  border: none;
   color: var(--c-pink);
   font-size: 12.5px;
   font-weight: 800;
@@ -1339,6 +1350,14 @@
   font-size: 11.5px;
   background: var(--c-error-bg);
   border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+}
+
+.reload-guard-saved-hint {
+  color: var(--c-pink);
+  font-size: 11.5px;
+  background: var(--c-pink-dim);
   border-radius: var(--radius-sm);
   padding: 6px 8px;
 }

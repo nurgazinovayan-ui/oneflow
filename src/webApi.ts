@@ -322,6 +322,21 @@ function backupToYandexDisk(urls: string[], prefix: string): void {
   });
 }
 
+// Used by ReloadGuard's "Save" button — unlike backupToYandexDisk (fire-and-forget for
+// generated media), the caller here needs to know whether the save actually succeeded before
+// deciding to go ahead with the reload, so this lets callFunction's rejection propagate instead
+// of swallowing it.
+export async function saveProjectToYandexDisk(project: {
+  name: string;
+  nodes: unknown;
+  edges: unknown;
+}): Promise<void> {
+  const json = JSON.stringify(project, null, 2);
+  const safeName = (project.name || 'project').replace(/[\\/:*?"<>|]/g, '_');
+  const fileName = `${safeName}-${Date.now()}.aystudio.json`;
+  await callFunction('yandex-project-upload', { fileName, content: json });
+}
+
 export function installWebApi(): void {
   const api: NodeApi = {
     // API key management doesn't apply on web — the Replicate key lives only as an Edge

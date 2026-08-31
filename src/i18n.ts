@@ -284,6 +284,15 @@ export interface Translations {
     submittingBtn: string;
     noCodeError: string;
   };
+  reloadGuard: {
+    title: string;
+    reloadBtn: string;
+    saveBtn: string;
+    savingBtn: string;
+    savedHint: string;
+    notConnectedError: string;
+    saveError: string;
+  };
   textWork: {
     newDialog: string;
     dialogName: (n: number) => string;
@@ -790,6 +799,15 @@ export const ru: Translations = {
     submitBtn: 'Подтвердить',
     submittingBtn: 'Подключаю...',
     noCodeError: 'Вставьте код.',
+  },
+  reloadGuard: {
+    title: 'При перезагрузке пропадёт проект. Сохранить его?',
+    reloadBtn: 'Перезагрузить',
+    saveBtn: 'Сохранить',
+    savingBtn: 'Сохраняю...',
+    savedHint: 'Проект сохранён на Яндекс Диск',
+    notConnectedError: 'Яндекс Диск не подключён — подключите его в Личном кабинете.',
+    saveError: 'Не удалось сохранить проект.',
   },
   textWork: {
     newDialog: 'Новый диалог',
@@ -1310,6 +1328,15 @@ export const en: Translations = {
     submitBtn: 'Confirm',
     submittingBtn: 'Connecting...',
     noCodeError: 'Paste the code.',
+  },
+  reloadGuard: {
+    title: 'Reloading will lose the project. Save it first?',
+    reloadBtn: 'Reload',
+    saveBtn: 'Save',
+    savingBtn: 'Saving...',
+    savedHint: 'Project saved to Yandex Disk',
+    notConnectedError: 'Yandex Disk isn’t connected — connect it from your account.',
+    saveError: 'Could not save the project.',
   },
   textWork: {
     newDialog: 'New dialog',

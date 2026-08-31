@@ -41,6 +41,7 @@ import BackgroundRemoverModal from './components/BackgroundRemoverModal';
 import UpscalerModal from './components/UpscalerModal';
 import PhotoEditorModal from './components/PhotoEditorModal';
 import StartScreen, { type StartScreenChoice } from './components/StartScreen';
+import ReloadGuard from './components/ReloadGuard';
 import { BUSINESS_PRESET_ORDER, BUSINESS_PRESET_PROMPTS, type BusinessPresetKey } from './businessPresets';
 import {
   IconDocument,
@@ -1162,6 +1163,9 @@ function Canvas() {
           onChooseBusiness={handleStartScreenBusinessChoice}
           onAutoCreate={handleStartScreenAutoCreate}
         />
+      )}
+      {import.meta.env.VITE_WEB_MODE === '1' && (
+        <ReloadGuard projectName={activeProject.name} nodes={nodes} edges={edges} />
       )}
       <AdminMessageToast />
     </div>
