@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -377,6 +377,30 @@ function Canvas() {
   const [templatesMenuOpen, setTemplatesMenuOpen] = useState(false);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const [bgRemoverOpen, setBgRemoverOpen] = useState(false);
+
+  // Dock-style hover magnification for the canvas-toolbar's node-add icons — icons scale up as
+  // the cursor nears them and taper off with distance, like a macOS dock. Applied by writing
+  // `transform` directly on the DOM nodes on every mousemove rather than through React state, so
+  // the effect stays smooth at pointer-move frequency without re-rendering the tree; the actual
+  // spring-back easing lives in the `.canvas-toolbar .toolbar-icon-btn` transition in App.css.
+  const NODE_MENU_MAGNIFY_RADIUS = 90;
+  const NODE_MENU_MAGNIFY_SCALE = 0.32;
+  const handleNodeMenuMouseMove = (e: ReactMouseEvent<HTMLDivElement>) => {
+    const icons = e.currentTarget.querySelectorAll<HTMLButtonElement>('.toolbar-icon-btn');
+    icons.forEach((icon) => {
+      const rect = icon.getBoundingClientRect();
+      const center = rect.left + rect.width / 2;
+      const distance = Math.abs(e.clientX - center);
+      const proximity = Math.max(0, 1 - distance / NODE_MENU_MAGNIFY_RADIUS);
+      const scale = 1 + proximity * NODE_MENU_MAGNIFY_SCALE;
+      icon.style.transform = `translateY(${-proximity * 5}px) scale(${scale})`;
+    });
+  };
+  const handleNodeMenuMouseLeave = (e: ReactMouseEvent<HTMLDivElement>) => {
+    e.currentTarget.querySelectorAll<HTMLButtonElement>('.toolbar-icon-btn').forEach((icon) => {
+      icon.style.transform = '';
+    });
+  };
   const [upscalerOpen, setUpscalerOpen] = useState(false);
   const [photoEditorOpen, setPhotoEditorOpen] = useState(false);
   const [showStartScreen, setShowStartScreen] = useState(true);
@@ -1061,7 +1085,11 @@ function Canvas() {
         </div>
         <div className="canvas-area" onDragOver={onCanvasDragOver} onDrop={onCanvasDrop}>
           <div className="canvas-toolbar">
-            <div className="toolbar-group">
+            <div
+              className="toolbar-group"
+              onMouseMove={handleNodeMenuMouseMove}
+              onMouseLeave={handleNodeMenuMouseLeave}
+            >
               {SIDEBAR_ADD_NODE_OPTIONS.map((opt) => {
                 const Icon = opt.icon;
                 return (

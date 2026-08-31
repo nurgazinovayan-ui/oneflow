@@ -294,6 +294,18 @@
   transform: translateY(0);
 }
 
+/* Dock-style hover magnification (canvas-toolbar's node-add icons only — see App.tsx
+   handleNodeMenuMouseMove/handleNodeMenuMouseLeave, which drive `transform` directly).
+   Spring-like overshoot on the way up, faster settle on the way back down; transform-origin
+   anchors growth to the bottom of the icon so it reads as "growing up" like a dock rather than
+   growing from its center. */
+.canvas-toolbar .toolbar-icon-btn {
+  transform-origin: center bottom;
+  transition:
+    background 0.15s var(--ease),
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 /* DSP/settings/about/avatar/budget in the app's own top-right chrome read as plain icons at
    rest, background appearing only on hover — kept as a modifier (not a change to the base
    rule) since .toolbar-icon-btn is shared with the canvas-toolbar's node buttons, which stay
