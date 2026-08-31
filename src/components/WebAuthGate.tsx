@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { setWebSession, type WebSession } from '../webAuthSession';
 import { installMockApiIfNeeded } from '../mockApi';
 import { useT } from '../i18n';
+import DomeGallery from './DomeGallery';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -180,6 +181,9 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
 
   return (
     <div className="web-auth-gate">
+      <div className="web-auth-gate-bg">
+        <DomeGallery grayscale={false} fit={1} minRadius={950} />
+      </div>
       <div className={`web-auth-toast ${toastVisible ? 'visible' : ''}`}>{toast}</div>
       <div className="web-auth-row">
         <div className="web-auth-window">

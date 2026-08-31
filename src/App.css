@@ -1556,13 +1556,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   background-color: var(--c-canvas-bg);
-  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.15) 1px, transparent 1px);
-  background-size: 20px 20px;
+}
+
+/* Full-bleed DomeGallery backdrop, replacing the old flat dot-grid. Its own position:absolute
+   + z-index establishes a stacking context, so the sphere's internal z-index:9999 (used only
+   while its "enlarge" close animation runs) stays contained in here rather than climbing above
+   .web-auth-row. */
+.web-auth-gate-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
 }
 
 .web-auth-row {
   position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
