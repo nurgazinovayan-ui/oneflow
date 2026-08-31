@@ -167,13 +167,10 @@
   background-color: var(--c-canvas-bg);
 }
 
-/* Logo now lives in .toolbar-left next to the File/Templates/Tools menus rather than in a
-   centered grid column, so this is a plain two-group flex row (left menus+logo, right
-   budget/DSP/icons) instead of the old 1fr-auto-1fr grid. */
 .top-toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   padding: 8px 14px;
   padding-right: 150px;
@@ -205,7 +202,8 @@
 }
 
 /* The 150px padding-right above reserves room for the desktop window's native traffic-light/
-   minimize-maximize-close buttons — nothing occupies that space in a browser tab. */
+   minimize-maximize-close buttons — nothing occupies that space in a browser tab, so it would
+   otherwise pull the grid's centered logo visibly off-center to the left on web. */
 .web-mode .top-toolbar {
   padding-right: 14px;
 }
@@ -484,20 +482,12 @@
   -webkit-app-region: drag;
 }
 
-/* Its own row below .topbar now (previously shared that row with .mode-switch-pill), left-
-   aligned same as before — just no longer competing for space with the mode tabs. */
-.project-tabs-row {
-  display: flex;
-  padding: 4px 12px 8px;
-  background-color: var(--c-canvas-bg);
-  -webkit-app-region: drag;
-}
-
 .project-tabs {
   display: flex;
   align-items: center;
   gap: 4px;
   overflow-x: auto;
+  flex: 1;
   min-width: 0;
   -webkit-app-region: no-drag;
 }
@@ -570,6 +560,13 @@
   color: var(--c-text);
 }
 
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
 
 .budget-bar {
   display: flex;
@@ -624,6 +621,10 @@
    persistent .topbar (not floating over the canvas), same small radius as the other toolbar
    buttons rather than a bordered pill. */
 .mode-switch-pill {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: stretch;
   height: 34px;
@@ -662,10 +663,16 @@
   color: #fff;
 }
 
-/* Sits inline in .topbar next to .mode-switch-pill (canvas mode only) rather than floating over
-   the canvas — still keeps its own matte-glass plaque so it reads as a distinct control
-   surface against the topbar's flat --c-canvas-bg. */
+/* One of the top menus that keeps its shadow (see App.tsx toolbar-usage sites) — and, unlike
+   .top-toolbar/.topbar, keeps its own matte-glass plaque too: it floats directly over the
+   node canvas rather than sitting in a chrome row, so it needs a fill of its own to read as a
+   control surface distinct from whatever's under it as the canvas pans. */
 .canvas-toolbar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -675,8 +682,6 @@
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   box-shadow: var(--shadow-md);
-  overflow-x: auto;
-  min-width: 0;
 }
 
 .react-flow__panel.bottom {

@@ -806,9 +806,6 @@ function Canvas() {
     <div className={`app-shell${import.meta.env.VITE_WEB_MODE === '1' ? ' web-mode' : ''}`}>
       <div className={`top-toolbar${mainView === 'canvas' ? ' dot-grid-bg' : ''}`}>
         <div className="toolbar-left">
-          <div className="toolbar-brand">
-            <Logo className="toolbar-logo" />
-          </div>
           <div className="toolbar-menu-wrapper">
             <button
               className="toolbar-label-btn"
@@ -891,8 +888,10 @@ function Canvas() {
             )}
           </div>
         </div>
+        <div className="toolbar-brand">
+          <Logo className="toolbar-logo" />
+        </div>
         <div className="toolbar-group toolbar-right">
-          <BudgetBar />
           {!subscriptionActive && (
             <button className="toolbar-pay-btn" onClick={() => setPaymentModalOpen(true)}>
               <IconCreditCard size={13} /> {t.paymentModal.topBarBtn}
@@ -939,92 +938,7 @@ function Canvas() {
       </div>
       <div className="main-area">
         <div className={`topbar${mainView === 'canvas' ? ' dot-grid-bg' : ''}`}>
-          <div className="mode-switch-pill">
-            <button
-              className={`mode-switch-tab ${mainView === 'canvas' ? 'active' : ''}`}
-              onClick={() => setMainView('canvas')}
-            >
-              <IconFlow size={13} /> {t.modeSwitch.nodesAndAdapt}
-            </button>
-            <button
-              className={`mode-switch-tab ${mainView === 'generate' ? 'active' : ''}`}
-              onClick={() => setMainView('generate')}
-            >
-              <IconSparkles size={13} /> {t.modeSwitch.quickGeneration}
-            </button>
-            <button
-              className={`mode-switch-tab ${mainView === 'text' ? 'active' : ''}`}
-              onClick={() => setMainView('text')}
-            >
-              <IconChat size={13} /> {t.modeSwitch.textWork}
-            </button>
-            {import.meta.env.VITE_WEB_MODE === '1' && (
-              <button
-                className={`mode-switch-tab ${mainView === 'evaluate' ? 'active' : ''}`}
-                onClick={() => setMainView('evaluate')}
-              >
-                <IconGauge size={13} /> {t.modeSwitch.evaluation}
-              </button>
-            )}
-            {import.meta.env.VITE_WEB_MODE === '1' && (
-              <button
-                className={`mode-switch-tab ${mainView === 'onelaunch' ? 'active' : ''}`}
-                onClick={() => setMainView('onelaunch')}
-              >
-                <IconRocket size={13} /> {t.modeSwitch.oneLaunch}
-              </button>
-            )}
-            {import.meta.env.VITE_WEB_MODE === '1' && (
-              <button
-                className={`mode-switch-tab ${mainView === 'musicaudio' ? 'active' : ''}`}
-                onClick={() => setMainView('musicaudio')}
-              >
-                <IconMusic size={13} /> {t.modeSwitch.musicAudio}
-              </button>
-            )}
-          </div>
           {mainView === 'canvas' && (
-          <div className="canvas-toolbar">
-            <div className="toolbar-group">
-              {SIDEBAR_ADD_NODE_OPTIONS.map((opt) => {
-                const Icon = opt.icon;
-                return (
-                  <button
-                    key={opt.type}
-                    className="toolbar-icon-btn"
-                    onClick={() => addNode(opt.type)}
-                    title={opt.label}
-                  >
-                    <Icon />
-                  </button>
-                );
-              })}
-              <button
-                className="toolbar-icon-btn ai-assistant-btn"
-                onClick={() => setAiAssistantOpen(true)}
-                title={t.nodeLabels.aiAssistantTooltip}
-              >
-                <IconChat />
-              </button>
-            </div>
-            <div className="toolbar-divider" />
-            <div className="toolbar-group">
-              {ADAPT_PRESETS.map((preset) => (
-                <button
-                  key={preset.key}
-                  className="toolbar-label-btn"
-                  onClick={() => addAdaptWithPreset(preset.key)}
-                >
-                  <IconCrop size={13} />{' '}
-                  {preset.key === 'RSYA' ? t.nodes.modelMeta.yandexNetwork : preset.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          )}
-        </div>
-        {mainView === 'canvas' && (
-        <div className="project-tabs-row">
           <div className="project-tabs">
             {projects.map((p) => (
               <div
@@ -1073,9 +987,93 @@ function Canvas() {
               +
             </button>
           </div>
+          )}
+          <div className="mode-switch-pill">
+            <button
+              className={`mode-switch-tab ${mainView === 'canvas' ? 'active' : ''}`}
+              onClick={() => setMainView('canvas')}
+            >
+              <IconFlow size={13} /> {t.modeSwitch.nodesAndAdapt}
+            </button>
+            <button
+              className={`mode-switch-tab ${mainView === 'generate' ? 'active' : ''}`}
+              onClick={() => setMainView('generate')}
+            >
+              <IconSparkles size={13} /> {t.modeSwitch.quickGeneration}
+            </button>
+            <button
+              className={`mode-switch-tab ${mainView === 'text' ? 'active' : ''}`}
+              onClick={() => setMainView('text')}
+            >
+              <IconChat size={13} /> {t.modeSwitch.textWork}
+            </button>
+            {import.meta.env.VITE_WEB_MODE === '1' && (
+              <button
+                className={`mode-switch-tab ${mainView === 'evaluate' ? 'active' : ''}`}
+                onClick={() => setMainView('evaluate')}
+              >
+                <IconGauge size={13} /> {t.modeSwitch.evaluation}
+              </button>
+            )}
+            {import.meta.env.VITE_WEB_MODE === '1' && (
+              <button
+                className={`mode-switch-tab ${mainView === 'onelaunch' ? 'active' : ''}`}
+                onClick={() => setMainView('onelaunch')}
+              >
+                <IconRocket size={13} /> {t.modeSwitch.oneLaunch}
+              </button>
+            )}
+            {import.meta.env.VITE_WEB_MODE === '1' && (
+              <button
+                className={`mode-switch-tab ${mainView === 'musicaudio' ? 'active' : ''}`}
+                onClick={() => setMainView('musicaudio')}
+              >
+                <IconMusic size={13} /> {t.modeSwitch.musicAudio}
+              </button>
+            )}
+          </div>
+          <div className="topbar-right">
+            <BudgetBar />
+          </div>
         </div>
-        )}
         <div className="canvas-area" onDragOver={onCanvasDragOver} onDrop={onCanvasDrop}>
+          <div className="canvas-toolbar">
+            <div className="toolbar-group">
+              {SIDEBAR_ADD_NODE_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                return (
+                  <button
+                    key={opt.type}
+                    className="toolbar-icon-btn"
+                    onClick={() => addNode(opt.type)}
+                    title={opt.label}
+                  >
+                    <Icon />
+                  </button>
+                );
+              })}
+              <button
+                className="toolbar-icon-btn ai-assistant-btn"
+                onClick={() => setAiAssistantOpen(true)}
+                title={t.nodeLabels.aiAssistantTooltip}
+              >
+                <IconChat />
+              </button>
+            </div>
+            <div className="toolbar-divider" />
+            <div className="toolbar-group">
+              {ADAPT_PRESETS.map((preset) => (
+                <button
+                  key={preset.key}
+                  className="toolbar-label-btn"
+                  onClick={() => addAdaptWithPreset(preset.key)}
+                >
+                  <IconCrop size={13} />{' '}
+                  {preset.key === 'RSYA' ? t.nodes.modelMeta.yandexNetwork : preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="hotkey-hint">
             <span>{t.hotkeys.fitView}</span>
             <span>{t.hotkeys.alignNodes}</span>
