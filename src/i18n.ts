@@ -38,6 +38,8 @@ export interface Translations {
   toolbar: {
     file: string;
     saveProject: string;
+    saveProjectSuccess: string;
+    saveProjectError: string;
     openProject: string;
     saveWorkspace: string;
     openWorkspace: string;
@@ -511,6 +513,8 @@ export const ru: Translations = {
   toolbar: {
     file: 'Файл',
     saveProject: 'Сохранить проект',
+    saveProjectSuccess: 'Проект сохранён на Яндекс Диск',
+    saveProjectError: 'Не удалось сохранить проект.',
     openProject: 'Открыть проект',
     saveWorkspace: 'Сохранить рабочую область',
     openWorkspace: 'Открыть рабочую область',
@@ -1041,6 +1045,8 @@ export const en: Translations = {
   toolbar: {
     file: 'File',
     saveProject: 'Save project',
+    saveProjectSuccess: 'Project saved to Yandex Disk',
+    saveProjectError: 'Could not save the project.',
     openProject: 'Open project',
     saveWorkspace: 'Save workspace',
     openWorkspace: 'Open workspace',

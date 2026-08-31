@@ -79,6 +79,8 @@ import ArchiveStrip from './components/ArchiveStrip';
 import { parseAssistantReply, type AssistantAction, type AssistantNodeType } from './aiActions';
 import { useT, type Translations } from './i18n';
 import { useThemeStore } from './theme';
+import { saveProjectToYandexDisk } from './webApi';
+import { formatGenerationError } from './errorMessages';
 import './App.css';
 
 const nodeTypes = {
@@ -381,6 +383,7 @@ function Canvas() {
   const [subscriptionActive, setSubscriptionActive] = useState(true);
   const [checkoutUrl, setCheckoutUrl] = useState('');
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [saveToast, setSaveToast] = useState<{ ok: boolean; message: string } | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -455,7 +458,26 @@ function Canvas() {
     setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, name } : p)));
   };
 
+  // Web mode saves to the user's own Yandex Disk (see ReloadGuard, which uses the same call) —
+  // a plain local-file download is unreliable in a hosted/embedded browser tab and gives no
+  // in-app confirmation either way, which is why this used to look like it "did nothing".
+  // Electron keeps saving to a local file via window.api, unchanged.
   const handleSaveProject = async () => {
+    if (import.meta.env.VITE_WEB_MODE === '1') {
+      try {
+        await saveProjectToYandexDisk({ name: activeProject.name, nodes, edges });
+        setSaveToast({ ok: true, message: t.toolbar.saveProjectSuccess });
+      } catch (err) {
+        setSaveToast({
+          ok: false,
+          message: window.api.isYandexDiskConnected()
+            ? formatGenerationError(err) || t.toolbar.saveProjectError
+            : t.reloadGuard.notConnectedError,
+        });
+      }
+      window.setTimeout(() => setSaveToast(null), 4000);
+      return;
+    }
     await window.api.saveProjectFile({ name: activeProject.name, nodes, edges });
   };
 
@@ -1166,6 +1188,9 @@ function Canvas() {
       )}
       {import.meta.env.VITE_WEB_MODE === '1' && (
         <ReloadGuard projectName={activeProject.name} nodes={nodes} edges={edges} />
+      )}
+      {saveToast && (
+        <div className={`save-toast ${saveToast.ok ? 'ok' : 'error'}`}>{saveToast.message}</div>
       )}
       <AdminMessageToast />
     </div>

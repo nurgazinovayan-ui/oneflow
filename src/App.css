@@ -325,11 +325,12 @@
     transform 0.15s var(--ease);
 }
 
-/* File/Templates/Tools specifically go flat (no resting fill, still bordered) — the same
+/* File/Templates/Tools specifically go flat — no resting fill, no border either — the same
    .toolbar-label-btn class is also used for canvas-toolbar's business-preset chips, which keep
-   their solid background. */
+   their solid background and border. */
 .toolbar-menu-wrapper .toolbar-label-btn {
   background: transparent;
+  border: none;
 }
 
 .toolbar-label-btn:hover {
@@ -3212,6 +3213,37 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Transient result of File > Save Project (web mode saves to Yandex Disk — see
+   App.tsx:handleSaveProject) — same animation language as .admin-toast, but pinned to the top
+   instead of sharing its bottom-center spot, which .admin-toast-stack already owns (a save
+   toast landing there at the same time would sit exactly on top of an admin message, both at
+   z-index 200, and read as one broken toast). */
+.save-toast {
+  position: fixed;
+  left: 50%;
+  top: 176px;
+  transform: translateX(-50%);
+  z-index: 200;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  background: var(--c-panel);
+  color: var(--c-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--c-divider);
+  animation: admin-toast-in 0.3s var(--ease);
+}
+
+.save-toast.ok {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--c-pink) 45%, transparent);
+  color: var(--c-pink);
+}
+
+.save-toast.error {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--c-error) 45%, transparent);
+  color: var(--c-error);
 }
 
 .ai-panel-body.file-drop-active {
