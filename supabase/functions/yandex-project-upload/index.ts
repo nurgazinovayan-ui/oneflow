@@ -106,7 +106,31 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
+    // Confirm where the file actually landed rather than trusting the PUT status alone — an
+    // OAuth token scoped to "app folder" access (cloud_api:disk.app_folder, set when the
+    // Yandex OAuth app was registered at oauth.yandex.ru) silently remaps every path into a
+    // hidden Приложения/<app name>/ folder and still returns success, which is exactly the
+    // "upload succeeded but /ONEFLOW is nowhere to be found" symptom. Yandex's resource
+    // metadata reports the real location either way: a path starting with "app:/" confirms the
+    // app-folder scope (fix: broaden the app's Disk permissions at oauth.yandex.ru, then
+    // disconnect/reconnect Yandex Disk in ONEFLOW so a fresh token picks up the new scope);
+    // "disk:/..." confirms it's really at the visible Disk root.
+    let resolvedPath = diskPath;
+    try {
+      const metaRes = await fetch(
+        `https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent(diskPath)}&fields=path`,
+        { headers: { Authorization: `OAuth ${row.access_token}` } }
+      );
+      const metaData = await metaRes.json().catch(() => ({}) as Record<string, unknown>);
+      if (metaRes.ok && typeof (metaData as { path?: string }).path === 'string') {
+        resolvedPath = (metaData as { path: string }).path;
+      }
+    } catch {
+      // Best-effort — the upload itself already succeeded, so a failed follow-up lookup
+      // shouldn't turn a real success into a reported failure.
+    }
+
+    return new Response(JSON.stringify({ ok: true, path: resolvedPath }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {

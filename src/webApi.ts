@@ -326,15 +326,22 @@ function backupToYandexDisk(urls: string[], prefix: string): void {
 // generated media), the caller here needs to know whether the save actually succeeded before
 // deciding to go ahead with the reload, so this lets callFunction's rejection propagate instead
 // of swallowing it.
+// Returns the path the Edge Function confirmed the file actually landed at (see that
+// function's comment on why "confirmed" matters — a success response alone doesn't guarantee
+// it's at the visible Disk root rather than a hidden app-scoped folder).
 export async function saveProjectToYandexDisk(project: {
   name: string;
   nodes: unknown;
   edges: unknown;
-}): Promise<void> {
+}): Promise<string> {
   const json = JSON.stringify(project, null, 2);
   const safeName = (project.name || 'project').replace(/[\\/:*?"<>|]/g, '_');
   const fileName = `${safeName}-${Date.now()}.aystudio.json`;
-  await callFunction('yandex-project-upload', { fileName, content: json });
+  const result = await callFunction<{ ok: boolean; path?: string }>('yandex-project-upload', {
+    fileName,
+    content: json,
+  });
+  return result.path || `${fileName}`;
 }
 
 export function installWebApi(): void {

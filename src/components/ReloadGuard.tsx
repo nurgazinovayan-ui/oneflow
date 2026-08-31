@@ -23,6 +23,7 @@ export default function ReloadGuard({ projectName, nodes, edges }: ReloadGuardPr
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [savedPath, setSavedPath] = useState('');
   const [error, setError] = useState('');
 
   const hasContent = nodes.length > 0;
@@ -64,9 +65,10 @@ export default function ReloadGuard({ projectName, nodes, edges }: ReloadGuardPr
     setSaving(true);
     setError('');
     try {
-      await saveProjectToYandexDisk({ name: projectName, nodes, edges });
+      const path = await saveProjectToYandexDisk({ name: projectName, nodes, edges });
       setSaved(true);
-      window.setTimeout(() => window.location.reload(), 700);
+      setSavedPath(path);
+      window.setTimeout(() => window.location.reload(), 1400);
     } catch (err) {
       setError(formatGenerationError(err) || t.reloadGuard.saveError);
       setSaving(false);
@@ -78,7 +80,11 @@ export default function ReloadGuard({ projectName, nodes, edges }: ReloadGuardPr
       <div className="modal reload-guard-modal" onClick={(e) => e.stopPropagation()}>
         <h2>{t.reloadGuard.title}</h2>
         {error && <div className="error-text">{error}</div>}
-        {saved && <div className="reload-guard-saved-hint">{t.reloadGuard.savedHint}</div>}
+        {saved && (
+          <div className="reload-guard-saved-hint">
+            {t.reloadGuard.savedHint}: {savedPath}
+          </div>
+        )}
         <div className="modal-actions">
           <button className="secondary-btn" onClick={handleReload} disabled={saving}>
             {t.reloadGuard.reloadBtn}

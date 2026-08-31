@@ -465,8 +465,8 @@ function Canvas() {
   const handleSaveProject = async () => {
     if (import.meta.env.VITE_WEB_MODE === '1') {
       try {
-        await saveProjectToYandexDisk({ name: activeProject.name, nodes, edges });
-        setSaveToast({ ok: true, message: t.toolbar.saveProjectSuccess });
+        const path = await saveProjectToYandexDisk({ name: activeProject.name, nodes, edges });
+        setSaveToast({ ok: true, message: `${t.toolbar.saveProjectSuccess}: ${path}` });
       } catch (err) {
         setSaveToast({
           ok: false,
