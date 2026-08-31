@@ -157,14 +157,15 @@
 /* Not truly transparent: .top-toolbar is a flex-row sibling ABOVE .canvas-area (not an overlay
    on top of it), so a see-through background would just expose .app-shell's own --c-bg — which
    in dark theme is near-black, i.e. still reads as "a dark bar up top", not a transparent one.
-   Filled with --c-canvas-bg instead — the same flat paper-gray the node canvas itself uses (see
-   the --c-canvas-bg comment near its definition) — so the header sits flush with zero visible
-   seam against the canvas below it, which is what "logo on a transparent background" actually
-   looks like given this DOM structure. .topbar (project tabs + mode switcher, just below) shares
-   the same treatment so the whole chrome above the canvas reads as one continuous surface. */
+   Filled with --c-panel instead — a dark surface matching the rest of the app's chrome, rather
+   than the light --c-canvas-bg the node canvas itself uses — so buttons/pills inside now need a
+   subtle --c-divider outline (see .toolbar-label-btn, .toolbar-icon-btn, .mode-switch-pill,
+   .project-tab, etc.) to still read as distinct controls against this equally-dark row. .topbar
+   (project tabs + mode switcher, just below) shares the same treatment so the whole chrome
+   above the canvas reads as one continuous surface. */
 .top-toolbar,
 .topbar {
-  background-color: var(--c-canvas-bg);
+  background-color: var(--c-panel);
 }
 
 .top-toolbar {
@@ -217,10 +218,14 @@
   -webkit-app-region: no-drag;
 }
 
+/* fill="currentColor" in the SVG + this color, rather than a fixed hex, so the wordmark stays
+   legible against .top-toolbar's now-dark background in dark theme and its light background in
+   light theme, tracking --c-text either way instead of going invisible on one of them. */
 .toolbar-logo {
   height: 26px;
   width: auto;
   display: block;
+  color: var(--c-text);
 }
 
 .toolbar-group {
@@ -268,7 +273,7 @@
   height: 34px;
   border-radius: 50%;
   background: var(--c-panel-2);
-  border: none;
+  border: 1px solid var(--c-divider);
   color: var(--c-text);
   flex-shrink: 0;
   transition:
@@ -305,7 +310,7 @@
   padding: 0 14px;
   border-radius: 999px;
   background: var(--c-panel-2);
-  border: none;
+  border: 1px solid var(--c-divider);
   color: var(--c-text);
   font-size: 12.5px;
   font-weight: 500;
@@ -437,7 +442,7 @@
   height: 34px;
   border-radius: 50%;
   background: transparent;
-  border: none;
+  border: 1px solid var(--c-divider);
   color: var(--c-text);
   flex-shrink: 0;
   transition:
@@ -499,7 +504,7 @@
   padding: 7px 12px;
   border-radius: var(--radius-sm);
   background: transparent;
-  border: none;
+  border: 1px solid var(--c-divider);
   font-size: 12.5px;
   color: var(--c-text-muted);
   cursor: pointer;
@@ -544,7 +549,7 @@
 
 .project-tab-add {
   background: var(--c-panel-2);
-  border: none;
+  border: 1px solid var(--c-divider);
   color: var(--c-text-muted);
   border-radius: var(--radius-sm);
   width: 28px;
@@ -630,6 +635,7 @@
   height: 34px;
   flex-shrink: 0;
   border-radius: var(--radius-sm);
+  border: 1px solid var(--c-divider);
   overflow: hidden;
   -webkit-app-region: no-drag;
 }

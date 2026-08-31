@@ -18,7 +18,7 @@ export default function Logo({ className }: LogoProps) {
         fontWeight="900"
         fontSize="106"
         letterSpacing="-3"
-        fill="#17171b"
+        fill="currentColor"
       >
         ONEFLOW
       </text>
