@@ -535,7 +535,7 @@
 
 .pricing-heading {
   margin: 0;
-  text-align: left;
+  text-align: center;
   font-size: 21px;
   line-height: 1.05;
   font-weight: 800;
@@ -544,13 +544,13 @@
 
 .pricing-subheading {
   margin: 0 0 14px;
-  text-align: left;
+  text-align: center;
   font-size: 11px;
   color: var(--c-text-muted);
 }
 
 .pricing-period-toggle {
-  align-self: flex-start;
+  align-self: center;
   display: flex;
   gap: 3px;
   padding: 2px;
@@ -618,24 +618,6 @@
   background: radial-gradient(ellipse 100% 36% at 50% 100%, rgba(0, 153, 255, 0.28), transparent 70%);
 }
 
-/* The Популярный tier's two-ray crystal renders into a physically smaller region (not just a
-   smaller shader `scale`, which produced streaky raymarch artifacts at low values instead of a
-   cleanly shrunk shape) — a container roughly a third of the card's footprint, pinned above the
-   button rather than behind it, so it reads as "the same kind of light, just smaller" without
-   sitting on top of the button or the last couple of benefit rows. */
-.pricing-card-bg-small {
-  position: absolute;
-  left: 22%;
-  right: 22%;
-  bottom: 24%;
-  height: 34%;
-}
-
-.pricing-card-bg-small .prism-container {
-  position: absolute;
-  inset: 0;
-}
-
 /* height: 100% (not just shrink-to-content) so this fills the card's full stretched height —
    .pricing-grid's flex row already stretches every .pricing-card to match the tallest one, but
    without this the content box itself stayed only as tall as its own benefit list, leaving the
@@ -650,13 +632,16 @@
   padding: 20px 17px 17px;
 }
 
-/* Sits in the corner just above .pricing-price (only rendered for the yearly view on tiers that
-   have a discount) — .pricing-price gets pushed down to 24px (from 17px) so the two never
-   overlap whether or not the badge is present. */
+/* Price now sits in normal flow at the top-left of the card, above the title, instead of as an
+   absolutely-positioned corner badge — the discount badge (yearly view only, on tiers that have
+   one) sits right next to it in the same row. */
+.pricing-price-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .pricing-discount-badge {
-  position: absolute;
-  top: 4px;
-  right: 17px;
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--c-pink);
@@ -666,9 +651,6 @@
 }
 
 .pricing-price {
-  position: absolute;
-  top: 24px;
-  right: 17px;
   font-size: 11px;
   font-weight: 800;
   color: var(--c-pink);
@@ -676,7 +658,6 @@
 
 .pricing-card-title {
   margin: 0;
-  padding-right: 42px;
   font-size: 15px;
   font-weight: 800;
   color: var(--c-text);
@@ -752,6 +733,35 @@
 
 .pricing-recheck-link:hover {
   color: var(--c-text);
+}
+
+/* "Payment is in development" toast — shown on any "Оформить"/Subscribe click (see
+   PaymentModal's handlePay). Same fade+rise pattern as .web-auth-toast, centered at the bottom
+   of the modal panel (which is position:relative, so this anchors to it rather than the
+   viewport). */
+.pricing-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translate(-50%, 8px);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(15, 15, 18, 0.92);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.2s var(--ease),
+    transform 0.2s var(--ease);
+  z-index: 5;
+}
+
+.pricing-toast.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .toolbar-avatar-btn {

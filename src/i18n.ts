@@ -376,6 +376,7 @@ export interface Translations {
     recheckLink: string;
     checkingBtn: string;
     paymentNotFound: string;
+    paymentInDevelopment: string;
     benefitOneflowAccess: string;
     benefitBudgetChoice: string;
     benefit30Models: string;
@@ -922,6 +923,7 @@ export const ru: Translations = {
     recheckLink: 'Уже оплатили? Проверить',
     checkingBtn: 'Проверка...',
     paymentNotFound: 'Оплата пока не найдена, попробуйте ещё раз через минуту.',
+    paymentInDevelopment: 'Процесс оплаты в разработке',
     benefitOneflowAccess: 'Доступ к ONEFLOW',
     benefitBudgetChoice: 'Выбор бюджета по желанию',
     benefit30Models: '30+ самых актуальных нейросетей',
@@ -1479,6 +1481,7 @@ export const en: Translations = {
     recheckLink: 'Already paid? Check',
     checkingBtn: 'Checking...',
     paymentNotFound: 'Payment not found yet — please try again in a minute.',
+    paymentInDevelopment: 'Payment processing is under development',
     benefitOneflowAccess: 'Access to ONEFLOW',
     benefitBudgetChoice: 'Choose your own budget',
     benefit30Models: '30+ of the most up-to-date AI models',

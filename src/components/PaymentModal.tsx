@@ -9,7 +9,7 @@ interface PaymentModalProps {
   onRecheck: () => Promise<boolean>;
 }
 
-type CrystalStyle = 'glow' | 'small' | 'full';
+type CrystalStyle = 'glow' | 'dim' | 'full';
 type BillingPeriod = 'month' | 'year';
 
 interface Tier {
@@ -27,19 +27,19 @@ interface Tier {
 
 // Pricing overview, opened from the "Тариф" button in the top toolbar (always shown, including
 // demo mode — this reads as a general "view pricing" entry point rather than strictly an
-// unpaid-account nag). Only the Популярный/Максимальный tiers actually lead anywhere — both
-// currently open the same single checkoutUrl (see webApi.ts buildCheckoutUrl), since the backend
-// only has one LemonSqueezy product wired up so far; per-tier checkout links would need separate
-// LemonSqueezy variants configured before this can charge different amounts (monthly vs. yearly
-// included — the toggle below only changes what's displayed, not which checkout link opens).
-export default function PaymentModal({ checkoutUrl, onClose, onRecheck }: PaymentModalProps) {
+// unpaid-account nag). Real checkout isn't wired up yet (see handlePay) — "Оформить" just shows
+// a "payment is in development" toast rather than opening checkoutUrl, since that single
+// LemonSqueezy link doesn't actually distinguish between tiers or billing periods yet.
+export default function PaymentModal({ onClose, onRecheck }: PaymentModalProps) {
   const t = useT();
   const [checking, setChecking] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [period, setPeriod] = useState<BillingPeriod>('month');
+  const [toastVisible, setToastVisible] = useState(false);
 
   const handlePay = () => {
-    if (checkoutUrl) window.api.openCheckout(checkoutUrl);
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 3000);
   };
 
   const handleRecheck = async () => {
@@ -86,7 +86,7 @@ export default function PaymentModal({ checkoutUrl, onClose, onRecheck }: Paymen
       buttonLabel: t.paymentModal.selectBtn,
       onSelect: handlePay,
       accent: true,
-      crystal: 'small',
+      crystal: 'dim',
     },
     {
       key: 'max',
@@ -130,33 +130,35 @@ export default function PaymentModal({ checkoutUrl, onClose, onRecheck }: Paymen
               <div key={tier.key} className={`pricing-card ${tier.accent ? 'accent' : ''}`}>
                 <div className="pricing-card-bg">
                   {tier.crystal === 'glow' && <div className="pricing-card-glow" />}
-                  {tier.crystal === 'small' && (
-                    <div className="pricing-card-bg-small">
+                  {tier.crystal === 'dim' && (
+                    <>
                       <Prism
                         animationType="rotate"
-                        glow={0.8}
-                        bloom={0.9}
+                        glow={0.35}
+                        bloom={0.4}
                         noise={0}
                         scale={3.2}
-                        offset={{ x: -18, y: 0 }}
+                        offset={{ x: -35, y: 0 }}
                       />
                       <Prism
                         animationType="rotate"
-                        glow={0.8}
-                        bloom={0.9}
+                        glow={0.35}
+                        bloom={0.4}
                         noise={0}
                         scale={3.2}
-                        offset={{ x: 18, y: 0 }}
+                        offset={{ x: 35, y: 0 }}
                       />
-                    </div>
+                    </>
                   )}
                   {tier.crystal === 'full' && (
                     <Prism animationType="rotate" glow={1} bloom={1} noise={0} scale={3.2} />
                   )}
                 </div>
                 <div className="pricing-card-content">
-                  {showDiscount && <span className="pricing-discount-badge">{tier.yearlyDiscount}</span>}
-                  <span className="pricing-price">{price}</span>
+                  <div className="pricing-price-row">
+                    {showDiscount && <span className="pricing-discount-badge">{tier.yearlyDiscount}</span>}
+                    <span className="pricing-price">{price}</span>
+                  </div>
                   <h3 className="pricing-card-title">{tier.title}</h3>
                   <div className="pricing-benefits">
                     {tier.benefits.map((benefit) => (
@@ -182,6 +184,9 @@ export default function PaymentModal({ checkoutUrl, onClose, onRecheck }: Paymen
         <button className="pricing-recheck-link" onClick={handleRecheck} disabled={checking}>
           {checking ? t.paymentModal.checkingBtn : t.paymentModal.recheckLink}
         </button>
+        <div className={`pricing-toast ${toastVisible ? 'visible' : ''}`}>
+          {t.paymentModal.paymentInDevelopment}
+        </div>
       </div>
     </div>
   );
