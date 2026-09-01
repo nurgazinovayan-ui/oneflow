@@ -490,16 +490,16 @@
   background: rgba(10, 10, 12, 0.55);
 }
 
-/* Matte glass panel (translucent + its own blur) rather than a solid fill, same recipe as
-   .canvas-toolbar/.web-auth-panel elsewhere in the app — and every size below is the original
-   value × 0.7 (width, padding, headings, cards, buttons) per the "shrink the whole window 30%"
-   ask, not just a narrower max-width. */
+/* Matte glass panel — the exact same translucent recipe as .canvas-toolbar (the node-buttons
+   plaque), per the design ask to match it — rather than a solid fill. Every size below is the
+   original value × 0.7 (width, padding, headings, cards, buttons) per the earlier "shrink the
+   whole window 30%" ask, not just a narrower max-width. */
 .pricing-modal {
   position: relative;
   width: min(784px, 92vw);
   max-height: 88vh;
   overflow-y: auto;
-  background: rgba(24, 24, 28, 0.62);
+  background: rgba(15, 15, 18, 0.62);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   border-radius: var(--radius-lg);
@@ -532,12 +532,19 @@
 }
 
 .pricing-heading {
-  margin: 0 0 22px;
+  margin: 0;
   text-align: left;
-  font-size: 42px;
+  font-size: 21px;
   line-height: 1.05;
   font-weight: 800;
   color: var(--c-text);
+}
+
+.pricing-subheading {
+  margin: 0 0 22px;
+  text-align: left;
+  font-size: 11px;
+  color: var(--c-text-muted);
 }
 
 .pricing-grid {
@@ -572,9 +579,14 @@
   opacity: 0.8;
 }
 
+/* height: 100% (not just shrink-to-content) so this fills the card's full stretched height —
+   .pricing-grid's flex row already stretches every .pricing-card to match the tallest one, but
+   without this the content box itself stayed only as tall as its own benefit list, leaving the
+   button wherever the shortest tier's list happened to end instead of flush with the others. */
 .pricing-card-content {
   position: relative;
   z-index: 1;
+  height: 100%;
   display: flex;
   flex-direction: column;
   gap: 11px;
@@ -622,27 +634,32 @@
 .pricing-card-btn {
   height: 28px;
   border-radius: var(--radius-sm);
-  border: none;
-  background: var(--c-pink);
-  color: #fff;
+  border: 1px solid var(--c-pink);
+  background: transparent;
+  color: var(--c-pink);
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;
-  transition: opacity 0.15s var(--ease);
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
 }
 
 .pricing-card-btn:hover {
-  opacity: 0.9;
+  background: var(--c-pink);
+  color: #fff;
 }
 
 .pricing-card-btn.disabled {
-  background: var(--c-panel-3);
+  border-color: var(--c-divider);
+  background: transparent;
   color: var(--c-text-muted);
   cursor: default;
 }
 
 .pricing-card-btn.disabled:hover {
-  opacity: 1;
+  background: transparent;
+  color: var(--c-text-muted);
 }
 
 .pricing-error {

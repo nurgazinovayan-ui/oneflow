@@ -91,11 +91,12 @@ export default function PaymentModal({ checkoutUrl, onClose, onRecheck }: Paymen
           <IconClose size={16} />
         </button>
         <h2 className="pricing-heading">{t.paymentModal.heading}</h2>
+        <p className="pricing-subheading">{t.paymentModal.subheading}</p>
         <div className="pricing-grid">
           {tiers.map((tier) => (
             <div key={tier.key} className={`pricing-card ${tier.accent ? 'accent' : ''}`}>
               <div className="pricing-card-bg">
-                <Prism animationType="rotate" hueShift={0} glow={1} bloom={1} noise={0.3} scale={3.2} />
+                <Prism animationType="rotate" hueShift={0} glow={1} bloom={1} noise={0} scale={3.2} />
               </div>
               <div className="pricing-card-content">
                 <span className="pricing-price">{tier.price}</span>

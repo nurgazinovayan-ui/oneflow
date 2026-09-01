@@ -364,6 +364,7 @@ export interface Translations {
   paymentModal: {
     topBarBtn: string;
     heading: string;
+    subheading: string;
     tierBasicTitle: string;
     tierPopularTitle: string;
     tierMaxTitle: string;
@@ -908,6 +909,7 @@ export const ru: Translations = {
   paymentModal: {
     topBarBtn: 'Тариф',
     heading: 'Виды тарифов',
+    subheading: 'Остаток бюджета не сгорает в следующем месяце',
     tierBasicTitle: 'Базовый тариф',
     tierPopularTitle: 'Популярный тариф',
     tierMaxTitle: 'Максимальный тариф',
@@ -1463,6 +1465,7 @@ export const en: Translations = {
   paymentModal: {
     topBarBtn: 'Plan',
     heading: 'Plan types',
+    subheading: "Unused budget doesn't expire the next month",
     tierBasicTitle: 'Basic plan',
     tierPopularTitle: 'Popular plan',
     tierMaxTitle: 'Maximum plan',
