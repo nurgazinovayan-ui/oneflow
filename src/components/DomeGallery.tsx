@@ -14,6 +14,7 @@ interface TileItem {
   sizeY: number;
   src: string;
   alt: string;
+  label: readonly [string, string];
 }
 
 interface DomeGalleryProps {
@@ -73,6 +74,16 @@ const DEFAULTS = {
   segments: 35,
 };
 
+// Small two-line "model used" caption shown bottom-right on each tile, one at random per tile —
+// each pair's second line is just the trailing version token off the first, so it reads as one
+// wrapped label rather than two unrelated words.
+const TILE_LABELS: readonly (readonly [string, string])[] = [
+  ['/nano banana', 'pro'],
+  ['/seedream', '5'],
+  ['/GPT image', '2'],
+  ['/nano banana', '2'],
+];
+
 const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
 const normalizeAngle = (d: number) => ((d % 360) + 360) % 360;
 const wrapAngleSigned = (deg: number) => {
@@ -97,7 +108,7 @@ function buildItems(pool: (string | ImageItem)[], seg: number): TileItem[] {
 
   const totalSlots = coords.length;
   if (pool.length === 0) {
-    return coords.map((c) => ({ ...c, src: '', alt: '' }));
+    return coords.map((c) => ({ ...c, src: '', alt: '', label: TILE_LABELS[0] }));
   }
   if (pool.length > totalSlots) {
     console.warn(
@@ -131,6 +142,7 @@ function buildItems(pool: (string | ImageItem)[], seg: number): TileItem[] {
     ...c,
     src: usedImages[i].src,
     alt: usedImages[i].alt || '',
+    label: TILE_LABELS[Math.floor(Math.random() * TILE_LABELS.length)],
   }));
 }
 
@@ -696,6 +708,10 @@ export default function DomeGallery({
                   onPointerUp={onTilePointerUp}
                 >
                   <img src={it.src} draggable={false} alt={it.alt} />
+                  <span className="item__caption">
+                    <span>{it.label[0]}</span>
+                    <span>{it.label[1]}</span>
+                  </span>
                 </div>
               </div>
             ))}

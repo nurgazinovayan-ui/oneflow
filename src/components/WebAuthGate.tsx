@@ -296,7 +296,6 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
           </button>
 
           {error && <div className="login-error">{error}</div>}
-          {mode === 'login' && <p className="modal-hint web-auth-hint">{t.webAuth.credentialsHint}</p>}
           <button className="web-auth-demo-link" type="button" onClick={handleDemoMode}>
             {t.webAuth.demoModeLink}
           </button>

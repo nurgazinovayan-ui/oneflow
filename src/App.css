@@ -1825,11 +1825,6 @@
   line-height: 1.4;
 }
 
-.web-auth-hint {
-  color: #a6a6ad;
-  font-size: 11px;
-}
-
 .web-auth-demo-link {
   background: none;
   border: none;
@@ -4813,53 +4808,28 @@
   text-align: center;
 }
 
-/* The topbar's "Ассеты" entry point — reuses .toolbar-label-btn's chip look (see App.tsx,
-   next to BudgetBar) with no extra rules needed since that class already reads fine against
-   this row's dark --c-panel background (same as File/Templates/Tools next to it). */
+/* The topbar's "Ассеты" entry point — reuses .toolbar-label-btn's chip look (see App.tsx, next
+   to BudgetBar), just with .project-tab's smaller corner radius instead of the default pill
+   shape, per the design ask to match the project tabs' rounding. */
+.assets-btn {
+  border-radius: var(--radius-sm);
+}
 
-/* Full-screen gallery of files backed up to the account's Yandex Disk /ONEFLOW folder — same
-   overlay shape as .musicaudio-panel (flat --c-canvas-bg, covers the whole app) but opened as a
-   simple boolean modal (see App.tsx assetsOpen) rather than a mainView tab, since it's reachable
-   from any mode via the topbar button rather than being one of the mode-switch destinations. */
+/* Gallery of files backed up to the account's Yandex Disk /ONEFLOW folder — same panel shape as
+   .musicaudio-panel/.evaluation-panel/etc. (flat --c-canvas-bg, sits inside .canvas-area, shown
+   or hidden via the `active` prop rather than mounted/unmounted) since it's now one of the
+   mode-switch destinations' siblings rather than a separate overlay. */
 .assets-panel {
   position: absolute;
   inset: 0;
-  z-index: 30;
+  z-index: 20;
   display: flex;
   flex-direction: column;
   background: var(--c-canvas-bg);
 }
 
-.assets-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--c-divider);
-}
-
-.assets-panel-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--c-text);
-}
-
-.assets-panel-close {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--c-panel-2);
-  border: none;
-  color: var(--c-text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.assets-panel-close:hover {
-  background: var(--c-panel-3);
-  color: var(--c-text);
+.assets-panel-hidden {
+  display: none;
 }
 
 .assets-panel-body {

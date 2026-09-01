@@ -1,28 +1,30 @@
 import { useEffect, useState } from 'react';
-import { IconClose, IconDownload, IconImage, IconVideo } from './Icons';
+import { IconDownload, IconImage, IconVideo } from './Icons';
 import type { YandexAsset } from '../types';
 import { useT } from '../i18n';
 
 interface AssetsPanelProps {
-  onClose: () => void;
+  active: boolean;
 }
 
 type Filter = 'all' | 'image' | 'video';
 
 const NOT_CONNECTED_ERROR = 'Яндекс Диск не подключен.';
 
-// Full-screen gallery of everything the account has saved to its Yandex Disk /ONEFLOW folder
-// (see supabase/functions/yandex-list-assets) — opened from the "Ассеты" button next to
-// BudgetBar. Mounted only while open (App.tsx renders it conditionally), so it always fetches a
-// fresh listing on open rather than trying to keep a cache in sync with what generations get
-// backed up in the background elsewhere in the app.
-export default function AssetsPanel({ onClose }: AssetsPanelProps) {
+// Gallery of everything the account has saved to its Yandex Disk /ONEFLOW folder (see
+// supabase/functions/yandex-list-assets) — reached via the "Ассеты" button next to BudgetBar.
+// Toggled the same way as TextWorkPanel/EvaluationPanel/MusicAudioPanel etc. (always mounted,
+// hidden via CSS while inactive) rather than as a separate overlay/modal, so switching to it and
+// back behaves exactly like switching between any other mode. Fetches once on first activation
+// rather than on mount, since most sessions never open it.
+export default function AssetsPanel({ active }: AssetsPanelProps) {
   const t = useT();
   const [assets, setAssets] = useState<YandexAsset[] | null>(null);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
 
   useEffect(() => {
+    if (!active || assets !== null) return;
     let cancelled = false;
     window.api
       .listYandexAssets()
@@ -37,7 +39,7 @@ export default function AssetsPanel({ onClose }: AssetsPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [active, assets]);
 
   const download = (asset: YandexAsset) => {
     void window.api.saveFile(asset.url, asset.name);
@@ -47,13 +49,7 @@ export default function AssetsPanel({ onClose }: AssetsPanelProps) {
   const notConnected = error === NOT_CONNECTED_ERROR;
 
   return (
-    <div className="assets-panel">
-      <div className="assets-panel-header">
-        <span className="assets-panel-title">{t.assets.title}</span>
-        <button className="assets-panel-close" onClick={onClose}>
-          <IconClose size={14} />
-        </button>
-      </div>
+    <div className={`assets-panel ${active ? '' : 'assets-panel-hidden'}`}>
       <div className="assets-panel-body">
         <div className="assets-sidebar">
           <button

@@ -342,7 +342,6 @@ export interface Translations {
     passwordLabel: string;
     loginBtn: string;
     checkingBtn: string;
-    credentialsHint: string;
     invalidCredentials: string;
     connectionError: string;
     loginTitle: string;
@@ -874,7 +873,6 @@ export const ru: Translations = {
     passwordLabel: 'Пароль',
     loginBtn: 'Войти',
     checkingBtn: 'Проверка...',
-    credentialsHint: 'Логин и пароль выдаёт администратор',
     invalidCredentials: 'Неверный логин или пароль.',
     connectionError: 'Не удалось связаться с сервером авторизации.',
     loginTitle: 'Вход',
@@ -1418,7 +1416,6 @@ export const en: Translations = {
     passwordLabel: 'Password',
     loginBtn: 'Log in',
     checkingBtn: 'Checking...',
-    credentialsHint: 'Your login and password are issued by the administrator',
     invalidCredentials: 'Incorrect login or password.',
     connectionError: 'Could not reach the authorization server.',
     loginTitle: 'Log in',

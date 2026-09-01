@@ -125,6 +125,25 @@ main.sphere-main {
   filter: none;
 }
 
+/* Small "model used" caption, bottom-right of each tile, one of TILE_LABELS picked at random per
+   tile (see DomeGallery.tsx buildItems) — plain text sibling of the <img>, so it's unaffected by
+   that image's own grayscale/hover filter and stays readable at a fixed light-gray regardless. */
+.item__caption {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  line-height: 1.25;
+  font-size: 9px;
+  font-weight: 500;
+  color: #d4d4d8;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
 .viewer {
   position: absolute;
   inset: 0;
