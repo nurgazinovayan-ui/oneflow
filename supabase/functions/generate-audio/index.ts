@@ -47,11 +47,15 @@ function buildAudioInput(body: AudioBody): { model: string; input: Record<string
       },
     };
   }
+  // No output-format field exists on this model at all (Replicate rejects `output_format` as
+  // an unexpected/extra field — confirmed by the "Prediction input failed validation" error
+  // this used to throw on every music generation) — its container format is fixed server-side,
+  // not caller-selectable. body.format is still accepted from the client (used client-side to
+  // name the downloaded file) but intentionally not forwarded here.
   const input: Record<string, unknown> = {
     prompt: body.prompt ?? '',
     lyrics: body.lyrics ?? '',
   };
-  if (body.format) input.output_format = body.format;
   return { model: MUSIC_MODEL, input };
 }
 
