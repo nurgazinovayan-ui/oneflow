@@ -44,6 +44,8 @@ import UpscalerModal from './components/UpscalerModal';
 import PhotoEditorModal from './components/PhotoEditorModal';
 import StartScreen, { type StartScreenChoice } from './components/StartScreen';
 import ReloadGuard from './components/ReloadGuard';
+import LegalModal from './components/LegalModal';
+import type { LegalDoc } from './legalContent';
 import { BUSINESS_PRESET_ORDER, BUSINESS_PRESET_PROMPTS, type BusinessPresetKey } from './businessPresets';
 import {
   IconDocument,
@@ -385,6 +387,7 @@ function Canvas() {
   const [showStartScreen, setShowStartScreen] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(true);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null);
   const [saveToast, setSaveToast] = useState<{ ok: boolean; message: string } | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -1200,6 +1203,7 @@ function Canvas() {
         <PaymentModal
           onClose={() => setPaymentModalOpen(false)}
           onRecheck={refreshSubscriptionStatus}
+          onOpenLegal={setLegalDoc}
         />
       )}
       {showStartScreen && (
@@ -1208,8 +1212,10 @@ function Canvas() {
           onChooseBusiness={handleStartScreenBusinessChoice}
           onAutoCreate={handleStartScreenAutoCreate}
           onClose={() => handleStartScreenChoice('empty')}
+          onOpenLegal={setLegalDoc}
         />
       )}
+      {legalDoc && <LegalModal doc={legalDoc} onClose={() => setLegalDoc(null)} />}
       {import.meta.env.VITE_WEB_MODE === '1' && (
         <ReloadGuard projectName={activeProject.name} nodes={nodes} edges={edges} />
       )}

@@ -388,6 +388,11 @@ export interface Translations {
     benefitEvaluationAccess: string;
     benefitPrioritySupport: string;
   };
+  legal: {
+    privacyLink: string;
+    termsLink: string;
+    refundLink: string;
+  };
   startScreen: {
     greeting: string;
     closeTooltip: string;
@@ -935,6 +940,11 @@ export const ru: Translations = {
     benefitOneLaunchAccess: 'Доступ к One Launch',
     benefitEvaluationAccess: 'Доступ к инструменту оценка',
     benefitPrioritySupport: 'Приоритетная поддержка',
+  },
+  legal: {
+    privacyLink: 'Политика конфиденциальности',
+    termsLink: 'Условия использования',
+    refundLink: 'Политика возврата',
   },
   startScreen: {
     greeting: 'Начнем генерить?',
@@ -1494,6 +1504,11 @@ export const en: Translations = {
     benefitOneLaunchAccess: 'Access to One Launch',
     benefitEvaluationAccess: 'Access to the evaluation tool',
     benefitPrioritySupport: 'Priority support',
+  },
+  legal: {
+    privacyLink: 'Privacy Policy',
+    termsLink: 'Terms of Service',
+    refundLink: 'Refund Policy',
   },
   startScreen: {
     greeting: "Let's start generating?",

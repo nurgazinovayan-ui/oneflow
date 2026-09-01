@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { IconCheck, IconClose } from './Icons';
 import Prism from './Prism';
 import { useT } from '../i18n';
+import type { LegalDoc } from '../legalContent';
 
 interface PaymentModalProps {
   onClose: () => void;
   onRecheck: () => Promise<boolean>;
+  onOpenLegal: (doc: LegalDoc) => void;
 }
 
 type CrystalStyle = 'glow' | 'dim' | 'full';
@@ -32,7 +34,7 @@ interface Tier {
 // the credit balance this feeds is still real and gets credited at 85% of what was actually
 // charged (see lemonsqueezy-webhook). Falls back to the "in development" toast only when no
 // checkout link is available at all (not configured, or not logged in).
-export default function PaymentModal({ onClose, onRecheck }: PaymentModalProps) {
+export default function PaymentModal({ onClose, onRecheck, onOpenLegal }: PaymentModalProps) {
   const t = useT();
   const [checking, setChecking] = useState(false);
   const [notFound, setNotFound] = useState(false);
@@ -220,6 +222,17 @@ export default function PaymentModal({ onClose, onRecheck }: PaymentModalProps) 
         <button className="pricing-recheck-link" onClick={handleRecheck} disabled={checking}>
           {checking ? t.paymentModal.checkingBtn : t.paymentModal.recheckLink}
         </button>
+        <div className="pricing-legal-links">
+          <button className="legal-link" onClick={() => onOpenLegal('privacy')}>
+            {t.legal.privacyLink}
+          </button>
+          <button className="legal-link" onClick={() => onOpenLegal('terms')}>
+            {t.legal.termsLink}
+          </button>
+          <button className="legal-link" onClick={() => onOpenLegal('refund')}>
+            {t.legal.refundLink}
+          </button>
+        </div>
         <div className={`pricing-toast ${toastVisible ? 'visible' : ''}`}>
           {t.paymentModal.paymentInDevelopment}
         </div>
