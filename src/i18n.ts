@@ -365,7 +365,9 @@ export interface Translations {
     topBarBtn: string;
     heading: string;
     subheading: string;
-    tierBasicTitle: string;
+    periodMonth: string;
+    periodYear: string;
+    tierFreeTitle: string;
     tierPopularTitle: string;
     tierMaxTitle: string;
     freeLabel: string;
@@ -382,7 +384,6 @@ export interface Translations {
     benefitVisualAdaptation: string;
     benefitOneLaunchAccess: string;
     benefitEvaluationAccess: string;
-    benefitUnlimitedBudget: string;
     benefitPrioritySupport: string;
   };
   startScreen: {
@@ -910,7 +911,9 @@ export const ru: Translations = {
     topBarBtn: 'Тариф',
     heading: 'Виды тарифов',
     subheading: 'Остаток бюджета не сгорает в следующем месяце',
-    tierBasicTitle: 'Базовый тариф',
+    periodMonth: 'В месяц',
+    periodYear: 'В год',
+    tierFreeTitle: 'Бесплатный тариф',
     tierPopularTitle: 'Популярный тариф',
     tierMaxTitle: 'Максимальный тариф',
     freeLabel: 'Бесплатно',
@@ -927,7 +930,6 @@ export const ru: Translations = {
     benefitVisualAdaptation: 'Адаптация вижуалов',
     benefitOneLaunchAccess: 'Доступ к One Launch',
     benefitEvaluationAccess: 'Доступ к инструменту оценка',
-    benefitUnlimitedBudget: 'Безлимитный бюджет',
     benefitPrioritySupport: 'Приоритетная поддержка',
   },
   startScreen: {
@@ -1466,7 +1468,9 @@ export const en: Translations = {
     topBarBtn: 'Plan',
     heading: 'Plan types',
     subheading: "Unused budget doesn't expire the next month",
-    tierBasicTitle: 'Basic plan',
+    periodMonth: 'Monthly',
+    periodYear: 'Yearly',
+    tierFreeTitle: 'Free plan',
     tierPopularTitle: 'Popular plan',
     tierMaxTitle: 'Maximum plan',
     freeLabel: 'Free',
@@ -1483,7 +1487,6 @@ export const en: Translations = {
     benefitVisualAdaptation: 'Visual adaptation',
     benefitOneLaunchAccess: 'Access to One Launch',
     benefitEvaluationAccess: 'Access to the evaluation tool',
-    benefitUnlimitedBudget: 'Unlimited budget',
     benefitPrioritySupport: 'Priority support',
   },
   startScreen: {

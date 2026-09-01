@@ -482,24 +482,26 @@
   }
 }
 
-/* Pricing overview modal (PaymentModal.tsx) — noticeably stronger blur than the standard
-   .modal-overlay's 2px, per the design ask that the whole app background read as blurred behind
-   it rather than just dimmed. */
+/* Pricing overview modal (PaymentModal.tsx). The overlay's own dark fill is kept fairly light
+   (0.35, was 0.55) — stacked behind .pricing-modal's own translucent tint, the two used to
+   compound into what read as a flat solid gray box rather than glass; lighter here leaves more
+   of the actual blurred backdrop visible through both layers. */
 .modal-overlay.pricing-overlay {
   backdrop-filter: blur(14px);
-  background: rgba(10, 10, 12, 0.55);
+  background: rgba(10, 10, 12, 0.35);
 }
 
 /* Matte glass panel — the exact same translucent recipe as .canvas-toolbar (the node-buttons
-   plaque), per the design ask to match it — rather than a solid fill. Every size below is the
-   original value × 0.7 (width, padding, headings, cards, buttons) per the earlier "shrink the
-   whole window 30%" ask, not just a narrower max-width. */
+   plaque), per the design ask to match it, at an opacity low enough (0.4) to actually read as
+   see-through rather than a solid fill. Every size below is the original value × 0.7 (width,
+   padding, headings, cards, buttons) per the earlier "shrink the whole window 30%" ask, not
+   just a narrower max-width. */
 .pricing-modal {
   position: relative;
   width: min(784px, 92vw);
   max-height: 88vh;
   overflow-y: auto;
-  background: rgba(15, 15, 18, 0.62);
+  background: rgba(15, 15, 18, 0.4);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   border-radius: var(--radius-lg);
@@ -541,10 +543,39 @@
 }
 
 .pricing-subheading {
-  margin: 0 0 22px;
+  margin: 0 0 14px;
   text-align: left;
   font-size: 11px;
   color: var(--c-text-muted);
+}
+
+.pricing-period-toggle {
+  align-self: flex-start;
+  display: flex;
+  gap: 3px;
+  padding: 2px;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  background: var(--c-panel-2);
+}
+
+.pricing-period-toggle button {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--c-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+
+.pricing-period-toggle button.active {
+  background: var(--c-pink);
+  color: #fff;
 }
 
 .pricing-grid {
@@ -579,6 +610,32 @@
   opacity: 0.8;
 }
 
+/* Free tier has no Prism crystal at all — just a small, subtle glow pooled at the bottom edge of
+   the card. */
+.pricing-card-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 100% 36% at 50% 100%, rgba(0, 153, 255, 0.28), transparent 70%);
+}
+
+/* The Популярный tier's two-ray crystal renders into a physically smaller region (not just a
+   smaller shader `scale`, which produced streaky raymarch artifacts at low values instead of a
+   cleanly shrunk shape) — a container roughly a third of the card's footprint, pinned above the
+   button rather than behind it, so it reads as "the same kind of light, just smaller" without
+   sitting on top of the button or the last couple of benefit rows. */
+.pricing-card-bg-small {
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 24%;
+  height: 34%;
+}
+
+.pricing-card-bg-small .prism-container {
+  position: absolute;
+  inset: 0;
+}
+
 /* height: 100% (not just shrink-to-content) so this fills the card's full stretched height —
    .pricing-grid's flex row already stretches every .pricing-card to match the tallest one, but
    without this the content box itself stayed only as tall as its own benefit list, leaving the
@@ -593,9 +650,24 @@
   padding: 20px 17px 17px;
 }
 
+/* Sits in the corner just above .pricing-price (only rendered for the yearly view on tiers that
+   have a discount) — .pricing-price gets pushed down to 24px (from 17px) so the two never
+   overlap whether or not the badge is present. */
+.pricing-discount-badge {
+  position: absolute;
+  top: 4px;
+  right: 17px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--c-pink);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+}
+
 .pricing-price {
   position: absolute;
-  top: 17px;
+  top: 24px;
   right: 17px;
   font-size: 11px;
   font-weight: 800;
