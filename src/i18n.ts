@@ -362,16 +362,27 @@ export interface Translations {
     googleBtn: string;
   };
   paymentModal: {
-    title: string;
-    benefitBudgetControl: string;
-    benefitGenerationAssistant: string;
-    benefitBudgetChoice: string;
-    benefitModelsAccess: string;
-    payBtn: string;
-    recheckBtn: string;
+    topBarBtn: string;
+    heading: string;
+    tierBasicTitle: string;
+    tierPopularTitle: string;
+    tierMaxTitle: string;
+    freeLabel: string;
+    currentPlanBtn: string;
+    selectBtn: string;
+    recheckLink: string;
     checkingBtn: string;
     paymentNotFound: string;
-    topBarBtn: string;
+    benefitOneflowAccess: string;
+    benefitBudgetChoice: string;
+    benefit30Models: string;
+    benefitAiAssistant: string;
+    benefitLlmModels: string;
+    benefitVisualAdaptation: string;
+    benefitOneLaunchAccess: string;
+    benefitEvaluationAccess: string;
+    benefitUnlimitedBudget: string;
+    benefitPrioritySupport: string;
   };
   startScreen: {
     greeting: string;
@@ -895,16 +906,27 @@ export const ru: Translations = {
     googleBtn: 'Войти через Google',
   },
   paymentModal: {
-    title: 'Оплата подписки',
-    benefitBudgetControl: 'Контроль бюджета',
-    benefitGenerationAssistant: 'Генерация и ИИ ассистент',
-    benefitBudgetChoice: 'Самостоятельный выбор бюджета на генерацию',
-    benefitModelsAccess: 'Доступ к 20 ИИ моделям напрямую',
-    payBtn: 'Оплатить',
-    recheckBtn: 'Проверить оплату',
+    topBarBtn: 'Тариф',
+    heading: 'Виды тарифов',
+    tierBasicTitle: 'Базовый тариф',
+    tierPopularTitle: 'Популярный тариф',
+    tierMaxTitle: 'Максимальный тариф',
+    freeLabel: 'Бесплатно',
+    currentPlanBtn: 'Текущий тариф',
+    selectBtn: 'Оформить',
+    recheckLink: 'Уже оплатили? Проверить',
     checkingBtn: 'Проверка...',
     paymentNotFound: 'Оплата пока не найдена, попробуйте ещё раз через минуту.',
-    topBarBtn: 'Оплатить тариф',
+    benefitOneflowAccess: 'Доступ к ONEFLOW',
+    benefitBudgetChoice: 'Выбор бюджета по желанию',
+    benefit30Models: '30+ самых актуальных нейросетей',
+    benefitAiAssistant: 'ИИ-ассистент',
+    benefitLlmModels: 'LLM модели',
+    benefitVisualAdaptation: 'Адаптация вижуалов',
+    benefitOneLaunchAccess: 'Доступ к One Launch',
+    benefitEvaluationAccess: 'Доступ к инструменту оценка',
+    benefitUnlimitedBudget: 'Безлимитный бюджет',
+    benefitPrioritySupport: 'Приоритетная поддержка',
   },
   startScreen: {
     greeting: 'Начнем генерить?',
@@ -1439,16 +1461,27 @@ export const en: Translations = {
     googleBtn: 'Continue with Google',
   },
   paymentModal: {
-    title: 'Subscription payment',
-    benefitBudgetControl: 'Budget control',
-    benefitGenerationAssistant: 'Generation and AI assistant',
-    benefitBudgetChoice: 'Choose your own generation budget',
-    benefitModelsAccess: 'Direct access to 20 AI models',
-    payBtn: 'Pay',
-    recheckBtn: 'Check payment',
+    topBarBtn: 'Plan',
+    heading: 'Plan types',
+    tierBasicTitle: 'Basic plan',
+    tierPopularTitle: 'Popular plan',
+    tierMaxTitle: 'Maximum plan',
+    freeLabel: 'Free',
+    currentPlanBtn: 'Current plan',
+    selectBtn: 'Subscribe',
+    recheckLink: 'Already paid? Check',
     checkingBtn: 'Checking...',
     paymentNotFound: 'Payment not found yet — please try again in a minute.',
-    topBarBtn: 'Pay for plan',
+    benefitOneflowAccess: 'Access to ONEFLOW',
+    benefitBudgetChoice: 'Choose your own budget',
+    benefit30Models: '30+ of the most up-to-date AI models',
+    benefitAiAssistant: 'AI assistant',
+    benefitLlmModels: 'LLM models',
+    benefitVisualAdaptation: 'Visual adaptation',
+    benefitOneLaunchAccess: 'Access to One Launch',
+    benefitEvaluationAccess: 'Access to the evaluation tool',
+    benefitUnlimitedBudget: 'Unlimited budget',
+    benefitPrioritySupport: 'Priority support',
   },
   startScreen: {
     greeting: "Let's start generating?",

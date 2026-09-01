@@ -60,7 +60,7 @@ import {
   IconUser,
   IconSend,
   IconFlow,
-  IconCreditCard,
+  IconDiamond,
   IconGauge,
   IconRocket,
   IconTool,
@@ -918,11 +918,12 @@ function Canvas() {
           <Logo className="toolbar-logo" />
         </div>
         <div className="toolbar-group toolbar-right">
-          {!subscriptionActive && (
-            <button className="toolbar-pay-btn" onClick={() => setPaymentModalOpen(true)}>
-              <IconCreditCard size={13} /> {t.paymentModal.topBarBtn}
-            </button>
-          )}
+          {/* Always shown (including demo mode) — this is now a "view pricing" entry point
+              rather than strictly an unpaid-account nag, so it doesn't gate on
+              subscriptionActive the way it used to. */}
+          <button className="toolbar-pay-btn" onClick={() => setPaymentModalOpen(true)}>
+            <IconDiamond size={14} /> {t.paymentModal.topBarBtn}
+          </button>
           <button
             className="toolbar-dsp-btn"
             onClick={() => window.api.openDsp()}

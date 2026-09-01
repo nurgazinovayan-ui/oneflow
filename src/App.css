@@ -482,27 +482,167 @@
   }
 }
 
-.payment-benefits {
+/* Pricing overview modal (PaymentModal.tsx) — noticeably stronger blur than the standard
+   .modal-overlay's 2px, per the design ask that the whole app background read as blurred behind
+   it rather than just dimmed. */
+.modal-overlay.pricing-overlay {
+  backdrop-filter: blur(14px);
+  background: rgba(10, 10, 12, 0.55);
+}
+
+.pricing-modal {
+  position: relative;
+  width: min(1120px, 92vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--c-panel);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 1px var(--c-divider), var(--shadow-lg);
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pricing-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--c-panel-2);
+  color: var(--c-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.pricing-close:hover {
+  background: var(--c-panel-3);
+  color: var(--c-text);
+}
+
+.pricing-heading {
+  margin: 0 0 32px;
+  text-align: left;
+  font-size: 60px;
+  line-height: 1.05;
+  font-weight: 800;
+  color: var(--c-text);
+}
+
+.pricing-grid {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.pricing-card {
+  position: relative;
+  flex: 1 1 260px;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 28px 24px 24px;
+  border-radius: var(--radius-lg);
+  background: var(--c-panel-2);
+  box-shadow: 0 0 0 1px var(--c-divider);
+}
+
+/* The "Популярный" tier gets the same glow treatment as .toolbar-pay-btn so it reads as the
+   recommended pick without needing a separate ribbon/badge. */
+.pricing-card.accent {
+  box-shadow: 0 0 0 2px var(--c-pink);
+}
+
+.pricing-price {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--c-pink);
+}
+
+.pricing-card-title {
+  margin: 0;
+  padding-right: 60px;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--c-text);
+}
+
+.pricing-benefits {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin: 4px 0;
+  flex: 1;
 }
 
-.payment-benefit-row {
+.pricing-benefit-row {
   display: flex;
   align-items: center;
   gap: 9px;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
-  background: var(--c-panel-2);
+  background: var(--c-panel-3);
   color: var(--c-text);
   font-size: 12.5px;
 }
 
-.payment-benefit-row svg {
+.pricing-benefit-row svg {
   color: var(--c-pink);
   flex-shrink: 0;
+}
+
+.pricing-card-btn {
+  height: 40px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--c-pink);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s var(--ease);
+}
+
+.pricing-card-btn:hover {
+  opacity: 0.9;
+}
+
+.pricing-card-btn.disabled {
+  background: var(--c-panel-3);
+  color: var(--c-text-muted);
+  cursor: default;
+}
+
+.pricing-card-btn.disabled:hover {
+  opacity: 1;
+}
+
+.pricing-error {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.pricing-recheck-link {
+  align-self: center;
+  margin-top: 16px;
+  background: none;
+  border: none;
+  color: var(--c-text-muted);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.pricing-recheck-link:hover {
+  color: var(--c-text);
 }
 
 .toolbar-avatar-btn {

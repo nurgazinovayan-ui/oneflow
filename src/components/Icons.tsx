@@ -335,3 +335,15 @@ export function IconAssetsFolder({ size = 15 }: IconProps) {
     </svg>
   );
 }
+
+// Same deliberately-colored treatment as IconAssetsFolder — the "Тариф" button needs to read as
+// a distinct blue gem at a glance rather than blend into the glowing pill it sits in.
+export function IconDiamond({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24">
+      <path d="M6.5 3h11L21 8l-9 13L3 8l3.5-5Z" fill="#2E6FE0" />
+      <path d="M6.5 3h11L19.5 7h-15L6.5 3Z" fill="#8FBBFF" />
+      <path d="M4.5 7h15L12 19 4.5 7Z" fill="#4F8CF7" />
+    </svg>
+  );
+}
