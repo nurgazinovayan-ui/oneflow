@@ -339,6 +339,7 @@ export function installMockApiIfNeeded(): void {
     // Not metered — the mock/desktop path uses the user's own Replicate key, not the shared
     // owner account the credit system funds.
     getCreditBalance: async () => Number.POSITIVE_INFINITY,
+    getCheckoutUrl: async () => '',
     openCheckout: (url) => {
       window.open(url, '_blank', 'noopener,noreferrer');
     },

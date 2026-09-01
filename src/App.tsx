@@ -384,7 +384,6 @@ function Canvas() {
   const [photoEditorOpen, setPhotoEditorOpen] = useState(false);
   const [showStartScreen, setShowStartScreen] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(true);
-  const [checkoutUrl, setCheckoutUrl] = useState('');
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [saveToast, setSaveToast] = useState<{ ok: boolean; message: string } | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -411,7 +410,6 @@ function Canvas() {
   const refreshSubscriptionStatus = useCallback(async (): Promise<boolean> => {
     const status = await window.api.getSubscriptionStatus();
     setSubscriptionActive(status.active);
-    setCheckoutUrl(status.checkoutUrl);
     return status.active;
   }, []);
 
@@ -1200,7 +1198,6 @@ function Canvas() {
       {photoEditorOpen && <PhotoEditorModal onClose={() => setPhotoEditorOpen(false)} />}
       {paymentModalOpen && (
         <PaymentModal
-          checkoutUrl={checkoutUrl}
           onClose={() => setPaymentModalOpen(false)}
           onRecheck={refreshSubscriptionStatus}
         />

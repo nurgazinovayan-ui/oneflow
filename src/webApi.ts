@@ -558,6 +558,12 @@ export function installWebApi(): void {
       if (!session) return 0;
       return fetchCreditBalance(session);
     },
+    getCheckoutUrl: async () => {
+      if (!LEMONSQUEEZY_CHECKOUT_URL) return '';
+      const session = await getValidSession();
+      if (!session) return '';
+      return buildCheckoutUrl(session.email, session.userId);
+    },
     evaluateCreative: (images, platform) =>
       callFunction<CreativeEvaluationResult>('evaluate-creative', { images, platform }),
     generateAudio: async (params: AudioGenParams) => {

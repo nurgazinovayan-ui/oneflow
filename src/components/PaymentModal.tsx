@@ -4,7 +4,6 @@ import Prism from './Prism';
 import { useT } from '../i18n';
 
 interface PaymentModalProps {
-  checkoutUrl: string;
   onClose: () => void;
   onRecheck: () => Promise<boolean>;
 }
@@ -27,9 +26,12 @@ interface Tier {
 
 // Pricing overview, opened from the "Тариф" button in the top toolbar (always shown, including
 // demo mode — this reads as a general "view pricing" entry point rather than strictly an
-// unpaid-account nag). Real checkout isn't wired up yet (see handlePay) — "Оформить" just shows
-// a "payment is in development" toast rather than opening checkoutUrl, since that single
-// LemonSqueezy link doesn't actually distinguish between tiers or billing periods yet.
+// unpaid-account nag). "Оформить" opens the single shared LemonSqueezy checkout link — it
+// doesn't yet distinguish between tiers/billing periods (that needs separate LemonSqueezy
+// products per tier), so every card charges whatever price is configured on that one product;
+// the credit balance this feeds is still real and gets credited at 85% of what was actually
+// charged (see lemonsqueezy-webhook). Falls back to the "in development" toast only when no
+// checkout link is available at all (not configured, or not logged in).
 export default function PaymentModal({ onClose, onRecheck }: PaymentModalProps) {
   const t = useT();
   const [checking, setChecking] = useState(false);
@@ -37,6 +39,7 @@ export default function PaymentModal({ onClose, onRecheck }: PaymentModalProps) 
   const [period, setPeriod] = useState<BillingPeriod>('month');
   const [toastVisible, setToastVisible] = useState(false);
   const [balanceUsd, setBalanceUsd] = useState<number | null>(null);
+  const [checkoutUrl, setCheckoutUrl] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -48,12 +51,24 @@ export default function PaymentModal({ onClose, onRecheck }: PaymentModalProps) 
       .catch(() => {
         // No balance to show (e.g. logged out) — leave the line hidden rather than erroring.
       });
+    window.api
+      .getCheckoutUrl()
+      .then((url) => {
+        if (!cancelled) setCheckoutUrl(url);
+      })
+      .catch(() => {
+        // No checkout link available — handlePay falls back to the "in development" toast.
+      });
     return () => {
       cancelled = true;
     };
   }, []);
 
   const handlePay = () => {
+    if (checkoutUrl) {
+      window.api.openCheckout(checkoutUrl);
+      return;
+    }
     setToastVisible(true);
     setTimeout(() => setToastVisible(false), 3000);
   };

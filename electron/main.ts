@@ -952,6 +952,16 @@ ipcMain.handle('subscription:get-status', async () => {
   return { active, checkoutUrl: active ? '' : buildCheckoutUrl(session.email, session.userId) };
 });
 
+// Unlike subscription:get-status's checkoutUrl (only set when there's no active subscription),
+// this always returns a ready-to-open link when logged in — the pricing modal's "Оформить"
+// tops up a balance that can run out regardless of subscription status.
+ipcMain.handle('credit:get-checkout-url', async () => {
+  if (!isPaymentConfigured()) return '';
+  const session = await getValidSession();
+  if (!session) return '';
+  return buildCheckoutUrl(session.email, session.userId);
+});
+
 interface AdminMessage {
   id: string;
   body: string;

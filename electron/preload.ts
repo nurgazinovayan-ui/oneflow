@@ -166,6 +166,7 @@ const api = {
   // settings:get-api-key/set-api-key above), not the shared owner account the web build's
   // credit system funds.
   getCreditBalance: (): Promise<number> => Promise.resolve(Number.POSITIVE_INFINITY),
+  getCheckoutUrl: (): Promise<string> => ipcRenderer.invoke('credit:get-checkout-url'),
   openCheckout: (url: string): void => {
     ipcRenderer.send('auth:open-checkout', url);
   },

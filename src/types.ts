@@ -338,6 +338,11 @@ export interface NodeApi {
   // never $0 unless the account has never paid. Desktop/mock builds bring their own Replicate
   // key and aren't metered this way, so they report Infinity (no restriction).
   getCreditBalance: () => Promise<number>;
+  // Always returns a ready-to-open checkout link when logged in (empty string if not
+  // configured/logged in) — unlike getSubscriptionStatus().checkoutUrl, this isn't gated on
+  // "no active subscription", since paying here tops up a balance that can run out at any time
+  // regardless of subscription status.
+  getCheckoutUrl: () => Promise<string>;
   evaluateCreative: (images: string[], platform?: string) => Promise<CreativeEvaluationResult>;
   generateAudio: (params: AudioGenParams) => Promise<string>;
   connectYandexDisk: (code: string) => Promise<boolean>;
