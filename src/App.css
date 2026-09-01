@@ -543,10 +543,18 @@
 }
 
 .pricing-subheading {
-  margin: 0 0 14px;
+  margin: 0 0 4px;
   text-align: center;
   font-size: 11px;
   color: var(--c-text-muted);
+}
+
+.pricing-balance {
+  margin: 0 0 14px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-pink);
 }
 
 .pricing-period-toggle {

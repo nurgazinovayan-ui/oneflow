@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IconCheck, IconClose } from './Icons';
 import Prism from './Prism';
 import { useT } from '../i18n';
@@ -36,6 +36,22 @@ export default function PaymentModal({ onClose, onRecheck }: PaymentModalProps) 
   const [notFound, setNotFound] = useState(false);
   const [period, setPeriod] = useState<BillingPeriod>('month');
   const [toastVisible, setToastVisible] = useState(false);
+  const [balanceUsd, setBalanceUsd] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    window.api
+      .getCreditBalance()
+      .then((balance) => {
+        if (!cancelled) setBalanceUsd(balance);
+      })
+      .catch(() => {
+        // No balance to show (e.g. logged out) — leave the line hidden rather than erroring.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handlePay = () => {
     setToastVisible(true);
@@ -109,6 +125,11 @@ export default function PaymentModal({ onClose, onRecheck }: PaymentModalProps) 
         </button>
         <h2 className="pricing-heading">{t.paymentModal.heading}</h2>
         <p className="pricing-subheading">{t.paymentModal.subheading}</p>
+        {Number.isFinite(balanceUsd) && (
+          <p className="pricing-balance">
+            {t.paymentModal.balanceLabel} ${(balanceUsd as number).toFixed(2)}
+          </p>
+        )}
 
         <div className="pricing-period-toggle">
           <button

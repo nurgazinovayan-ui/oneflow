@@ -1,6 +1,7 @@
 // Deploy in Supabase Studio → Edge Functions → Create a new function → name it
 // "generate-audio" → paste this file → Deploy. Keep "Verify JWT" ON (default).
 // Secret needed: REPLICATE_API_KEY (Edge Functions → generate-audio → Secrets).
+// SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY are normally already set automatically.
 //
 // Backs the "Музыка и аудио" panel's two modes (see src/components/MusicAudioPanel.tsx):
 // music (minimax/music-2.5 — style prompt + lyrics) and speech (google/gemini-3.1-flash-tts —
@@ -8,10 +9,39 @@
 // aren't published in an exact machine-readable schema here — if Replicate rejects a field as
 // unexpected, its error message names the actual expected key; update buildAudioInput below to
 // match (and mirror the same change in electron/main.ts's copy for the desktop build).
+//
+// Requires the user_credits table and deduct_credit_balance() function — see the SQL comment
+// in lemonsqueezy-webhook/index.ts.
 
 import Replicate from 'npm:replicate';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY') ?? '';
+
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+);
+
+// Neither model publishes a fixed per-call USD rate — rough flat estimates, kept in sync by
+// hand with AUDIO_PRICE_USD in src/types.ts.
+const AUDIO_PRICE_USD: Record<'music' | 'speech', number> = { music: 0.2, speech: 0.02 };
+
+async function getCallerId(req: Request): Promise<string | null> {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+  if (!token) return null;
+  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  return error || !data.user ? null : data.user.id;
+}
+
+async function getBalanceUsd(userId: string): Promise<number> {
+  const { data } = await supabaseAdmin
+    .from('user_credits')
+    .select('balance_usd')
+    .eq('user_id', userId)
+    .maybeSingle();
+  return data?.balance_usd ?? 0;
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -74,10 +104,34 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
   try {
+    const callerId = await getCallerId(req);
+    if (!callerId) {
+      return new Response(JSON.stringify({ error: 'Not authenticated.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const body: AudioBody = await req.json();
+    const costUsd = AUDIO_PRICE_USD[body.mode === 'speech' ? 'speech' : 'music'];
+    const balanceUsd = await getBalanceUsd(callerId);
+    if (costUsd > balanceUsd) {
+      return new Response(
+        JSON.stringify({ error: 'Недостаточно средств на балансе. Пополните тариф, чтобы продолжить.' }),
+        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { model, input } = buildAudioInput(body);
     const replicate = new Replicate({ auth: REPLICATE_API_KEY });
     const output = await replicate.run(model, { input });
+
+    const { error: deductError } = await supabaseAdmin.rpc('deduct_credit_balance', {
+      p_user_id: callerId,
+      p_amount_usd: costUsd,
+    });
+    if (deductError) console.error('Failed to deduct credit balance', deductError);
+
     return new Response(JSON.stringify({ url: normalizeAudioOutput(output) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

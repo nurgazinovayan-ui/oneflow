@@ -237,6 +237,25 @@ export function estimateVideoCost(model: string, resolution: string, duration: n
   return perSecond * Math.max(1, duration);
 }
 
+// Neither minimax/music-2.5 nor google/gemini-3.1-flash-tts nor openai/gpt-5.6-terra (used by
+// evaluate-creative) publish a fixed per-call USD rate the way the image/video models above do —
+// these are rough flat estimates, not scraped from a pricing page. Adjust if Replicate's actual
+// billed amount for these calls turns out to differ meaningfully.
+export const AUDIO_PRICE_USD: Record<'music' | 'speech', number> = {
+  music: 0.2,
+  speech: 0.02,
+};
+
+export function estimateAudioCost(mode: 'music' | 'speech' | undefined): number {
+  return AUDIO_PRICE_USD[mode === 'speech' ? 'speech' : 'music'];
+}
+
+export const EVALUATE_CREATIVE_PRICE_PER_IMAGE_USD = 0.03;
+
+export function estimateEvaluateCreativeCost(imageCount: number): number {
+  return EVALUATE_CREATIVE_PRICE_PER_IMAGE_USD * Math.max(1, imageCount);
+}
+
 export interface ArchiveEntry {
   fileName: string;
   category: 'image' | 'video' | 'adapt' | 'vector';
@@ -314,6 +333,11 @@ export interface NodeApi {
   getOnlineUsers: () => Promise<OnlineUser[]>;
   getSubscriptionStatus: () => Promise<SubscriptionStatus>;
   openCheckout: (url: string) => void;
+  // Real dollars available to spend on generations funded by the shared owner Replicate
+  // account — credited at 85% of what a tariff payment charges (see lemonsqueezy-webhook),
+  // never $0 unless the account has never paid. Desktop/mock builds bring their own Replicate
+  // key and aren't metered this way, so they report Infinity (no restriction).
+  getCreditBalance: () => Promise<number>;
   evaluateCreative: (images: string[], platform?: string) => Promise<CreativeEvaluationResult>;
   generateAudio: (params: AudioGenParams) => Promise<string>;
   connectYandexDisk: (code: string) => Promise<boolean>;

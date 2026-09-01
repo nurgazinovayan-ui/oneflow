@@ -365,6 +365,7 @@ export interface Translations {
     topBarBtn: string;
     heading: string;
     subheading: string;
+    balanceLabel: string;
     periodMonth: string;
     periodYear: string;
     tierFreeTitle: string;
@@ -912,6 +913,7 @@ export const ru: Translations = {
     topBarBtn: 'Тариф',
     heading: 'Виды тарифов',
     subheading: 'Остаток бюджета не сгорает в следующем месяце',
+    balanceLabel: 'Ваш баланс:',
     periodMonth: 'В месяц',
     periodYear: 'В год',
     tierFreeTitle: 'Бесплатный тариф',
@@ -1470,6 +1472,7 @@ export const en: Translations = {
     topBarBtn: 'Plan',
     heading: 'Plan types',
     subheading: "Unused budget doesn't expire the next month",
+    balanceLabel: 'Your balance:',
     periodMonth: 'Monthly',
     periodYear: 'Yearly',
     tierFreeTitle: 'Free plan',

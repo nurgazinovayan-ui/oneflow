@@ -162,6 +162,10 @@ const api = {
   getOnlineUsers: (): Promise<OnlineUser[]> => ipcRenderer.invoke('admin:get-online-users'),
   getSubscriptionStatus: (): Promise<SubscriptionStatus> =>
     ipcRenderer.invoke('subscription:get-status'),
+  // Not metered on desktop — generation runs on the user's own Replicate key (see
+  // settings:get-api-key/set-api-key above), not the shared owner account the web build's
+  // credit system funds.
+  getCreditBalance: (): Promise<number> => Promise.resolve(Number.POSITIVE_INFINITY),
   openCheckout: (url: string): void => {
     ipcRenderer.send('auth:open-checkout', url);
   },

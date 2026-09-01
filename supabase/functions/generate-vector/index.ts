@@ -7,10 +7,39 @@
 //
 // After deploying, set one secret (Edge Functions → generate-vector → Secrets):
 //   REPLICATE_API_KEY — your Replicate token (replicate.com/account/api-tokens)
+// SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY are normally already set automatically.
+//
+// Requires the user_credits table and deduct_credit_balance() function — see the SQL comment
+// in lemonsqueezy-webhook/index.ts.
 
 import Replicate from 'npm:replicate';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY') ?? '';
+
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+);
+
+// Kept in sync by hand with IMAGE_PRICE_USD['recraft-ai/recraft-v4-svg'] in src/types.ts.
+const RECRAFT_V4_SVG_PRICE_USD = 0.08;
+
+async function getCallerId(req: Request): Promise<string | null> {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+  if (!token) return null;
+  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  return error || !data.user ? null : data.user.id;
+}
+
+async function getBalanceUsd(userId: string): Promise<number> {
+  const { data } = await supabaseAdmin
+    .from('user_credits')
+    .select('balance_usd')
+    .eq('user_id', userId)
+    .maybeSingle();
+  return data?.balance_usd ?? 0;
+}
 
 // The web build is served from a different origin than *.supabase.co, so every browser call
 // here is cross-origin and triggers a CORS preflight (OPTIONS) first — without these headers
@@ -68,11 +97,34 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
   try {
+    const callerId = await getCallerId(req);
+    if (!callerId) {
+      return new Response(JSON.stringify({ error: 'Not authenticated.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const balanceUsd = await getBalanceUsd(callerId);
+    if (RECRAFT_V4_SVG_PRICE_USD > balanceUsd) {
+      return new Response(
+        JSON.stringify({ error: 'Недостаточно средств на балансе. Пополните тариф, чтобы продолжить.' }),
+        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const params = await req.json();
     const { prompt, aspectRatio } = params;
     const input = buildVectorInput(prompt, aspectRatio);
     const replicate = new Replicate({ auth: REPLICATE_API_KEY });
     const output = await replicate.run('recraft-ai/recraft-v4-svg', { input });
+
+    const { error: deductError } = await supabaseAdmin.rpc('deduct_credit_balance', {
+      p_user_id: callerId,
+      p_amount_usd: RECRAFT_V4_SVG_PRICE_USD,
+    });
+    if (deductError) console.error('Failed to deduct credit balance', deductError);
+
     return new Response(JSON.stringify(normalizeOutput(output)), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

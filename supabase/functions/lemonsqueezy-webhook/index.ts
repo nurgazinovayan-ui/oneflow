@@ -12,11 +12,83 @@
 // users directly, since LemonSqueezy includes the buyer's email inline on the subscription
 // object already.)
 //
+// Also requires the user_credits/credit_events tables and the credit_user_once() function —
+// see the SQL block at the bottom of this comment. Run it once in Supabase Studio's SQL editor.
+//
 // Then in LemonSqueezy: Settings → Webhooks → Add webhook, URL = this function's URL (shown
 // in Supabase Studio after deploy, looks like
 // https://<project-ref>.functions.supabase.co/lemonsqueezy-webhook), and subscribe to at
 // least: subscription_created, subscription_updated, subscription_cancelled,
-// subscription_resumed, subscription_expired, subscription_paused, subscription_unpaused.
+// subscription_resumed, subscription_expired, subscription_paused, subscription_unpaused,
+// order_created, subscription_payment_success.
+//
+// order_created fires for a one-time purchase; subscription_payment_success fires each time a
+// recurring subscription charge succeeds. Both credit the buyer's user_credits.balance_usd at
+// 85% of the real amount charged (attributes.total, in cents) — a one-time top-up that
+// accumulates and never resets/expires, kept separate from the subscriptions status table
+// above (which only tracks active/cancelled/etc., not money). The 15% held back is the app's
+// margin: real Replicate usage is billed to the one shared owner API key regardless of who
+// generates, so this is what actually funds that account per paying user.
+//
+// SQL (run once):
+//
+//   create table if not exists user_credits (
+//     user_id uuid primary key references auth.users(id) on delete cascade,
+//     balance_usd numeric not null default 0,
+//     updated_at timestamptz default now()
+//   );
+//   alter table user_credits enable row level security;
+//   create policy "select own balance" on user_credits
+//     for select using (auth.uid() = user_id);
+//   -- No insert/update/delete policy — only Edge Functions (service-role client, which
+//   -- bypasses RLS) ever write to this table.
+//
+//   create table if not exists credit_events (
+//     event_id text primary key,
+//     user_id uuid not null references auth.users(id) on delete cascade,
+//     amount_usd numeric not null,
+//     created_at timestamptz default now()
+//   );
+//   alter table credit_events enable row level security;
+//   -- No policies — service-role only, same as user_credits. This table exists purely so a
+//   -- retried webhook delivery (same LemonSqueezy event id) can't double-credit a balance.
+//
+//   create or replace function credit_user_once(p_event_id text, p_user_id uuid, p_amount_usd numeric)
+//   returns boolean
+//   language plpgsql
+//   as $$
+//   begin
+//     insert into credit_events (event_id, user_id, amount_usd)
+//     values (p_event_id, p_user_id, p_amount_usd);
+//
+//     insert into user_credits (user_id, balance_usd)
+//     values (p_user_id, p_amount_usd)
+//     on conflict (user_id) do update
+//       set balance_usd = user_credits.balance_usd + p_amount_usd,
+//           updated_at = now();
+//
+//     return true;
+//   exception
+//     when unique_violation then
+//       return false;
+//   end;
+//   $$;
+//
+//   create or replace function deduct_credit_balance(p_user_id uuid, p_amount_usd numeric)
+//   returns numeric
+//   language plpgsql
+//   as $$
+//   declare
+//     new_balance numeric;
+//   begin
+//     update user_credits
+//       set balance_usd = greatest(balance_usd - p_amount_usd, 0),
+//           updated_at = now()
+//     where user_id = p_user_id
+//     returning balance_usd into new_balance;
+//     return coalesce(new_balance, 0);
+//   end;
+//   $$;
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -80,28 +152,58 @@ Deno.serve(async (req) => {
 
   const payload = JSON.parse(rawBody);
   const eventName: string = payload.meta?.event_name ?? '';
-
-  if (!eventName.startsWith('subscription_')) {
-    // Not something we track — acknowledge so LemonSqueezy doesn't retry.
-    return new Response('ok', { status: 200 });
-  }
-
   const attributes = payload.data?.attributes ?? {};
-  const status: string | undefined = attributes.status;
-  // Active subscriptions have renews_at set; cancelled/expired ones have ends_at instead.
-  const currentPeriodEnd: string | null = attributes.renews_at ?? attributes.ends_at ?? null;
 
   let userId: string | undefined = payload.meta?.custom_data?.user_id;
   if (!userId && attributes.user_email) {
     userId = (await findUserIdByEmail(attributes.user_email)) ?? undefined;
   }
 
-  if (!userId || !status) {
-    console.error('lemonsqueezy-webhook: missing user_id or status', {
-      userId,
-      status,
+  if (!userId) {
+    console.error('lemonsqueezy-webhook: could not resolve user_id', {
+      eventName,
       email: attributes.user_email,
     });
+    return new Response('ok', { status: 200 });
+  }
+
+  // order_created (one-time purchase) and subscription_payment_success (a recurring charge
+  // succeeding) are the only events that represent real money changing hands — credit 85% of
+  // the actual charged amount as a permanent balance top-up. Everything else below is
+  // subscription *status* bookkeeping, unrelated to the balance.
+  if (eventName === 'order_created' || eventName === 'subscription_payment_success') {
+    // 'paid' is the only status that means the charge actually succeeded — order_created can
+    // also fire for e.g. a $0 test order, and invoices can be created before payment clears.
+    if (attributes.status !== 'paid' || typeof attributes.total !== 'number') {
+      return new Response('ok', { status: 200 });
+    }
+    const totalUsd = attributes.total / 100;
+    const creditUsd = Math.round(totalUsd * 0.85 * 100) / 100;
+    const eventId = `${eventName}:${payload.data?.id ?? crypto.randomUUID()}`;
+
+    const { error } = await supabaseAdmin.rpc('credit_user_once', {
+      p_event_id: eventId,
+      p_user_id: userId,
+      p_amount_usd: creditUsd,
+    });
+    if (error) {
+      console.error('Failed to credit balance', error);
+      return new Response('error', { status: 500 });
+    }
+    return new Response('ok', { status: 200 });
+  }
+
+  if (!eventName.startsWith('subscription_')) {
+    // Not something we track — acknowledge so LemonSqueezy doesn't retry.
+    return new Response('ok', { status: 200 });
+  }
+
+  const status: string | undefined = attributes.status;
+  // Active subscriptions have renews_at set; cancelled/expired ones have ends_at instead.
+  const currentPeriodEnd: string | null = attributes.renews_at ?? attributes.ends_at ?? null;
+
+  if (!status) {
+    console.error('lemonsqueezy-webhook: missing status', { userId, eventName });
     return new Response('ok', { status: 200 });
   }
 

@@ -5,12 +5,54 @@
 // Replicate credits; only requests carrying a valid logged-in user's Supabase session token
 // reach this code.
 //
-// After deploying, set one secret (Edge Functions → generate-image → Secrets):
+// After deploying, set these secrets (Edge Functions → generate-image → Secrets):
 //   REPLICATE_API_KEY — your Replicate token (replicate.com/account/api-tokens)
+//   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY — usually already set automatically for every
+//   Edge Function in this project; only add them by hand if they're missing.
+//
+// Requires the user_credits table and deduct_credit_balance() function — see the SQL comment
+// in lemonsqueezy-webhook/index.ts.
 
 import Replicate from 'npm:replicate';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY') ?? '';
+
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+);
+
+// Kept in sync by hand with IMAGE_PRICE_USD/estimateImageCost in src/types.ts — Deno Edge
+// Functions in this project are deployed by pasting one self-contained file, no shared imports.
+const IMAGE_PRICE_USD: Record<string, Record<string, number> | number> = {
+  'google/nano-banana-pro': { '1K': 0.134, '2K': 0.134, '4K': 0.24 },
+  'google/nano-banana-2': { '1K': 0.067, '2K': 0.101, '4K': 0.151 },
+  'openai/gpt-image-2': { auto: 0.08, low: 0.006, medium: 0.053, high: 0.211 },
+  'recraft-ai/recraft-v4-svg': 0.08,
+};
+
+function estimateImageCost(model: string, resolution: string | undefined): number {
+  const entry = IMAGE_PRICE_USD[model];
+  if (entry === undefined) return 0;
+  return typeof entry === 'number' ? entry : (resolution && entry[resolution]) || Object.values(entry)[0];
+}
+
+async function getCallerId(req: Request): Promise<string | null> {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+  if (!token) return null;
+  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  return error || !data.user ? null : data.user.id;
+}
+
+async function getBalanceUsd(userId: string): Promise<number> {
+  const { data } = await supabaseAdmin
+    .from('user_credits')
+    .select('balance_usd')
+    .eq('user_id', userId)
+    .maybeSingle();
+  return data?.balance_usd ?? 0;
+}
 
 // The web build is served from a different origin than *.supabase.co (e.g. a Vercel/Netlify
 // domain), so every browser call here is cross-origin. A POST with a JSON body and an
@@ -164,11 +206,38 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
   try {
+    const callerId = await getCallerId(req);
+    if (!callerId) {
+      return new Response(JSON.stringify({ error: 'Not authenticated.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const params = await req.json();
     const { model, prompt, aspectRatio, resolution, image, images, width, height } = params;
+
+    const costUsd = estimateImageCost(model, resolution);
+    const balanceUsd = await getBalanceUsd(callerId);
+    if (costUsd > balanceUsd) {
+      return new Response(
+        JSON.stringify({ error: 'Недостаточно средств на балансе. Пополните тариф, чтобы продолжить.' }),
+        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const input = buildImageInput(model, prompt, aspectRatio, image, width, height, images, resolution);
     const replicate = new Replicate({ auth: REPLICATE_API_KEY });
     const output = await runReplicateWithRetry(replicate, model, input);
+
+    if (costUsd > 0) {
+      const { error: deductError } = await supabaseAdmin.rpc('deduct_credit_balance', {
+        p_user_id: callerId,
+        p_amount_usd: costUsd,
+      });
+      if (deductError) console.error('Failed to deduct credit balance', deductError);
+    }
+
     return new Response(JSON.stringify(normalizeOutput(output)), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

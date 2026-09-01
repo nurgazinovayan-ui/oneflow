@@ -336,6 +336,9 @@ export function installMockApiIfNeeded(): void {
       { email: 'demo.user@example.com', lastSeen: new Date(Date.now() - 90_000).toISOString() },
     ],
     getSubscriptionStatus: async () => ({ active: true, checkoutUrl: '' }),
+    // Not metered — the mock/desktop path uses the user's own Replicate key, not the shared
+    // owner account the credit system funds.
+    getCreditBalance: async () => Number.POSITIVE_INFINITY,
     openCheckout: (url) => {
       window.open(url, '_blank', 'noopener,noreferrer');
     },

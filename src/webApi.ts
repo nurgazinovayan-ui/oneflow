@@ -239,6 +239,24 @@ export async function checkSubscriptionActive(session: {
   }
 }
 
+async function fetchCreditBalance(session: {
+  userId: string;
+  accessToken: string;
+}): Promise<number> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_credits?user_id=eq.${session.userId}&select=balance_usd`,
+      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${session.accessToken}` } }
+    );
+    if (!res.ok) return 0;
+    const rows: { balance_usd: number }[] = await res.json();
+    // No row yet means the account has never had a tariff payment credited — $0, not an error.
+    return rows[0]?.balance_usd ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 const SEEN_ADMIN_MESSAGES_KEY = 'oneflow-seen-admin-messages';
 
 function getSeenAdminMessageIds(): Set<string> {
@@ -534,6 +552,11 @@ export function installWebApi(): void {
     },
     openCheckout: (url) => {
       window.open(url, '_blank', 'noopener,noreferrer');
+    },
+    getCreditBalance: async () => {
+      const session = await getValidSession();
+      if (!session) return 0;
+      return fetchCreditBalance(session);
     },
     evaluateCreative: (images, platform) =>
       callFunction<CreativeEvaluationResult>('evaluate-creative', { images, platform }),

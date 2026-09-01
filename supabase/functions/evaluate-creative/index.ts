@@ -1,6 +1,7 @@
 // Deploy in Supabase Studio → Edge Functions → Create a new function → name it
 // "evaluate-creative" → paste this file → Deploy. Keep "Verify JWT" ON (default).
 // Secret needed: REPLICATE_API_KEY (Edge Functions → evaluate-creative → Secrets).
+// SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY are normally already set automatically.
 //
 // This is a heuristic design-quality read on an ad creative, not a statistical CTR
 // prediction — no model here has real impression/click data to calibrate a percentage
@@ -8,10 +9,40 @@
 // strengths/weaknesses instead of inventing a plausible-looking number. Comparing 2-3
 // variants against each other (relative judgment) is the more reliable use of this than
 // trusting any single absolute score.
+//
+// Requires the user_credits table and deduct_credit_balance() function — see the SQL comment
+// in lemonsqueezy-webhook/index.ts.
 
 import Replicate from 'npm:replicate';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY') ?? '';
+
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+);
+
+// openai/gpt-5.6-terra doesn't publish a fixed per-call USD rate — a rough flat estimate per
+// image evaluated, kept in sync by hand with EVALUATE_CREATIVE_PRICE_PER_IMAGE_USD in
+// src/types.ts.
+const PRICE_PER_IMAGE_USD = 0.03;
+
+async function getCallerId(req: Request): Promise<string | null> {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+  if (!token) return null;
+  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  return error || !data.user ? null : data.user.id;
+}
+
+async function getBalanceUsd(userId: string): Promise<number> {
+  const { data } = await supabaseAdmin
+    .from('user_credits')
+    .select('balance_usd')
+    .eq('user_id', userId)
+    .maybeSingle();
+  return data?.balance_usd ?? 0;
+}
 
 // The web build is served from a different origin than *.supabase.co, so every browser call
 // here is cross-origin and triggers a CORS preflight (OPTIONS) first — without these headers
@@ -61,6 +92,14 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
   try {
+    const callerId = await getCallerId(req);
+    if (!callerId) {
+      return new Response(JSON.stringify({ error: 'Not authenticated.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const body: EvaluationBody = await req.json();
     const images = body.images ?? [];
     if (images.length === 0 || images.length > 3) {
@@ -68,6 +107,15 @@ Deno.serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    const costUsd = PRICE_PER_IMAGE_USD * images.length;
+    const balanceUsd = await getBalanceUsd(callerId);
+    if (costUsd > balanceUsd) {
+      return new Response(
+        JSON.stringify({ error: 'Недостаточно средств на балансе. Пополните тариф, чтобы продолжить.' }),
+        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const promptLines = [
@@ -85,6 +133,13 @@ Deno.serve(async (req) => {
         image_input: images,
       },
     });
+
+    const { error: deductError } = await supabaseAdmin.rpc('deduct_credit_balance', {
+      p_user_id: callerId,
+      p_amount_usd: costUsd,
+    });
+    if (deductError) console.error('Failed to deduct credit balance', deductError);
+
     const text = Array.isArray(output) ? output.map(String).join('') : String(output);
     const parsed = extractJson(text) as {
       variants?: { score?: number; strengths?: string[]; weaknesses?: string[] }[];
