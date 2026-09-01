@@ -26,6 +26,19 @@ export interface AudioGenParams {
   language?: string;
 }
 
+// One file under the caller's Yandex Disk /ONEFLOW folder — see
+// supabase/functions/yandex-list-assets. `url` is Yandex's own temporary direct-download link
+// (the resource's `file` field), usable directly as an <img>/<video> src or download href.
+export interface YandexAsset {
+  name: string;
+  path: string;
+  url: string;
+  mediaType: 'image' | 'video';
+  mimeType: string;
+  size: number;
+  created: string;
+}
+
 // Real Gemini TTS voice names (Google's Gemini API "Speech generation" voice list, all 30
 // prebuilt voices) — used as-is since google/gemini-3.1-flash-tts is presumed to accept the
 // same voice catalog.
@@ -306,6 +319,7 @@ export interface NodeApi {
   connectYandexDisk: (code: string) => Promise<boolean>;
   isYandexDiskConnected: () => boolean;
   disconnectYandexDisk: () => void;
+  listYandexAssets: () => Promise<YandexAsset[]>;
 }
 
 declare global {

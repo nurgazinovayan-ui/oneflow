@@ -322,3 +322,16 @@ export function IconRocket({ size = 15 }: IconProps) {
     </svg>
   );
 }
+
+// Deliberately filled/colored (not the shared `currentColor` outline style every other icon in
+// this file uses) — the "Ассеты" button needs to read as a distinct colored folder glyph at a
+// glance in the dark topbar, per the design ask, rather than blend in with the monochrome icons
+// around it.
+export function IconAssetsFolder({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24">
+      <path d="M3 6.5a2 2 0 0 1 2-2h4.4l2.2 2.2H19a2 2 0 0 1 2 2V8H3V6.5Z" fill="#E8A93B" />
+      <path d="M3 8h18v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8Z" fill="#FBC65D" />
+    </svg>
+  );
+}

@@ -38,6 +38,7 @@ import QuickGenPanel from './components/QuickGenPanel';
 import EvaluationPanel from './components/EvaluationPanel';
 import OneLaunchPanel from './components/OneLaunchPanel';
 import MusicAudioPanel from './components/MusicAudioPanel';
+import AssetsPanel from './components/AssetsPanel';
 import BackgroundRemoverModal from './components/BackgroundRemoverModal';
 import UpscalerModal from './components/UpscalerModal';
 import PhotoEditorModal from './components/PhotoEditorModal';
@@ -64,6 +65,7 @@ import {
   IconRocket,
   IconTool,
   IconMusic,
+  IconAssetsFolder,
 } from './components/Icons';
 import {
   VIDEO_MODEL_META,
@@ -379,6 +381,7 @@ function Canvas() {
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const [bgRemoverOpen, setBgRemoverOpen] = useState(false);
   const [upscalerOpen, setUpscalerOpen] = useState(false);
+  const [assetsOpen, setAssetsOpen] = useState(false);
   const [photoEditorOpen, setPhotoEditorOpen] = useState(false);
   const [showStartScreen, setShowStartScreen] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(true);
@@ -1057,6 +1060,11 @@ function Canvas() {
             )}
           </div>
           <div className="topbar-right">
+            {import.meta.env.VITE_WEB_MODE === '1' && (
+              <button className="toolbar-label-btn assets-btn" onClick={() => setAssetsOpen(true)}>
+                <IconAssetsFolder size={15} /> {t.assets.buttonLabel}
+              </button>
+            )}
             <BudgetBar />
           </div>
         </div>
@@ -1189,6 +1197,7 @@ function Canvas() {
       {bgRemoverOpen && <BackgroundRemoverModal onClose={() => setBgRemoverOpen(false)} />}
       {upscalerOpen && <UpscalerModal onClose={() => setUpscalerOpen(false)} />}
       {photoEditorOpen && <PhotoEditorModal onClose={() => setPhotoEditorOpen(false)} />}
+      {assetsOpen && <AssetsPanel onClose={() => setAssetsOpen(false)} />}
       {paymentModalOpen && (
         <PaymentModal
           checkoutUrl={checkoutUrl}

@@ -10,6 +10,7 @@ import type {
   SubscriptionStatus,
   CreativeEvaluationResult,
   AudioGenParams,
+  YandexAsset,
 } from './types';
 import { estimateImageCost, estimateVideoCost, DSP_URL } from './types';
 import { getWebSession, setWebSession, type WebSession } from './webAuthSession';
@@ -558,6 +559,10 @@ export function installWebApi(): void {
       } catch {
         // Nothing to clean up if storage isn't available.
       }
+    },
+    listYandexAssets: async () => {
+      const { assets } = await callFunction<{ assets: YandexAsset[] }>('yandex-list-assets', {});
+      return assets;
     },
   };
 

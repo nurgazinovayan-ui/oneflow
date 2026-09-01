@@ -276,6 +276,18 @@ export interface Translations {
     loadingMessagesSpeech: string[];
     downloadTooltip: string;
   };
+  assets: {
+    title: string;
+    buttonLabel: string;
+    filterAll: string;
+    filterPhoto: string;
+    filterVideo: string;
+    loadingHint: string;
+    emptyHint: string;
+    notConnectedHint: string;
+    loadError: string;
+    downloadTooltip: string;
+  };
   yandexDisk: {
     title: string;
     description: string;
@@ -793,6 +805,18 @@ export const ru: Translations = {
       'Синхронизирую произношение...',
       'Финализирую запись...',
     ],
+    downloadTooltip: 'Скачать',
+  },
+  assets: {
+    title: 'Ассеты',
+    buttonLabel: 'Ассеты',
+    filterAll: 'Все',
+    filterPhoto: 'Фото',
+    filterVideo: 'Видео',
+    loadingHint: 'Загружаю материалы...',
+    emptyHint: 'Пока пусто — здесь появятся фото и видео, сохранённые на Яндекс Диск.',
+    notConnectedHint: 'Подключите Яндекс Диск в настройках, чтобы видеть свои материалы здесь.',
+    loadError: 'Не удалось загрузить материалы.',
     downloadTooltip: 'Скачать',
   },
   yandexDisk: {
@@ -1325,6 +1349,18 @@ export const en: Translations = {
       'Syncing pronunciation...',
       'Finalizing the recording...',
     ],
+    downloadTooltip: 'Download',
+  },
+  assets: {
+    title: 'Assets',
+    buttonLabel: 'Assets',
+    filterAll: 'All',
+    filterPhoto: 'Photos',
+    filterVideo: 'Videos',
+    loadingHint: 'Loading assets...',
+    emptyHint: 'Nothing here yet — photos and videos saved to Yandex Disk will show up here.',
+    notConnectedHint: 'Connect Yandex Disk in settings to see your files here.',
+    loadError: 'Failed to load assets.',
     downloadTooltip: 'Download',
   },
   yandexDisk: {
