@@ -1209,6 +1209,7 @@ function Canvas() {
           onChoose={handleStartScreenChoice}
           onChooseBusiness={handleStartScreenBusinessChoice}
           onAutoCreate={handleStartScreenAutoCreate}
+          onClose={() => handleStartScreenChoice('empty')}
         />
       )}
       {import.meta.env.VITE_WEB_MODE === '1' && (

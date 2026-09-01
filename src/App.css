@@ -1859,6 +1859,7 @@
 }
 
 .start-screen-inner {
+  position: relative;
   width: 100%;
   max-width: 760px;
   border-radius: var(--radius-lg);
@@ -1868,6 +1869,28 @@
   flex-direction: row;
   align-items: stretch;
   overflow: hidden;
+}
+
+.start-screen-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e2e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.start-screen-close:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
 }
 
 /* Left-side video insert, flush against the card's left/top/bottom edges (no margin/gap) —

@@ -375,6 +375,7 @@ export interface Translations {
   };
   startScreen: {
     greeting: string;
+    closeTooltip: string;
     emptyDoc: string;
     emptyDocHint: string;
     photoGen: string;
@@ -907,6 +908,7 @@ export const ru: Translations = {
   },
   startScreen: {
     greeting: 'Начнем генерить?',
+    closeTooltip: 'Закрыть',
     emptyDoc: 'Пустой документ',
     emptyDocHint: 'Начать с чистого холста',
     photoGen: 'Генерация фото',
@@ -1450,6 +1452,7 @@ export const en: Translations = {
   },
   startScreen: {
     greeting: "Let's start generating?",
+    closeTooltip: 'Close',
     emptyDoc: 'Blank document',
     emptyDocHint: 'Start from a clean canvas',
     photoGen: 'Photo generation',

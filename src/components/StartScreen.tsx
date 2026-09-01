@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { IconSend } from './Icons';
+import { IconClose, IconSend } from './Icons';
 import { useT } from '../i18n';
 import { BUSINESS_PRESET_ORDER, BUSINESS_PRESET_PROMPTS, type BusinessPresetKey } from '../businessPresets';
 
@@ -9,11 +9,12 @@ interface StartScreenProps {
   onChoose: (choice: StartScreenChoice) => void;
   onChooseBusiness: (prompt: string) => void;
   onAutoCreate: (prompt: string) => Promise<void>;
+  onClose: () => void;
 }
 
 type NavTab = 'quickStart' | 'business';
 
-export default function StartScreen({ onChoose, onChooseBusiness, onAutoCreate }: StartScreenProps) {
+export default function StartScreen({ onChoose, onChooseBusiness, onAutoCreate, onClose }: StartScreenProps) {
   const t = useT();
   const [tab, setTab] = useState<NavTab>('quickStart');
   const [draft, setDraft] = useState('');
@@ -51,6 +52,9 @@ export default function StartScreen({ onChoose, onChooseBusiness, onAutoCreate }
   return (
     <div className="start-screen">
       <div className="start-screen-inner">
+        <button className="start-screen-close" onClick={onClose} title={t.startScreen.closeTooltip}>
+          <IconClose size={14} />
+        </button>
         <div className="start-screen-video-panel">
           <video
             className="start-screen-video"

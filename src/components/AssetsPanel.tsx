@@ -77,7 +77,7 @@ export default function AssetsPanel({ active }: AssetsPanelProps) {
 
           {assets !== null && error && (
             <div className="connected-hint assets-hint">
-              {notConnected ? t.assets.notConnectedHint : t.assets.loadError}
+              {notConnected ? t.assets.notConnectedHint : `${t.assets.loadError} (${error})`}
             </div>
           )}
 

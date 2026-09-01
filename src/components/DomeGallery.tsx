@@ -708,11 +708,11 @@ export default function DomeGallery({
                   onPointerUp={onTilePointerUp}
                 >
                   <img src={it.src} draggable={false} alt={it.alt} />
-                  <span className="item__caption">
-                    <span>{it.label[0]}</span>
-                    <span>{it.label[1]}</span>
-                  </span>
                 </div>
+                <span className="item__caption">
+                  <span>{it.label[0]}</span>
+                  <span>{it.label[1]}</span>
+                </span>
               </div>
             ))}
           </div>

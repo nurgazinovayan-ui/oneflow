@@ -4,6 +4,9 @@
   height: 100%;
   --radius: 520px;
   --viewer-pad: 72px;
+  /* Shared with .item__caption below, which sits in this same reserved gap band rather than
+     inside .item__image, so the two never drift out of sync when this gets re-tuned. */
+  --tile-gap-inset: 84px;
   --circ: calc(var(--radius) * 3.14);
   --rot-y: calc((360deg / var(--segments-x)) / 2);
   --rot-x: calc((360deg / var(--segments-y)) / 2);
@@ -90,7 +93,7 @@ main.sphere-main {
   /* Gap between neighboring tiles = 2 * inset. Was 120px (240px gap); -30% on the gap
      (240 * 0.7 = 168px) means inset only needs to drop to 84px, growing the visible image
      back up somewhat as a side effect (grid cell size is still unchanged). */
-  inset: 84px;
+  inset: var(--tile-gap-inset);
   border-radius: var(--tile-radius, 12px);
   background: var(--overlay-blur-color, #120f17);
   overflow: hidden;
@@ -125,22 +128,33 @@ main.sphere-main {
   filter: none;
 }
 
-/* Small "model used" caption, bottom-right of each tile, one of TILE_LABELS picked at random per
-   tile (see DomeGallery.tsx buildItems) — plain text sibling of the <img>, so it's unaffected by
-   that image's own grayscale/hover filter and stays readable at a fixed light-gray regardless. */
+/* Small "model used" caption, one of TILE_LABELS picked at random per tile (see
+   DomeGallery.tsx buildItems) — sits below the image rather than over it, in the same reserved
+   gap band .item__image's own inset already carves out of this .item cell (hence the shared
+   --tile-gap-inset var), so it never overlaps the photo or a neighboring tile. A sibling of
+   .item__image rather than nested inside it, since that element clips its own content to the
+   image's box (overflow: hidden) and would clip this right out if it lived in there instead. */
 .item__caption {
   position: absolute;
-  right: 6px;
-  bottom: 6px;
+  left: var(--tile-gap-inset);
+  right: var(--tile-gap-inset);
+  top: calc(100% - var(--tile-gap-inset));
+  height: var(--tile-gap-inset);
+  backface-visibility: hidden;
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
   align-items: flex-end;
   text-align: right;
+  padding-top: 6px;
   line-height: 1.25;
   font-size: 9px;
   font-weight: 500;
-  color: #d4d4d8;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  /* A truly light gray (e.g. #d4d4d8) would all but disappear against this dome's own light
+     background (#eceef1, set via overlayBlurColor in WebAuthGate.tsx) now that the caption sits
+     next to the image instead of over it with a dark text-shadow backing it — darkened just
+     enough to stay legible while still reading as gray rather than near-black. */
+  color: #7a7a82;
   pointer-events: none;
 }
 
