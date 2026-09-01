@@ -490,26 +490,32 @@
   background: rgba(10, 10, 12, 0.55);
 }
 
+/* Matte glass panel (translucent + its own blur) rather than a solid fill, same recipe as
+   .canvas-toolbar/.web-auth-panel elsewhere in the app — and every size below is the original
+   value × 0.7 (width, padding, headings, cards, buttons) per the "shrink the whole window 30%"
+   ask, not just a narrower max-width. */
 .pricing-modal {
   position: relative;
-  width: min(1120px, 92vw);
+  width: min(784px, 92vw);
   max-height: 88vh;
   overflow-y: auto;
-  background: var(--c-panel);
+  background: rgba(24, 24, 28, 0.62);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
   border-radius: var(--radius-lg);
   box-shadow: 0 0 0 1px var(--c-divider), var(--shadow-lg);
-  padding: 48px;
+  padding: 34px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .pricing-close {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  width: 32px;
-  height: 32px;
+  top: 14px;
+  right: 14px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: none;
   background: var(--c-panel-2);
@@ -526,9 +532,9 @@
 }
 
 .pricing-heading {
-  margin: 0 0 32px;
+  margin: 0 0 22px;
   text-align: left;
-  font-size: 60px;
+  font-size: 42px;
   line-height: 1.05;
   font-weight: 800;
   color: var(--c-text);
@@ -536,20 +542,19 @@
 
 .pricing-grid {
   display: flex;
-  gap: 20px;
+  gap: 14px;
   flex-wrap: wrap;
 }
 
 .pricing-card {
   position: relative;
-  flex: 1 1 260px;
-  min-width: 260px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 28px 24px 24px;
+  flex: 1 1 182px;
+  min-width: 182px;
   border-radius: var(--radius-lg);
-  background: var(--c-panel-2);
+  overflow: hidden;
+  /* Dark base so the Prism canvas's transparent areas still read as a solid card rather than
+     showing whatever's behind the now-translucent modal panel. */
+  background: #0a0a0c;
   box-shadow: 0 0 0 1px var(--c-divider);
 }
 
@@ -559,19 +564,36 @@
   box-shadow: 0 0 0 2px var(--c-pink);
 }
 
+.pricing-card-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.pricing-card-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 20px 17px 17px;
+}
+
 .pricing-price {
   position: absolute;
-  top: 24px;
-  right: 24px;
-  font-size: 15px;
+  top: 17px;
+  right: 17px;
+  font-size: 11px;
   font-weight: 800;
   color: var(--c-pink);
 }
 
 .pricing-card-title {
   margin: 0;
-  padding-right: 60px;
-  font-size: 22px;
+  padding-right: 42px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--c-text);
 }
@@ -579,19 +601,17 @@
 .pricing-benefits {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   flex: 1;
 }
 
 .pricing-benefit-row {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  background: var(--c-panel-3);
+  gap: 6px;
+  padding: 3px 0;
   color: var(--c-text);
-  font-size: 12.5px;
+  font-size: 10px;
 }
 
 .pricing-benefit-row svg {
@@ -600,12 +620,12 @@
 }
 
 .pricing-card-btn {
-  height: 40px;
+  height: 28px;
   border-radius: var(--radius-sm);
   border: none;
   background: var(--c-pink);
   color: #fff;
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 700;
   cursor: pointer;
   transition: opacity 0.15s var(--ease);
@@ -626,17 +646,17 @@
 }
 
 .pricing-error {
-  margin-top: 16px;
+  margin-top: 11px;
   text-align: center;
 }
 
 .pricing-recheck-link {
   align-self: center;
-  margin-top: 16px;
+  margin-top: 11px;
   background: none;
   border: none;
   color: var(--c-text-muted);
-  font-size: 12px;
+  font-size: 11px;
   text-decoration: underline;
   cursor: pointer;
 }

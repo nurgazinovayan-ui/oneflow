@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { IconCheck, IconClose } from './Icons';
+import Prism from './Prism';
 import { useT } from '../i18n';
 
 interface PaymentModalProps {
@@ -93,23 +94,28 @@ export default function PaymentModal({ checkoutUrl, onClose, onRecheck }: Paymen
         <div className="pricing-grid">
           {tiers.map((tier) => (
             <div key={tier.key} className={`pricing-card ${tier.accent ? 'accent' : ''}`}>
-              <span className="pricing-price">{tier.price}</span>
-              <h3 className="pricing-card-title">{tier.title}</h3>
-              <div className="pricing-benefits">
-                {tier.benefits.map((benefit) => (
-                  <div key={benefit} className="pricing-benefit-row">
-                    <IconCheck size={13} />
-                    <span>{benefit}</span>
-                  </div>
-                ))}
+              <div className="pricing-card-bg">
+                <Prism animationType="rotate" hueShift={0} glow={1} bloom={1} noise={0.3} scale={3.2} />
               </div>
-              <button
-                className={`pricing-card-btn ${tier.onSelect ? '' : 'disabled'}`}
-                onClick={tier.onSelect ?? undefined}
-                disabled={!tier.onSelect}
-              >
-                {tier.buttonLabel}
-              </button>
+              <div className="pricing-card-content">
+                <span className="pricing-price">{tier.price}</span>
+                <h3 className="pricing-card-title">{tier.title}</h3>
+                <div className="pricing-benefits">
+                  {tier.benefits.map((benefit) => (
+                    <div key={benefit} className="pricing-benefit-row">
+                      <IconCheck size={12} />
+                      <span>{benefit}</span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  className={`pricing-card-btn ${tier.onSelect ? '' : 'disabled'}`}
+                  onClick={tier.onSelect ?? undefined}
+                  disabled={!tier.onSelect}
+                >
+                  {tier.buttonLabel}
+                </button>
+              </div>
             </div>
           ))}
         </div>
