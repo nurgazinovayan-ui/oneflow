@@ -213,9 +213,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   flex-shrink: 0;
   background: transparent;
   -webkit-app-region: no-drag;
+}
+
+/* Sits left of the ONEFLOW wordmark, sized to match .toolbar-logo's height. */
+.toolbar-brand-lottie {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
 }
 
 /* fill="currentColor" in the SVG + this color, rather than a fixed hex, so the wordmark stays

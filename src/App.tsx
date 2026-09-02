@@ -33,6 +33,7 @@ import AdminMessageToast from './components/AdminMessageToast';
 import AdminSendMessageModal from './components/AdminSendMessageModal';
 import BudgetBar from './components/BudgetBar';
 import Logo from './components/Logo';
+import LottieLoader from './components/LottieLoader';
 import PaymentModal from './components/PaymentModal';
 import QuickGenPanel from './components/QuickGenPanel';
 import EvaluationPanel from './components/EvaluationPanel';
@@ -916,6 +917,7 @@ function Canvas() {
           </div>
         </div>
         <div className="toolbar-brand">
+          <LottieLoader path="/lottie/generating.json" className="toolbar-brand-lottie" />
           <Logo className="toolbar-logo" />
         </div>
         <div className="toolbar-group toolbar-right">
