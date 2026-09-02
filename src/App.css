@@ -2054,6 +2054,31 @@
   transform: translate(-50%, 0);
 }
 
+/* Privacy/Terms/Refund links, pinned to the bottom of the full-viewport login screen. A small
+   dark pill (independent of theme/the DomeGallery backdrop underneath, which can be light)
+   guarantees contrast — same reasoning as .web-auth-toast's dark background. */
+.web-auth-footer {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  gap: 18px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: rgba(20, 20, 24, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+.web-auth-footer .legal-link {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.web-auth-footer .legal-link:hover {
+  color: #fff;
+}
+
 .web-auth-panel {
   position: relative;
   z-index: 2;

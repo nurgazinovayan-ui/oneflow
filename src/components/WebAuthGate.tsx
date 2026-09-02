@@ -3,6 +3,8 @@ import { setWebSession, type WebSession } from '../webAuthSession';
 import { installMockApiIfNeeded } from '../mockApi';
 import { useT } from '../i18n';
 import DomeGallery from './DomeGallery';
+import LegalModal from './LegalModal';
+import type { LegalDoc } from '../legalContent';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -37,6 +39,7 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
+  const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null);
 
   // Supabase's implicit OAuth flow (used by handleGoogleAuth below) redirects back here with
   // the session in the URL fragment rather than a query string or POST body — pick it up once
@@ -301,6 +304,18 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
           </button>
         </form>
       </div>
+      <div className="web-auth-footer">
+        <button className="legal-link" onClick={() => setLegalDoc('privacy')}>
+          {t.legal.privacyLink}
+        </button>
+        <button className="legal-link" onClick={() => setLegalDoc('terms')}>
+          {t.legal.termsLink}
+        </button>
+        <button className="legal-link" onClick={() => setLegalDoc('refund')}>
+          {t.legal.refundLink}
+        </button>
+      </div>
+      {legalDoc && <LegalModal doc={legalDoc} onClose={() => setLegalDoc(null)} />}
     </div>
   );
 }
