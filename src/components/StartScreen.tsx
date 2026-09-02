@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { IconClose, IconSend } from './Icons';
+import SideRays from './SideRays';
 import { useT } from '../i18n';
 import { BUSINESS_PRESET_ORDER, BUSINESS_PRESET_PROMPTS, type BusinessPresetKey } from '../businessPresets';
 
@@ -57,6 +58,7 @@ export default function StartScreen({
   return (
     <div className="start-screen">
       <div className="start-screen-inner">
+        <SideRays />
         <button className="start-screen-close" onClick={onClose} title={t.startScreen.closeTooltip}>
           <IconClose size={14} />
         </button>

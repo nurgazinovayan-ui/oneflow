@@ -2286,6 +2286,16 @@
   overflow: hidden;
 }
 
+/* Fills the whole card, behind the video panel and main content — both of those get their own
+   position: relative below so normal DOM-order stacking (this div renders first) keeps them
+   painting on top rather than the rays layer covering them (an absolutely-positioned sibling
+   would otherwise paint above static in-flow content regardless of DOM order). Pointer events
+   pass through it (see SideRays.css) so it never blocks clicks. */
+.start-screen-inner > .side-rays-container {
+  position: absolute;
+  inset: 0;
+}
+
 .start-screen-close {
   position: absolute;
   top: 12px;
@@ -2314,6 +2324,7 @@
    source clip to fill that box, same as before. .start-screen-inner's own overflow: hidden +
    border-radius clips this panel's outer corners, so it needs no radius of its own. */
 .start-screen-video-panel {
+  position: relative;
   width: 200px;
   flex-shrink: 0;
   align-self: stretch;
@@ -2328,6 +2339,7 @@
 }
 
 .start-screen-main {
+  position: relative;
   flex: 1;
   min-width: 0;
   padding: 20px 22px;
