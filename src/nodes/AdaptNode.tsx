@@ -24,6 +24,7 @@ import {
   IconSave,
   IconRefresh,
 } from '../components/Icons';
+import LottieLoader from '../components/LottieLoader';
 import { useT } from '../i18n';
 
 const BACKGROUND_PLATE_PROMPT =
@@ -369,6 +370,12 @@ function AdaptNode({ id, data, selected }: NodeProps) {
         </button>
 
         {nodeData.status === 'error' && <div className="error-text">{nodeData.error}</div>}
+
+        {nodeData.status === 'loading' && !nodeData.formats.some((f) => nodeData.results[f.id]) && (
+          <div className="preview-area">
+            <LottieLoader path="/lottie/generating.json" className="preview-loading" />
+          </div>
+        )}
 
         {nodeData.formats.some((f) => nodeData.results[f.id]) && (
           <>

@@ -1712,6 +1712,18 @@
   gap: 8px;
 }
 
+/* Shown in place of the (previously empty) node body while a generation is in flight — same
+   flat dark tile background as .quick-gen-tile.loading, filled by the same looping Lottie
+   animation instead of nothing/a bare spinner. */
+.preview-loading {
+  width: 100%;
+  height: 160px;
+  border-radius: var(--radius-sm);
+  background: var(--c-panel-2);
+  box-shadow: 0 0 0 1px var(--c-divider);
+  overflow: hidden;
+}
+
 .preview-item {
   display: flex;
   flex-direction: column;
@@ -2562,6 +2574,16 @@
 
 .quick-gen-tile-spinner svg {
   animation: spin 0.9s linear infinite;
+}
+
+/* Fills the whole tile while a generation is in flight, replacing the old bare corner
+   spinner — .quick-gen-tile.loading's flat --c-panel-2 background still shows around/behind
+   the animation's own transparent edges. */
+.quick-gen-tile-lottie {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 /* Starts as a centered "landing prompt" (empty canvas, nothing generated yet) and animates

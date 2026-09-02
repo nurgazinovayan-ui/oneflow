@@ -15,6 +15,7 @@ import { useProjectId } from '../store/projectContext';
 import { useSubscription } from '../store/subscriptionContext';
 import { formatGenerationError } from '../errorMessages';
 import { IconVector, IconDownload } from '../components/Icons';
+import LottieLoader from '../components/LottieLoader';
 import { useT } from '../i18n';
 
 export interface VectorGenNodeData extends Record<string, unknown> {
@@ -127,6 +128,12 @@ function VectorGenNode({ id, data, selected }: NodeProps) {
         </button>
 
         {nodeData.status === 'error' && <div className="error-text">{nodeData.error}</div>}
+
+        {nodeData.status === 'loading' && (
+          <div className="preview-area">
+            <LottieLoader path="/lottie/generating.json" className="preview-loading" />
+          </div>
+        )}
 
         {nodeData.status === 'done' && nodeData.outputs?.length > 0 && (
           <div className="preview-area">
