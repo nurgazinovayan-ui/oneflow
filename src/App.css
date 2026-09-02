@@ -219,10 +219,10 @@
   -webkit-app-region: no-drag;
 }
 
-/* Sits left of the ONEFLOW wordmark, sized to match .toolbar-logo's height. */
+/* Sits left of the ONEFLOW wordmark — 2x .toolbar-logo's 26px height, by request. */
 .toolbar-brand-lottie {
-  width: 26px;
-  height: 26px;
+  width: 52px;
+  height: 52px;
   flex-shrink: 0;
 }
 
