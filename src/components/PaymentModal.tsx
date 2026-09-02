@@ -26,9 +26,10 @@ interface Tier {
   crystal: CrystalStyle;
 }
 
-// Pricing overview, opened from the "Тариф" button in the top toolbar (always shown, including
-// demo mode — this reads as a general "view pricing" entry point rather than strictly an
-// unpaid-account nag). "Оформить" opens the single shared LemonSqueezy checkout link — it
+// Pricing overview, opened from the "Тариф" button in the top toolbar (shown in demo mode and
+// to real users without an active subscription; hidden once a real user has one — see App.tsx's
+// isDemoMode/subscriptionActive gate). "Оформить" opens the single shared LemonSqueezy checkout
+// link — it
 // doesn't yet distinguish between tiers/billing periods (that needs separate LemonSqueezy
 // products per tier), so every card charges whatever price is configured on that one product;
 // the credit balance this feeds is still real and gets credited at 85% of what was actually

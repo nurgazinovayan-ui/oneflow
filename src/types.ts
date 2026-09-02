@@ -268,6 +268,11 @@ export interface ArchiveEntry {
 export interface AuthStatus {
   configured: boolean;
   email: string | null;
+  // True only for the web build's "Demo mode" link (mockApi.ts stands in for the real,
+  // Supabase-backed webApi.ts there) — used to hide admin-only UI and to show the "Тариф"
+  // button even though the mock subscription status always reports active:true. Always false
+  // (or omitted) for the real web (webApi.ts) and desktop (electron) builds.
+  isDemo?: boolean;
 }
 
 // The only account allowed to send targeted admin messages (see AdminSendMessageModal /

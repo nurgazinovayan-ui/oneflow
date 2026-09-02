@@ -293,10 +293,12 @@ export function installMockApiIfNeeded(): void {
     },
     listArchive: async () => [],
     openArchiveFolder: async () => true,
-    // Dev-preview only: reports the admin's own email so the "Send a message" button
-    // (real gating happens in the Edge Function, checked against the caller's JWT) is
-    // visible to click through in this mock environment.
-    getAuthStatus: async () => ({ configured: true, email: ADMIN_EMAIL }),
+    // Demo mode has no real logged-in identity — never report the admin's own email here, or
+    // the admin panel (gated on authEmail === ADMIN_EMAIL in App.tsx) would incorrectly show up
+    // for every visitor who clicks "Demo mode". isDemo:true is the signal the toolbar's "Тариф"
+    // button uses to still show itself despite getSubscriptionStatus below always reporting an
+    // active subscription (there's no real subscription concept in this mock environment).
+    getAuthStatus: async () => ({ configured: true, email: null, isDemo: true }),
     logout: async () => true,
     openDsp: () => {
       window.open(DSP_URL, '_blank', 'noopener,noreferrer');
