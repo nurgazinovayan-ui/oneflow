@@ -440,18 +440,19 @@
 
 /* Unpaid-subscription indicator — always lit (unlike .toolbar-dsp-btn, which is a ghost
    button that only lights on hover) so it stays noticeable without blocking the rest of the
-   toolbar. Gradient + ambient glow matches the reference kit's "Get Started" pill; the pulse
-   on top keeps it from fading into the background chrome. */
+   toolbar. Outline-only (no fill), same shape as .project-tab and same outline/hover-fill
+   pattern as .pricing-card-btn; the ambient-glow pulse on top keeps it from fading into the
+   background chrome. */
 .toolbar-pay-btn {
   display: flex;
   align-items: center;
   gap: 6px;
   height: 34px;
   padding: 0 16px;
-  border-radius: 999px;
-  background: var(--glow-gradient);
-  border: none;
-  color: var(--glow-text);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid var(--c-pink);
+  color: var(--c-pink);
   font-size: 12.5px;
   font-weight: 800;
   letter-spacing: 0.02em;
@@ -460,11 +461,16 @@
   cursor: pointer;
   box-shadow: var(--glow-shadow);
   animation: pay-btn-pulse 2.4s ease-in-out infinite;
-  transition: transform 0.15s var(--ease);
+  transition:
+    transform 0.15s var(--ease),
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
 }
 
 .toolbar-pay-btn:hover {
   transform: translateY(-1px);
+  background: var(--c-pink);
+  color: #fff;
   box-shadow: var(--glow-shadow-hover);
 }
 
@@ -983,7 +989,7 @@
   height: 34px;
   flex-shrink: 0;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--c-divider);
+  border: 1px solid var(--c-pink);
   overflow: hidden;
   -webkit-app-region: no-drag;
 }
@@ -995,7 +1001,7 @@
   padding: 0 14px;
   border: none;
   background: var(--c-panel-2);
-  color: var(--c-text-muted);
+  color: var(--c-pink);
   font-size: 12.5px;
   font-weight: 600;
   white-space: nowrap;
@@ -1005,7 +1011,7 @@
 }
 
 .mode-switch-tab:not(:first-child) {
-  border-left: 1px solid var(--c-divider);
+  border-left: 1px solid var(--c-pink);
 }
 
 .mode-switch-tab:hover {
@@ -2451,16 +2457,6 @@
   padding: 0;
 }
 
-/* Privacy/Terms/Refund links, pinned to the bottom of the right-side content column regardless
-   of which tab/tile content sits above (margin-top: auto inside .start-screen-main's own flex
-   column). */
-.start-screen-footer {
-  margin-top: auto;
-  padding-top: 12px;
-  display: flex;
-  gap: 14px;
-}
-
 .legal-link {
   background: none;
   border: none;
@@ -2473,17 +2469,6 @@
 
 .legal-link:hover {
   color: var(--c-text);
-}
-
-/* Overrides the theme-following default above — this footer sits on the fixed-dark glass card
-   (see the .start-screen-inner comment on why its text uses hardcoded light colors in both
-   themes), so var(--c-text-muted) would go near-invisible in light mode. */
-.start-screen-footer .legal-link {
-  color: rgba(242, 242, 244, 0.45);
-}
-
-.start-screen-footer .legal-link:hover {
-  color: rgba(242, 242, 244, 0.8);
 }
 
 /* «Генерация» mode — a third canvas-area layer alongside ReactFlow and .text-work-panel,

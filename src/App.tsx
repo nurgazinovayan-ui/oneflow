@@ -1212,7 +1212,6 @@ function Canvas() {
           onChooseBusiness={handleStartScreenBusinessChoice}
           onAutoCreate={handleStartScreenAutoCreate}
           onClose={() => handleStartScreenChoice('empty')}
-          onOpenLegal={setLegalDoc}
         />
       )}
       {legalDoc && <LegalModal doc={legalDoc} onClose={() => setLegalDoc(null)} />}

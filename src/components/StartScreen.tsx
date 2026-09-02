@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { IconClose, IconSend } from './Icons';
 import { useT } from '../i18n';
 import { BUSINESS_PRESET_ORDER, BUSINESS_PRESET_PROMPTS, type BusinessPresetKey } from '../businessPresets';
-import type { LegalDoc } from '../legalContent';
 
 export type StartScreenChoice = 'empty' | 'photoGen' | 'photoAdapt' | 'videoGen';
 
@@ -11,7 +10,6 @@ interface StartScreenProps {
   onChooseBusiness: (prompt: string) => void;
   onAutoCreate: (prompt: string) => Promise<void>;
   onClose: () => void;
-  onOpenLegal: (doc: LegalDoc) => void;
 }
 
 type NavTab = 'quickStart' | 'business';
@@ -21,7 +19,6 @@ export default function StartScreen({
   onChooseBusiness,
   onAutoCreate,
   onClose,
-  onOpenLegal,
 }: StartScreenProps) {
   const t = useT();
   const [tab, setTab] = useState<NavTab>('quickStart');
@@ -149,17 +146,6 @@ export default function StartScreen({
                 </div>
               )}
             </div>
-          </div>
-          <div className="start-screen-footer">
-            <button className="legal-link" onClick={() => onOpenLegal('privacy')}>
-              {t.legal.privacyLink}
-            </button>
-            <button className="legal-link" onClick={() => onOpenLegal('terms')}>
-              {t.legal.termsLink}
-            </button>
-            <button className="legal-link" onClick={() => onOpenLegal('refund')}>
-              {t.legal.refundLink}
-            </button>
           </div>
         </div>
       </div>
