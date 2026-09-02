@@ -28,7 +28,9 @@ export interface AudioGenParams {
 
 // One file under the caller's Yandex Disk /ONEFLOW folder — see
 // supabase/functions/yandex-list-assets. `url` is Yandex's own temporary direct-download link
-// (the resource's `file` field), usable directly as an <img>/<video> src or download href.
+// (the resource's `file` field) — kept for reference/debugging, but NOT safe to use directly as
+// an <img>/<video> src: loading it cross-origin from the browser doesn't reliably render (see
+// NodeApi.loadYandexAsset, which proxies the bytes through yandex-asset-download instead).
 export interface YandexAsset {
   name: string;
   path: string;
@@ -349,6 +351,11 @@ export interface NodeApi {
   isYandexDiskConnected: () => boolean;
   disconnectYandexDisk: () => void;
   listYandexAssets: () => Promise<YandexAsset[]>;
+  // Fetches one asset's actual bytes through yandex-asset-download (server-side, using the
+  // stored OAuth token) and returns a blob: URL — usable directly as an <img>/<video> src, or
+  // passed to saveFile for downloading. Caller is responsible for URL.revokeObjectURL(...) once
+  // done with it (see AssetsPanel's cleanup effect).
+  loadYandexAsset: (path: string) => Promise<string>;
 }
 
 declare global {

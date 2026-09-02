@@ -5344,6 +5344,38 @@
   display: block;
 }
 
+/* Shown while loadYandexAsset's proxied fetch is still in flight for this tile (see
+   AssetsPanel) — a plain pulse rather than a spinner, since a whole grid of tiles loads at
+   once. */
+.assets-tile-loading {
+  width: 100%;
+  height: 100%;
+  background: var(--c-panel-3);
+  animation: assets-tile-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes assets-tile-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.assets-tile-error {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--c-text-muted);
+}
+
 .assets-tile-name {
   position: absolute;
   left: 0;
@@ -5380,4 +5412,13 @@
 
 .assets-tile-download:hover {
   background: var(--c-pink);
+}
+
+.assets-tile-download:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.assets-tile-download:disabled:hover {
+  background: rgba(15, 15, 18, 0.62);
 }

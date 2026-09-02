@@ -593,6 +593,25 @@ export function installWebApi(): void {
       const { assets } = await callFunction<{ assets: YandexAsset[] }>('yandex-list-assets', {});
       return assets;
     },
+    loadYandexAsset: async (path: string) => {
+      const session = await getValidSession();
+      if (!session) throw new Error(t().errors.notLoggedIn);
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/yandex-asset-download`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify({ path }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || t().errors.generationError);
+      }
+      const blob = await res.blob();
+      return URL.createObjectURL(blob);
+    },
   };
 
   window.api = api;

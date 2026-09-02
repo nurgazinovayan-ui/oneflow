@@ -359,6 +359,7 @@ export function installMockApiIfNeeded(): void {
     isYandexDiskConnected: () => false,
     disconnectYandexDisk: () => {},
     listYandexAssets: async () => [],
+    loadYandexAsset: async (path: string) => path,
     evaluateCreative: async (images): Promise<CreativeEvaluationResult> => {
       await new Promise((r) => setTimeout(r, 900));
       const variants = images.map((_, i) => ({

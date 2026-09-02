@@ -22,6 +22,11 @@ export default function AssetsPanel({ active }: AssetsPanelProps) {
   const [assets, setAssets] = useState<YandexAsset[] | null>(null);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  // Yandex's own `file` link (asset.url) doesn't reliably render cross-origin as an <img>/
+  // <video> src — see NodeApi.loadYandexAsset's comment. Each tile's real bytes are fetched
+  // through that proxy once assets load, keyed by path, and swapped in here as blob: URLs.
+  const [blobUrls, setBlobUrls] = useState<Record<string, string>>({});
+  const [failedPaths, setFailedPaths] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!active || assets !== null) return;
@@ -41,8 +46,40 @@ export default function AssetsPanel({ active }: AssetsPanelProps) {
     };
   }, [active, assets]);
 
+  useEffect(() => {
+    if (!assets || assets.length === 0) return;
+    let cancelled = false;
+    for (const asset of assets) {
+      window.api
+        .loadYandexAsset(asset.path)
+        .then((blobUrl) => {
+          if (cancelled) return;
+          setBlobUrls((prev) => ({ ...prev, [asset.path]: blobUrl }));
+        })
+        .catch(() => {
+          if (!cancelled) setFailedPaths((prev) => ({ ...prev, [asset.path]: true }));
+        });
+    }
+    return () => {
+      cancelled = true;
+    };
+    // Re-run whenever the asset list itself changes (new listYandexAssets result) — assets is
+    // otherwise stable within one panel session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assets]);
+
+  // Blob URLs only live for this tab's session — release them when the panel's asset list
+  // changes or unmounts, rather than leaking memory for however long the page stays open.
+  useEffect(() => {
+    return () => {
+      Object.values(blobUrls).forEach((url) => URL.revokeObjectURL(url));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assets]);
+
   const download = (asset: YandexAsset) => {
-    void window.api.saveFile(asset.url, asset.name);
+    const blobUrl = blobUrls[asset.path];
+    if (blobUrl) void window.api.saveFile(blobUrl, asset.name);
   };
 
   const visible = (assets ?? []).filter((a) => filter === 'all' || a.mediaType === filter);
@@ -87,23 +124,34 @@ export default function AssetsPanel({ active }: AssetsPanelProps) {
 
           {visible.length > 0 && (
             <div className="assets-grid">
-              {visible.map((asset) => (
-                <div key={asset.path} className="assets-tile">
-                  {asset.mediaType === 'image' ? (
-                    <img src={asset.url} alt={asset.name} loading="lazy" />
-                  ) : (
-                    <video src={asset.url} muted preload="metadata" />
-                  )}
-                  <span className="assets-tile-name">{asset.name}</span>
-                  <button
-                    className="assets-tile-download"
-                    onClick={() => download(asset)}
-                    title={t.assets.downloadTooltip}
-                  >
-                    <IconDownload size={13} />
-                  </button>
-                </div>
-              ))}
+              {visible.map((asset) => {
+                const blobUrl = blobUrls[asset.path];
+                const failed = failedPaths[asset.path];
+                return (
+                  <div key={asset.path} className="assets-tile">
+                    {failed ? (
+                      <div className="assets-tile-error">{t.assets.tileLoadError}</div>
+                    ) : blobUrl ? (
+                      asset.mediaType === 'image' ? (
+                        <img src={blobUrl} alt={asset.name} />
+                      ) : (
+                        <video src={blobUrl} muted preload="metadata" />
+                      )
+                    ) : (
+                      <div className="assets-tile-loading" />
+                    )}
+                    <span className="assets-tile-name">{asset.name}</span>
+                    <button
+                      className="assets-tile-download"
+                      onClick={() => download(asset)}
+                      title={t.assets.downloadTooltip}
+                      disabled={!blobUrl}
+                    >
+                      <IconDownload size={13} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

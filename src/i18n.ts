@@ -287,6 +287,7 @@ export interface Translations {
     notConnectedHint: string;
     loadError: string;
     downloadTooltip: string;
+    tileLoadError: string;
   };
   yandexDisk: {
     title: string;
@@ -838,6 +839,7 @@ export const ru: Translations = {
     notConnectedHint: 'Подключите Яндекс Диск в настройках, чтобы видеть свои материалы здесь.',
     loadError: 'Не удалось загрузить материалы.',
     downloadTooltip: 'Скачать',
+    tileLoadError: 'Не удалось загрузить',
   },
   yandexDisk: {
     title: 'Яндекс Диск',
@@ -1402,6 +1404,7 @@ export const en: Translations = {
     notConnectedHint: 'Connect Yandex Disk in settings to see your files here.',
     loadError: 'Failed to load assets.',
     downloadTooltip: 'Download',
+    tileLoadError: 'Failed to load',
   },
   yandexDisk: {
     title: 'Yandex Disk',
