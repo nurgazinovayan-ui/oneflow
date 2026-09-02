@@ -10,7 +10,8 @@
 // SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY are normally already set automatically.
 //
 // Requires the user_credits table and deduct_credit_balance() function — see the SQL comment
-// in lemonsqueezy-webhook/index.ts.
+// in lemonsqueezy-webhook/index.ts — and the generation_log table — see the SQL comment in
+// admin-list-generations/index.ts.
 
 import Replicate from 'npm:replicate';
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -25,11 +26,12 @@ const supabaseAdmin = createClient(
 // Kept in sync by hand with IMAGE_PRICE_USD['recraft-ai/recraft-v4-svg'] in src/types.ts.
 const RECRAFT_V4_SVG_PRICE_USD = 0.08;
 
-async function getCallerId(req: Request): Promise<string | null> {
+async function getCaller(req: Request): Promise<{ id: string; email: string } | null> {
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
   if (!token) return null;
   const { data, error } = await supabaseAdmin.auth.getUser(token);
-  return error || !data.user ? null : data.user.id;
+  if (error || !data.user) return null;
+  return { id: data.user.id, email: data.user.email ?? '' };
 }
 
 async function getBalanceUsd(userId: string): Promise<number> {
@@ -39,6 +41,19 @@ async function getBalanceUsd(userId: string): Promise<number> {
     .eq('user_id', userId)
     .maybeSingle();
   return data?.balance_usd ?? 0;
+}
+
+async function logGeneration(
+  userId: string,
+  email: string,
+  model: string,
+  category: string,
+  costUsd: number
+): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('generation_log')
+    .insert({ user_id: userId, email, model, category, cost_usd: costUsd });
+  if (error) console.error('Failed to log generation', error);
 }
 
 // The web build is served from a different origin than *.supabase.co, so every browser call
@@ -97,13 +112,14 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
   try {
-    const callerId = await getCallerId(req);
-    if (!callerId) {
+    const caller = await getCaller(req);
+    if (!caller) {
       return new Response(JSON.stringify({ error: 'Not authenticated.' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    const callerId = caller.id;
 
     const balanceUsd = await getBalanceUsd(callerId);
     if (RECRAFT_V4_SVG_PRICE_USD > balanceUsd) {
@@ -124,6 +140,7 @@ Deno.serve(async (req) => {
       p_amount_usd: RECRAFT_V4_SVG_PRICE_USD,
     });
     if (deductError) console.error('Failed to deduct credit balance', deductError);
+    void logGeneration(callerId, caller.email, 'recraft-ai/recraft-v4-svg', 'vector', RECRAFT_V4_SVG_PRICE_USD);
 
     return new Response(JSON.stringify(normalizeOutput(output)), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

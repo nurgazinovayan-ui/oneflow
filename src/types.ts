@@ -286,6 +286,21 @@ export interface OnlineUser {
   lastSeen: string;
 }
 
+// Who to reach with an admin broadcast — either every registered account (minus the admin
+// themself) or a specific list of email addresses picked from the online list / typed by hand.
+export type AdminMessageTarget = { mode: 'all' } | { mode: 'selected'; emails: string[] };
+
+// One completed generation, logged server-side by each generate-*/evaluate-creative Edge
+// Function (see supabase/functions/admin-list-generations) — admin-only, and only ever
+// returned for accounts whose email ends in @mechta.kz (enforced server-side, not just here).
+export interface AdminGenerationRecord {
+  email: string;
+  model: string;
+  category: string;
+  costUsd: number;
+  createdAt: string;
+}
+
 // A heuristic design-quality read on an ad creative — NOT a statistical CTR prediction (no
 // model here has real impression/click data to calibrate against). Comparing 2-3 variants
 // against each other is the more reliable use of this: relative judgment beats an absolute
@@ -329,10 +344,15 @@ export interface NodeApi {
   openDsp: () => void;
   getSubscriptionInfo: () => Promise<SubscriptionInfo>;
   getGenerationHistory: () => Promise<GenerationLogEntry[]>;
-  sendAdminMessage: (email: string, message: string) => Promise<{ ok: boolean; error?: string }>;
+  sendAdminMessage: (
+    target: AdminMessageTarget,
+    message: string
+  ) => Promise<{ ok: boolean; error?: string; count?: number }>;
   getPendingMessages: () => Promise<AdminMessage[]>;
   sendHeartbeat: () => Promise<void>;
   getOnlineUsers: () => Promise<OnlineUser[]>;
+  // Admin-only (nurgazinov.ayan@gmail.com) — see AdminGenerationRecord's comment.
+  getMechtaGenerations: () => Promise<AdminGenerationRecord[]>;
   getSubscriptionStatus: () => Promise<SubscriptionStatus>;
   openCheckout: (url: string) => void;
   // Real dollars available to spend on generations funded by the shared owner Replicate

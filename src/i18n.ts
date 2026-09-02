@@ -134,13 +134,31 @@ export interface Translations {
     close: string;
     send: string;
     sending: string;
-    sent: string;
+    sent: (count: number) => string;
     genericError: string;
     onlineTitle: string;
     onlineLoading: string;
     onlineEmpty: string;
     lastSeenJustNow: string;
     lastSeenMinutesAgo: (n: number) => string;
+    tabMessages: string;
+    tabStats: string;
+    broadcastLabel: string;
+    recipientsLabel: string;
+    addEmailPlaceholder: string;
+    noRecipientsError: string;
+    statsHint: string;
+    statsLoading: string;
+    statsEmpty: string;
+    statsError: string;
+    statsSummaryTitle: string;
+    statsLogTitle: string;
+    statsColumnEmail: string;
+    statsColumnModel: string;
+    statsColumnCategory: string;
+    statsColumnCost: string;
+    statsColumnWhen: string;
+    statsGenerationsCount: (n: number) => string;
   };
   aiAssistant: {
     title: string;
@@ -651,21 +669,39 @@ export const ru: Translations = {
     locale: 'ru-RU',
   },
   adminModal: {
-    title: 'Отправить сообщение',
-    hint: 'Сообщение всплывёт снизу экрана у этого пользователя, пока он работает в программе.',
+    title: 'Админ-панель',
+    hint: 'Сообщение всплывёт снизу экрана у пользователя, пока он работает в программе.',
     emailLabel: 'Email пользователя',
     messageLabel: 'Сообщение',
     messagePlaceholder: 'Текст сообщения...',
     close: 'Закрыть',
     send: 'Отправить',
     sending: 'Отправка...',
-    sent: 'Отправлено ✓',
+    sent: (count) => `Отправлено ${count === 1 ? 'получателю' : 'получателям'} (${count}) ✓`,
     genericError: 'Не удалось отправить сообщение.',
     onlineTitle: 'Сейчас в сети',
     onlineLoading: 'Загрузка...',
     onlineEmpty: 'Сейчас никто не в сети.',
     lastSeenJustNow: 'только что',
     lastSeenMinutesAgo: (n) => `${n} мин назад`,
+    tabMessages: 'Сообщения',
+    tabStats: 'Статистика',
+    broadcastLabel: 'Отправить всем пользователям',
+    recipientsLabel: 'Получатели',
+    addEmailPlaceholder: 'Добавить email и нажать Enter',
+    noRecipientsError: 'Выберите получателей или включите рассылку всем.',
+    statsHint: 'Генерации пользователей с почтой @mechta.kz',
+    statsLoading: 'Загрузка...',
+    statsEmpty: 'Пока нет ни одной генерации от пользователей @mechta.kz.',
+    statsError: 'Не удалось загрузить статистику.',
+    statsSummaryTitle: 'По пользователям',
+    statsLogTitle: 'Все генерации',
+    statsColumnEmail: 'Email',
+    statsColumnModel: 'Модель',
+    statsColumnCategory: 'Тип',
+    statsColumnCost: 'Стоимость',
+    statsColumnWhen: 'Когда',
+    statsGenerationsCount: (n) => `${n} ${n === 1 ? 'генерация' : n < 5 ? 'генерации' : 'генераций'}`,
   },
   aiAssistant: {
     title: 'ИИ ассистент (GPT-5.6)',
@@ -1216,21 +1252,39 @@ export const en: Translations = {
     locale: 'en-US',
   },
   adminModal: {
-    title: 'Send a message',
-    hint: "The message will pop up from the bottom of this user's screen while they use the app.",
+    title: 'Admin panel',
+    hint: "The message will pop up from the bottom of a user's screen while they use the app.",
     emailLabel: "User's email",
     messageLabel: 'Message',
     messagePlaceholder: 'Message text...',
     close: 'Close',
     send: 'Send',
     sending: 'Sending...',
-    sent: 'Sent ✓',
+    sent: (count) => `Sent to ${count} recipient${count === 1 ? '' : 's'} ✓`,
     genericError: 'Could not send the message.',
     onlineTitle: 'Online now',
     onlineLoading: 'Loading...',
     onlineEmpty: 'No one is online right now.',
     lastSeenJustNow: 'just now',
     lastSeenMinutesAgo: (n) => `${n} min ago`,
+    tabMessages: 'Messages',
+    tabStats: 'Statistics',
+    broadcastLabel: 'Send to everyone',
+    recipientsLabel: 'Recipients',
+    addEmailPlaceholder: 'Add an email and press Enter',
+    noRecipientsError: 'Select recipients or enable send-to-everyone.',
+    statsHint: 'Generations by users with an @mechta.kz email',
+    statsLoading: 'Loading...',
+    statsEmpty: 'No generations from @mechta.kz users yet.',
+    statsError: 'Could not load statistics.',
+    statsSummaryTitle: 'By user',
+    statsLogTitle: 'All generations',
+    statsColumnEmail: 'Email',
+    statsColumnModel: 'Model',
+    statsColumnCategory: 'Type',
+    statsColumnCost: 'Cost',
+    statsColumnWhen: 'When',
+    statsGenerationsCount: (n) => `${n} generation${n === 1 ? '' : 's'}`,
   },
   aiAssistant: {
     title: 'AI assistant (GPT-5.6)',

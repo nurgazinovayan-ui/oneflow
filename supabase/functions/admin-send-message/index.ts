@@ -3,6 +3,10 @@
 // No secrets to configure: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are reserved names that
 // Supabase injects into every Edge Function automatically — the dashboard actively refuses to
 // let you set a secret with the SUPABASE_ prefix yourself, which is expected, not an error.
+//
+// Body: { mode: 'all', message } broadcasts to every account except the caller; or
+// { mode: 'selected', emails: string[], message } targets just those addresses (any that don't
+// resolve to a real account are silently skipped, not an error, as long as at least one does).
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -40,28 +44,41 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body: { email?: string; message?: string } = await req.json();
-    const targetEmail = body.email?.trim().toLowerCase();
+    const body: { mode?: 'all' | 'selected'; emails?: string[]; message?: string } = await req.json();
+    const mode = body.mode === 'all' ? 'all' : 'selected';
     const message = body.message?.trim();
-    if (!targetEmail || !message) {
-      return new Response(JSON.stringify({ error: 'Укажите email и текст сообщения.' }), {
+    if (!message) {
+      return new Response(JSON.stringify({ error: 'Укажите текст сообщения.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (mode === 'selected' && (!body.emails || body.emails.length === 0)) {
+      return new Response(JSON.stringify({ error: 'Укажите хотя бы одного получателя.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // There's no direct "get user by email" in the admin API, so page through listUsers()
-    // until a match turns up — fine for a small user base.
-    let targetId: string | null = null;
-    for (let page = 1; page <= 20 && !targetId; page++) {
+    // There's no direct "get users by email" in the admin API, so page through listUsers()
+    // once, collecting everyone — fine for a small user base. Reused below for both modes.
+    const allUsers: { id: string; email: string }[] = [];
+    for (let page = 1; page <= 50; page++) {
       const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
       if (error) break;
-      const match = data.users.find((u) => u.email?.toLowerCase() === targetEmail);
-      if (match) targetId = match.id;
+      allUsers.push(...data.users.map((u) => ({ id: u.id, email: (u.email ?? '').toLowerCase() })));
       if (data.users.length < 200) break;
     }
-    if (!targetId) {
-      return new Response(JSON.stringify({ error: 'Пользователь с таким email не найден.' }), {
+
+    let targetIds: string[];
+    if (mode === 'all') {
+      targetIds = allUsers.filter((u) => u.id !== caller.id).map((u) => u.id);
+    } else {
+      const wanted = new Set(body.emails!.map((e) => e.trim().toLowerCase()));
+      targetIds = allUsers.filter((u) => wanted.has(u.email)).map((u) => u.id);
+    }
+    if (targetIds.length === 0) {
+      return new Response(JSON.stringify({ error: 'Получатели не найдены.' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -69,10 +86,10 @@ Deno.serve(async (req) => {
 
     const { error: insertError } = await admin
       .from('admin_messages')
-      .insert({ target_user_id: targetId, body: message });
+      .insert(targetIds.map((id) => ({ target_user_id: id, body: message })));
     if (insertError) throw insertError;
 
-    return new Response(JSON.stringify({ ok: true }), {
+    return new Response(JSON.stringify({ ok: true, count: targetIds.length }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {

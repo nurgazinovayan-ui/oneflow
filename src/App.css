@@ -3613,9 +3613,10 @@
   margin-right: auto;
 }
 
-/* Online-users picker inside AdminSendMessageModal — a scrollable list of plain rows (same
-   "line, not a button" spirit as .text-work-thread) so it reads as a live roster rather than
-   a form control. */
+/* Online-users picker inside AdminPanel — a scrollable list of plain rows (same "line, not a
+   button" spirit as .text-work-thread) so it reads as a live roster rather than a form
+   control. Rows toggle membership in a multi-select now rather than filling a single email
+   field, so .active here means "checked", not "the one recipient". */
 .admin-online-list {
   display: flex;
   flex-direction: column;
@@ -3675,6 +3676,208 @@
   flex-shrink: 0;
   font-size: 10.5px;
   color: var(--c-text-dim);
+}
+
+/* Wider than the default 380px .modal — comfortably fits the stats table's five columns
+   without wrapping, and a max-height + scroll on the whole card (rather than just the table)
+   keeps a long message form or a long generation log from pushing the action buttons
+   off-screen. */
+.admin-panel-modal {
+  position: relative;
+  width: 560px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+}
+
+.admin-panel-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: var(--c-panel-2);
+  color: var(--c-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.admin-panel-close:hover {
+  background: var(--c-panel-3);
+  color: var(--c-text);
+}
+
+.admin-panel-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--c-panel-2);
+  margin-bottom: 4px;
+}
+
+.admin-panel-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--c-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+
+.admin-panel-tab:hover {
+  color: var(--c-text);
+}
+
+.admin-panel-tab.active {
+  background: var(--c-panel);
+  color: var(--c-text);
+  box-shadow: 0 0 0 1px var(--c-divider);
+}
+
+.admin-broadcast-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--c-panel-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--c-text);
+  cursor: pointer;
+}
+
+.admin-broadcast-toggle input {
+  accent-color: var(--c-pink);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.admin-email-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-email-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border-radius: 999px;
+  background: var(--c-panel-2);
+  box-shadow: 0 0 0 1px var(--c-divider);
+  font-size: 11.5px;
+  color: var(--c-text);
+}
+
+.admin-email-chip button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--c-text-muted);
+  cursor: pointer;
+}
+
+.admin-email-chip button:hover {
+  background: var(--c-panel-3);
+  color: var(--c-text);
+}
+
+.admin-stats-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 140px;
+  overflow-y: auto;
+  border-radius: var(--radius-sm);
+}
+
+.admin-stats-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.admin-stats-summary-row:hover {
+  background: var(--c-panel-2);
+}
+
+.admin-stats-summary-email {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--c-text);
+}
+
+.admin-stats-summary-count {
+  flex-shrink: 0;
+  color: var(--c-text-muted);
+}
+
+.admin-stats-summary-cost {
+  flex-shrink: 0;
+  min-width: 52px;
+  text-align: right;
+  font-weight: 700;
+  color: var(--c-pink);
+}
+
+.admin-stats-table-wrap {
+  max-height: 260px;
+  overflow: auto;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 1px var(--c-divider);
+}
+
+.admin-stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.admin-stats-table th {
+  position: sticky;
+  top: 0;
+  padding: 7px 8px;
+  text-align: left;
+  background: var(--c-panel-2);
+  color: var(--c-text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin-stats-table td {
+  padding: 6px 8px;
+  border-top: 1px solid var(--c-divider);
+  color: var(--c-text);
+  white-space: nowrap;
 }
 
 /* Targeted admin announcements — always mounted, popping up from the bottom of the screen

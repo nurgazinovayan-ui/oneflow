@@ -983,27 +983,34 @@ async function fetchAdminMessages(session: AuthSession): Promise<AdminMessage[]>
   return rows.map((r) => ({ id: r.id, body: r.body, createdAt: r.created_at }));
 }
 
-ipcMain.handle('admin:send-message', async (_event, email: string, message: string) => {
-  const session = await getValidSession();
-  if (!session) return { ok: false, error: 'Не выполнен вход.' };
-  try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-send-message`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-      body: JSON.stringify({ email, message }),
-    });
-    const data = await res.json();
-    if (!res.ok) return { ok: false, error: data?.error || 'Не удалось отправить сообщение.' };
-    return { ok: true };
-  } catch (err) {
-    console.error('Admin message send failed', err);
-    return { ok: false, error: 'Не удалось связаться с сервером.' };
+ipcMain.handle(
+  'admin:send-message',
+  async (_event, target: { mode: 'all' } | { mode: 'selected'; emails: string[] }, message: string) => {
+    const session = await getValidSession();
+    if (!session) return { ok: false, error: 'Не выполнен вход.' };
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-send-message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify({
+          mode: target.mode,
+          emails: target.mode === 'selected' ? target.emails : undefined,
+          message,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) return { ok: false, error: data?.error || 'Не удалось отправить сообщение.' };
+      return { ok: true, count: data?.count };
+    } catch (err) {
+      console.error('Admin message send failed', err);
+      return { ok: false, error: 'Не удалось связаться с сервером.' };
+    }
   }
-});
+);
 
 // Messages aren't deleted after being read (so the admin keeps a record on their side) — this
 // tracks which ones this install has already shown, in seenAdminMessageIds, so the same
@@ -1077,6 +1084,36 @@ ipcMain.handle('admin:get-online-users', async (): Promise<OnlineUser[]> => {
     return Array.isArray(data) ? data : [];
   } catch (err) {
     console.error('Online users fetch failed', err);
+    return [];
+  }
+});
+
+interface AdminGenerationRecord {
+  email: string;
+  model: string;
+  category: string;
+  costUsd: number;
+  createdAt: string;
+}
+
+ipcMain.handle('admin:get-mechta-generations', async (): Promise<AdminGenerationRecord[]> => {
+  const session = await getValidSession();
+  if (!session) return [];
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-list-generations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${session.accessToken}`,
+      },
+      body: '{}',
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.error('Mechta generations fetch failed', err);
     return [];
   }
 });

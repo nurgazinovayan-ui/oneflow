@@ -6,6 +6,7 @@ import type {
   AuthStatus,
   GenerationLogEntry,
   AdminMessage,
+  AdminGenerationRecord,
   OnlineUser,
   SubscriptionStatus,
   CreativeEvaluationResult,
@@ -511,10 +512,14 @@ export function installWebApi(): void {
         return [];
       }
     },
-    sendAdminMessage: async (email, message) => {
+    sendAdminMessage: async (target, message) => {
       try {
-        await callFunction<{ ok: true }>('admin-send-message', { email, message });
-        return { ok: true };
+        const result = await callFunction<{ ok: true; count: number }>('admin-send-message', {
+          mode: target.mode,
+          emails: target.mode === 'selected' ? target.emails : undefined,
+          message,
+        });
+        return { ok: true, count: result.count };
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : t().errors.sendFailed };
       }
@@ -536,6 +541,13 @@ export function installWebApi(): void {
     getOnlineUsers: async () => {
       try {
         return await callFunction<OnlineUser[]>('admin-list-online', {});
+      } catch {
+        return [];
+      }
+    },
+    getMechtaGenerations: async () => {
+      try {
+        return await callFunction<AdminGenerationRecord[]>('admin-list-generations', {});
       } catch {
         return [];
       }

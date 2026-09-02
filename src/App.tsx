@@ -30,7 +30,7 @@ import DropdownMenu from './components/DropdownMenu';
 import AiAssistantPanel from './components/AiAssistantPanel';
 import TextWorkPanel from './components/TextWorkPanel';
 import AdminMessageToast from './components/AdminMessageToast';
-import AdminSendMessageModal from './components/AdminSendMessageModal';
+import AdminPanel from './components/AdminPanel';
 import BudgetBar from './components/BudgetBar';
 import Logo from './components/Logo';
 import LottieLoader from './components/LottieLoader';
@@ -378,7 +378,7 @@ function Canvas() {
     'canvas' | 'text' | 'generate' | 'evaluate' | 'onelaunch' | 'musicaudio' | 'assets'
   >('canvas');
   const [authEmail, setAuthEmail] = useState<string | null>(null);
-  const [adminMessageOpen, setAdminMessageOpen] = useState(false);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [templatesMenuOpen, setTemplatesMenuOpen] = useState(false);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
@@ -937,7 +937,7 @@ function Canvas() {
           {authEmail === ADMIN_EMAIL && (
             <button
               className="toolbar-icon-btn toolbar-icon-btn-ghost"
-              onClick={() => setAdminMessageOpen(true)}
+              onClick={() => setAdminPanelOpen(true)}
               title={t.toolbar.sendMessageTooltip}
             >
               <IconSend />
@@ -1197,7 +1197,7 @@ function Canvas() {
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
       {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
-      {adminMessageOpen && <AdminSendMessageModal onClose={() => setAdminMessageOpen(false)} />}
+      {adminPanelOpen && <AdminPanel onClose={() => setAdminPanelOpen(false)} />}
       {bgRemoverOpen && <BackgroundRemoverModal onClose={() => setBgRemoverOpen(false)} />}
       {upscalerOpen && <UpscalerModal onClose={() => setUpscalerOpen(false)} />}
       {photoEditorOpen && <PhotoEditorModal onClose={() => setPhotoEditorOpen(false)} />}

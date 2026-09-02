@@ -309,14 +309,15 @@ export function installMockApiIfNeeded(): void {
         return [];
       }
     },
-    sendAdminMessage: async (email, message) => {
+    sendAdminMessage: async (target, message) => {
       await new Promise((r) => setTimeout(r, 400));
-      if (!email.includes('@')) {
+      if (target.mode === 'selected' && target.emails.some((e) => !e.includes('@'))) {
         const t = useLanguageStore.getState().language === 'en' ? en : ru;
         return { ok: false, error: t.errors.userNotFound };
       }
-      console.log(`[mock] admin message to ${email}: ${message}`);
-      return { ok: true };
+      const count = target.mode === 'all' ? 2 : target.emails.length;
+      console.log(`[mock] admin message (${target.mode}): ${message}`);
+      return { ok: true, count };
     },
     getPendingMessages: async () => {
       // Fires once per dev session so the bottom-popup toast is easy to preview, then goes
@@ -334,6 +335,22 @@ export function installMockApiIfNeeded(): void {
     getOnlineUsers: async () => [
       { email: ADMIN_EMAIL, lastSeen: new Date().toISOString() },
       { email: 'demo.user@example.com', lastSeen: new Date(Date.now() - 90_000).toISOString() },
+    ],
+    getMechtaGenerations: async () => [
+      {
+        email: 'demo.user@mechta.kz',
+        model: 'google/nano-banana-pro',
+        category: 'image',
+        costUsd: 0.134,
+        createdAt: new Date(Date.now() - 3_600_000).toISOString(),
+      },
+      {
+        email: 'demo.user@mechta.kz',
+        model: 'bytedance/seedance-2.5',
+        category: 'video',
+        costUsd: 1.2,
+        createdAt: new Date(Date.now() - 7_200_000).toISOString(),
+      },
     ],
     getSubscriptionStatus: async () => ({ active: true, checkoutUrl: '' }),
     // Not metered — the mock/desktop path uses the user's own Replicate key, not the shared

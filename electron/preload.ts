@@ -105,6 +105,16 @@ export interface OnlineUser {
   lastSeen: string;
 }
 
+export type AdminMessageTarget = { mode: 'all' } | { mode: 'selected'; emails: string[] };
+
+export interface AdminGenerationRecord {
+  email: string;
+  model: string;
+  category: string;
+  costUsd: number;
+  createdAt: string;
+}
+
 export interface SubscriptionStatus {
   active: boolean;
   checkoutUrl: string;
@@ -155,11 +165,16 @@ const api = {
   getSubscriptionInfo: (): Promise<SubscriptionInfo> =>
     ipcRenderer.invoke('auth:get-subscription-info'),
   getGenerationHistory: (): Promise<GenerationLogEntry[]> => ipcRenderer.invoke('history:get'),
-  sendAdminMessage: (email: string, message: string): Promise<{ ok: boolean; error?: string }> =>
-    ipcRenderer.invoke('admin:send-message', email, message),
+  sendAdminMessage: (
+    target: AdminMessageTarget,
+    message: string
+  ): Promise<{ ok: boolean; error?: string; count?: number }> =>
+    ipcRenderer.invoke('admin:send-message', target, message),
   getPendingMessages: (): Promise<AdminMessage[]> => ipcRenderer.invoke('admin:get-pending-messages'),
   sendHeartbeat: (): Promise<void> => ipcRenderer.invoke('presence:heartbeat'),
   getOnlineUsers: (): Promise<OnlineUser[]> => ipcRenderer.invoke('admin:get-online-users'),
+  getMechtaGenerations: (): Promise<AdminGenerationRecord[]> =>
+    ipcRenderer.invoke('admin:get-mechta-generations'),
   getSubscriptionStatus: (): Promise<SubscriptionStatus> =>
     ipcRenderer.invoke('subscription:get-status'),
   // Not metered on desktop — generation runs on the user's own Replicate key (see
