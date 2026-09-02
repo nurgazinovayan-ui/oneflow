@@ -34,15 +34,6 @@ async function getCaller(req: Request): Promise<{ id: string; email: string } | 
   return { id: data.user.id, email: data.user.email ?? '' };
 }
 
-async function getBalanceUsd(userId: string): Promise<number> {
-  const { data } = await supabaseAdmin
-    .from('user_credits')
-    .select('balance_usd')
-    .eq('user_id', userId)
-    .maybeSingle();
-  return data?.balance_usd ?? 0;
-}
-
 async function logGeneration(
   userId: string,
   email: string,
@@ -121,14 +112,7 @@ Deno.serve(async (req) => {
     }
     const callerId = caller.id;
 
-    const balanceUsd = await getBalanceUsd(callerId);
-    if (RECRAFT_V4_SVG_PRICE_USD > balanceUsd) {
-      return new Response(
-        JSON.stringify({ error: 'Недостаточно средств на балансе. Пополните тариф, чтобы продолжить.' }),
-        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
+    // Balance is no longer a hard gate here — see the matching comment in generate-image.
     const params = await req.json();
     const { prompt, aspectRatio } = params;
     const input = buildVectorInput(prompt, aspectRatio);

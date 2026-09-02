@@ -47,15 +47,6 @@ async function getCaller(req: Request): Promise<{ id: string; email: string } | 
   return { id: data.user.id, email: data.user.email ?? '' };
 }
 
-async function getBalanceUsd(userId: string): Promise<number> {
-  const { data } = await supabaseAdmin
-    .from('user_credits')
-    .select('balance_usd')
-    .eq('user_id', userId)
-    .maybeSingle();
-  return data?.balance_usd ?? 0;
-}
-
 async function logGeneration(
   userId: string,
   email: string,
@@ -233,14 +224,12 @@ Deno.serve(async (req) => {
     const params = await req.json();
     const { model, prompt, aspectRatio, resolution, image, images, width, height } = params;
 
+    // Balance is no longer a hard gate here — real payment/checkout isn't wired up for end
+    // users yet (see PaymentModal.tsx's handlePay), so blocking on user_credits.balance_usd
+    // would stop every generation even though it's actually billed to the one shared owner
+    // Replicate key. costUsd is still computed and logged (below) for admin stats and to keep
+    // the deduct_credit_balance ledger consistent for whenever real payments go live.
     const costUsd = estimateImageCost(model, resolution);
-    const balanceUsd = await getBalanceUsd(callerId);
-    if (costUsd > balanceUsd) {
-      return new Response(
-        JSON.stringify({ error: 'Недостаточно средств на балансе. Пополните тариф, чтобы продолжить.' }),
-        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     const input = buildImageInput(model, prompt, aspectRatio, image, width, height, images, resolution);
     const replicate = new Replicate({ auth: REPLICATE_API_KEY });

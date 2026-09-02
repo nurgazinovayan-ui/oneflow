@@ -28,13 +28,9 @@ interface Tier {
 
 // Pricing overview, opened from the "Тариф" button in the top toolbar (shown in demo mode and
 // to real users without an active subscription; hidden once a real user has one — see App.tsx's
-// isDemoMode/subscriptionActive gate). "Оформить" opens the single shared LemonSqueezy checkout
-// link — it
-// doesn't yet distinguish between tiers/billing periods (that needs separate LemonSqueezy
-// products per tier), so every card charges whatever price is configured on that one product;
-// the credit balance this feeds is still real and gets credited at 85% of what was actually
-// charged (see lemonsqueezy-webhook). Falls back to the "in development" toast only when no
-// checkout link is available at all (not configured, or not logged in).
+// isDemoMode/subscriptionActive gate). Real checkout isn't wired up for end users yet, so
+// "Оформить" always shows the "in development" toast rather than opening LemonSqueezy — see
+// handlePay below.
 export default function PaymentModal({ onClose, onRecheck, onOpenLegal }: PaymentModalProps) {
   const t = useT();
   const [checking, setChecking] = useState(false);
@@ -42,7 +38,6 @@ export default function PaymentModal({ onClose, onRecheck, onOpenLegal }: Paymen
   const [period, setPeriod] = useState<BillingPeriod>('month');
   const [toastVisible, setToastVisible] = useState(false);
   const [balanceUsd, setBalanceUsd] = useState<number | null>(null);
-  const [checkoutUrl, setCheckoutUrl] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -54,24 +49,12 @@ export default function PaymentModal({ onClose, onRecheck, onOpenLegal }: Paymen
       .catch(() => {
         // No balance to show (e.g. logged out) — leave the line hidden rather than erroring.
       });
-    window.api
-      .getCheckoutUrl()
-      .then((url) => {
-        if (!cancelled) setCheckoutUrl(url);
-      })
-      .catch(() => {
-        // No checkout link available — handlePay falls back to the "in development" toast.
-      });
     return () => {
       cancelled = true;
     };
   }, []);
 
   const handlePay = () => {
-    if (checkoutUrl) {
-      window.api.openCheckout(checkoutUrl);
-      return;
-    }
     setToastVisible(true);
     setTimeout(() => setToastVisible(false), 3000);
   };

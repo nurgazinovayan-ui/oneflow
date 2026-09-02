@@ -36,15 +36,6 @@ async function getCaller(req: Request): Promise<{ id: string; email: string } | 
   return { id: data.user.id, email: data.user.email ?? '' };
 }
 
-async function getBalanceUsd(userId: string): Promise<number> {
-  const { data } = await supabaseAdmin
-    .from('user_credits')
-    .select('balance_usd')
-    .eq('user_id', userId)
-    .maybeSingle();
-  return data?.balance_usd ?? 0;
-}
-
 async function logGeneration(
   userId: string,
   email: string,
@@ -129,14 +120,8 @@ Deno.serve(async (req) => {
     const callerId = caller.id;
 
     const body: AudioBody = await req.json();
+    // Balance is no longer a hard gate here — see the matching comment in generate-image.
     const costUsd = AUDIO_PRICE_USD[body.mode === 'speech' ? 'speech' : 'music'];
-    const balanceUsd = await getBalanceUsd(callerId);
-    if (costUsd > balanceUsd) {
-      return new Response(
-        JSON.stringify({ error: 'Недостаточно средств на балансе. Пополните тариф, чтобы продолжить.' }),
-        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     const { model, input } = buildAudioInput(body);
     const replicate = new Replicate({ auth: REPLICATE_API_KEY });
