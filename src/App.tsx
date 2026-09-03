@@ -39,6 +39,7 @@ import QuickGenPanel from './components/QuickGenPanel';
 import EvaluationPanel from './components/EvaluationPanel';
 import OneLaunchPanel from './components/OneLaunchPanel';
 import MusicAudioPanel from './components/MusicAudioPanel';
+import StrategyPanel from './components/StrategyPanel';
 import AssetsPanel from './components/AssetsPanel';
 import BackgroundRemoverModal from './components/BackgroundRemoverModal';
 import UpscalerModal from './components/UpscalerModal';
@@ -68,6 +69,7 @@ import {
   IconRocket,
   IconTool,
   IconMusic,
+  IconTarget,
   IconAssetsFolder,
 } from './components/Icons';
 import {
@@ -375,7 +377,7 @@ function Canvas() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
   const [mainView, setMainView] = useState<
-    'canvas' | 'text' | 'generate' | 'evaluate' | 'onelaunch' | 'musicaudio' | 'assets'
+    'canvas' | 'text' | 'generate' | 'evaluate' | 'onelaunch' | 'musicaudio' | 'strategy' | 'assets'
   >('canvas');
   const [authEmail, setAuthEmail] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -734,6 +736,17 @@ function Canvas() {
     setShowStartScreen(false);
   };
 
+  // "Create from Strategy" (Стратегия → Overview/Map/Plan → Create) — same node shape as the
+  // business presets, just fed a prompt built from the strategy's audience/positioning/offer
+  // instead of a fixed vertical, and switches the user onto the canvas so the generated card
+  // is one click away instead of leaving them with only a text recommendation.
+  const handleCreateFromStrategy = (prompt: string) => {
+    const { nodes: presetNodes, edges: presetEdges } = buildBusinessPresetNodesEdges(prompt);
+    setNodes(presetNodes);
+    setEdges(presetEdges);
+    setMainView('canvas');
+  };
+
   // "Авто создание нод с ИИ ассистентом" on the start screen — reuses the same assistant
   // pipeline as the in-canvas AI panel (generateChat in 'assistant' mode + parseAssistantReply)
   // rather than a separate endpoint, so both surfaces stay in sync automatically.
@@ -1066,6 +1079,14 @@ function Canvas() {
                 <IconMusic size={13} /> {t.modeSwitch.musicAudio}
               </button>
             )}
+            {import.meta.env.VITE_WEB_MODE === '1' && (
+              <button
+                className={`mode-switch-tab ${mainView === 'strategy' ? 'active' : ''}`}
+                onClick={() => setMainView('strategy')}
+              >
+                <IconTarget size={13} /> {t.modeSwitch.strategy}
+              </button>
+            )}
           </div>
           <div className="topbar-right">
             {import.meta.env.VITE_WEB_MODE === '1' && (
@@ -1186,6 +1207,9 @@ function Canvas() {
           )}
           {import.meta.env.VITE_WEB_MODE === '1' && (
             <MusicAudioPanel active={mainView === 'musicaudio'} />
+          )}
+          {import.meta.env.VITE_WEB_MODE === '1' && (
+            <StrategyPanel active={mainView === 'strategy'} onCreateWorkflow={handleCreateFromStrategy} />
           )}
           {import.meta.env.VITE_WEB_MODE === '1' && <AssetsPanel active={mainView === 'assets'} />}
         </div>

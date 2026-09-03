@@ -63,6 +63,7 @@ export interface Translations {
     evaluation: string;
     oneLaunch: string;
     musicAudio: string;
+    strategy: string;
   };
   nodeLabels: {
     prompt: string;
@@ -245,6 +246,81 @@ export interface Translations {
     templatePaletteNote: string;
     templateResultLabel: string;
     discountPlaceholder: string;
+  };
+  strategy: {
+    title: string;
+    headerSubtitle: string;
+    months: string;
+    tabOverview: string;
+    tabMap: string;
+    tabPlan: string;
+    newStrategyBtn: string;
+    onboardGoalStep: string;
+    onboardContextStep: string;
+    onboardOf: string;
+    onboardBack: string;
+    onboardContinue: string;
+    onboardCreate: string;
+    onboardGenerating: string;
+    marketLabel: string;
+    durationLabel: string;
+    budgetLabel: string;
+    descriptionLabel: string;
+    descriptionPlaceholder: string;
+    photoLabel: string;
+    scoreTitle: string;
+    goalCardTitle: string;
+    positioningCardTitle: string;
+    offerCardTitle: string;
+    audienceCardTitle: string;
+    channelsCardTitle: string;
+    risksCardTitle: string;
+    opportunitiesCardTitle: string;
+    contentMatrixTitle: string;
+    funnelCardTitle: string;
+    segments: string;
+    openBtn: string;
+    createBtn: string;
+    generateBtn: string;
+    planThisWeek: string;
+    drawerPotential: string;
+    drawerMainJob: string;
+    drawerPainPoints: string;
+    drawerOffer: string;
+    drawerAllocation: string;
+    createOfferBtn: string;
+    createModalTitle: string;
+    createModalFormat: string;
+    createModalHint: string;
+    createModalBtn: string;
+    assistantTitle: string;
+    assistantCollapse: string;
+    assistantContext: string;
+    assistantInsightLabel: string;
+    assistantApply: string;
+    assistantApplied: string;
+    assistantExplain: string;
+    assistantExplaining: string;
+    assistantPlaceholder: string;
+    scoreMetricAudience: string;
+    scoreMetricPositioning: string;
+    scoreMetricOffer: string;
+    scoreMetricChannels: string;
+    scoreMetricContent: string;
+    scoreMetricRetention: string;
+    scoreExcellent: string;
+    scoreGood: string;
+    scoreFair: string;
+    scoreWeak: string;
+    stageAwareness: string;
+    stageConsideration: string;
+    stageConversion: string;
+    potentialLabel: string;
+    segmentsUnit: string;
+    budgetUnit: string;
+    mapAudienceTitle: string;
+    mapPositioningTitle: string;
+    mapOfferTitle: string;
   };
   tools: {
     menuLabel: string;
@@ -596,6 +672,7 @@ export const ru: Translations = {
     evaluation: 'Оценка',
     oneLaunch: 'One Launch',
     musicAudio: 'Музыка и аудио',
+    strategy: 'Стратегия',
   },
   nodeLabels: {
     prompt: 'Текстовый промпт',
@@ -811,6 +888,81 @@ export const ru: Translations = {
     templatePaletteNote: 'Цветовая гамма уже задана выбранным шаблоном.',
     templateResultLabel: 'Карточка по шаблону',
     discountPlaceholder: 'Скидка (например -20%), необязательно',
+  },
+  strategy: {
+    title: 'Стратегия',
+    headerSubtitle: 'Маркетинговая стратегия для ONEFLOW',
+    months: 'мес.',
+    tabOverview: 'Обзор',
+    tabMap: 'Карта',
+    tabPlan: 'План',
+    newStrategyBtn: 'Новая стратегия',
+    onboardGoalStep: 'Какой результат вы хотите получить?',
+    onboardContextStep: 'Расскажите о продукте',
+    onboardOf: 'из',
+    onboardBack: 'Назад',
+    onboardContinue: 'Продолжить',
+    onboardCreate: 'Создать стратегию',
+    onboardGenerating: 'Создаём стратегию...',
+    marketLabel: 'Рынок',
+    durationLabel: 'Срок, мес.',
+    budgetLabel: 'Бюджет, ₸',
+    descriptionLabel: 'Опишите продукт или бизнес',
+    descriptionPlaceholder: 'Что вы продаёте, кому и в чём отличие от конкурентов',
+    photoLabel: 'Фото товара (необязательно)',
+    scoreTitle: 'Оценка стратегии',
+    goalCardTitle: 'Цель',
+    positioningCardTitle: 'Позиционирование',
+    offerCardTitle: 'Оффер',
+    audienceCardTitle: 'Аудитория',
+    channelsCardTitle: 'Каналы',
+    risksCardTitle: 'Риски',
+    opportunitiesCardTitle: 'Возможности',
+    contentMatrixTitle: 'Контент-матрица',
+    funnelCardTitle: 'Воронка',
+    segments: 'сегмента',
+    openBtn: 'Открыть',
+    createBtn: 'Создать',
+    generateBtn: 'Создать',
+    planThisWeek: 'На этой неделе',
+    drawerPotential: 'Потенциал',
+    drawerMainJob: 'Главная задача',
+    drawerPainPoints: 'Боли',
+    drawerOffer: 'Рекомендуемый оффер',
+    drawerAllocation: 'Доля бюджета',
+    createOfferBtn: 'Создать оффер',
+    createModalTitle: 'Создать из стратегии',
+    createModalFormat: 'Формат',
+    createModalHint: 'ONEFLOW создаст workflow генерации на основе этого контекста и откроет его в холсте нод.',
+    createModalBtn: 'Создать workflow',
+    assistantTitle: 'ONEFLOW Assistant',
+    assistantCollapse: 'Свернуть',
+    assistantContext: 'Контекст стратегии',
+    assistantInsightLabel: 'AI-инсайт',
+    assistantApply: 'Применить',
+    assistantApplied: 'Применено',
+    assistantExplain: 'Объяснить',
+    assistantExplaining: 'Объясняю...',
+    assistantPlaceholder: 'Спросите о стратегии...',
+    scoreMetricAudience: 'Аудитория',
+    scoreMetricPositioning: 'Позиционирование',
+    scoreMetricOffer: 'Оффер',
+    scoreMetricChannels: 'Каналы',
+    scoreMetricContent: 'Контент',
+    scoreMetricRetention: 'Удержание',
+    scoreExcellent: 'Отлично',
+    scoreGood: 'Хорошо',
+    scoreFair: 'Средне',
+    scoreWeak: 'Слабо',
+    stageAwareness: 'Осведомлённость',
+    stageConsideration: 'Рассмотрение',
+    stageConversion: 'Конверсия',
+    potentialLabel: 'потенциал',
+    segmentsUnit: 'сегмента',
+    budgetUnit: 'бюджета',
+    mapAudienceTitle: 'Аудитория',
+    mapPositioningTitle: 'Позиционирование',
+    mapOfferTitle: 'Оффер',
   },
   tools: {
     menuLabel: 'Инструменты',
@@ -1186,6 +1338,7 @@ export const en: Translations = {
     evaluation: 'Evaluation',
     oneLaunch: 'One Launch',
     musicAudio: 'Music & audio',
+    strategy: 'Strategy',
   },
   nodeLabels: {
     prompt: 'Text prompt',
@@ -1400,6 +1553,81 @@ export const en: Translations = {
     templatePaletteNote: 'Color palette is already set by the chosen template.',
     templateResultLabel: 'Template card',
     discountPlaceholder: 'Discount (e.g. -20%), optional',
+  },
+  strategy: {
+    title: 'Strategy',
+    headerSubtitle: 'Marketing strategy for ONEFLOW',
+    months: 'mo.',
+    tabOverview: 'Overview',
+    tabMap: 'Map',
+    tabPlan: 'Plan',
+    newStrategyBtn: 'New strategy',
+    onboardGoalStep: 'What result do you want?',
+    onboardContextStep: 'Tell us about the product',
+    onboardOf: 'of',
+    onboardBack: 'Back',
+    onboardContinue: 'Continue',
+    onboardCreate: 'Create strategy',
+    onboardGenerating: 'Building strategy...',
+    marketLabel: 'Market',
+    durationLabel: 'Duration, months',
+    budgetLabel: 'Budget',
+    descriptionLabel: 'Describe the product or business',
+    descriptionPlaceholder: 'What you sell, to whom, and what sets it apart from competitors',
+    photoLabel: 'Product photo (optional)',
+    scoreTitle: 'Strategy Score',
+    goalCardTitle: 'Goal',
+    positioningCardTitle: 'Positioning',
+    offerCardTitle: 'Offer',
+    audienceCardTitle: 'Audience',
+    channelsCardTitle: 'Channels',
+    risksCardTitle: 'Risks',
+    opportunitiesCardTitle: 'Opportunities',
+    contentMatrixTitle: 'Content Matrix',
+    funnelCardTitle: 'Funnel',
+    segments: 'segments',
+    openBtn: 'Open',
+    createBtn: 'Create',
+    generateBtn: 'Generate',
+    planThisWeek: 'This Week',
+    drawerPotential: 'Potential',
+    drawerMainJob: 'Main Job',
+    drawerPainPoints: 'Pain Points',
+    drawerOffer: 'Recommended offer',
+    drawerAllocation: 'Budget share',
+    createOfferBtn: 'Create Offer',
+    createModalTitle: 'Create from Strategy',
+    createModalFormat: 'Format',
+    createModalHint: 'ONEFLOW will create a generation workflow from this context and open it on the node canvas.',
+    createModalBtn: 'Create Workflow',
+    assistantTitle: 'ONEFLOW Assistant',
+    assistantCollapse: 'Collapse',
+    assistantContext: 'Strategy context',
+    assistantInsightLabel: 'AI Insight',
+    assistantApply: 'Apply',
+    assistantApplied: 'Applied',
+    assistantExplain: 'Explain',
+    assistantExplaining: 'Explaining...',
+    assistantPlaceholder: 'Ask about the strategy...',
+    scoreMetricAudience: 'Audience',
+    scoreMetricPositioning: 'Positioning',
+    scoreMetricOffer: 'Offer',
+    scoreMetricChannels: 'Channels',
+    scoreMetricContent: 'Content',
+    scoreMetricRetention: 'Retention',
+    scoreExcellent: 'Excellent',
+    scoreGood: 'Good',
+    scoreFair: 'Fair',
+    scoreWeak: 'Weak',
+    stageAwareness: 'Awareness',
+    stageConsideration: 'Consideration',
+    stageConversion: 'Conversion',
+    potentialLabel: 'potential',
+    segmentsUnit: 'segments',
+    budgetUnit: 'budget',
+    mapAudienceTitle: 'Audience',
+    mapPositioningTitle: 'Positioning',
+    mapOfferTitle: 'Offer',
   },
   tools: {
     menuLabel: 'Tools',

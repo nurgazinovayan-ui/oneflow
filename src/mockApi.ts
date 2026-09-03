@@ -190,6 +190,66 @@ export function installMockApiIfNeeded(): void {
     generateChat: async (messages, images, mode) => {
       await new Promise((r) => setTimeout(r, 500));
       const lastMessage = messages[messages.length - 1]?.content ?? '';
+      // Strategy mode's onboarding call (see strategyPrompts.ts) and its assistant Q&A both
+      // send a recognizable marker — checked before the generic images?.length branch below,
+      // since a strategy brief can include an optional product photo too.
+      if (/маркетинговый стратег/i.test(lastMessage)) {
+        return JSON.stringify({
+          title: 'Q4 Growth Strategy',
+          positioning: 'Премиальный, но доступный бренд для активных предпринимателей на маркетплейсах.',
+          offer: 'Готовые карточки товаров за 5 минут вместо найма дизайнера.',
+          score: { overall: 82, audience: 92, positioning: 86, offer: 88, channels: 74, content: 79, retention: 63 },
+          audience: [
+            {
+              name: 'Marketplace Sellers',
+              potential: 'High',
+              description: 'Быстро создают карточки товаров для большого количества SKU.',
+              painPoints: ['High production cost', 'Slow workflow'],
+            },
+            {
+              name: 'Small Businesses',
+              potential: 'Medium',
+              description: 'Нужен маркетинг без найма отдельной команды.',
+              painPoints: ['Ограниченный бюджет', 'Нет времени на дизайн'],
+            },
+          ],
+          channels: [
+            { name: 'TikTok', percent: 35 },
+            { name: 'Instagram', percent: 30 },
+            { name: 'Google Ads', percent: 20 },
+            { name: 'Email', percent: 15 },
+          ],
+          risks: [
+            { title: 'Low retention', description: 'Повторные продажи почти не используются в текущей стратегии.' },
+            { title: 'High CAC on paid search', description: 'Google Ads может оказаться дороже прогноза на этом рынке.' },
+          ],
+          opportunities: [
+            { title: 'TikTok potential', description: 'TikTok может дать больше охвата в выбранном сегменте.' },
+          ],
+          contentMatrix: [
+            { format: 'UGC', stages: ['awareness', 'consideration', 'conversion'] },
+            { format: 'Product Demo', stages: ['awareness', 'consideration', 'conversion'] },
+            { format: 'Education', stages: ['awareness', 'consideration'] },
+            { format: 'Comparison', stages: ['consideration', 'conversion'] },
+            { format: 'Testimonials', stages: ['consideration', 'conversion'] },
+          ],
+          funnel: [
+            { label: 'Impressions', value: 1_000_000, conversionToNext: 2.8 },
+            { label: 'Clicks', value: 28_000, conversionToNext: 12 },
+            { label: 'Sign Ups', value: 3_300, conversionToNext: 7 },
+            { label: 'Purchases', value: 235 },
+          ],
+          plan: [
+            { day: 'MON 03', title: 'Create 3 UGC creatives', tag: 'Conversion · Marketplace Sellers' },
+            { day: 'TUE 04', title: 'Create Product Demo campaign', tag: 'Awareness · Marketplace Sellers' },
+            { day: 'WED 05', title: 'Compare 3 offers', tag: 'Conversion · Small Businesses' },
+          ],
+          topInsight: {
+            title: 'Instagram получает 45% бюджета',
+            description: 'TikTok может быть эффективнее для выбранного сегмента — перераспределить 15%?',
+          },
+        });
+      }
       if (images?.length) {
         return `Mock reply: received ${images.length} attached photo(s) and message: "${lastMessage}"`;
       }
