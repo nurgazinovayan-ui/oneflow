@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { setWebSession, type WebSession } from '../webAuthSession';
 import { installMockApiIfNeeded } from '../mockApi';
 import { useT } from '../i18n';
+import DomeGallery from './DomeGallery';
 import LegalModal from './LegalModal';
 import type { LegalDoc } from '../legalContent';
 import { IconEye, IconEyeOff } from './Icons';
@@ -213,6 +214,16 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
 
   return (
     <div className="web-auth-gate">
+      <div className="web-auth-gate-bg">
+        <DomeGallery
+          grayscale
+          fit={1}
+          minRadius={1900}
+          autoRotate
+          autoRotateSpeed={0.02}
+          overlayBlurColor="#eceef1"
+        />
+      </div>
       <div className={`web-auth-toast ${toastVisible ? 'visible' : ''}`}>{toast}</div>
       <div className="web-auth-card">
         <section className="web-auth-form-side">

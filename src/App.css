@@ -2071,10 +2071,11 @@
    translated to this app's --c-* tokens since there's no Tailwind here (see GlowMenuBar.tsx for
    the same porting approach used earlier). Unlike the reference's own full h-[100dvh] w-[100dvw]
    layout, this stays a bounded card centered on the page (closer to the app's original
-   windowed login) — sized generously enough that none of the reference's spacing had to shrink
-   to fit. The reference's floating testimonial cards were dropped: no real testimonial data to
-   show, and inventing fake customer quotes would misrepresent the product. Its heroImageSrc
-   panel is the existing background video, not a static image. */
+   windowed login), with the DomeGallery 3D backdrop visible again in the space around it — sized
+   generously enough that none of the reference's spacing had to shrink to fit. The reference's
+   floating testimonial cards were dropped: no real testimonial data to show, and inventing fake
+   customer quotes would misrepresent the product. Its heroImageSrc panel is the existing
+   background video, not a static image. */
 .web-auth-gate {
   position: relative;
   height: 100dvh;
@@ -2084,6 +2085,15 @@
   justify-content: center;
   overflow: hidden;
   background-color: var(--c-bg);
+}
+
+/* Full-bleed DomeGallery backdrop. Its own position:absolute + z-index establishes a stacking
+   context, so the sphere's internal z-index:9999 (used only while its "enlarge" close animation
+   runs) stays contained in here rather than climbing above .web-auth-card. */
+.web-auth-gate-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
 }
 
 .web-auth-card {
@@ -2258,6 +2268,29 @@
 
 .web-auth-input::placeholder {
   color: var(--c-text-dim);
+}
+
+/* Browser autofill (saved login/password) paints its own background straight onto the <input>,
+   bypassing .web-auth-input's transparent background and .web-auth-input-wrap's dark one — a
+   pale yellow/blue fill with black text on Chrome, unreadable against this dark theme. The
+   -webkit-box-shadow inset trick is the only way to override that UA-level fill (plain
+   background/background-color are ignored on autofilled inputs); the long transition delay
+   stops Chrome's own flash-to-yellow animation from showing before it applies. Firefox honors
+   background-color directly via the standard :autofill pseudo-class, no trick needed. */
+.web-auth-input:-webkit-autofill,
+.web-auth-input:-webkit-autofill:hover,
+.web-auth-input:-webkit-autofill:focus,
+.web-auth-input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--c-text);
+  -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.05) inset;
+  box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.05) inset;
+  caret-color: var(--c-text);
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.web-auth-input:autofill {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--c-text);
 }
 
 .web-auth-eye-btn {
