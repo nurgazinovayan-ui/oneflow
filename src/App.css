@@ -2065,27 +2065,23 @@
   white-space: pre-wrap;
 }
 
-/* Ported from electron/splash.html — same video background + frosted glass panel as the
-   desktop login window, but laid out as two cards side by side rather than the panel floating
-   on top of the video: a full browser tab has room a fixed 640×400 app window doesn't, and
-   keeping the video fully visible reads better than covering a corner of it. The page around
-   the pair uses the same light dot-grid backdrop as the node canvas (.canvas-area/--c-canvas-bg)
-   rather than plain black, since a full browser tab reads as a page, not a borderless app
-   window. */
-/* Ported from a shadcn/Tailwind "sign-in" reference component: a full h-[100dvh] w-[100dvw]
-   split screen (form left, media right), sized exactly per that component's own Tailwind
-   classes — max-w-md (448px) content column, p-8/p-4 (32px/16px) section padding, text-4xl/5xl
-   title, p-4 rounded-2xl inputs, py-4 buttons — translated to this app's --c-* tokens since
-   there's no Tailwind here (see GlowMenuBar.tsx for the same porting approach used earlier).
-   IS the whole login screen now, not a floating card over a separate backdrop, so the
-   DomeGallery background this used to sit on top of was dropped — it would be fully covered.
-   The reference's floating testimonial cards were dropped too: no real testimonial data to
+/* Ported from a shadcn/Tailwind "sign-in" reference component: form left, media right, sized
+   per that component's own Tailwind classes — max-w-md (448px) content column, p-8/p-4
+   (32px/16px) section padding, text-4xl/5xl title, p-4 rounded-2xl inputs, py-4 buttons —
+   translated to this app's --c-* tokens since there's no Tailwind here (see GlowMenuBar.tsx for
+   the same porting approach used earlier). Unlike the reference's own full h-[100dvh] w-[100dvw]
+   layout, this stays a bounded card centered on the page (closer to the app's original
+   windowed login) — sized generously enough that none of the reference's spacing had to shrink
+   to fit. The reference's floating testimonial cards were dropped: no real testimonial data to
    show, and inventing fake customer quotes would misrepresent the product. Its heroImageSrc
    panel is the existing background video, not a static image. */
 .web-auth-gate {
   position: relative;
   height: 100dvh;
   width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   background-color: var(--c-bg);
 }
@@ -2093,10 +2089,14 @@
 .web-auth-card {
   position: relative;
   z-index: 1;
-  height: 100%;
-  width: 100%;
+  width: min(1040px, 94vw);
+  height: min(720px, 90dvh);
+  border-radius: 24px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+  background: var(--c-panel);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
 }
 
 .web-auth-form-side {
@@ -2360,7 +2360,7 @@
 .web-auth-divider span {
   position: relative;
   padding: 0 16px;
-  background: var(--c-bg);
+  background: var(--c-panel);
   color: var(--c-text-muted);
   font-size: 14px;
 }
