@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { IconClose, IconDownload, IconImage, IconPlus, IconRocket, IconSparkles } from './Icons';
+import { IconClose, IconDownload, IconPlus, IconRocket, IconSparkles } from './Icons';
 import { PRODUCT_PALETTES, type ProductPalette } from '../palettes';
 import { generatePaletteFromColor } from '../colorUtils';
 import { composeMarketplaceCard } from '../imageCompositor';
+import { ONELAUNCH_TEMPLATE_SECTIONS, ONELAUNCH_TEMPLATES } from '../onelaunchTemplates';
 import type { CreativeVariantEvaluation } from '../types';
 import { formatGenerationError } from '../errorMessages';
 import { parseSuggestions } from '../chatSuggestions';
@@ -24,7 +25,7 @@ const FORMATS: FormatDef[] = [
 ];
 
 interface FormatResult {
-  key: FormatDef['key'];
+  key: FormatDef['key'] | 'template';
   label: string;
   image: string;
   evaluation: CreativeVariantEvaluation | null;
@@ -33,22 +34,20 @@ interface FormatResult {
 const IMAGE_MODEL = 'openai/gpt-image-2';
 const CUSTOM_PALETTE_KEY = 'custom';
 
-// Placeholder catalog for the "layout style" step — tabs by theme, empty preview tiles under
-// each until real preview images are added later (see step 3's JSX below). Names follow the
-// same unlocalized-proper-noun convention as PRODUCT_PALETTES in ../palettes.ts.
-interface LayoutStyleCategory {
-  key: string;
-  label: string;
-  tileCount: number;
+// Static asset (public/onelaunch-templates/...) → data URL, so it can travel to generate-image
+// as a reference image the same way the user's own uploaded photo does (pickImageFile already
+// returns a data URL, not a path) — Replicate needs either a real absolute URL or a data URI,
+// not a root-relative path.
+async function assetToDataUrl(path: string): Promise<string> {
+  const res = await fetch(path);
+  const blob = await res.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
-
-const LAYOUT_STYLE_CATEGORIES: LayoutStyleCategory[] = [
-  { key: 'minimal', label: 'Минимализм', tileCount: 4 },
-  { key: 'luxury', label: 'Люкс', tileCount: 4 },
-  { key: 'bold', label: 'Яркий', tileCount: 4 },
-  { key: 'marketplace', label: 'Маркетплейс', tileCount: 4 },
-  { key: 'eco', label: 'Эко', tileCount: 4 },
-];
 
 function buildImagePrompt(name: string, palette: ProductPalette): string {
   return (
@@ -107,8 +106,9 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
     story: true,
     landscape: false,
   });
-  const [layoutCategory, setLayoutCategory] = useState(LAYOUT_STYLE_CATEGORIES[0].key);
-  const [selectedLayoutTile, setSelectedLayoutTile] = useState<string | null>(null);
+  const [layoutSection, setLayoutSection] = useState(ONELAUNCH_TEMPLATE_SECTIONS[0]?.key ?? '');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const selectedTemplate = ONELAUNCH_TEMPLATES.find((tpl) => tpl.id === selectedTemplateId) ?? null;
   const [selectedPaletteKey, setSelectedPaletteKey] = useState<string | null>(null);
   const [recommendedPaletteKey, setRecommendedPaletteKey] = useState<string | null>(null);
   const [customPalette, setCustomPalette] = useState<ProductPalette | null>(null);
@@ -122,14 +122,16 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
 
   // Progressive gating: each step only unlocks once the previous one's requirement is met, so
   // the form reads as a guided sequence rather than one long page of fields. Step 3 (layout
-  // style) is a placeholder catalog with no real preview images yet, so it doesn't gate
-  // anything of its own — it just tracks along with step 2 being done.
+  // template) is optional — picking one is a finished design with its own fixed aspect ratio
+  // and colors, so steps 4 (formats) and 5 (palette) become moot and auto-complete; leaving no
+  // template selected keeps the original generic-photo + palette + multi-format flow.
   const step1Done = !!photo;
   const step2Done = step1Done && name.trim().length > 0;
   const step3Done = step2Done;
+  const usingTemplate = !!selectedTemplate;
   const anyFormatSelected = FORMATS.some((f) => selectedFormats[f.key]);
-  const step4Done = step3Done && anyFormatSelected;
-  const step5Done = step4Done && !!selectedPaletteKey;
+  const step4Done = usingTemplate ? step3Done : step3Done && anyFormatSelected;
+  const step5Done = usingTemplate ? step4Done : step4Done && !!selectedPaletteKey;
 
   // As soon as a photo is uploaded, ask the vision model which palette suits it best — shown
   // as a badge on that swatch, and used as the default selection if the user hasn't picked one.
@@ -209,17 +211,18 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
       setError(t.oneLaunch.noNameError);
       return;
     }
-    const formats = FORMATS.filter((f) => selectedFormats[f.key]);
-    if (formats.length === 0) {
-      setStatus('error');
-      setError(t.oneLaunch.noFormatError);
-      return;
+    if (!usingTemplate) {
+      const anyFormat = FORMATS.some((f) => selectedFormats[f.key]);
+      if (!anyFormat) {
+        setStatus('error');
+        setError(t.oneLaunch.noFormatError);
+        return;
+      }
     }
     const advantages = advantagesText
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean);
-    const palette = palettes.find((p) => p.key === selectedPaletteKey) ?? palettes[0];
 
     setStatus('running');
     setError('');
@@ -228,23 +231,45 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
 
     try {
       const nextResults: FormatResult[] = [];
-      for (const format of formats) {
-        setStatusMessage(t.oneLaunch.statusGenerating(formatLabel(format.key)));
+      if (selectedTemplate) {
+        setStatusMessage(t.oneLaunch.statusGenerating(selectedTemplate.name));
+        const templateDataUrl = await assetToDataUrl(selectedTemplate.image);
         const outputs = await window.api.generateImage({
           model: IMAGE_MODEL,
-          prompt: buildImagePrompt(name.trim(), palette),
-          aspectRatio: format.aspectRatio,
+          prompt: selectedTemplate.buildPrompt(name.trim(), advantages),
+          aspectRatio: selectedTemplate.aspectRatio,
           resolution: 'high',
-          image: photo,
+          images: [templateDataUrl, photo],
           category: 'image',
         });
         const rawDataUrl = await window.api.fetchImageAsDataUrl(outputs[0]);
-        const composited = await composeMarketplaceCard(rawDataUrl, {
-          name: name.trim(),
-          advantages,
-          accentColor: palette.accent,
+        nextResults.push({
+          key: 'template',
+          label: t.oneLaunch.templateResultLabel,
+          image: rawDataUrl,
+          evaluation: null,
         });
-        nextResults.push({ key: format.key, label: formatLabel(format.key), image: composited, evaluation: null });
+      } else {
+        const formats = FORMATS.filter((f) => selectedFormats[f.key]);
+        const palette = palettes.find((p) => p.key === selectedPaletteKey) ?? palettes[0];
+        for (const format of formats) {
+          setStatusMessage(t.oneLaunch.statusGenerating(formatLabel(format.key)));
+          const outputs = await window.api.generateImage({
+            model: IMAGE_MODEL,
+            prompt: buildImagePrompt(name.trim(), palette),
+            aspectRatio: format.aspectRatio,
+            resolution: 'high',
+            image: photo,
+            category: 'image',
+          });
+          const rawDataUrl = await window.api.fetchImageAsDataUrl(outputs[0]);
+          const composited = await composeMarketplaceCard(rawDataUrl, {
+            name: name.trim(),
+            advantages,
+            accentColor: palette.accent,
+          });
+          nextResults.push({ key: format.key, label: formatLabel(format.key), image: composited, evaluation: null });
+        }
       }
       setResults(nextResults);
 
@@ -360,33 +385,36 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
           </div>
           <fieldset className="onelaunch-step-body" disabled={!step2Done}>
             <div className="onelaunch-style-tabs">
-              {LAYOUT_STYLE_CATEGORIES.map((cat) => (
+              {ONELAUNCH_TEMPLATE_SECTIONS.map((section) => (
                 <button
-                  key={cat.key}
+                  key={section.key}
                   type="button"
-                  className={`onelaunch-style-tab ${layoutCategory === cat.key ? 'active' : ''}`}
-                  onClick={() => setLayoutCategory(cat.key)}
+                  className={`onelaunch-style-tab ${layoutSection === section.key ? 'active' : ''}`}
+                  onClick={() => setLayoutSection(section.key)}
                 >
-                  {cat.label}
+                  {section.label}
                 </button>
               ))}
             </div>
             <div className="onelaunch-style-grid">
-              {Array.from({
-                length: LAYOUT_STYLE_CATEGORIES.find((c) => c.key === layoutCategory)?.tileCount ?? 4,
-              }).map((_, i) => {
-                const tileId = `${layoutCategory}-${i}`;
-                return (
-                  <button
-                    key={tileId}
-                    type="button"
-                    className={`onelaunch-style-tile ${selectedLayoutTile === tileId ? 'selected' : ''}`}
-                    onClick={() => setSelectedLayoutTile(tileId)}
-                  >
-                    <IconImage size={22} />
-                  </button>
-                );
-              })}
+              <button
+                type="button"
+                className={`onelaunch-style-tile onelaunch-style-tile-none ${!selectedTemplateId ? 'selected' : ''}`}
+                onClick={() => setSelectedTemplateId(null)}
+              >
+                {t.oneLaunch.templateNoneLabel}
+              </button>
+              {ONELAUNCH_TEMPLATES.filter((tpl) => tpl.section === layoutSection).map((tpl) => (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  className={`onelaunch-style-tile ${selectedTemplateId === tpl.id ? 'selected' : ''}`}
+                  onClick={() => setSelectedTemplateId(tpl.id)}
+                  title={tpl.name}
+                >
+                  <img src={tpl.image} alt={tpl.name} loading="lazy" />
+                </button>
+              ))}
             </div>
           </fieldset>
         </div>
@@ -396,18 +424,22 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
             <span className={`onelaunch-step-badge ${step4Done ? 'done' : ''}`}>4</span>
             <span className="onelaunch-step-title">{t.oneLaunch.step4Title}</span>
           </div>
-          <fieldset className="onelaunch-step-body onelaunch-formats-row" disabled={!step3Done}>
-            {FORMATS.map((f) => (
-              <label key={f.key} className="onelaunch-format-check">
-                <input
-                  type="checkbox"
-                  checked={selectedFormats[f.key]}
-                  onChange={() => toggleFormat(f.key)}
-                />
-                {formatLabel(f.key)}
-              </label>
-            ))}
-          </fieldset>
+          {usingTemplate ? (
+            <div className="onelaunch-step-body onelaunch-template-note">{t.oneLaunch.templateFormatNote}</div>
+          ) : (
+            <fieldset className="onelaunch-step-body onelaunch-formats-row" disabled={!step3Done}>
+              {FORMATS.map((f) => (
+                <label key={f.key} className="onelaunch-format-check">
+                  <input
+                    type="checkbox"
+                    checked={selectedFormats[f.key]}
+                    onChange={() => toggleFormat(f.key)}
+                  />
+                  {formatLabel(f.key)}
+                </label>
+              ))}
+            </fieldset>
+          )}
         </div>
 
         <div className={`onelaunch-step ${step4Done ? '' : 'locked'}`}>
@@ -415,6 +447,9 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
             <span className={`onelaunch-step-badge ${step5Done ? 'done' : ''}`}>5</span>
             <span className="onelaunch-step-title">{t.oneLaunch.step5Title}</span>
           </div>
+          {usingTemplate ? (
+            <div className="onelaunch-step-body onelaunch-template-note">{t.oneLaunch.templatePaletteNote}</div>
+          ) : (
           <fieldset className="onelaunch-step-body" disabled={!step4Done}>
             <div className="onelaunch-palette-grid">
               {palettes.map((p) => (
@@ -461,6 +496,7 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
               </label>
             </div>
           </fieldset>
+          )}
         </div>
 
         <button

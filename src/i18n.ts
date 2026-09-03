@@ -239,6 +239,10 @@ export interface Translations {
     statusWritingCaptions: string;
     captionsTitle: string;
     downloadTooltip: string;
+    templateNoneLabel: string;
+    templateFormatNote: string;
+    templatePaletteNote: string;
+    templateResultLabel: string;
   };
   tools: {
     menuLabel: string;
@@ -799,6 +803,10 @@ export const ru: Translations = {
     statusWritingCaptions: 'Пишу тексты для постов...',
     captionsTitle: 'Тексты для Instagram',
     downloadTooltip: 'Скачать',
+    templateNoneLabel: 'Без шаблона',
+    templateFormatNote: 'Формат уже задан выбранным шаблоном.',
+    templatePaletteNote: 'Цветовая гамма уже задана выбранным шаблоном.',
+    templateResultLabel: 'Карточка по шаблону',
   },
   tools: {
     menuLabel: 'Инструменты',
@@ -1382,6 +1390,10 @@ export const en: Translations = {
     statusWritingCaptions: 'Writing post copy...',
     captionsTitle: 'Instagram post copy',
     downloadTooltip: 'Download',
+    templateNoneLabel: 'No template',
+    templateFormatNote: 'Format is already set by the chosen template.',
+    templatePaletteNote: 'Color palette is already set by the chosen template.',
+    templateResultLabel: 'Template card',
   },
   tools: {
     menuLabel: 'Tools',
