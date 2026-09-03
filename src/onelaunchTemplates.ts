@@ -84,7 +84,7 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     id: 'premium-body',
     section: 'premium',
     name: 'Боди для малыша',
-    image: '/onelaunch-templates/premium/01-body.png',
+    image: '/onelaunch-templates/premium/01-body.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
     buildPrompt: (name, advantages) => {
@@ -112,7 +112,7 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     id: 'premium-pajama',
     section: 'premium',
     name: 'Пижама детская',
-    image: '/onelaunch-templates/premium/02-pajama.png',
+    image: '/onelaunch-templates/premium/02-pajama.jpg',
     aspectRatio: '3:4',
     advantageSlots: 4,
     buildPrompt: (name, advantages) => {
@@ -142,7 +142,7 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     id: 'premium-hoodie',
     section: 'premium',
     name: 'Худи детское',
-    image: '/onelaunch-templates/premium/03-hoodie.png',
+    image: '/onelaunch-templates/premium/03-hoodie.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
     buildPrompt: (name, advantages) => {
@@ -170,7 +170,7 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     id: 'premium-pyramid',
     section: 'premium',
     name: 'Деревянная пирамидка',
-    image: '/onelaunch-templates/premium/04-pyramid.png',
+    image: '/onelaunch-templates/premium/04-pyramid.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
     buildPrompt: (name, advantages) => {
@@ -198,7 +198,7 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     id: 'premium-bunny',
     section: 'premium',
     name: 'Мягкий зайка',
-    image: '/onelaunch-templates/premium/05-bunny.png',
+    image: '/onelaunch-templates/premium/05-bunny.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
     buildPrompt: (name, advantages) => {
@@ -226,7 +226,7 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     id: 'electronics-coffee-machine',
     section: 'electronics',
     name: 'Кофемашина',
-    image: '/onelaunch-templates/electronics/01.png',
+    image: '/onelaunch-templates/electronics/01.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
     buildPrompt: (name, advantages) => {
@@ -256,7 +256,7 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     id: 'electronics-earbuds',
     section: 'electronics',
     name: 'Беспроводные наушники',
-    image: '/onelaunch-templates/electronics/02.png',
+    image: '/onelaunch-templates/electronics/02.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
     buildPrompt: (name, advantages) => {
@@ -285,7 +285,7 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     id: 'electronics-robot-vacuum',
     section: 'electronics',
     name: 'Робот-пылесос',
-    image: '/onelaunch-templates/electronics/03.png',
+    image: '/onelaunch-templates/electronics/03.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
     buildPrompt: (name, advantages) => {
@@ -313,7 +313,7 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     id: 'electronics-blender',
     section: 'electronics',
     name: 'Блендер',
-    image: '/onelaunch-templates/electronics/04.png',
+    image: '/onelaunch-templates/electronics/04.jpg',
     aspectRatio: '3:4',
     advantageSlots: 4,
     buildPrompt: (name, advantages) => {
@@ -344,7 +344,7 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     id: 'electronics-smartwatch',
     section: 'electronics',
     name: 'Смарт-часы',
-    image: '/onelaunch-templates/electronics/05.png',
+    image: '/onelaunch-templates/electronics/05.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
     buildPrompt: (name, advantages) => {
@@ -374,7 +374,7 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     id: 'electronics-speaker',
     section: 'electronics',
     name: 'Портативная колонка',
-    image: '/onelaunch-templates/electronics/06.png',
+    image: '/onelaunch-templates/electronics/06.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
     buildPrompt: (name, advantages) => {
@@ -404,7 +404,7 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     id: 'electronics-air-fryer',
     section: 'electronics',
     name: 'Аэрогриль',
-    image: '/onelaunch-templates/electronics/07.png',
+    image: '/onelaunch-templates/electronics/07.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
     buildPrompt: (name, advantages) => {
@@ -434,7 +434,7 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     id: 'electronics-power-bank',
     section: 'electronics',
     name: 'Повербанк',
-    image: '/onelaunch-templates/electronics/08.png',
+    image: '/onelaunch-templates/electronics/08.jpg',
     aspectRatio: '3:4',
     advantageSlots: 6,
     buildPrompt: (name, advantages) => {
@@ -469,7 +469,7 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     id: 'electronics-toothbrush',
     section: 'electronics',
     name: 'Электрическая зубная щётка',
-    image: '/onelaunch-templates/electronics/09.png',
+    image: '/onelaunch-templates/electronics/09.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
     buildPrompt: (name, advantages) => {
