@@ -40,6 +40,7 @@ import EvaluationPanel from './components/EvaluationPanel';
 import OneLaunchPanel from './components/OneLaunchPanel';
 import MusicAudioPanel from './components/MusicAudioPanel';
 import StrategyPanel from './components/StrategyPanel';
+import { GlowMenuBar, type GlowMenuItem } from './components/GlowMenuBar';
 import AssetsPanel from './components/AssetsPanel';
 import BackgroundRemoverModal from './components/BackgroundRemoverModal';
 import UpscalerModal from './components/UpscalerModal';
@@ -1036,58 +1037,71 @@ function Canvas() {
             </button>
           </div>
           )}
-          <div className="mode-switch-pill">
-            <button
-              className={`mode-switch-tab ${mainView === 'canvas' ? 'active' : ''}`}
-              onClick={() => setMainView('canvas')}
-            >
-              <IconFlow size={13} /> {t.modeSwitch.nodesAndAdapt}
-            </button>
-            <button
-              className={`mode-switch-tab ${mainView === 'generate' ? 'active' : ''}`}
-              onClick={() => setMainView('generate')}
-            >
-              <IconSparkles size={13} /> {t.modeSwitch.quickGeneration}
-            </button>
-            <button
-              className={`mode-switch-tab ${mainView === 'text' ? 'active' : ''}`}
-              onClick={() => setMainView('text')}
-            >
-              <IconChat size={13} /> {t.modeSwitch.textWork}
-            </button>
-            {import.meta.env.VITE_WEB_MODE === '1' && (
-              <button
-                className={`mode-switch-tab ${mainView === 'evaluate' ? 'active' : ''}`}
-                onClick={() => setMainView('evaluate')}
-              >
-                <IconGauge size={13} /> {t.modeSwitch.evaluation}
-              </button>
-            )}
-            {import.meta.env.VITE_WEB_MODE === '1' && (
-              <button
-                className={`mode-switch-tab ${mainView === 'onelaunch' ? 'active' : ''}`}
-                onClick={() => setMainView('onelaunch')}
-              >
-                <IconRocket size={13} /> {t.modeSwitch.oneLaunch}
-              </button>
-            )}
-            {import.meta.env.VITE_WEB_MODE === '1' && (
-              <button
-                className={`mode-switch-tab ${mainView === 'musicaudio' ? 'active' : ''}`}
-                onClick={() => setMainView('musicaudio')}
-              >
-                <IconMusic size={13} /> {t.modeSwitch.musicAudio}
-              </button>
-            )}
-            {import.meta.env.VITE_WEB_MODE === '1' && (
-              <button
-                className={`mode-switch-tab ${mainView === 'strategy' ? 'active' : ''}`}
-                onClick={() => setMainView('strategy')}
-              >
-                <IconTarget size={13} /> {t.modeSwitch.strategy}
-              </button>
-            )}
-          </div>
+          <GlowMenuBar
+            className="mode-switch-pill"
+            activeValue={mainView}
+            onSelect={(value) => setMainView(value as typeof mainView)}
+            items={
+              [
+                {
+                  value: 'canvas',
+                  label: t.modeSwitch.nodesAndAdapt,
+                  icon: IconFlow,
+                  iconColor: '#60a5fa',
+                  gradient:
+                    'radial-gradient(circle, rgba(96,165,250,0.15) 0%, rgba(37,99,235,0.06) 50%, rgba(29,78,216,0) 100%)',
+                },
+                {
+                  value: 'generate',
+                  label: t.modeSwitch.quickGeneration,
+                  icon: IconSparkles,
+                  iconColor: '#c084fc',
+                  gradient:
+                    'radial-gradient(circle, rgba(192,132,252,0.15) 0%, rgba(147,51,234,0.06) 50%, rgba(107,33,168,0) 100%)',
+                },
+                {
+                  value: 'text',
+                  label: t.modeSwitch.textWork,
+                  icon: IconChat,
+                  iconColor: '#22d3ee',
+                  gradient:
+                    'radial-gradient(circle, rgba(34,211,238,0.15) 0%, rgba(8,145,178,0.06) 50%, rgba(21,94,117,0) 100%)',
+                },
+                import.meta.env.VITE_WEB_MODE === '1' && {
+                  value: 'evaluate',
+                  label: t.modeSwitch.evaluation,
+                  icon: IconGauge,
+                  iconColor: '#22c55e',
+                  gradient:
+                    'radial-gradient(circle, rgba(34,197,94,0.15) 0%, rgba(22,163,74,0.06) 50%, rgba(21,128,61,0) 100%)',
+                },
+                import.meta.env.VITE_WEB_MODE === '1' && {
+                  value: 'onelaunch',
+                  label: t.modeSwitch.oneLaunch,
+                  icon: IconRocket,
+                  iconColor: '#f97316',
+                  gradient:
+                    'radial-gradient(circle, rgba(249,115,22,0.15) 0%, rgba(234,88,12,0.06) 50%, rgba(194,65,12,0) 100%)',
+                },
+                import.meta.env.VITE_WEB_MODE === '1' && {
+                  value: 'musicaudio',
+                  label: t.modeSwitch.musicAudio,
+                  icon: IconMusic,
+                  iconColor: '#f472b6',
+                  gradient:
+                    'radial-gradient(circle, rgba(244,114,182,0.15) 0%, rgba(219,39,119,0.06) 50%, rgba(157,23,77,0) 100%)',
+                },
+                import.meta.env.VITE_WEB_MODE === '1' && {
+                  value: 'strategy',
+                  label: t.modeSwitch.strategy,
+                  icon: IconTarget,
+                  iconColor: '#f87171',
+                  gradient:
+                    'radial-gradient(circle, rgba(248,113,113,0.15) 0%, rgba(220,38,38,0.06) 50%, rgba(185,28,28,0) 100%)',
+                },
+              ].filter(Boolean) as GlowMenuItem[]
+            }
+          />
           <div className="topbar-right">
             {import.meta.env.VITE_WEB_MODE === '1' && (
               <button className="toolbar-label-btn assets-btn" onClick={() => setMainView('assets')}>

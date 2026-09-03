@@ -27,6 +27,7 @@
     "ag-psd": "^31.0.2",
     "docx": "^9.7.1",
     "electron-store": "^8.2.0",
+    "framer-motion": "^13.2.0",
     "lottie-web": "^5.13.0",
     "ogl": "^1.0.11",
     "pptxgenjs": "^4.0.1",

@@ -987,48 +987,117 @@
 }
 
 /* Switches the whole main area between the node canvas and Работа с текстом — lives in the
-   persistent .topbar (not floating over the canvas), same small radius as the other toolbar
-   buttons rather than a bordered pill. */
+   persistent .topbar (not floating over the canvas). .mode-switch-pill here only places the
+   GlowMenuBar within .topbar's grid; the pill's own look (background/border/radius) is
+   .glow-menu below, see GlowMenuBar.tsx. */
 .mode-switch-pill {
   grid-column: 2;
   justify-self: center;
-  display: flex;
-  align-items: stretch;
-  height: 34px;
   flex-shrink: 0;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--c-divider);
-  overflow: hidden;
   -webkit-app-region: no-drag;
 }
 
-.mode-switch-tab {
+/* GlowMenuBar — ported from a shadcn/Tailwind component (see GlowMenuBar.tsx's header comment)
+   onto this app's own --c-* tokens instead of Tailwind utility classes/next-themes. */
+
+.glow-menu {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(to bottom, var(--c-panel-2), var(--c-panel));
+  border: 1px solid var(--c-divider);
+  overflow: hidden;
+}
+
+.glow-menu-nav-glow {
+  position: absolute;
+  inset: -8px;
+  z-index: 0;
+  border-radius: calc(var(--radius-md) + 8px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.glow-menu-list {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.glow-menu-item {
+  position: relative;
+}
+
+.glow-menu-item-btn {
+  display: block;
+  height: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.glow-menu-item-inner {
+  position: relative;
+  height: 100%;
+  border-radius: 8px;
+  overflow: visible;
+  perspective: 600px;
+}
+
+.glow-menu-item-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.glow-menu-item-face {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 14px;
-  border: none;
-  background: var(--c-panel-2);
-  color: var(--c-text);
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--c-text-muted);
   font-size: 12.5px;
   font-weight: 600;
   white-space: nowrap;
-  transition:
-    background 0.15s var(--ease),
-    color 0.15s var(--ease);
+  transform-style: preserve-3d;
 }
 
-.mode-switch-tab:not(:first-child) {
-  border-left: 1px solid var(--c-divider);
+.glow-menu-item-front {
+  transform-origin: center bottom;
 }
 
-.mode-switch-tab:hover {
+.glow-menu-item-back {
+  position: absolute;
+  inset: 0;
+  transform-origin: center top;
+}
+
+.glow-menu-item-face.active {
   color: var(--c-text);
 }
 
-.mode-switch-tab.active {
-  background: var(--c-pink);
-  color: #fff;
+.glow-menu-icon {
+  display: flex;
+  align-items: center;
+  color: var(--c-text);
+  transition: color 0.2s var(--ease);
 }
 
 /* One of the top menus that keeps its shadow (see App.tsx toolbar-usage sites) — and, unlike
