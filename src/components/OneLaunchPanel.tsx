@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { IconClose, IconDownload, IconPlus, IconRocket, IconSparkles } from './Icons';
 import { PRODUCT_PALETTES, type ProductPalette } from '../palettes';
 import { generatePaletteFromColor } from '../colorUtils';
-import { composeMarketplaceCard } from '../imageCompositor';
 import { ONELAUNCH_TEMPLATE_SECTIONS, ONELAUNCH_TEMPLATES } from '../onelaunchTemplates';
 import type { CreativeVariantEvaluation } from '../types';
 import { formatGenerationError } from '../errorMessages';
@@ -49,27 +48,29 @@ async function assetToDataUrl(path: string): Promise<string> {
   });
 }
 
-// "Сделать уникальный шаблон" — the always-first tile in every section's grid. Unlike a fixed
-// template (a pre-made design just gets its text/photo swapped in), this asks the model to
-// design the shot itself: analyze what the product actually is and compose a photo suited to
-// that category, rather than a one-size-fits-all studio shot. Still text-free — the name and
-// advantages get drawn on top by composeMarketplaceCard below, same as the rest of this
-// (non-template) path, since letting the model render exact on-image text is unreliable (see
-// imageCompositor.ts's header comment).
-function buildUniqueDesignPrompt(name: string, advantages: string[], palette: ProductPalette): string {
-  const advantagesLine = advantages.length
-    ? ` Учти ключевые преимущества товара при выборе композиции и настроения кадра (не как ` +
-      `текст на фото, а как визуальную идею): ${advantages.join('; ')}.`
+// "Уникальный дизайн" — the always-first tile in every section's grid. Unlike a fixed template
+// (a pre-made design just gets its text/photo swapped in), this asks the model to invent the
+// whole card itself, Wildberries/Ozon marketplace-card style, with the name and advantages
+// baked directly into the design by the model rather than drawn on top afterward.
+function buildUniqueCardPrompt(name: string, advantages: string[], palette: ProductPalette): string {
+  const advantagesBlock = advantages.length
+    ? `\n\nДобавь ${advantages.length} компактных значка/плашки с преимуществами товара, текст ` +
+      `на каждом должен быть написан ТОЧНО так, без единой опечатки и без изменений: ` +
+      advantages.map((a, i) => `${i + 1}) "${a}"`).join(', ') +
+      '.'
     : '';
   return (
-    `Проанализируй товар на прикреплённом референс-фото — определи, что это за товар, к какой ` +
-    `категории он относится и для какого сценария использования подходит. На основе этого ` +
-    `придумай и сними оригинальную профессиональную рекламную фотографию товара "${name}" для ` +
-    `карточки маркетплейса: выбери композицию, ракурс, фон и декоративные детали, уместные ` +
-    `именно для этой категории товара (а не общий шаблонный студийный снимок), сохранив сам ` +
-    `товар точно таким же, как на референс-фото.${advantagesLine} Оформи в цветовой гамме ` +
-    `"${palette.name}" (основные тона: ${palette.colors.join(', ')}). Без текста, логотипов и ` +
-    `водяных знаков — только фотография.`
+    `Проанализируй товар на прикреплённом референс-фото — определи, что это за товар и к какой ` +
+    `категории он относится. На основе этого создай оригинальную рекламную карточку товара в ` +
+    `стиле карточек товаров маркетплейсов Wildberries/Ozon: портретный формат, товар с ` +
+    `референс-фото крупным планом (точно такой же, без изменений формы/цвета/дизайна товара), ` +
+    `чистая профессиональная композиция.\n\n` +
+    `Добавь крупный, хорошо читаемый заголовок с текстом ТОЧНО "${name}" — без опечаток, той же ` +
+    `орфографии, на русском языке.${advantagesBlock}\n\n` +
+    `Фон, декоративные элементы и расположение всех элементов придумай сам, уместно для ` +
+    `определённой тобой категории товара, в цветовой гамме "${palette.name}" (основные тона: ` +
+    `${palette.colors.join(', ')}). Перед завершением перепроверь весь текст на карточке — он ` +
+    `должен совпадать с указанным выше без единой ошибки.`
   );
 }
 
@@ -106,11 +107,12 @@ function buildImproveAdvantagesPrompt(name: string, advantagesText: string): str
 // campaign" in one pass: orchestrates three already-existing API calls (generateChat for the
 // palette pick/caption/advantage copy, generateImage for the per-format photography,
 // evaluateCreative for the score) rather than needing a dedicated backend function of its own.
-// The product name/advantages are composited onto each generated photo client-side (see
-// imageCompositor.ts) — deliberately not left to the image model, which can't render text
-// reliably. Laid out as a 5-step progressive form (each step disabled until the previous one's
-// requirement is met) rather than one flat form, since this is meant to be one of the app's
-// flagship flows.
+// The product name/advantages are rendered directly on the card by the image model itself
+// (GPT Image 2 renders on-image text reliably enough for this) — both the fixed-template path
+// and the "unique design" path prompt for exact text and ask the model to double-check spelling
+// before finishing. Laid out as a 5-step progressive form (each step disabled until the
+// previous one's requirement is met) rather than one flat form, since this is meant to be one
+// of the app's flagship flows.
 export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
   const t = useT();
   const [photo, setPhoto] = useState<string | null>(null);
@@ -273,19 +275,14 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
           setStatusMessage(t.oneLaunch.statusGenerating(formatLabel(format.key)));
           const outputs = await window.api.generateImage({
             model: IMAGE_MODEL,
-            prompt: buildUniqueDesignPrompt(name.trim(), advantages, palette),
+            prompt: buildUniqueCardPrompt(name.trim(), advantages, palette),
             aspectRatio: format.aspectRatio,
             resolution: 'high',
             image: photo,
             category: 'image',
           });
           const rawDataUrl = await window.api.fetchImageAsDataUrl(outputs[0]);
-          const composited = await composeMarketplaceCard(rawDataUrl, {
-            name: name.trim(),
-            advantages,
-            accentColor: palette.accent,
-          });
-          nextResults.push({ key: format.key, label: formatLabel(format.key), image: composited, evaluation: null });
+          nextResults.push({ key: format.key, label: formatLabel(format.key), image: rawDataUrl, evaluation: null });
         }
       }
       setResults(nextResults);
