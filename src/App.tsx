@@ -303,7 +303,7 @@ function buildVideoGenNodesEdges(): { nodes: Node[]; edges: Edge[] } {
 
 // "Для бизнеса" tiles — same Prompt→Генерация фото shape as buildPhotoGenNodesEdges, but with
 // the vertical's pre-written prompt already filled in, the settings the user specified
-// (gpt-image-2, medium, 9:16), and an Image input wired into the first reference slot — every
+// (nano-banana-pro, 2K, 9:16), and an Image input wired into the first reference slot — every
 // one of these prompts operates on "the uploaded photo", so the scheme is useless without it.
 // That Image node starts highlighted (see ImageInputNode's highlightUntilFilled) until the
 // user actually attaches a photo.
@@ -326,8 +326,8 @@ function buildBusinessPresetNodesEdges(prompt: string): { nodes: Node[]; edges: 
         position: { x: 460, y: 160 },
         data: {
           ...buildDefaultNodeData('imageGen'),
-          model: 'openai/gpt-image-2',
-          resolution: 'medium',
+          model: 'google/nano-banana-pro',
+          resolution: '2K',
           aspectRatio: '9:16',
         },
       },
