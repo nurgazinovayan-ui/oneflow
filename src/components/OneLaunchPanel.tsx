@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { IconClose, IconDownload, IconPlus, IconRocket, IconSparkles } from './Icons';
 import { PRODUCT_PALETTES, type ProductPalette } from '../palettes';
 import { generatePaletteFromColor } from '../colorUtils';
-import { composeMarketplaceCard } from '../imageCompositor';
+import { composeMarketplaceCard, cropToAspectRatio } from '../imageCompositor';
 import { ONELAUNCH_TEMPLATE_SECTIONS, ONELAUNCH_TEMPLATES } from '../onelaunchTemplates';
 import type { CreativeVariantEvaluation } from '../types';
 import { formatGenerationError } from '../errorMessages';
@@ -70,10 +70,12 @@ function buildPaletteRecommendationPrompt(): string {
 
 function buildCaptionsPrompt(name: string, advantages: string[]): string {
   return (
-    `Напиши 3 разных варианта текста для рекламного поста в Instagram для товара "${name}". ` +
-    `Преимущества товара: ${advantages.join('; ')}. Каждый вариант — короткий, продающий, с ` +
-    `эмодзи в меру и парой релевантных хэштегов в конце. Пронумеруй варианты (1., 2., 3.), между ` +
-    `ними оставь пустую строку. Только текст постов, без пояснений до или после.`
+    `На фото — реальный товар. Посмотри на фото и напиши 3 разных варианта текста для ` +
+    `рекламного поста в Instagram для товара "${name}", опираясь на то, что реально изображено ` +
+    `на фото, а не только на название. Преимущества товара: ${advantages.join('; ')}. Каждый ` +
+    `вариант — короткий, продающий, с эмодзи в меру и парой релевантных хэштегов в конце. ` +
+    `Пронумеруй варианты (1., 2., 3.), между ними оставь пустую строку. Только текст постов, ` +
+    `без пояснений до или после.`
   );
 }
 
@@ -243,10 +245,14 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
           category: 'image',
         });
         const rawDataUrl = await window.api.fetchImageAsDataUrl(outputs[0]);
+        // GPT Image 2 can only emit 1:1/3:2/2:3 natively — '3:4' resolves to the closest of
+        // those (2:3) server-side, so it needs trimming down to the exact ratio the template
+        // was designed at (see cropToAspectRatio's comment).
+        const cropped = await cropToAspectRatio(rawDataUrl, 3, 4);
         nextResults.push({
           key: 'template',
           label: t.oneLaunch.templateResultLabel,
-          image: rawDataUrl,
+          image: cropped,
           evaluation: null,
         });
       } else {
@@ -287,9 +293,12 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
       setResults(evaluated);
 
       setStatusMessage(t.oneLaunch.statusWritingCaptions);
+      // Passing the actual product photo (not just the typed name/advantages) keeps the post
+      // copy grounded in what the product really is — without it the model only has a name
+      // string to go on and can drift into generic or unrelated copy.
       const captionReply = await window.api.generateChat(
         [{ role: 'user', content: buildCaptionsPrompt(name.trim(), advantages) }],
-        undefined,
+        [photo],
         'text'
       );
       // The general-purpose "text work" system prompt (see generate-chat's

@@ -32,6 +32,40 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
   return lines;
 }
 
+// GPT Image 2 only ever returns one of three fixed sizes (1:1, 3:2, 2:3 — a real API
+// constraint, not a schema guess) so a template card requesting the 3:4 ratio its own design
+// was drawn at gets generated at the closest of those (2:3) and needs trimming down to the
+// exact 3:4 the card was designed for — otherwise it reads as taller/narrower than the template
+// (visually close to a 9:16 story shape). Center-crops symmetrically either axis, so it works
+// regardless of which side the source image is off on.
+export async function cropToAspectRatio(dataUrl: string, ratioW: number, ratioH: number): Promise<string> {
+  const img = await loadImage(dataUrl);
+  const targetRatio = ratioW / ratioH;
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  const currentRatio = w / h;
+
+  let cropW = w;
+  let cropH = h;
+  let offsetX = 0;
+  let offsetY = 0;
+  if (currentRatio > targetRatio) {
+    cropW = Math.round(h * targetRatio);
+    offsetX = Math.round((w - cropW) / 2);
+  } else if (currentRatio < targetRatio) {
+    cropH = Math.round(w / targetRatio);
+    offsetY = Math.round((h - cropH) / 2);
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = cropW;
+  canvas.height = cropH;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas 2D context unavailable');
+  ctx.drawImage(img, offsetX, offsetY, cropW, cropH, 0, 0, cropW, cropH);
+  return canvas.toDataURL('image/png');
+}
+
 export interface MarketplaceCardOptions {
   name: string;
   advantages: string[];
