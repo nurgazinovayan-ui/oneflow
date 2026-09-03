@@ -2072,79 +2072,62 @@
    the pair uses the same light dot-grid backdrop as the node canvas (.canvas-area/--c-canvas-bg)
    rather than plain black, since a full browser tab reads as a page, not a borderless app
    window. */
+/* Ported from a shadcn/Tailwind "sign-in" reference component: a full h-[100dvh] w-[100dvw]
+   split screen (form left, media right), sized exactly per that component's own Tailwind
+   classes — max-w-md (448px) content column, p-8/p-4 (32px/16px) section padding, text-4xl/5xl
+   title, p-4 rounded-2xl inputs, py-4 buttons — translated to this app's --c-* tokens since
+   there's no Tailwind here (see GlowMenuBar.tsx for the same porting approach used earlier).
+   IS the whole login screen now, not a floating card over a separate backdrop, so the
+   DomeGallery background this used to sit on top of was dropped — it would be fully covered.
+   The reference's floating testimonial cards were dropped too: no real testimonial data to
+   show, and inventing fake customer quotes would misrepresent the product. Its heroImageSrc
+   panel is the existing background video, not a static image. */
 .web-auth-gate {
   position: relative;
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
-  background-color: var(--c-canvas-bg);
+  background-color: var(--c-bg);
 }
 
-/* Full-bleed DomeGallery backdrop, replacing the old flat dot-grid. Its own position:absolute
-   + z-index establishes a stacking context, so the sphere's internal z-index:9999 (used only
-   while its "enlarge" close animation runs) stays contained in here rather than climbing above
-   .web-auth-card. */
-.web-auth-gate-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-/* Ported from a shadcn/Tailwind "sign-in" reference component's visual language (glass input
-   wrappers, floating field labels, password eye-toggle, checkbox+reset-link row, "or continue
-   with" divider) onto this app's own --c-* tokens — no Tailwind here, see GlowMenuBar.tsx for
-   the same porting approach used earlier. The reference is a full 100dvh/100vw split-screen;
-   kept the compact 640×400 footprint of the previous .web-auth-window design instead (task
-   explicitly asked to keep the window size), so spacing/type scale below is far denser than the
-   reference's own generous version, and its floating testimonial cards were dropped — there's
-   no room for them at this size and no real testimonial data to show anyway. The reference's
-   heroImageSrc panel is the existing background video, not a static image. */
 .web-auth-card {
   position: relative;
   z-index: 1;
+  height: 100%;
+  width: 100%;
   display: flex;
-  align-items: stretch;
-  width: 640px;
-  max-width: 92vw;
-  height: 400px;
-  max-height: 80vh;
-  border-radius: 14px;
-  overflow: hidden;
-  background: var(--c-panel);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  flex-direction: column;
 }
 
 .web-auth-form-side {
-  flex: none;
-  width: 360px;
-  max-width: 56%;
+  flex: 1;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  padding: 32px;
   overflow-y: auto;
-  padding: 22px 26px;
 }
 
-.web-auth-form-inner {
+.web-auth-form-col {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 24px;
+  width: 100%;
+  max-width: 448px;
 }
 
 .web-auth-title {
   margin: 0;
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
   color: var(--c-text);
 }
 
 .web-auth-subtitle {
-  margin: 0 0 4px;
-  font-size: 10.5px;
+  margin: -12px 0 0;
+  font-size: 15px;
   line-height: 1.4;
   color: var(--c-text-muted);
 }
@@ -2152,17 +2135,26 @@
 .web-auth-media-side {
   position: relative;
   flex: 1;
+  display: none;
   overflow: hidden;
-  background: #000;
+  padding: 16px;
 }
 
 .web-auth-bg-video {
-  position: absolute;
-  inset: 0;
   width: 100%;
   height: 100%;
+  border-radius: 24px;
   object-fit: cover;
-  z-index: 0;
+}
+
+@media (min-width: 768px) {
+  .web-auth-card {
+    flex-direction: row;
+  }
+
+  .web-auth-media-side {
+    display: block;
+  }
 }
 
 .web-auth-toast {
@@ -2192,8 +2184,8 @@
 }
 
 /* Privacy/Terms/Refund links, pinned to the bottom of the full-viewport login screen. A small
-   dark pill (independent of theme/the DomeGallery backdrop underneath, which can be light)
-   guarantees contrast — same reasoning as .web-auth-toast's dark background. */
+   dark pill (independent of the app's own light/dark theme setting) guarantees contrast over
+   whatever sits beneath it — same reasoning as .web-auth-toast's dark background. */
 .web-auth-footer {
   position: absolute;
   bottom: 20px;
@@ -2219,21 +2211,19 @@
 .web-auth-fields {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 20px;
 }
 
 .web-auth-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .web-auth-field-label {
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--c-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
 }
 
 /* The reference's "glass input wrapper" — a rounded translucent shell around the plain <input>
@@ -2242,7 +2232,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  border-radius: 10px;
+  border-radius: 16px;
   border: 1px solid var(--c-divider);
   background: rgba(255, 255, 255, 0.05);
   transition:
@@ -2257,12 +2247,12 @@
 
 .web-auth-input {
   width: 100%;
-  padding: 8px 10px;
-  border-radius: 10px;
+  padding: 16px;
+  border-radius: 16px;
   border: none;
   background: transparent;
   color: var(--c-text);
-  font-size: 12px;
+  font-size: 14px;
   outline: none;
 }
 
@@ -2275,9 +2265,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  margin-right: 4px;
+  width: 36px;
+  height: 36px;
+  margin-right: 8px;
   border: none;
   background: none;
   color: var(--c-text-muted);
@@ -2293,20 +2283,20 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 10.5px;
+  font-size: 14px;
 }
 
 .web-auth-checkbox-label {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: var(--c-text-muted);
+  gap: 10px;
+  color: var(--c-text);
   cursor: pointer;
 }
 
 .web-auth-checkbox {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
   accent-color: var(--c-pink);
   cursor: pointer;
 }
@@ -2317,7 +2307,7 @@
   padding: 0;
   color: var(--c-pink);
   font-size: inherit;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -2331,14 +2321,14 @@
 }
 
 .web-auth-submit {
-  margin-top: 2px;
-  padding: 10px 12px;
+  width: 100%;
+  padding: 16px;
   border: none;
-  border-radius: 10px;
+  border-radius: 16px;
   background: var(--c-pink);
   color: #fff;
-  font-size: 12.5px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -2352,46 +2342,52 @@
 }
 
 .web-auth-divider {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: var(--c-text-dim);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  justify-content: center;
 }
 
-.web-auth-divider::before,
-.web-auth-divider::after {
+.web-auth-divider::before {
   content: '';
-  flex: 1;
+  position: absolute;
+  left: 0;
+  right: 0;
   height: 1px;
   background: var(--c-divider);
+}
+
+.web-auth-divider span {
+  position: relative;
+  padding: 0 16px;
+  background: var(--c-bg);
+  color: var(--c-text-muted);
+  font-size: 14px;
 }
 
 .web-auth-google-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 10px;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  border-radius: 16px;
   border: 1px solid var(--c-divider);
-  background: rgba(255, 255, 255, 0.9);
-  color: #3c4043;
-  font-size: 11.5px;
-  font-weight: 600;
+  background: transparent;
+  color: var(--c-text);
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
 }
 
 .web-auth-google-btn:hover {
-  background: #fff;
-  border-color: var(--c-divider-hover, rgba(255, 255, 255, 0.2));
+  background: var(--c-panel-2);
 }
 
 .login-error {
   min-height: 14px;
-  font-size: 11px;
+  font-size: 13px;
   color: #ff6b6b;
   line-height: 1.4;
 }
@@ -2399,7 +2395,7 @@
 .web-auth-switch-mode {
   margin: 0;
   text-align: center;
-  font-size: 10.5px;
+  font-size: 14px;
   color: var(--c-text-muted);
 }
 
@@ -2408,9 +2404,9 @@
   background: none;
   border: none;
   padding: 0;
-  margin-top: 2px;
+  margin-top: 4px;
   color: var(--c-text-dim);
-  font-size: 10px;
+  font-size: 12px;
   text-decoration: underline;
   cursor: pointer;
 }

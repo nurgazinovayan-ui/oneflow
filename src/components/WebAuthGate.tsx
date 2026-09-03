@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { setWebSession, type WebSession } from '../webAuthSession';
 import { installMockApiIfNeeded } from '../mockApi';
 import { useT } from '../i18n';
-import DomeGallery from './DomeGallery';
 import LegalModal from './LegalModal';
 import type { LegalDoc } from '../legalContent';
 import { IconEye, IconEyeOff } from './Icons';
@@ -24,9 +23,10 @@ type PanelMode = 'login' | 'register';
 // Generate, see src/store/subscriptionContext.ts and PaymentModal), driven by
 // window.api.getSubscriptionStatus() once the user is already inside.
 //
-// Visually this mirrors electron/splash.html (video background, frosted-glass panel,
-// login/register toggle) rather than the old plain centered card, so desktop and web present
-// the same first impression — see that file for the source of truth this was ported from.
+// Visually ported from a shadcn/Tailwind "sign-in" reference component — full-viewport split
+// screen (form left, media right), sized exactly as that component's own h-[100dvh] w-[100dvw]
+// classes specify, not the compact floating-window look this used before. See App.css's
+// .web-auth-gate block for the token-based (no Tailwind) port of its typography/spacing scale.
 export default function WebAuthGate({ children }: WebAuthGateProps) {
   const t = useT();
   const [stage, setStage] = useState<Stage>('login');
@@ -213,137 +213,129 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
 
   return (
     <div className="web-auth-gate">
-      <div className="web-auth-gate-bg">
-        <DomeGallery
-          grayscale
-          fit={1}
-          minRadius={1900}
-          autoRotate
-          autoRotateSpeed={0.02}
-          overlayBlurColor="#eceef1"
-        />
-      </div>
       <div className={`web-auth-toast ${toastVisible ? 'visible' : ''}`}>{toast}</div>
       <div className="web-auth-card">
-        <form className="web-auth-form-side" onSubmit={mode === 'login' ? handleLogin : handleRegister}>
-          <div className="web-auth-form-inner">
+        <section className="web-auth-form-side">
+          <div className="web-auth-form-col">
             <h1 className="web-auth-title">{mode === 'login' ? t.webAuth.loginTitle : t.webAuth.registerTitle}</h1>
             <p className="web-auth-subtitle">{mode === 'login' ? t.webAuth.loginSubtitle : t.webAuth.registerSubtitle}</p>
 
-            {mode === 'login' ? (
-              <div className="web-auth-fields">
-                <label className="web-auth-field">
-                  <span className="web-auth-field-label">{t.webAuth.emailLabel}</span>
-                  <span className="web-auth-input-wrap">
-                    <input
-                      className="web-auth-input"
-                      type="email"
-                      placeholder={t.webAuth.emailLabel}
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      autoComplete="username"
-                      required
-                    />
-                  </span>
-                </label>
-                <label className="web-auth-field">
-                  <span className="web-auth-field-label">{t.webAuth.passwordLabel}</span>
-                  <span className="web-auth-input-wrap">
-                    <input
-                      className="web-auth-input"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder={t.webAuth.passwordLabel}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      autoComplete="current-password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="web-auth-eye-btn"
-                      onClick={() => setShowPassword((v) => !v)}
-                      tabIndex={-1}
-                    >
-                      {showPassword ? <IconEyeOff size={14} /> : <IconEye size={14} />}
-                    </button>
-                  </span>
-                </label>
-                <div className="web-auth-field-row">
-                  <label className="web-auth-checkbox-label">
-                    <input type="checkbox" className="web-auth-checkbox" />
-                    {t.webAuth.keepSignedIn}
+            <form className="web-auth-fields" onSubmit={mode === 'login' ? handleLogin : handleRegister}>
+              {mode === 'login' ? (
+                <>
+                  <label className="web-auth-field">
+                    <span className="web-auth-field-label">{t.webAuth.emailLabel}</span>
+                    <span className="web-auth-input-wrap">
+                      <input
+                        className="web-auth-input"
+                        type="email"
+                        placeholder={t.webAuth.emailLabel}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        autoComplete="username"
+                        required
+                      />
+                    </span>
                   </label>
-                  <button
-                    type="button"
-                    className="web-auth-text-link"
-                    onClick={handleResetPassword}
-                    disabled={resettingPassword}
-                  >
-                    {t.webAuth.resetPasswordLink}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="web-auth-fields">
-                <label className="web-auth-field">
-                  <span className="web-auth-field-label">{t.webAuth.emailLabel}</span>
-                  <span className="web-auth-input-wrap">
-                    <input
-                      className="web-auth-input"
-                      type="email"
-                      placeholder={t.webAuth.emailLabel}
-                      value={registerEmail}
-                      onChange={(e) => setRegisterEmail(e.target.value)}
-                      autoComplete="username"
-                    />
-                  </span>
-                </label>
-                <label className="web-auth-field">
-                  <span className="web-auth-field-label">{t.webAuth.passwordLabel}</span>
-                  <span className="web-auth-input-wrap">
-                    <input
-                      className="web-auth-input"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder={t.webAuth.passwordLabel}
-                      value={registerPassword}
-                      onChange={(e) => setRegisterPassword(e.target.value)}
-                      autoComplete="new-password"
-                    />
+                  <label className="web-auth-field">
+                    <span className="web-auth-field-label">{t.webAuth.passwordLabel}</span>
+                    <span className="web-auth-input-wrap">
+                      <input
+                        className="web-auth-input"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder={t.webAuth.passwordLabel}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        autoComplete="current-password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="web-auth-eye-btn"
+                        onClick={() => setShowPassword((v) => !v)}
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <IconEyeOff size={17} /> : <IconEye size={17} />}
+                      </button>
+                    </span>
+                  </label>
+                  <div className="web-auth-field-row">
+                    <label className="web-auth-checkbox-label">
+                      <input type="checkbox" className="web-auth-checkbox" />
+                      {t.webAuth.keepSignedIn}
+                    </label>
                     <button
                       type="button"
-                      className="web-auth-eye-btn"
-                      onClick={() => setShowPassword((v) => !v)}
-                      tabIndex={-1}
+                      className="web-auth-text-link"
+                      onClick={handleResetPassword}
+                      disabled={resettingPassword}
                     >
-                      {showPassword ? <IconEyeOff size={14} /> : <IconEye size={14} />}
+                      {t.webAuth.resetPasswordLink}
                     </button>
-                  </span>
-                </label>
-                <label className="web-auth-field">
-                  <span className="web-auth-field-label">{t.webAuth.repeatPasswordLabel}</span>
-                  <span className="web-auth-input-wrap">
-                    <input
-                      className="web-auth-input"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder={t.webAuth.repeatPasswordLabel}
-                      value={registerPasswordConfirm}
-                      onChange={(e) => setRegisterPasswordConfirm(e.target.value)}
-                      autoComplete="new-password"
-                    />
-                  </span>
-                </label>
-              </div>
-            )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <label className="web-auth-field">
+                    <span className="web-auth-field-label">{t.webAuth.emailLabel}</span>
+                    <span className="web-auth-input-wrap">
+                      <input
+                        className="web-auth-input"
+                        type="email"
+                        placeholder={t.webAuth.emailLabel}
+                        value={registerEmail}
+                        onChange={(e) => setRegisterEmail(e.target.value)}
+                        autoComplete="username"
+                      />
+                    </span>
+                  </label>
+                  <label className="web-auth-field">
+                    <span className="web-auth-field-label">{t.webAuth.passwordLabel}</span>
+                    <span className="web-auth-input-wrap">
+                      <input
+                        className="web-auth-input"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder={t.webAuth.passwordLabel}
+                        value={registerPassword}
+                        onChange={(e) => setRegisterPassword(e.target.value)}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        className="web-auth-eye-btn"
+                        onClick={() => setShowPassword((v) => !v)}
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <IconEyeOff size={17} /> : <IconEye size={17} />}
+                      </button>
+                    </span>
+                  </label>
+                  <label className="web-auth-field">
+                    <span className="web-auth-field-label">{t.webAuth.repeatPasswordLabel}</span>
+                    <span className="web-auth-input-wrap">
+                      <input
+                        className="web-auth-input"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder={t.webAuth.repeatPasswordLabel}
+                        value={registerPasswordConfirm}
+                        onChange={(e) => setRegisterPasswordConfirm(e.target.value)}
+                        autoComplete="new-password"
+                      />
+                    </span>
+                  </label>
+                </>
+              )}
 
-            <button className="web-auth-submit" type="submit" disabled={loading}>
-              {mode === 'login'
-                ? loading
-                  ? t.webAuth.checkingBtn
-                  : t.webAuth.loginBtn
-                : loading
-                  ? t.webAuth.registeringBtn
-                  : t.webAuth.registerSubmitBtn}
-            </button>
+              <button className="web-auth-submit" type="submit" disabled={loading}>
+                {mode === 'login'
+                  ? loading
+                    ? t.webAuth.checkingBtn
+                    : t.webAuth.loginBtn
+                  : loading
+                    ? t.webAuth.registeringBtn
+                    : t.webAuth.registerSubmitBtn}
+              </button>
+            </form>
 
             {error && <div className="login-error">{error}</div>}
 
@@ -351,7 +343,7 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
               <span>{t.webAuth.orDivider}</span>
             </div>
             <button className="web-auth-google-btn" type="button" onClick={handleGoogleAuth}>
-              <svg width="15" height="15" viewBox="0 0 18 18" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
                 <path
                   fill="#4285F4"
                   d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"
@@ -383,11 +375,11 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
               {t.webAuth.demoModeLink}
             </button>
           </div>
-        </form>
+        </section>
 
-        <div className="web-auth-media-side">
+        <section className="web-auth-media-side">
           <video className="web-auth-bg-video" src="/splash-bg.mp4" autoPlay loop muted playsInline />
-        </div>
+        </section>
       </div>
       <div className="web-auth-footer">
         <button className="legal-link" onClick={() => setLegalDoc('privacy')}>
