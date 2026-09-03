@@ -1,13 +1,14 @@
 import { forwardRef, type FC } from 'react';
 import { motion, type Variants } from 'framer-motion';
-import { useThemeStore } from '../theme';
 
 // Ported from a shadcn/Tailwind "glow-menu" component into ONEFLOW's own stack: no Tailwind
 // utility classes here (this app has none — see App.css's --c-* token system instead), no
-// next-themes (the app already tracks its own theme in theme.ts's useThemeStore), and app icons
-// (Icons.tsx) instead of lucide-react so we're not carrying two icon sets. The animation
-// structure (3D flip on hover, per-item radial glow, a soft rainbow glow behind the whole bar)
-// is kept as-is via framer-motion — that part is framework-agnostic.
+// next-themes, and app icons (Icons.tsx) instead of lucide-react so we're not carrying two icon
+// sets. The animation structure (3D flip + per-item radial glow on hover) is kept via
+// framer-motion — that part is framework-agnostic. Unlike the original reference, the glow is
+// scoped to the hovered item only — the original also washed the whole bar's background in a
+// blended rainbow glow on hover, which read as "the panel lights up" rather than "this item is
+// highlighted", so that whole-bar layer was dropped.
 
 export interface GlowMenuItem {
   icon: FC<{ size?: number }>;
@@ -48,14 +49,6 @@ const glowVariants: Variants = {
   },
 };
 
-const navGlowVariants: Variants = {
-  initial: { opacity: 0 },
-  hover: {
-    opacity: 1,
-    transition: { duration: 0.5, ease: EASE_OUT },
-  },
-};
-
 const sharedTransition = {
   type: 'spring' as const,
   stiffness: 100,
@@ -65,27 +58,8 @@ const sharedTransition = {
 
 export const GlowMenuBar = forwardRef<HTMLElement, GlowMenuBarProps>(
   ({ className, items, activeValue, onSelect }, ref) => {
-    const theme = useThemeStore((s) => s.theme);
-    const isDark = theme === 'dark';
-
     return (
-      <motion.nav
-        ref={ref}
-        className={`glow-menu ${className ?? ''}`}
-        initial="initial"
-        whileHover="hover"
-      >
-        <motion.div
-          className="glow-menu-nav-glow"
-          variants={navGlowVariants}
-          style={{
-            background: `radial-gradient(ellipse at center, transparent, ${
-              isDark
-                ? 'rgba(96,165,250,0.25), rgba(192,132,252,0.25) 40%, rgba(248,113,113,0.25) 70%'
-                : 'rgba(96,165,250,0.16), rgba(192,132,252,0.16) 40%, rgba(248,113,113,0.16) 70%'
-            }, transparent)`,
-          }}
-        />
+      <motion.nav ref={ref} className={`glow-menu ${className ?? ''}`}>
         <ul className="glow-menu-list">
           {items.map((item) => {
             const Icon = item.icon;
@@ -93,13 +67,17 @@ export const GlowMenuBar = forwardRef<HTMLElement, GlowMenuBarProps>(
             return (
               <motion.li key={item.value} className="glow-menu-item">
                 <button type="button" className="glow-menu-item-btn" onClick={() => onSelect?.(item.value)}>
-                  <motion.div className="glow-menu-item-inner" whileHover="hover" initial="initial">
+                  <motion.div className="glow-menu-item-inner" initial="initial" whileHover="hover">
+                    {/* Hover glow only — no `animate` override here, so it purely follows this
+                        item's own whileHover state instead of the whole bar's. */}
                     <motion.div
                       className="glow-menu-item-glow"
                       variants={glowVariants}
-                      animate={isActive ? 'hover' : 'initial'}
-                      style={{ background: item.gradient, opacity: isActive ? 1 : 0 }}
+                      style={{ background: item.gradient }}
                     />
+                    {isActive && (
+                      <div className="glow-menu-item-active-tint" style={{ background: `${item.iconColor}22` }} />
+                    )}
                     <motion.div
                       className={`glow-menu-item-face glow-menu-item-front ${isActive ? 'active' : ''}`}
                       variants={itemVariants}

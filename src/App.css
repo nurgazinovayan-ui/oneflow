@@ -1011,15 +1011,6 @@
   overflow: hidden;
 }
 
-.glow-menu-nav-glow {
-  position: absolute;
-  inset: -8px;
-  z-index: 0;
-  border-radius: calc(var(--radius-md) + 8px);
-  opacity: 0;
-  pointer-events: none;
-}
-
 .glow-menu-list {
   position: relative;
   z-index: 1;
@@ -1055,6 +1046,17 @@
 }
 
 .glow-menu-item-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Static tint for the active item — separate from .glow-menu-item-glow (which is purely
+   hover-driven now) so the active item stays visibly marked without hovering it. */
+.glow-menu-item-active-tint {
   position: absolute;
   inset: 0;
   z-index: 0;
