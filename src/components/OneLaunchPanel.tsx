@@ -238,7 +238,7 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
           model: IMAGE_MODEL,
           prompt: selectedTemplate.buildPrompt(name.trim(), advantages),
           aspectRatio: selectedTemplate.aspectRatio,
-          resolution: 'high',
+          resolution: 'medium',
           images: [templateDataUrl, photo],
           category: 'image',
         });
@@ -258,7 +258,7 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
             model: IMAGE_MODEL,
             prompt: buildImagePrompt(name.trim(), palette),
             aspectRatio: format.aspectRatio,
-            resolution: 'high',
+            resolution: 'medium',
             image: photo,
             category: 'image',
           });
