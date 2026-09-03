@@ -1,5 +1,7 @@
 import { IconClose, IconRocket } from './Icons';
 import type { AudienceSegment, ChannelAllocation, StrategyData } from '../strategyTypes';
+import { primaryOffer } from '../strategyTypes';
+import { computeChannelForecast } from '../strategyCompute';
 import { useT } from '../i18n';
 
 export type StrategyDetailTarget =
@@ -10,14 +12,16 @@ export type StrategyDetailTarget =
 interface StrategyDetailDrawerProps {
   target: StrategyDetailTarget;
   data: StrategyData;
+  budget: number;
   onClose: () => void;
   onCreate: (target: StrategyDetailTarget) => void;
 }
 
 // Right drawer per spec section 25 — used instead of a separate screen when opening an
 // Audience/Offer/Channel card's details.
-export default function StrategyDetailDrawer({ target, data, onClose, onCreate }: StrategyDetailDrawerProps) {
+export default function StrategyDetailDrawer({ target, data, budget, onClose, onCreate }: StrategyDetailDrawerProps) {
   const t = useT();
+  const offer = primaryOffer(data.offers);
   return (
     <div className="strategy-drawer-overlay" onClick={onClose}>
       <div className="strategy-drawer" onClick={(e) => e.stopPropagation()}>
@@ -36,7 +40,7 @@ export default function StrategyDetailDrawer({ target, data, onClose, onCreate }
               </div>
               <div className="strategy-drawer-field">
                 <div className="strategy-drawer-field-label">{t.strategy.drawerMainJob}</div>
-                <div className="strategy-drawer-field-value">{target.segment.description}</div>
+                <div className="strategy-drawer-field-value">{target.segment.mainJob || target.segment.description}</div>
               </div>
               <div className="strategy-drawer-field">
                 <div className="strategy-drawer-field-label">{t.strategy.drawerPainPoints}</div>
@@ -46,9 +50,32 @@ export default function StrategyDetailDrawer({ target, data, onClose, onCreate }
                   ))}
                 </ul>
               </div>
+              {target.segment.purchaseTriggers.length > 0 && (
+                <div className="strategy-drawer-field">
+                  <div className="strategy-drawer-field-label">{t.strategy.drawerTriggers}</div>
+                  <ul className="strategy-drawer-list">
+                    {target.segment.purchaseTriggers.map((p, i) => (
+                      <li key={i}>{p}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {target.segment.objections.length > 0 && (
+                <div className="strategy-drawer-field">
+                  <div className="strategy-drawer-field-label">{t.strategy.drawerObjections}</div>
+                  <ul className="strategy-drawer-list">
+                    {target.segment.objections.map((p, i) => (
+                      <li key={i}>{p}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <div className="strategy-drawer-field">
                 <div className="strategy-drawer-field-label">{t.strategy.drawerOffer}</div>
-                <div className="strategy-drawer-field-value">{data.offer}</div>
+                <div className="strategy-drawer-field-value">{target.segment.recommendedMessage || offer?.text}</div>
+              </div>
+              <div className="strategy-drawer-confidence">
+                {t.strategy.drawerConfidence}: {target.segment.confidence}%
               </div>
             </div>
           </>
@@ -67,6 +94,24 @@ export default function StrategyDetailDrawer({ target, data, onClose, onCreate }
                 <div className="strategy-drawer-field-label">{t.strategy.drawerAllocation}</div>
                 <div className="strategy-drawer-field-value">{target.channel.percent}%</div>
               </div>
+              <div className="strategy-drawer-field">
+                <div className="strategy-drawer-field-label">{t.strategy.drawerRationale}</div>
+                <div className="strategy-drawer-field-value">{target.channel.rationale}</div>
+              </div>
+              <div className="strategy-drawer-field">
+                <div className="strategy-drawer-field-label">{t.strategy.drawerForecast}</div>
+                <div className="strategy-drawer-field-value">
+                  {(() => {
+                    const f = computeChannelForecast(budget, target.channel);
+                    return f.insufficientData
+                      ? t.strategy.forecastInsufficientData
+                      : `${f.clicksMin?.toLocaleString('ru-RU')}–${f.clicksMax?.toLocaleString('ru-RU')} ${t.strategy.forecastClicks}`;
+                  })()}
+                </div>
+              </div>
+              <div className="strategy-drawer-confidence">
+                {t.strategy.drawerConfidence}: {target.channel.confidence}%
+              </div>
             </div>
           </>
         )}
@@ -82,11 +127,29 @@ export default function StrategyDetailDrawer({ target, data, onClose, onCreate }
             <div className="strategy-drawer-body">
               <div className="strategy-drawer-field">
                 <div className="strategy-drawer-field-label">{t.strategy.positioningCardTitle}</div>
-                <div className="strategy-drawer-field-value">{data.positioning}</div>
+                <div className="strategy-drawer-field-value">{data.positioning.primaryStatement}</div>
               </div>
               <div className="strategy-drawer-field">
+                <div className="strategy-drawer-field-label">{t.strategy.drawerValueProp}</div>
+                <div className="strategy-drawer-field-value">{data.positioning.valueProposition}</div>
+              </div>
+              {data.positioning.reasonsToBelieve.length > 0 && (
+                <div className="strategy-drawer-field">
+                  <div className="strategy-drawer-field-label">{t.strategy.drawerReasonsToBelieve}</div>
+                  <ul className="strategy-drawer-list">
+                    {data.positioning.reasonsToBelieve.map((p, i) => (
+                      <li key={i}>{p}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className="strategy-drawer-field">
                 <div className="strategy-drawer-field-label">{t.strategy.offerCardTitle}</div>
-                <div className="strategy-drawer-field-value">{data.offer}</div>
+                <div className="strategy-drawer-field-value">{offer?.text}</div>
+              </div>
+              <div className="strategy-drawer-field">
+                <div className="strategy-drawer-field-label">{t.strategy.drawerAngle}</div>
+                <div className="strategy-drawer-field-value">{offer?.angle}</div>
               </div>
             </div>
           </>

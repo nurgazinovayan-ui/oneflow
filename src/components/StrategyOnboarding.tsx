@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { IconPlus, IconClose, IconTarget } from './Icons';
+import { useEffect, useState } from 'react';
+import { IconPlus, IconClose, IconTarget, IconCheck } from './Icons';
 import type { StrategyBrief, StrategyGoal } from '../strategyTypes';
 import { STRATEGY_GOAL_LABELS } from '../strategyTypes';
 import { useT, useLanguageStore } from '../i18n';
@@ -13,9 +13,9 @@ interface StrategyOnboardingProps {
 const GOALS: StrategyGoal[] = ['sales', 'leads', 'awareness'];
 
 // Compact centered card, not a full landing page — per the spec's "Onboarding не должен
-// выглядеть как отдельный лендинг" note. Website-URL analysis (spec section 39) isn't wired up
-// here — there's no backend endpoint yet that fetches/summarizes an arbitrary URL, so this
-// collects a plain text description (+ optional product photo) instead.
+// выглядеть как отдельный лендинг" note. Website-URL/competitor fields (spec section 4) are
+// collected as plain optional text hints for the AI prompt — there's no backend endpoint to
+// actually fetch/analyze an arbitrary URL, so "Analyze" (spec UI39) isn't wired up.
 export default function StrategyOnboarding({ status, error, onGenerate }: StrategyOnboardingProps) {
   const t = useT();
   const language = useLanguageStore((s) => s.language);
@@ -26,6 +26,30 @@ export default function StrategyOnboarding({ status, error, onGenerate }: Strate
   const [budget, setBudget] = useState(2_000_000);
   const [productDescription, setProductDescription] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
+  const [showOptional, setShowOptional] = useState(false);
+  const [websiteUrl, setWebsiteUrl] = useState('');
+  const [competitors, setCompetitors] = useState('');
+  const [knownAudience, setKnownAudience] = useState('');
+
+  const LOADING_STEPS = [
+    t.strategy.loadingAnalyzeProduct,
+    t.strategy.loadingDefineAudience,
+    t.strategy.loadingAnalyzeCompetitors,
+    t.strategy.loadingPositioning,
+    t.strategy.loadingChannels,
+    t.strategy.loadingContentPlan,
+  ];
+  const [loadingStep, setLoadingStep] = useState(0);
+
+  useEffect(() => {
+    if (status !== 'generating') {
+      setLoadingStep(0);
+      return;
+    }
+    const id = setInterval(() => setLoadingStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1)), 900);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
   const steps = [t.strategy.onboardGoalStep, t.strategy.onboardContextStep];
   const canContinue = step === 0 ? !!goal : productDescription.trim().length > 0;
@@ -45,8 +69,37 @@ export default function StrategyOnboarding({ status, error, onGenerate }: Strate
       currency: '₸',
       productDescription: productDescription.trim(),
       photo,
+      websiteUrl: websiteUrl.trim() || undefined,
+      competitors: competitors.trim() || undefined,
+      knownAudience: knownAudience.trim() || undefined,
     });
   };
+
+  if (status === 'generating') {
+    return (
+      <div className="strategy-onboarding-wrap">
+        <div className="modal strategy-onboarding-modal strategy-loading-modal">
+          <div className="strategy-onboarding-eyebrow">
+            <IconTarget size={14} /> {t.strategy.title}
+          </div>
+          <h2>{t.strategy.onboardGenerating}</h2>
+          <div className="strategy-loading-steps">
+            {LOADING_STEPS.map((label, i) => (
+              <div
+                key={label}
+                className={`strategy-loading-step ${i < loadingStep ? 'done' : i === loadingStep ? 'active' : 'pending'}`}
+              >
+                <span className="strategy-loading-step-icon">
+                  {i < loadingStep ? <IconCheck size={11} /> : i === loadingStep ? <span className="strategy-loading-dot" /> : null}
+                </span>
+                {label}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="strategy-onboarding-wrap">
@@ -137,6 +190,42 @@ export default function StrategyOnboarding({ status, error, onGenerate }: Strate
                 </button>
               )}
             </label>
+
+            <button type="button" className="strategy-optional-toggle" onClick={() => setShowOptional((v) => !v)}>
+              {showOptional ? t.strategy.optionalHide : t.strategy.optionalShow}
+            </button>
+            {showOptional && (
+              <>
+                <label className="strategy-field-label">
+                  {t.strategy.websiteLabel}
+                  <input
+                    className="node-select"
+                    type="text"
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    placeholder="https://example.com"
+                  />
+                </label>
+                <label className="strategy-field-label">
+                  {t.strategy.competitorsLabel}
+                  <input
+                    className="node-select"
+                    type="text"
+                    value={competitors}
+                    onChange={(e) => setCompetitors(e.target.value)}
+                  />
+                </label>
+                <label className="strategy-field-label">
+                  {t.strategy.knownAudienceLabel}
+                  <input
+                    className="node-select"
+                    type="text"
+                    value={knownAudience}
+                    onChange={(e) => setKnownAudience(e.target.value)}
+                  />
+                </label>
+              </>
+            )}
           </div>
         )}
 
@@ -158,13 +247,8 @@ export default function StrategyOnboarding({ status, error, onGenerate }: Strate
               {t.strategy.onboardContinue}
             </button>
           ) : (
-            <button
-              type="button"
-              className="generate-btn"
-              disabled={!canContinue || status === 'generating'}
-              onClick={handleSubmit}
-            >
-              {status === 'generating' ? t.strategy.onboardGenerating : t.strategy.onboardCreate}
+            <button type="button" className="generate-btn" disabled={!canContinue} onClick={handleSubmit}>
+              {t.strategy.onboardCreate}
             </button>
           )}
         </div>

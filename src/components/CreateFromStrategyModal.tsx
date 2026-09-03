@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { IconRocket } from './Icons';
 import type { StrategyData } from '../strategyTypes';
+import { primaryOffer } from '../strategyTypes';
 import { buildStrategyWorkflowPrompt } from '../strategyPrompts';
 import { useT } from '../i18n';
 
@@ -58,7 +59,7 @@ export default function CreateFromStrategyModal({
         </label>
         <div className="strategy-create-modal-offer">
           <div className="strategy-drawer-field-label">{t.strategy.offerCardTitle}</div>
-          <div className="strategy-drawer-field-value">{data.offer}</div>
+          <div className="strategy-drawer-field-value">{primaryOffer(data.offers)?.text}</div>
         </div>
         <div className="strategy-create-modal-hint">{t.strategy.createModalHint}</div>
         <div className="modal-actions">

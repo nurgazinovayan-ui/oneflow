@@ -14,6 +14,7 @@ import {
 } from '@xyflow/react';
 import { IconTarget, IconRocket, IconGauge } from './Icons';
 import type { AudienceSegment, ChannelAllocation, StrategyData } from '../strategyTypes';
+import { primaryOffer } from '../strategyTypes';
 import { useT, type Translations } from '../i18n';
 
 interface StrategyMapProps {
@@ -96,11 +97,12 @@ function buildMapNodesEdges(
     data: {
       kind: 'positioning',
       title: t.strategy.mapPositioningTitle,
-      lines: [data.positioning],
+      lines: [data.positioning.primaryStatement],
       onClick: onOpenOffer,
     },
   });
 
+  const offer = primaryOffer(data.offers);
   nodes.push({
     id: 'offer',
     type: 'strategyNode',
@@ -108,7 +110,7 @@ function buildMapNodesEdges(
     data: {
       kind: 'offer',
       title: t.strategy.mapOfferTitle,
-      lines: [data.offer],
+      lines: [offer?.text ?? ''],
       onClick: onOpenOffer,
     },
   });
@@ -117,7 +119,7 @@ function buildMapNodesEdges(
   edges.push({ id: 'e-positioning-offer', source: 'positioning', target: 'offer' });
 
   data.channels.forEach((channel, i) => {
-    const id = `channel-${i}`;
+    const id = `channel-${channel.id}`;
     nodes.push({
       id,
       type: 'strategyNode',

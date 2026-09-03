@@ -5842,6 +5842,88 @@
   margin-top: 4px;
 }
 
+.strategy-optional-toggle {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-pink);
+  cursor: pointer;
+}
+
+/* Multi-step "AI thinking" loader (spec §UI31) — replaces a bare spinner with a checklist that
+   advances client-side while the single generateStrategy call is in flight; the timing is
+   cosmetic (there's no real per-step progress from a one-shot AI call), so the last step just
+   holds "active" until the response actually comes back. */
+
+.strategy-loading-modal {
+  gap: 18px;
+}
+
+.strategy-loading-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.strategy-loading-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--c-text-dim);
+}
+
+.strategy-loading-step.done {
+  color: var(--c-text-muted);
+}
+
+.strategy-loading-step.active {
+  color: var(--c-text);
+  font-weight: 600;
+}
+
+.strategy-loading-step-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--c-divider);
+  color: #2ecc71;
+  flex: none;
+}
+
+.strategy-loading-step.done .strategy-loading-step-icon {
+  border-color: color-mix(in srgb, #2ecc71 40%, transparent);
+}
+
+.strategy-loading-step.active .strategy-loading-step-icon {
+  border-color: var(--c-pink);
+}
+
+.strategy-loading-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--c-pink);
+  animation: strategy-loading-pulse 1s ease-in-out infinite;
+}
+
+@keyframes strategy-loading-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 /* Main shell (tabs + assistant side panel) */
 
 .strategy-shell {
@@ -5938,6 +6020,21 @@
   padding: 24px 32px 40px;
 }
 
+.strategy-action-error {
+  margin: 0 32px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #f5555a 14%, var(--c-panel));
+  border: 1px solid color-mix(in srgb, #f5555a 40%, transparent);
+  color: #f5555a;
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 /* Overview grid + cards */
 
 .strategy-grid {
@@ -5974,28 +6071,31 @@
   grid-column: span 4;
 }
 
+.strategy-card-audience,
+.strategy-card-positioning,
 .strategy-card-offer {
-  grid-column: span 6;
-}
-
-.strategy-card-audience-group {
-  grid-column: span 12;
+  grid-column: span 4;
 }
 
 .strategy-card-channels {
   grid-column: span 8;
 }
 
-.strategy-card-risks,
-.strategy-card-opportunities {
+.strategy-card-risks {
   grid-column: span 4;
 }
 
-.strategy-card-matrix {
-  grid-column: span 12;
+.strategy-card-opportunities {
+  grid-column: span 8;
 }
 
-.strategy-card-funnel {
+.strategy-card-kpi {
+  grid-column: span 4;
+}
+
+.strategy-card-matrix,
+.strategy-card-funnel,
+.strategy-card-journey {
   grid-column: span 12;
 }
 
@@ -6095,27 +6195,124 @@
   color: var(--c-text);
 }
 
+.strategy-goal-summary {
+  margin-top: 4px;
+}
+
 .strategy-goal-meta {
   font-size: 12px;
   color: var(--c-text-muted);
   margin-top: 6px;
 }
 
-/* Audience */
+/* Positioning / Offer — narrow 4-col cards, alternatives surfaced as chips/rows the user can
+   promote to primary in one click (spec §7/§8) instead of a separate compare screen. */
 
-.strategy-audience-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+.strategy-alt-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
 }
 
-.strategy-audience-card {
+.strategy-alt-chip {
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--c-divider);
   background: var(--c-panel-2);
-  border-radius: 12px;
-  padding: 14px;
+  color: var(--c-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.strategy-alt-chip:hover {
+  border-color: var(--c-pink);
+  color: var(--c-pink);
+}
+
+.strategy-card-link-btn,
+.strategy-icon-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--c-pink);
+}
+
+.strategy-card-link-btn {
+  margin-top: 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.strategy-icon-link-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.strategy-icon-link-btn:hover {
+  background: var(--c-panel-3);
+}
+
+.strategy-icon-link-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.strategy-offer-alt-list {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--c-divider);
+}
+
+.strategy-offer-alt-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 8px;
+}
+
+.strategy-offer-alt-text {
+  font-size: 11.5px;
+  color: var(--c-text-muted);
+  line-height: 1.4;
+}
+
+.strategy-inline-loading {
+  font-size: 11.5px;
+  color: var(--c-text-dim);
+  margin-top: 8px;
+}
+
+/* Audience — a narrow 4-col card (spec §UI8: Audience/Positioning/Offer side by side), so
+   segments stack vertically instead of the wide side-by-side row a 12-col card would fit; full
+   detail (triggers/objections/confidence) lives in the drawer, per spec's own detail-in-drawer
+   pattern (§UI25). */
+
+.strategy-audience-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.strategy-audience-row-card {
+  background: var(--c-panel-2);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .strategy-audience-card-top {
@@ -6192,13 +6389,6 @@
 }
 
 .strategy-channel-row {
-  background: none;
-  border: none;
-  padding: 0;
-  text-align: left;
-  cursor: pointer;
-  color: inherit;
-  font: inherit;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -6207,18 +6397,41 @@
 .strategy-channel-top {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-size: 13px;
 }
 
-.strategy-channel-name {
+.strategy-channel-name-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
   font-weight: 600;
   color: var(--c-text);
 }
 
-.strategy-channel-percent {
+.strategy-channel-name-btn:hover {
+  color: var(--c-pink);
+}
+
+.strategy-channel-percent-input {
+  width: 42px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--c-divider);
+  background: var(--c-panel-2);
   color: var(--c-pink);
   font-weight: 600;
+  font-size: 12.5px;
+  text-align: right;
+  padding: 0 4px;
+}
+
+.strategy-channel-percent-sign {
+  color: var(--c-pink);
+  font-weight: 600;
+  font-size: 12.5px;
 }
 
 .strategy-channel-budget {
@@ -6239,6 +6452,36 @@
   display: block;
   height: 100%;
   background: var(--c-pink);
+}
+
+.strategy-channel-forecast {
+  font-size: 11px;
+  color: var(--c-text-dim);
+}
+
+.strategy-normalize-hint {
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
+.strategy-normalize-hint.warn {
+  color: #f5a623;
+}
+
+.strategy-inline-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: inherit;
+  color: var(--c-pink);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.strategy-inline-link.muted {
+  color: var(--c-text-muted);
+  font-weight: 500;
 }
 
 /* Risks / opportunities */
@@ -6277,6 +6520,11 @@
   color: #2ecc71;
 }
 
+.strategy-note-body {
+  flex: 1;
+  min-width: 0;
+}
+
 .strategy-note-title {
   font-size: 12.5px;
   font-weight: 600;
@@ -6287,6 +6535,18 @@
   font-size: 12px;
   color: var(--c-text-muted);
   line-height: 1.4;
+}
+
+.strategy-note-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 11.5px;
+}
+
+.strategy-empty-hint {
+  font-size: 12px;
+  color: var(--c-text-dim);
 }
 
 /* Content matrix */
@@ -6382,9 +6642,100 @@
 }
 
 .strategy-funnel-connector-value {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
   font-size: 11px;
   font-weight: 600;
   color: var(--c-pink);
+}
+
+.strategy-funnel-connector-value:hover {
+  text-decoration: underline;
+}
+
+.strategy-funnel-rate-input {
+  width: 44px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1px solid var(--c-pink);
+  background: var(--c-panel-2);
+  color: var(--c-pink);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* KPI card */
+
+.strategy-kpi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.strategy-kpi-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.strategy-kpi-label {
+  color: var(--c-text-muted);
+}
+
+.strategy-kpi-value {
+  color: var(--c-text);
+  font-weight: 600;
+}
+
+.strategy-kpi-unit {
+  color: var(--c-text-dim);
+  font-weight: 500;
+  font-size: 11.5px;
+}
+
+/* Customer Journey — six fixed stages (spec §12), a compact horizontal flow rather than a full
+   swimlane diagram. */
+
+.strategy-journey-flow {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+
+.strategy-journey-step {
+  background: var(--c-panel-2);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 96px;
+}
+
+.strategy-journey-stage-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-pink);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.strategy-journey-thought {
+  font-size: 11.5px;
+  color: var(--c-text);
+  line-height: 1.4;
+  font-style: italic;
+}
+
+.strategy-journey-meta {
+  font-size: 10.5px;
+  color: var(--c-text-muted);
 }
 
 /* Strategy Map */
@@ -6475,6 +6826,10 @@
   padding: 12px 0;
 }
 
+.strategy-plan-row.done {
+  opacity: 0.55;
+}
+
 .strategy-plan-day {
   font-size: 11px;
   font-weight: 700;
@@ -6483,9 +6838,29 @@
 }
 
 .strategy-plan-task-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13.5px;
   font-weight: 500;
   color: var(--c-text);
+}
+
+.strategy-plan-type-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--c-panel-3);
+  color: var(--c-pink);
+  flex: none;
+}
+
+.strategy-plan-done-btn {
+  color: #2ecc71;
+  border-color: color-mix(in srgb, #2ecc71 40%, transparent);
 }
 
 .strategy-plan-task-tag {
@@ -6624,6 +6999,22 @@
   white-space: pre-wrap;
 }
 
+.strategy-assistant-action-card {
+  background: var(--c-panel-2);
+  border: 1px solid var(--c-divider);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.strategy-assistant-action-rationale {
+  font-size: 12px;
+  color: var(--c-text-muted);
+  line-height: 1.4;
+}
+
 .strategy-assistant-input-row {
   display: flex;
   gap: 8px;
@@ -6697,6 +7088,12 @@
   line-height: 1.6;
 }
 
+.strategy-drawer-confidence {
+  font-size: 11px;
+  color: var(--c-text-dim);
+  margin-top: -6px;
+}
+
 .strategy-drawer-actions {
   display: flex;
   justify-content: flex-end;
@@ -6721,20 +7118,88 @@
   line-height: 1.5;
 }
 
+/* Scenario compare (spec §19/UI42) — read-only grid, see StrategyScenarioModal.tsx for why
+   there's no scenario-switching UI here. */
+
+.strategy-scenario-modal {
+  width: min(560px, 92vw);
+  gap: 14px;
+}
+
+.strategy-scenario-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--c-divider);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.strategy-scenario-row {
+  display: grid;
+  grid-template-columns: 90px repeat(3, 1fr);
+  gap: 1px;
+}
+
+.strategy-scenario-cell {
+  background: var(--c-panel);
+  padding: 10px 12px;
+  font-size: 12.5px;
+  color: var(--c-text);
+  display: flex;
+  align-items: center;
+}
+
+.strategy-scenario-label-cell {
+  color: var(--c-text-muted);
+  font-weight: 500;
+}
+
+.strategy-scenario-header-cell {
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.strategy-scenario-risk-low {
+  color: #2ecc71;
+}
+
+.strategy-scenario-risk-medium {
+  color: #f5a623;
+}
+
+.strategy-scenario-risk-high {
+  color: #f5555a;
+}
+
+.strategy-scenario-disclaimer {
+  font-size: 11px;
+  color: var(--c-text-dim);
+  line-height: 1.4;
+}
+
 @media (max-width: 1100px) {
   .strategy-assistant-panel {
     display: none;
   }
 
   .strategy-card-score,
-  .strategy-card-channels {
+  .strategy-card-channels,
+  .strategy-card-opportunities {
     grid-column: span 12;
   }
 
   .strategy-card-goal,
+  .strategy-card-audience,
+  .strategy-card-positioning,
   .strategy-card-offer,
   .strategy-card-risks,
-  .strategy-card-opportunities {
+  .strategy-card-kpi {
     grid-column: span 6;
+  }
+
+  .strategy-journey-flow {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
   }
 }

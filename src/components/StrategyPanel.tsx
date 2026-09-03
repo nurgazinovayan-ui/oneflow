@@ -5,10 +5,20 @@ import StrategyMap from './StrategyMap';
 import StrategyPlanView from './StrategyPlanView';
 import StrategyAssistantPanel from './StrategyAssistantPanel';
 import StrategyDetailDrawer, { type StrategyDetailTarget } from './StrategyDetailDrawer';
+import StrategyScenarioModal from './StrategyScenarioModal';
 import CreateFromStrategyModal from './CreateFromStrategyModal';
-import type { AudienceSegment, ChannelAllocation, PlanTask, StrategyBrief, StrategyData } from '../strategyTypes';
-import { buildStrategyPrompt, buildStrategyWorkflowPrompt, parseStrategyResponse } from '../strategyPrompts';
+import type { AudienceSegment, ChannelAllocation, PlanTask, StrategyAction, StrategyBrief, StrategyData } from '../strategyTypes';
+import {
+  buildStrategyPrompt,
+  buildStrategyWorkflowPrompt,
+  buildOfferAlternativesPrompt,
+  parseStrategyResponse,
+  parseOfferAlternatives,
+} from '../strategyPrompts';
+import { applyStrategyAction, StrategyActionError } from '../strategyActions';
+import { computeOverallScore } from '../strategyCompute';
 import { formatGenerationError } from '../errorMessages';
+import { IconVector } from './Icons';
 import { useT } from '../i18n';
 
 interface StrategyPanelProps {
@@ -24,17 +34,23 @@ type StrategyTab = 'overview' | 'map' | 'plan';
 // pattern), so its own state (the generated strategy) survives switching tabs and back.
 //
 // Not persisted to a project file — there's no backend schema for strategy data yet, unlike
-// node-canvas projects — so it lives in this component's state for the session.
+// node-canvas projects — so it lives in this component's state for the session. Every mutation
+// (funnel edit, budget normalize, offer/positioning switch, Insight Apply, Assistant action)
+// goes through applyStrategyAction so it's validated and logged to data.history the same way,
+// per spec §20/§25.
 export default function StrategyPanel({ active, onCreateWorkflow }: StrategyPanelProps) {
   const t = useT();
   const [brief, setBrief] = useState<StrategyBrief | null>(null);
   const [data, setData] = useState<StrategyData | null>(null);
   const [status, setStatus] = useState<'idle' | 'generating' | 'error'>('idle');
   const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
   const [tab, setTab] = useState<StrategyTab>('overview');
   const [assistantCollapsed, setAssistantCollapsed] = useState(false);
   const [drawerTarget, setDrawerTarget] = useState<StrategyDetailTarget | null>(null);
   const [createModalAudience, setCreateModalAudience] = useState<string | null | undefined>(undefined);
+  const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
+  const [generatingOffers, setGeneratingOffers] = useState(false);
 
   const handleGenerate = async (b: StrategyBrief) => {
     setBrief(b);
@@ -58,6 +74,46 @@ export default function StrategyPanel({ active, onCreateWorkflow }: StrategyPane
     setStatus('idle');
     setTab('overview');
     setDrawerTarget(null);
+  };
+
+  const handleApplyAction = (action: StrategyAction) => {
+    if (!data) return;
+    setActionError('');
+    try {
+      const { data: next, event } = applyStrategyAction(data, action);
+      setData({ ...next, history: [...next.history, event] });
+    } catch (err) {
+      setActionError(err instanceof StrategyActionError ? err.message : formatGenerationError(err));
+    }
+  };
+
+  const handleGenerateOfferAlternatives = async () => {
+    if (!data || !brief || generatingOffers) return;
+    setGeneratingOffers(true);
+    setActionError('');
+    try {
+      const reply = await window.api.generateChat(
+        [{ role: 'user', content: buildOfferAlternativesPrompt(data, brief) }],
+        undefined,
+        'text'
+      );
+      const newOffers = parseOfferAlternatives(reply, data.audience);
+      setData((prev) => (prev ? { ...prev, offers: [...prev.offers, ...newOffers] } : prev));
+    } catch (err) {
+      setActionError(formatGenerationError(err));
+    } finally {
+      setGeneratingOffers(false);
+    }
+  };
+
+  const handleToggleTaskDone = (taskId: string) => {
+    setData((prev) =>
+      prev ? { ...prev, plan: prev.plan.map((task) => (task.id === taskId ? { ...task, done: !task.done } : task)) } : prev
+    );
+  };
+
+  const handleReview = () => {
+    setAssistantCollapsed(false);
   };
 
   const handleCreateFromDrawer = (target: StrategyDetailTarget) => {
@@ -107,12 +163,24 @@ export default function StrategyPanel({ active, onCreateWorkflow }: StrategyPane
                     {t.strategy.tabPlan}
                   </button>
                 </div>
-                <div className="strategy-score-pill">{data.score.overall} / 100</div>
+                <button type="button" className="secondary-btn strategy-small-btn" onClick={() => setScenarioModalOpen(true)}>
+                  <IconVector size={12} /> {t.strategy.scenarioCompareBtn}
+                </button>
+                <div className="strategy-score-pill">{computeOverallScore(data.scoreBreakdown)} / 100</div>
                 <button type="button" className="secondary-btn strategy-small-btn" onClick={handleReset}>
                   {t.strategy.newStrategyBtn}
                 </button>
               </div>
             </div>
+
+            {actionError && (
+              <div className="strategy-action-error">
+                {actionError}
+                <button type="button" className="strategy-inline-link" onClick={() => setActionError('')}>
+                  {t.strategy.dismissBtn}
+                </button>
+              </div>
+            )}
 
             <div className="strategy-content">
               {tab === 'overview' && (
@@ -123,6 +191,9 @@ export default function StrategyPanel({ active, onCreateWorkflow }: StrategyPane
                   onOpenChannel={(channel) => setDrawerTarget({ kind: 'channel', channel })}
                   onOpenOffer={() => setDrawerTarget({ kind: 'offer' })}
                   onCreateFromAudience={(segment: AudienceSegment) => setCreateModalAudience(segment.name)}
+                  onApplyAction={handleApplyAction}
+                  onGenerateOfferAlternatives={handleGenerateOfferAlternatives}
+                  generatingOffers={generatingOffers}
                 />
               )}
               {tab === 'map' && (
@@ -133,7 +204,14 @@ export default function StrategyPanel({ active, onCreateWorkflow }: StrategyPane
                   onOpenOffer={() => setDrawerTarget({ kind: 'offer' })}
                 />
               )}
-              {tab === 'plan' && <StrategyPlanView tasks={data.plan} onGenerate={handleCreateFromPlanTask} />}
+              {tab === 'plan' && (
+                <StrategyPlanView
+                  tasks={data.plan}
+                  onGenerate={handleCreateFromPlanTask}
+                  onToggleDone={handleToggleTaskDone}
+                  onReview={handleReview}
+                />
+              )}
             </div>
           </div>
 
@@ -142,6 +220,7 @@ export default function StrategyPanel({ active, onCreateWorkflow }: StrategyPane
             brief={brief!}
             collapsed={assistantCollapsed}
             onToggleCollapsed={() => setAssistantCollapsed((c) => !c)}
+            onApplyAction={handleApplyAction}
           />
         </div>
       )}
@@ -150,6 +229,7 @@ export default function StrategyPanel({ active, onCreateWorkflow }: StrategyPane
         <StrategyDetailDrawer
           target={drawerTarget}
           data={data!}
+          budget={brief!.budget}
           onClose={() => setDrawerTarget(null)}
           onCreate={handleCreateFromDrawer}
         />
@@ -161,6 +241,9 @@ export default function StrategyPanel({ active, onCreateWorkflow }: StrategyPane
           onClose={() => setCreateModalAudience(undefined)}
           onCreate={handleCreateModalSubmit}
         />
+      )}
+      {scenarioModalOpen && data && brief && (
+        <StrategyScenarioModal data={data} brief={brief} onClose={() => setScenarioModalOpen(false)} />
       )}
     </div>
   );

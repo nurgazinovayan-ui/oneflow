@@ -321,6 +321,69 @@ export interface Translations {
     mapAudienceTitle: string;
     mapPositioningTitle: string;
     mapOfferTitle: string;
+    assistantApplying: string;
+    drawerTriggers: string;
+    drawerObjections: string;
+    drawerConfidence: string;
+    drawerRationale: string;
+    drawerForecast: string;
+    forecastInsufficientData: string;
+    forecastClicks: string;
+    drawerValueProp: string;
+    drawerReasonsToBelieve: string;
+    drawerAngle: string;
+    loadingAnalyzeProduct: string;
+    loadingDefineAudience: string;
+    loadingAnalyzeCompetitors: string;
+    loadingPositioning: string;
+    loadingChannels: string;
+    loadingContentPlan: string;
+    optionalHide: string;
+    optionalShow: string;
+    websiteLabel: string;
+    competitorsLabel: string;
+    knownAudienceLabel: string;
+    scoreMetricFunnel: string;
+    scoreMetricMeasurement: string;
+    journeyDiscover: string;
+    journeyInterest: string;
+    journeyResearch: string;
+    journeyTry: string;
+    journeyBuy: string;
+    journeyReturn: string;
+    manualBudgetEditRationale: string;
+    manualPositioningRationale: string;
+    generateAlternativesBtn: string;
+    setPrimaryBtn: string;
+    manualOfferRationale: string;
+    generatingOffers: string;
+    normalizeBtn: string;
+    fixBtn: string;
+    dismissBtn: string;
+    noActiveRisks: string;
+    noActiveOpportunities: string;
+    kpiCardTitle: string;
+    journeyCardTitle: string;
+    scenarioCompareBtn: string;
+    planTypeGenerate: string;
+    planTypeScore: string;
+    planTypeCompare: string;
+    planTypeManual: string;
+    planTypeReview: string;
+    planDoneBtn: string;
+    planMarkDoneBtn: string;
+    scenarioMain: string;
+    scenarioAggressive: string;
+    scenarioLean: string;
+    scenarioCompareTitle: string;
+    scenarioBudget: string;
+    scenarioGrowth: string;
+    scenarioCac: string;
+    scenarioRisk: string;
+    riskLow: string;
+    riskMedium: string;
+    riskHigh: string;
+    scenarioDisclaimer: string;
   };
   tools: {
     menuLabel: string;
@@ -963,6 +1026,69 @@ export const ru: Translations = {
     mapAudienceTitle: 'Аудитория',
     mapPositioningTitle: 'Позиционирование',
     mapOfferTitle: 'Оффер',
+    assistantApplying: 'Применяю...',
+    drawerTriggers: 'Триггеры покупки',
+    drawerObjections: 'Возражения',
+    drawerConfidence: 'Уверенность AI',
+    drawerRationale: 'Обоснование',
+    drawerForecast: 'Прогноз',
+    forecastInsufficientData: 'Недостаточно данных',
+    forecastClicks: 'кликов (оценка)',
+    drawerValueProp: 'Ценностное предложение',
+    drawerReasonsToBelieve: 'Почему стоит верить',
+    drawerAngle: 'Угол подачи',
+    loadingAnalyzeProduct: 'Анализ продукта',
+    loadingDefineAudience: 'Определение аудитории',
+    loadingAnalyzeCompetitors: 'Анализ конкурентов',
+    loadingPositioning: 'Формирование позиционирования',
+    loadingChannels: 'Выбор каналов',
+    loadingContentPlan: 'Контент-план',
+    optionalHide: 'Скрыть дополнительные поля',
+    optionalShow: 'Дополнительно (необязательно)',
+    websiteLabel: 'Сайт (необязательно)',
+    competitorsLabel: 'Конкуренты (необязательно)',
+    knownAudienceLabel: 'Известная аудитория (необязательно)',
+    scoreMetricFunnel: 'Воронка',
+    scoreMetricMeasurement: 'Измеримость',
+    journeyDiscover: 'Узнаёт',
+    journeyInterest: 'Интересуется',
+    journeyResearch: 'Изучает',
+    journeyTry: 'Пробует',
+    journeyBuy: 'Покупает',
+    journeyReturn: 'Возвращается',
+    manualBudgetEditRationale: 'Ручная правка бюджета пользователем',
+    manualPositioningRationale: 'Смена позиционирования пользователем',
+    generateAlternativesBtn: 'Сгенерировать альтернативы',
+    setPrimaryBtn: 'Сделать основным',
+    manualOfferRationale: 'Смена основного оффера пользователем',
+    generatingOffers: 'Генерируем альтернативы...',
+    normalizeBtn: 'Нормализовать',
+    fixBtn: 'Как исправить',
+    dismissBtn: 'Скрыть',
+    noActiveRisks: 'Активных рисков нет',
+    noActiveOpportunities: 'Активных возможностей нет',
+    kpiCardTitle: 'KPI',
+    journeyCardTitle: 'Путь клиента',
+    scenarioCompareBtn: 'Сравнить сценарии',
+    planTypeGenerate: 'Генерация',
+    planTypeScore: 'Оценка',
+    planTypeCompare: 'Сравнение',
+    planTypeManual: 'Вручную',
+    planTypeReview: 'Обзор',
+    planDoneBtn: 'Готово',
+    planMarkDoneBtn: 'Отметить готовым',
+    scenarioMain: 'Основной',
+    scenarioAggressive: 'Агрессивный рост',
+    scenarioLean: 'Экономный',
+    scenarioCompareTitle: 'Сравнение сценариев',
+    scenarioBudget: 'Бюджет',
+    scenarioGrowth: 'Рост',
+    scenarioCac: 'CAC',
+    scenarioRisk: 'Риск',
+    riskLow: 'Низкий',
+    riskMedium: 'Средний',
+    riskHigh: 'Высокий',
+    scenarioDisclaimer: 'Оценка на основе текущей воронки и бюджета, не гарантированный прогноз.',
   },
   tools: {
     menuLabel: 'Инструменты',
@@ -1628,6 +1754,69 @@ export const en: Translations = {
     mapAudienceTitle: 'Audience',
     mapPositioningTitle: 'Positioning',
     mapOfferTitle: 'Offer',
+    assistantApplying: 'Applying...',
+    drawerTriggers: 'Purchase triggers',
+    drawerObjections: 'Objections',
+    drawerConfidence: 'AI confidence',
+    drawerRationale: 'Rationale',
+    drawerForecast: 'Forecast',
+    forecastInsufficientData: 'Insufficient data',
+    forecastClicks: 'clicks (estimate)',
+    drawerValueProp: 'Value proposition',
+    drawerReasonsToBelieve: 'Reasons to believe',
+    drawerAngle: 'Angle',
+    loadingAnalyzeProduct: 'Analyzing product',
+    loadingDefineAudience: 'Defining audience',
+    loadingAnalyzeCompetitors: 'Analyzing competitors',
+    loadingPositioning: 'Building positioning',
+    loadingChannels: 'Choosing channels',
+    loadingContentPlan: 'Content plan',
+    optionalHide: 'Hide optional fields',
+    optionalShow: 'Optional',
+    websiteLabel: 'Website (optional)',
+    competitorsLabel: 'Competitors (optional)',
+    knownAudienceLabel: 'Known audience (optional)',
+    scoreMetricFunnel: 'Funnel',
+    scoreMetricMeasurement: 'Measurement',
+    journeyDiscover: 'Discover',
+    journeyInterest: 'Interest',
+    journeyResearch: 'Research',
+    journeyTry: 'Try',
+    journeyBuy: 'Buy',
+    journeyReturn: 'Return',
+    manualBudgetEditRationale: 'Manual budget edit by user',
+    manualPositioningRationale: 'Positioning switched by user',
+    generateAlternativesBtn: 'Generate alternatives',
+    setPrimaryBtn: 'Set primary',
+    manualOfferRationale: 'Primary offer switched by user',
+    generatingOffers: 'Generating alternatives...',
+    normalizeBtn: 'Normalize',
+    fixBtn: 'How to fix',
+    dismissBtn: 'Dismiss',
+    noActiveRisks: 'No active risks',
+    noActiveOpportunities: 'No active opportunities',
+    kpiCardTitle: 'KPI',
+    journeyCardTitle: 'Customer Journey',
+    scenarioCompareBtn: 'Compare scenarios',
+    planTypeGenerate: 'Generate',
+    planTypeScore: 'Score',
+    planTypeCompare: 'Compare',
+    planTypeManual: 'Manual',
+    planTypeReview: 'Review',
+    planDoneBtn: 'Done',
+    planMarkDoneBtn: 'Mark done',
+    scenarioMain: 'Main',
+    scenarioAggressive: 'Aggressive Growth',
+    scenarioLean: 'Lean',
+    scenarioCompareTitle: 'Compare scenarios',
+    scenarioBudget: 'Budget',
+    scenarioGrowth: 'Growth',
+    scenarioCac: 'CAC',
+    scenarioRisk: 'Risk',
+    riskLow: 'Low',
+    riskMedium: 'Medium',
+    riskHigh: 'High',
+    scenarioDisclaimer: 'Estimate based on the current funnel and budget, not a guaranteed forecast.',
   },
   tools: {
     menuLabel: 'Tools',
