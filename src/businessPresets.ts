@@ -1,5 +1,5 @@
 // "Для бизнеса" start-screen tiles — each drops a Prompt→Генерация фото chain pre-configured
-// for one vertical (nano-banana-pro, 2K, 9:16). The prompt text below is sent directly to the
+// for one vertical (gpt-image-2, medium, 9:16). The prompt text below is sent directly to the
 // image model, not shown as UI copy, so — like the AdaptNode format-adaptation prompts and the
 // assistant system prompts in electron/main.ts — it deliberately stays untranslated English
 // rather than going through src/i18n.ts.
