@@ -524,6 +524,16 @@ export interface Translations {
     demoModeLink: string;
     orDivider: string;
     googleBtn: string;
+    emailLabel: string;
+    loginSubtitle: string;
+    registerSubtitle: string;
+    keepSignedIn: string;
+    resetPasswordLink: string;
+    resetPasswordSentToast: string;
+    resetPasswordError: string;
+    resetPasswordNeedsEmailError: string;
+    switchToRegisterText: string;
+    switchToLoginText: string;
   };
   paymentModal: {
     topBarBtn: string;
@@ -1241,6 +1251,16 @@ export const ru: Translations = {
     demoModeLink: 'Демо режим',
     orDivider: 'или',
     googleBtn: 'Войти через Google',
+    emailLabel: 'Email',
+    loginSubtitle: 'Войдите в аккаунт и продолжите работу в ONEFLOW',
+    registerSubtitle: 'Создайте аккаунт, чтобы начать работу в ONEFLOW',
+    keepSignedIn: 'Не выходить из аккаунта',
+    resetPasswordLink: 'Забыли пароль?',
+    resetPasswordSentToast: 'Письмо для сброса пароля отправлено на почту.',
+    resetPasswordError: 'Не удалось отправить письмо для сброса пароля.',
+    resetPasswordNeedsEmailError: 'Сначала введите email.',
+    switchToRegisterText: 'Новый пользователь ONEFLOW?',
+    switchToLoginText: 'Уже есть аккаунт?',
   },
   paymentModal: {
     topBarBtn: 'Тариф',
@@ -1969,6 +1989,16 @@ export const en: Translations = {
     demoModeLink: 'Demo mode',
     orDivider: 'or',
     googleBtn: 'Continue with Google',
+    emailLabel: 'Email',
+    loginSubtitle: 'Access your account and continue your work in ONEFLOW',
+    registerSubtitle: 'Create an account to get started with ONEFLOW',
+    keepSignedIn: 'Keep me signed in',
+    resetPasswordLink: 'Forgot password?',
+    resetPasswordSentToast: 'Password reset email sent.',
+    resetPasswordError: 'Could not send the password reset email.',
+    resetPasswordNeedsEmailError: 'Enter your email first.',
+    switchToRegisterText: 'New to ONEFLOW?',
+    switchToLoginText: 'Already have an account?',
   },
   paymentModal: {
     topBarBtn: 'Plan',

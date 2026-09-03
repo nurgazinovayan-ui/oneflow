@@ -2086,33 +2086,73 @@
 /* Full-bleed DomeGallery backdrop, replacing the old flat dot-grid. Its own position:absolute
    + z-index establishes a stacking context, so the sphere's internal z-index:9999 (used only
    while its "enlarge" close animation runs) stays contained in here rather than climbing above
-   .web-auth-row. */
+   .web-auth-card. */
 .web-auth-gate-bg {
   position: absolute;
   inset: 0;
   z-index: 0;
 }
 
-.web-auth-row {
+/* Ported from a shadcn/Tailwind "sign-in" reference component's visual language (glass input
+   wrappers, floating field labels, password eye-toggle, checkbox+reset-link row, "or continue
+   with" divider) onto this app's own --c-* tokens — no Tailwind here, see GlowMenuBar.tsx for
+   the same porting approach used earlier. The reference is a full 100dvh/100vw split-screen;
+   kept the compact 640×400 footprint of the previous .web-auth-window design instead (task
+   explicitly asked to keep the window size), so spacing/type scale below is far denser than the
+   reference's own generous version, and its floating testimonial cards were dropped — there's
+   no room for them at this size and no real testimonial data to show anyway. The reference's
+   heroImageSrc panel is the existing background video, not a static image. */
+.web-auth-card {
   position: relative;
   z-index: 1;
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 16px;
-  max-width: 92vw;
-  max-height: 80vh;
-}
-
-.web-auth-window {
-  position: relative;
+  align-items: stretch;
   width: 640px;
-  max-width: min(640px, 60vw);
+  max-width: 92vw;
   height: 400px;
   max-height: 80vh;
-  overflow: hidden;
   border-radius: 14px;
+  overflow: hidden;
+  background: var(--c-panel);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.web-auth-form-side {
+  flex: none;
+  width: 360px;
+  max-width: 56%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 22px 26px;
+}
+
+.web-auth-form-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.web-auth-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--c-text);
+}
+
+.web-auth-subtitle {
+  margin: 0 0 4px;
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--c-text-muted);
+}
+
+.web-auth-media-side {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
   background: #000;
 }
 
@@ -2176,75 +2216,134 @@
   color: #fff;
 }
 
-.web-auth-panel {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 240px;
-  padding: 20px;
-  border-radius: 14px;
-  /* Half the panel's own width, pulled left past .web-auth-row's 16px gap — lands the panel
-     straddling the video's right edge, half over the video and half past it, rather than
-     sitting fully beside it. */
-  margin-left: -136px;
-  /* Sits partly over the video again, so back to the lighter on-video tint (relies on the
-     video showing through the blur) rather than the more opaque flat-card treatment used when
-     it sat entirely off to the side. */
-  background: rgba(18, 18, 22, 0.55);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-}
-
-.web-auth-panel .login-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #f2f2f4;
-  letter-spacing: 0.02em;
-}
-
 .web-auth-fields {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
+.web-auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.web-auth-field-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* The reference's "glass input wrapper" — a rounded translucent shell around the plain <input>
+   that highlights on focus, rather than styling the input's own border directly. */
+.web-auth-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-radius: 10px;
+  border: 1px solid var(--c-divider);
+  background: rgba(255, 255, 255, 0.05);
+  transition:
+    border-color 0.15s var(--ease),
+    background 0.15s var(--ease);
+}
+
+.web-auth-input-wrap:focus-within {
+  border-color: var(--c-pink);
+  background: color-mix(in srgb, var(--c-pink) 10%, rgba(255, 255, 255, 0.05));
+}
+
 .web-auth-input {
   width: 100%;
-  padding: 9px 11px;
-  border-radius: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
   border: none;
-  background: rgba(255, 255, 255, 0.08);
-  color: #f2f2f4;
-  font-size: 12.5px;
+  background: transparent;
+  color: var(--c-text);
+  font-size: 12px;
   outline: none;
 }
 
 .web-auth-input::placeholder {
-  color: #8f8f97;
+  color: var(--c-text-dim);
 }
 
-.web-auth-input:hover,
-.web-auth-input:focus {
+.web-auth-eye-btn {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-right: 4px;
   border: none;
-  background: rgba(255, 255, 255, 0.14);
+  background: none;
+  color: var(--c-text-muted);
+  cursor: pointer;
+}
+
+.web-auth-eye-btn:hover {
+  color: var(--c-text);
+}
+
+.web-auth-field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10.5px;
+}
+
+.web-auth-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--c-text-muted);
+  cursor: pointer;
+}
+
+.web-auth-checkbox {
+  width: 13px;
+  height: 13px;
+  accent-color: var(--c-pink);
+  cursor: pointer;
+}
+
+.web-auth-text-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--c-pink);
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.web-auth-text-link:hover {
+  text-decoration: underline;
+}
+
+.web-auth-text-link:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .web-auth-submit {
   margin-top: 2px;
   padding: 10px 12px;
   border: none;
-  border-radius: 8px;
-  background: #e5157e;
+  border-radius: 10px;
+  background: var(--c-pink);
   color: #fff;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .web-auth-submit:hover:not(:disabled) {
-  background: #ff2d8f;
+  filter: brightness(1.1);
 }
 
 .web-auth-submit:disabled {
@@ -2252,27 +2351,12 @@
   cursor: default;
 }
 
-.web-auth-register-toggle {
-  padding: 9px 12px;
-  border: none;
-  border-radius: 8px;
-  background: #f0e4c8;
-  color: #2b2419;
-  font-size: 12.5px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.web-auth-register-toggle:hover {
-  background: #f7edd8;
-}
-
 .web-auth-divider {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #8f8f97;
-  font-size: 10.5px;
+  color: var(--c-text-dim);
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -2282,7 +2366,7 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--c-divider);
 }
 
 .web-auth-google-btn {
@@ -2290,40 +2374,49 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 9px 12px;
-  border: none;
-  border-radius: 8px;
-  background: #fff;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--c-divider);
+  background: rgba(255, 255, 255, 0.9);
   color: #3c4043;
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .web-auth-google-btn:hover {
-  background: #f2f2f2;
+  background: #fff;
+  border-color: var(--c-divider-hover, rgba(255, 255, 255, 0.2));
 }
 
-.web-auth-panel .login-error {
+.login-error {
   min-height: 14px;
-  font-size: 11.5px;
+  font-size: 11px;
   color: #ff6b6b;
   line-height: 1.4;
 }
 
+.web-auth-switch-mode {
+  margin: 0;
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--c-text-muted);
+}
+
 .web-auth-demo-link {
+  align-self: center;
   background: none;
   border: none;
   padding: 0;
-  color: #ff6fa8;
-  font-size: 11px;
+  margin-top: 2px;
+  color: var(--c-text-dim);
+  font-size: 10px;
   text-decoration: underline;
   cursor: pointer;
-  text-align: left;
 }
 
 .web-auth-demo-link:hover {
-  color: #ff96c2;
+  color: var(--c-text-muted);
 }
 
 /* Post-login onboarding — a small floating window over the working canvas (not a takeover).
