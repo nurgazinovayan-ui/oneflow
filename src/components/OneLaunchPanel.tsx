@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { IconClose, IconDownload, IconPlus, IconRocket, IconSparkles } from './Icons';
 import { PRODUCT_PALETTES, type ProductPalette } from '../palettes';
 import { generatePaletteFromColor } from '../colorUtils';
-import { composeMarketplaceCard, cropToAspectRatio } from '../imageCompositor';
+import { composeMarketplaceCard } from '../imageCompositor';
 import { ONELAUNCH_TEMPLATE_SECTIONS, ONELAUNCH_TEMPLATES } from '../onelaunchTemplates';
 import type { CreativeVariantEvaluation } from '../types';
 import { formatGenerationError } from '../errorMessages';
@@ -49,13 +49,27 @@ async function assetToDataUrl(path: string): Promise<string> {
   });
 }
 
-function buildImagePrompt(name: string, palette: ProductPalette): string {
+// "Сделать уникальный шаблон" — the always-first tile in every section's grid. Unlike a fixed
+// template (a pre-made design just gets its text/photo swapped in), this asks the model to
+// design the shot itself: analyze what the product actually is and compose a photo suited to
+// that category, rather than a one-size-fits-all studio shot. Still text-free — the name and
+// advantages get drawn on top by composeMarketplaceCard below, same as the rest of this
+// (non-template) path, since letting the model render exact on-image text is unreliable (see
+// imageCompositor.ts's header comment).
+function buildUniqueDesignPrompt(name: string, advantages: string[], palette: ProductPalette): string {
+  const advantagesLine = advantages.length
+    ? ` Учти ключевые преимущества товара при выборе композиции и настроения кадра (не как ` +
+      `текст на фото, а как визуальную идею): ${advantages.join('; ')}.`
+    : '';
   return (
-    `Professional e-commerce product photography of "${name}", featuring the exact product ` +
-    `shown in the reference image, kept accurate to the reference. Studio lighting, clean ` +
-    `composition, background and accent lighting styled in a "${palette.name}" color palette ` +
-    `(dominant tones: ${palette.colors.join(', ')}). No text, no logos, no watermarks — pure ` +
-    `photography only.`
+    `Проанализируй товар на прикреплённом референс-фото — определи, что это за товар, к какой ` +
+    `категории он относится и для какого сценария использования подходит. На основе этого ` +
+    `придумай и сними оригинальную профессиональную рекламную фотографию товара "${name}" для ` +
+    `карточки маркетплейса: выбери композицию, ракурс, фон и декоративные детали, уместные ` +
+    `именно для этой категории товара (а не общий шаблонный студийный снимок), сохранив сам ` +
+    `товар точно таким же, как на референс-фото.${advantagesLine} Оформи в цветовой гамме ` +
+    `"${palette.name}" (основные тона: ${palette.colors.join(', ')}). Без текста, логотипов и ` +
+    `водяных знаков — только фотография.`
   );
 }
 
@@ -111,6 +125,7 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
   const [layoutSection, setLayoutSection] = useState(ONELAUNCH_TEMPLATE_SECTIONS[0]?.key ?? '');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const selectedTemplate = ONELAUNCH_TEMPLATES.find((tpl) => tpl.id === selectedTemplateId) ?? null;
+  const [discountText, setDiscountText] = useState('');
   const [selectedPaletteKey, setSelectedPaletteKey] = useState<string | null>(null);
   const [recommendedPaletteKey, setRecommendedPaletteKey] = useState<string | null>(null);
   const [customPalette, setCustomPalette] = useState<ProductPalette | null>(null);
@@ -238,21 +253,17 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
         const templateDataUrl = await assetToDataUrl(selectedTemplate.image);
         const outputs = await window.api.generateImage({
           model: IMAGE_MODEL,
-          prompt: selectedTemplate.buildPrompt(name.trim(), advantages),
+          prompt: selectedTemplate.buildPrompt(name.trim(), advantages, discountText.trim() || undefined),
           aspectRatio: selectedTemplate.aspectRatio,
-          resolution: 'medium',
+          resolution: 'high',
           images: [templateDataUrl, photo],
           category: 'image',
         });
         const rawDataUrl = await window.api.fetchImageAsDataUrl(outputs[0]);
-        // GPT Image 2 can only emit 1:1/3:2/2:3 natively — '3:4' resolves to the closest of
-        // those (2:3) server-side, so it needs trimming down to the exact ratio the template
-        // was designed at (see cropToAspectRatio's comment).
-        const cropped = await cropToAspectRatio(rawDataUrl, 3, 4);
         nextResults.push({
           key: 'template',
           label: t.oneLaunch.templateResultLabel,
-          image: cropped,
+          image: rawDataUrl,
           evaluation: null,
         });
       } else {
@@ -262,9 +273,9 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
           setStatusMessage(t.oneLaunch.statusGenerating(formatLabel(format.key)));
           const outputs = await window.api.generateImage({
             model: IMAGE_MODEL,
-            prompt: buildImagePrompt(name.trim(), palette),
+            prompt: buildUniqueDesignPrompt(name.trim(), advantages, palette),
             aspectRatio: format.aspectRatio,
-            resolution: 'medium',
+            resolution: 'high',
             image: photo,
             category: 'image',
           });
@@ -410,7 +421,9 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
                 type="button"
                 className={`onelaunch-style-tile onelaunch-style-tile-none ${!selectedTemplateId ? 'selected' : ''}`}
                 onClick={() => setSelectedTemplateId(null)}
+                title={t.oneLaunch.templateUniqueHint}
               >
+                <IconSparkles size={16} />
                 {t.oneLaunch.templateNoneLabel}
               </button>
               {ONELAUNCH_TEMPLATES.filter((tpl) => tpl.section === layoutSection).map((tpl) => (
@@ -425,6 +438,15 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
                 </button>
               ))}
             </div>
+            {selectedTemplate?.hasDiscountBadge && (
+              <input
+                className="node-select onelaunch-discount-input"
+                type="text"
+                value={discountText}
+                onChange={(e) => setDiscountText(e.target.value)}
+                placeholder={t.oneLaunch.discountPlaceholder}
+              />
+            )}
           </fieldset>
         </div>
 

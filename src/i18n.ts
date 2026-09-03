@@ -240,9 +240,11 @@ export interface Translations {
     captionsTitle: string;
     downloadTooltip: string;
     templateNoneLabel: string;
+    templateUniqueHint: string;
     templateFormatNote: string;
     templatePaletteNote: string;
     templateResultLabel: string;
+    discountPlaceholder: string;
   };
   tools: {
     menuLabel: string;
@@ -803,10 +805,12 @@ export const ru: Translations = {
     statusWritingCaptions: 'Пишу тексты для постов...',
     captionsTitle: 'Тексты для Instagram',
     downloadTooltip: 'Скачать',
-    templateNoneLabel: 'Без шаблона',
+    templateNoneLabel: 'Уникальный дизайн',
+    templateUniqueHint: 'Система проанализирует товар и данные и создаст карточку с уникальным дизайном',
     templateFormatNote: 'Формат уже задан выбранным шаблоном.',
     templatePaletteNote: 'Цветовая гамма уже задана выбранным шаблоном.',
     templateResultLabel: 'Карточка по шаблону',
+    discountPlaceholder: 'Скидка (например -20%), необязательно',
   },
   tools: {
     menuLabel: 'Инструменты',
@@ -1390,10 +1394,12 @@ export const en: Translations = {
     statusWritingCaptions: 'Writing post copy...',
     captionsTitle: 'Instagram post copy',
     downloadTooltip: 'Download',
-    templateNoneLabel: 'No template',
+    templateNoneLabel: 'Unique design',
+    templateUniqueHint: 'The system will analyze the product and your input and create a uniquely designed card',
     templateFormatNote: 'Format is already set by the chosen template.',
     templatePaletteNote: 'Color palette is already set by the chosen template.',
     templateResultLabel: 'Template card',
+    discountPlaceholder: 'Discount (e.g. -20%), optional',
   },
   tools: {
     menuLabel: 'Tools',

@@ -26,7 +26,10 @@ export interface OneLaunchTemplate {
   aspectRatio: string;
   // How many feature-callout text slots this design has, in on-card top-to-bottom order.
   advantageSlots: number;
-  buildPrompt: (name: string, advantages: string[]) => string;
+  // Whether this design has a discount-percent sticker (only the electronics templates do) —
+  // gates whether OneLaunchPanel shows the optional discount input for this template.
+  hasDiscountBadge?: boolean;
+  buildPrompt: (name: string, advantages: string[], discount?: string) => string;
 }
 
 export const ONELAUNCH_TEMPLATE_SECTIONS: OneLaunchTemplateSection[] = [
@@ -60,6 +63,25 @@ function badgeInstruction(badgeDescription: string): string {
     `товара, который ты определил на фото пользователя. Если не подходит — убери эту плашку с ` +
     `макета полностью (закрась/заполни то место фоном, как будто её там не было), а не ` +
     `подставляй вместо неё придуманный или неверный текст.`
+  );
+}
+
+// The discount sticker is the one badge that's never a claim about the product itself (a
+// price cut applies regardless of category), so unlike badgeInstruction it doesn't depend on
+// what's in the photo — only on whether the user actually typed a discount. No input means no
+// discount was ever offered, so the sticker must come off rather than keep showing a made-up
+// percentage.
+function discountInstruction(originalPercent: string, discount: string | undefined): string {
+  if (discount && discount.trim()) {
+    return (
+      `Бейдж со скидкой (сейчас "${originalPercent}") замени на "${discount.trim()}", тот же ` +
+      `стиль, форма и место.`
+    );
+  }
+  return (
+    `Бейдж со скидкой (сейчас "${originalPercent}") — скидку пользователь не указал, поэтому ` +
+    `убери этот бейдж с макета полностью (закрась то место фоном, как будто его не было), не ` +
+    `придумывай процент сам.`
   );
 }
 
@@ -229,7 +251,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     image: '/onelaunch-templates/electronics/01.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
-    buildPrompt: (name, advantages) => {
+    hasDiscountBadge: true,
+    buildPrompt: (name, advantages, discount) => {
       const [a1, a2, a3] = fillAdvantages(advantages, 3);
       return (
         `${PRODUCT_ANALYSIS_INSTRUCTION}\n\n` +
@@ -246,9 +269,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
         `трогай.\n\n` +
         `${badgeInstruction('4) Тёмная плашка-тег под заголовком "Насыщенный вкус каждое утро".')}\n\n` +
         `${badgeInstruction('5) Плашка "ДЛЯ ДОМА" с иконкой дома справа снизу.')}\n\n` +
-        `Круглый бейдж со скидкой "-26%" в правом верхнем углу — оставь как есть, это не ` +
-        `утверждение о товаре, а маркетинговый ярлык. Результат — тот же макет один в один, ` +
-        `только с этими заменами.`
+        `6) ${discountInstruction('-26%', discount)}\n\n` +
+        `Результат — тот же макет один в один, только с этими заменами.`
       );
     },
   },
@@ -259,7 +281,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     image: '/onelaunch-templates/electronics/02.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
-    buildPrompt: (name, advantages) => {
+    hasDiscountBadge: true,
+    buildPrompt: (name, advantages, discount) => {
       const [a1, a2, a3] = fillAdvantages(advantages, 3);
       return (
         `${PRODUCT_ANALYSIS_INSTRUCTION}\n\n` +
@@ -275,8 +298,9 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
         `"Bluetooth 5.3") → "${a1}", "${a2}", "${a3}" соответственно, сами иконки значков не ` +
         `трогай.\n\n` +
         `${badgeInstruction('4) Строка-тег под заголовком "Чистый звук и глубокий бас" со значком звуковой волны.')}\n\n` +
-        `Бейдж "ХИТ ПРОДАЖ" со звездой в правом верхнем углу и красный бейдж со скидкой "-35%" ` +
-        `слева снизу — оставь как есть, это не утверждения о товаре, а маркетинговые ярлыки. ` +
+        `Бейдж "ХИТ ПРОДАЖ" со звездой в правом верхнем углу — оставь как есть, это не ` +
+        `утверждение о товаре, а маркетинговый ярлык.\n\n` +
+        `5) ${discountInstruction('-35%', discount)}\n\n` +
         `Результат — тот же макет один в один, только с этими заменами.`
       );
     },
@@ -288,7 +312,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     image: '/onelaunch-templates/electronics/03.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
-    buildPrompt: (name, advantages) => {
+    hasDiscountBadge: true,
+    buildPrompt: (name, advantages, discount) => {
       const [a1, a2, a3] = fillAdvantages(advantages, 3);
       return (
         `${PRODUCT_ANALYSIS_INSTRUCTION}\n\n` +
@@ -304,8 +329,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
         `"До 180 минут") → "${a1}", "${a2}", "${a3}" соответственно, сами иконки значков не ` +
         `трогай.\n\n` +
         `${badgeInstruction('4) Плашка "УМНЫЙ ДОМ" с иконкой wifi-дома в правом верхнем углу.')}\n\n` +
-        `Синий бейдж со скидкой "-28%" — оставь как есть, это не утверждение о товаре, а ` +
-        `маркетинговый ярлык. Результат — тот же макет один в один, только с этими заменами.`
+        `5) ${discountInstruction('-28%', discount)}\n\n` +
+        `Результат — тот же макет один в один, только с этими заменами.`
       );
     },
   },
@@ -316,7 +341,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     image: '/onelaunch-templates/electronics/04.jpg',
     aspectRatio: '3:4',
     advantageSlots: 4,
-    buildPrompt: (name, advantages) => {
+    hasDiscountBadge: true,
+    buildPrompt: (name, advantages, discount) => {
       const [a1, a2, a3, a4] = fillAdvantages(advantages, 4);
       return (
         `${PRODUCT_ANALYSIS_INSTRUCTION}\n\n` +
@@ -335,8 +361,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
         `4) Текст в нижней белой плашке-баннере (сейчас "Смузи, соусы и коктейли за секунды") ` +
         `→ "${a4}".\n\n` +
         `${badgeInstruction('5) Плашка "ДЛЯ КУХНИ" с иконкой дома-сердца в правом верхнем углу.')}\n\n` +
-        `Оранжевый бейдж со скидкой "-22%" — оставь как есть, это не утверждение о товаре, а ` +
-        `маркетинговый ярлык. Результат — тот же макет один в один, только с этими заменами.`
+        `6) ${discountInstruction('-22%', discount)}\n\n` +
+        `Результат — тот же макет один в один, только с этими заменами.`
       );
     },
   },
@@ -347,7 +373,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     image: '/onelaunch-templates/electronics/05.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
-    buildPrompt: (name, advantages) => {
+    hasDiscountBadge: true,
+    buildPrompt: (name, advantages, discount) => {
       const [a1, a2, a3] = fillAdvantages(advantages, 3);
       return (
         `${PRODUCT_ANALYSIS_INSTRUCTION}\n\n` +
@@ -364,9 +391,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
         `трогай.\n\n` +
         `${badgeInstruction('4) Строка-тег под заголовком "Стиль и контроль каждый день".')}\n\n` +
         `${badgeInstruction('5) Плашка "НОВИНКА" со звёздочкой в левом верхнем углу.')}\n\n` +
-        `Зелёный бейдж со скидкой "-31%" слева снизу — оставь как есть, это не утверждение о ` +
-        `товаре, а маркетинговый ярлык. Результат — тот же макет один в один, только с этими ` +
-        `заменами.`
+        `6) ${discountInstruction('-31%', discount)}\n\n` +
+        `Результат — тот же макет один в один, только с этими заменами.`
       );
     },
   },
@@ -377,7 +403,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     image: '/onelaunch-templates/electronics/06.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
-    buildPrompt: (name, advantages) => {
+    hasDiscountBadge: true,
+    buildPrompt: (name, advantages, discount) => {
       const [a1, a2, a3] = fillAdvantages(advantages, 3);
       return (
         `${PRODUCT_ANALYSIS_INSTRUCTION}\n\n` +
@@ -395,8 +422,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
         `часов") → "${a1}", "${a2}", "${a3}" соответственно, сами иконки значков не трогай.\n\n` +
         `${badgeInstruction('4) Рукописная строка-тег "Берите музыку с собой" под заголовком.')}\n\n` +
         `${badgeInstruction('5) Плашка "ДЛЯ ПУТЕШЕСТВИЙ" с иконкой рюкзака и пальмы справа снизу.')}\n\n` +
-        `Круглый бейдж со скидкой "-18%" — оставь как есть, это не утверждение о товаре, а ` +
-        `маркетинговый ярлык. Результат — тот же макет один в один, только с этими заменами.`
+        `6) ${discountInstruction('-18%', discount)}\n\n` +
+        `Результат — тот же макет один в один, только с этими заменами.`
       );
     },
   },
@@ -407,7 +434,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     image: '/onelaunch-templates/electronics/07.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
-    buildPrompt: (name, advantages) => {
+    hasDiscountBadge: true,
+    buildPrompt: (name, advantages, discount) => {
       const [a1, a2, a3] = fillAdvantages(advantages, 3);
       return (
         `${PRODUCT_ANALYSIS_INSTRUCTION}\n\n` +
@@ -425,8 +453,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
         `не трогай.\n\n` +
         `${badgeInstruction('4) Строка-тег под заголовком "Хрустящая корочка и быстрый ужин" со значком огня.')}\n\n` +
         `${badgeInstruction('5) Плашка "ТОП ДЛЯ КУХНИ" со значком поварского колпака в правом верхнем углу.')}\n\n` +
-        `Оранжевый бейдж со скидкой "-27%" — оставь как есть, это не утверждение о товаре, а ` +
-        `маркетинговый ярлык. Результат — тот же макет один в один, только с этими заменами.`
+        `6) ${discountInstruction('-27%', discount)}\n\n` +
+        `Результат — тот же макет один в один, только с этими заменами.`
       );
     },
   },
@@ -437,7 +465,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     image: '/onelaunch-templates/electronics/08.jpg',
     aspectRatio: '3:4',
     advantageSlots: 6,
-    buildPrompt: (name, advantages) => {
+    hasDiscountBadge: true,
+    buildPrompt: (name, advantages, discount) => {
       const [a1, a2, a3, a4, a5, a6] = fillAdvantages(advantages, 6);
       return (
         `${PRODUCT_ANALYSIS_INSTRUCTION}\n\n` +
@@ -460,8 +489,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
         `соответственно.\n` +
         `Сами иконки значков не трогай.\n\n` +
         `${badgeInstruction('5) Плашка "ДОРОЖНЫЙ ХИТ" с иконкой чемодана в правом верхнем углу.')}\n\n` +
-        `Синий бейдж со скидкой "-24%" — оставь как есть, это не утверждение о товаре, а ` +
-        `маркетинговый ярлык. Результат — тот же макет один в один, только с этими заменами.`
+        `6) ${discountInstruction('-24%', discount)}\n\n` +
+        `Результат — тот же макет один в один, только с этими заменами.`
       );
     },
   },
@@ -472,7 +501,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
     image: '/onelaunch-templates/electronics/09.jpg',
     aspectRatio: '3:4',
     advantageSlots: 3,
-    buildPrompt: (name, advantages) => {
+    hasDiscountBadge: true,
+    buildPrompt: (name, advantages, discount) => {
       const [a1, a2, a3] = fillAdvantages(advantages, 3);
       return (
         `${PRODUCT_ANALYSIS_INSTRUCTION}\n\n` +
@@ -491,8 +521,8 @@ export const ONELAUNCH_TEMPLATES: OneLaunchTemplate[] = [
         `текстовую подпись рядом.\n\n` +
         `${badgeInstruction('4) Розовая плашка-баннер "Бережный уход и белоснежная улыбка" со звёздочкой снизу слева.')}\n\n` +
         `${badgeInstruction('5) Плашка "УХОД ЗА СОБОЙ" с иконкой лица в правом верхнем углу.')}\n\n` +
-        `Розовый бейдж со скидкой "-20%" — оставь как есть, это не утверждение о товаре, а ` +
-        `маркетинговый ярлык. Результат — тот же макет один в один, только с этими заменами.`
+        `6) ${discountInstruction('-20%', discount)}\n\n` +
+        `Результат — тот же макет один в один, только с этими заменами.`
       );
     },
   },
