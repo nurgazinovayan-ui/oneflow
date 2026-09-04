@@ -192,10 +192,10 @@
 
 /* The 150px padding-right above reserves room for the desktop window's native traffic-light/
    minimize-maximize-close buttons — nothing occupies that space in a browser tab, so web mode
-   pulls the whole .toolbar-right group in flush against the edge instead (by request — "в
-   притык"), rather than matching .top-toolbar's own 14px left padding. */
+   pulls the whole .toolbar-right group flush against the very edge instead (by request — "прям
+   в край"), rather than matching .top-toolbar's own 14px left padding. */
 .web-mode .top-toolbar {
-  padding-right: 4px;
+  padding-right: 0;
 }
 
 /* Far left of .top-toolbar, alone now that Файл/Шаблоны/Инструменты/О программе moved to the
@@ -214,7 +214,7 @@
    legible against .top-toolbar's now-dark background in dark theme and its light background in
    light theme, tracking --c-text either way instead of going invisible on one of them. */
 .toolbar-logo {
-  height: 26px;
+  height: 10.4px; /* 26px / 2.5, by request */
   width: auto;
   display: block;
   color: var(--c-text);
