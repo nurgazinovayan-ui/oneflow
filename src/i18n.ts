@@ -657,6 +657,30 @@ export interface Translations {
     privacyLink: string;
     termsLink: string;
     refundLink: string;
+    helpLink: string;
+  };
+  landingHeader: {
+    saveProjectDesc: string;
+    openProjectDesc: string;
+    templatesForBusinessGroup: string;
+    templatesMarketplacesGroup: string;
+    forBusinessDesc: string;
+    marketplacesDesc: string;
+    horecaDesc: string;
+    autoDesc: string;
+    apartmentDesc: string;
+    furnitureDesc: string;
+    electronicsDesc: string;
+    bgRemoverDesc: string;
+    upscalerDesc: string;
+    photoEditorDesc: string;
+    aboutMenuLabel: string;
+    privacyDesc: string;
+    termsDesc: string;
+    refundDesc: string;
+    helpDesc: string;
+    signInBtn: string;
+    signUpBtn: string;
   };
   startScreen: {
     greeting: string;
@@ -1466,6 +1490,30 @@ export const ru: Translations = {
     privacyLink: 'Политика конфиденциальности',
     termsLink: 'Условия использования',
     refundLink: 'Политика возврата',
+    helpLink: 'Справка',
+  },
+  landingHeader: {
+    saveProjectDesc: 'Сохранить текущий холст в файл проекта',
+    openProjectDesc: 'Загрузить ранее сохранённый проект',
+    templatesForBusinessGroup: 'Для бизнеса',
+    templatesMarketplacesGroup: 'Маркетплейсы',
+    forBusinessDesc: 'Готовые сценарии под нишу вашего бизнеса',
+    marketplacesDesc: 'Шаблоны карточек под маркетплейсы',
+    horecaDesc: 'Фото блюд и интерьера для ресторанов и кафе',
+    autoDesc: 'Профессиональные фото автомобилей из одного снимка',
+    apartmentDesc: 'Каталожные фото квартир и интерьеров',
+    furnitureDesc: 'Студийные фото мебели для каталога',
+    electronicsDesc: 'Премиальные фото техники и электроники',
+    bgRemoverDesc: 'Убрать фон с фото за один клик',
+    upscalerDesc: 'Повысить разрешение изображения без потери качества',
+    photoEditorDesc: 'Быстрое редактирование фото прямо в браузере',
+    aboutMenuLabel: 'О программе',
+    privacyDesc: 'Как ONEFLOW собирает и использует ваши данные',
+    termsDesc: 'Правила использования сервиса',
+    refundDesc: 'Условия возврата средств',
+    helpDesc: 'Как начать работу и куда обратиться за поддержкой',
+    signInBtn: 'Войти',
+    signUpBtn: 'Регистрация',
   },
   startScreen: {
     greeting: 'Начнем генерить?',
@@ -2286,6 +2334,30 @@ export const en: Translations = {
     privacyLink: 'Privacy Policy',
     termsLink: 'Terms of Service',
     refundLink: 'Refund Policy',
+    helpLink: 'Help',
+  },
+  landingHeader: {
+    saveProjectDesc: 'Save the current canvas to a project file',
+    openProjectDesc: 'Load a previously saved project',
+    templatesForBusinessGroup: 'For business',
+    templatesMarketplacesGroup: 'Marketplaces',
+    forBusinessDesc: 'Ready-made scenarios for your business niche',
+    marketplacesDesc: 'Product card templates for marketplaces',
+    horecaDesc: 'Food and interior photos for restaurants and cafes',
+    autoDesc: 'Professional car photos from a single snapshot',
+    apartmentDesc: 'Catalog-quality apartment and interior photos',
+    furnitureDesc: 'Studio furniture photos for a catalog',
+    electronicsDesc: 'Premium photos of devices and electronics',
+    bgRemoverDesc: 'Remove the background from a photo in one click',
+    upscalerDesc: 'Increase image resolution without losing quality',
+    photoEditorDesc: 'Quick photo editing right in the browser',
+    aboutMenuLabel: 'About',
+    privacyDesc: 'How ONEFLOW collects and uses your data',
+    termsDesc: 'Rules for using the service',
+    refundDesc: 'Refund conditions',
+    helpDesc: 'How to get started and where to get support',
+    signInBtn: 'Sign In',
+    signUpBtn: 'Sign Up',
   },
   startScreen: {
     greeting: "Let's start generating?",

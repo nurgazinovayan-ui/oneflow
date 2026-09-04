@@ -1,6 +1,6 @@
 import type { Language } from './i18n';
 
-export type LegalDoc = 'privacy' | 'terms' | 'refund';
+export type LegalDoc = 'privacy' | 'terms' | 'refund' | 'help';
 
 export interface LegalSection {
   heading: string;
@@ -246,6 +246,47 @@ export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = 
         },
       ],
     },
+    help: {
+      title: 'Справка',
+      updated: 'Последнее обновление: 1 сентября 2026 г.',
+      intro:
+        'Короткий гид по ONEFLOW. Если здесь нет ответа на ваш вопрос — напишите в поддержку ' +
+        'через профиль внутри приложения после входа.',
+      sections: [
+        {
+          heading: '1. Что такое ONEFLOW',
+          paragraphs: [
+            'ONEFLOW — конструктор рекламных фото и видео на нодах: собираете цепочку из промпта, ' +
+              'генерации изображения/видео и адаптации под площадку (BYYD, Discovery, GDN, Kaspi, ' +
+              'РСЯ), и получаете готовый материал без дизайнера.',
+          ],
+        },
+        {
+          heading: '2. С чего начать',
+          paragraphs: [
+            'После входа выберите шаблон под вашу нишу («Шаблоны» → нужная категория) или начните ' +
+              'с пустого холста и добавьте первую ноду («Промпт» или «Фото») вручную.',
+            'Баланс и лимит генераций видны в верхней панели приложения; пополнить — кнопкой ' +
+              '«Оплатить тариф».',
+          ],
+        },
+        {
+          heading: '3. Сохранение и проекты',
+          paragraphs: [
+            '«Файл → Сохранить проект» сохраняет текущий холст в файл, «Открыть проект» — ' +
+              'загружает его обратно. Каждая генерация также сохраняется в архив проекта ' +
+              'автоматически.',
+          ],
+        },
+        {
+          heading: '4. Поддержка',
+          paragraphs: [
+            'Если что-то не работает или остались вопросы — напишите разработчику через раздел ' +
+              '«Профиль» внутри приложения.',
+          ],
+        },
+      ],
+    },
   },
   en: {
     privacy: {
@@ -463,6 +504,46 @@ export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = 
           paragraphs: [
             'No refund is given if the account was suspended for violating the Terms of Service, ' +
               'or if the refund request is submitted more than 14 days after payment.',
+          ],
+        },
+      ],
+    },
+    help: {
+      title: 'Help',
+      updated: 'Last updated: September 1, 2026',
+      intro:
+        'A short guide to ONEFLOW. If you can’t find what you need here, contact support from ' +
+        'your profile inside the app once you’re signed in.',
+      sections: [
+        {
+          heading: '1. What ONEFLOW is',
+          paragraphs: [
+            'ONEFLOW is a node-based ad creative builder: chain a prompt, image/video generation, ' +
+              'and platform adaptation (BYYD, Discovery, GDN, Kaspi, Yandex Ads) into a finished ' +
+              'asset without a designer.',
+          ],
+        },
+        {
+          heading: '2. Getting started',
+          paragraphs: [
+            'After signing in, pick a template for your niche ("Templates" → the right category) ' +
+              'or start from a blank canvas and add your first node ("Prompt" or "Photo") manually.',
+            'Your balance and generation limit are shown in the top bar; top up with the "Upgrade" ' +
+              'button.',
+          ],
+        },
+        {
+          heading: '3. Saving and projects',
+          paragraphs: [
+            '"File → Save project" saves the current canvas to a file, "Open project" loads it ' +
+              'back. Every generation is also saved to the project archive automatically.',
+          ],
+        },
+        {
+          heading: '4. Support',
+          paragraphs: [
+            "If something isn't working or you have questions, message the developer from the " +
+              '"Profile" section inside the app.',
           ],
         },
       ],
