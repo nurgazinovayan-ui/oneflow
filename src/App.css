@@ -302,14 +302,27 @@
   transform: translateY(0);
 }
 
-/* Dock-style hover magnification (canvas-toolbar's node-add icons and adaptation preset chips,
-   plus MusicAudioPanel's Music/Speech switch on its own matte plaque — see src/dockHover.ts,
-   which drives `transform`/`margin` directly). Spring-like overshoot on the way up, faster
-   settle on the way back down; transform-origin anchors growth to the bottom of the item so it
-   reads as "growing up" like a dock rather than growing from its center. The margin transition
-   matches the transform's timing so the space reserved for a growing neighbor opens up in step
-   with it, instead of the neighbor jumping into place. */
-.canvas-toolbar .toolbar-icon-btn,
+/* Node-add dock circles — bg-gray-200, borderless, matching the reference's IconContainer. */
+.toolbar-dock-icon-btn {
+  background: #e5e7eb;
+  border: none;
+  color: #525252;
+}
+
+.toolbar-dock-icon-btn:hover {
+  background: #d1d5db;
+  transform: none;
+}
+
+/* Dock-style hover magnification for the adaptation preset chips and MusicAudioPanel's
+   Music/Speech switch — see src/dockHover.ts, which drives `transform`/`margin` directly.
+   Spring-like overshoot on the way up, faster settle on the way back down; transform-origin
+   anchors growth to the bottom of the item so it reads as "growing up" like a dock rather than
+   growing from its center. The margin transition matches the transform's timing so the space
+   reserved for a growing neighbor opens up in step with it, instead of the neighbor jumping into
+   place. (canvas-toolbar's node-add icons use FloatingDockGroup.tsx's real framer-motion spring
+   instead — its width/height are driven by useSpring frame-by-frame, so flexbox just reflows
+   live as the box grows; no CSS transition or margin push needed there.) */
 .canvas-toolbar .toolbar-label-btn,
 .musicaudio-mode-toolbar .toolbar-label-btn {
   transform-origin: center bottom;
@@ -318,7 +331,6 @@
     transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.canvas-toolbar .toolbar-icon-wrap,
 .canvas-toolbar .toolbar-label-btn,
 .musicaudio-mode-toolbar .toolbar-label-btn {
   transition: margin 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -333,32 +345,27 @@
   flex-shrink: 0;
 }
 
-/* The button's name, hidden until hover — see the "снизу" (from below) placement the user asked
-   for: it sits just under the icon rather than above it, since this toolbar already sits at the
-   very top of the canvas and a label above would spill into the topbar. */
+/* The button's name, mounted/animated by FloatingDockGroup.tsx's AnimatePresence (not a CSS
+   :hover rule — framer-motion drives the mount, fade and x/y offset via inline style, this class
+   only supplies the static box: position, padding, colors). Colors ported from the reference's
+   own tooltip (border border-gray-200 bg-gray-100 text-neutral-700) — see the "снизу" (from
+   below) placement the user asked for previously: it sits just under the icon rather than above
+   it, since this toolbar already sits at the very top of the canvas and a label above would
+   spill into the topbar. */
 .toolbar-icon-label {
   position: absolute;
   top: calc(100% + 8px);
   left: 50%;
-  transform: translate(-50%, -6px);
   padding: 4px 8px;
   border-radius: 6px;
-  background: rgba(15, 15, 18, 0.92);
-  color: #fff;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #374151;
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
   pointer-events: none;
-  opacity: 0;
-  transition:
-    opacity 0.15s var(--ease),
-    transform 0.15s var(--ease);
   z-index: 10;
-}
-
-.toolbar-icon-wrap:hover .toolbar-icon-label {
-  opacity: 1;
-  transform: translate(-50%, 0);
 }
 
 /* DSP/settings/about/avatar/budget in the app's own top-right chrome read as plain icons at
@@ -405,6 +412,19 @@
 .toolbar-label-btn:hover {
   background: var(--c-panel-3);
   transform: translateY(-1px);
+}
+
+/* Adaptation preset chips sit on .canvas-toolbar's own light-gray plaque (see below) rather than
+   the app's usual --c-panel-2 surface — same bg-gray-200/gray-300 pairing as the reference's dock
+   items, borderless like the reference too. */
+.canvas-toolbar .toolbar-label-btn {
+  background: #e5e7eb;
+  border: none;
+  color: #374151;
+}
+
+.canvas-toolbar .toolbar-label-btn:hover {
+  background: #d1d5db;
 }
 
 .toolbar-menu-chevron {
@@ -1116,9 +1136,12 @@
 }
 
 /* One of the top menus that keeps its shadow (see App.tsx toolbar-usage sites) — and, unlike
-   .top-toolbar/.topbar, keeps its own matte-glass plaque too: it floats directly over the
-   node canvas rather than sitting in a chrome row, so it needs a fill of its own to read as a
-   control surface distinct from whatever's under it as the canvas pans. */
+   .top-toolbar/.topbar, keeps its own plaque too: it floats directly over the node canvas
+   rather than sitting in a chrome row, so it needs a fill of its own to read as a control
+   surface distinct from whatever's under it as the canvas pans. Colors/radius ported from the
+   Aceternity "floating-dock" reference (bg-gray-50 flat panel, rounded-2xl) instead of the old
+   dark matte-glass recipe — flat, no blur, just a soft shadow + hairline border for definition
+   against the equally-light canvas underneath. */
 .canvas-toolbar {
   position: absolute;
   top: 16px;
@@ -1129,11 +1152,10 @@
   align-items: center;
   gap: 6px;
   padding: 6px;
-  border-radius: var(--radius-md);
-  background: rgba(15, 15, 18, 0.62);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  box-shadow: var(--shadow-md);
+  border-radius: 16px;
+  background: #f9fafb;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
 }
 
 .react-flow__panel.bottom {

@@ -48,6 +48,7 @@ import StartScreen, { type StartScreenChoice } from './components/StartScreen';
 import ReloadGuard from './components/ReloadGuard';
 import LegalModal from './components/LegalModal';
 import ToolbarMenu from './components/ToolbarMenu';
+import FloatingDockGroup from './components/FloatingDockGroup';
 import type { LegalDoc } from './legalContent';
 import { BUSINESS_PRESET_ORDER, BUSINESS_PRESET_PROMPTS, type BusinessPresetKey } from './businessPresets';
 import {
@@ -1090,39 +1091,21 @@ function Canvas() {
         </div>
         <div className="canvas-area" onDragOver={onCanvasDragOver} onDrop={onCanvasDrop}>
           <div className="canvas-toolbar">
-            <div
-              className="toolbar-group"
-              onMouseMove={handleDockMouseMove}
-              onMouseLeave={handleDockMouseLeave}
-            >
-              {SIDEBAR_ADD_NODE_OPTIONS.map((opt) => {
-                const Icon = opt.icon;
-                return (
-                  <div key={opt.type} className="toolbar-icon-wrap" data-dock-wrap>
-                    <button
-                      className="toolbar-icon-btn"
-                      onClick={() => addNode(opt.type)}
-                      title={opt.label}
-                      data-dock-item
-                    >
-                      <Icon />
-                    </button>
-                    <span className="toolbar-icon-label">{opt.label}</span>
-                  </div>
-                );
-              })}
-              <div className="toolbar-icon-wrap" data-dock-wrap>
-                <button
-                  className="toolbar-icon-btn ai-assistant-btn"
-                  onClick={() => setAiAssistantOpen(true)}
-                  title={t.nodeLabels.aiAssistantTooltip}
-                  data-dock-item
-                >
-                  <IconChat />
-                </button>
-                <span className="toolbar-icon-label">{t.nodeLabels.aiAssistantTooltip}</span>
-              </div>
-            </div>
+            <FloatingDockGroup
+              items={[
+                ...SIDEBAR_ADD_NODE_OPTIONS.map((opt) => {
+                  const Icon = opt.icon;
+                  return { key: opt.type, label: opt.label, icon: <Icon />, onClick: () => addNode(opt.type) };
+                }),
+                {
+                  key: 'ai-assistant',
+                  label: t.nodeLabels.aiAssistantTooltip,
+                  icon: <IconChat />,
+                  onClick: () => setAiAssistantOpen(true),
+                  className: 'ai-assistant-btn',
+                },
+              ]}
+            />
             <div className="toolbar-divider" />
             <div
               className="toolbar-group"
