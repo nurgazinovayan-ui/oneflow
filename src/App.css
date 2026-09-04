@@ -394,15 +394,28 @@
 
 /* File/Templates/Tools specifically go flat — no resting fill, no border either — the same
    .toolbar-label-btn class is also used for canvas-toolbar's business-preset chips, which keep
-   their solid background and border. */
+   their solid background and border. Small rounded-md radius (reference kit's
+   navigationMenuTriggerStyle), not the app's usual full-pill chip. */
 .toolbar-menu-wrapper .toolbar-label-btn {
   background: transparent;
   border: none;
+  border-radius: 6px;
 }
 
 .toolbar-label-btn:hover {
   background: var(--c-panel-3);
   transform: translateY(-1px);
+}
+
+.toolbar-menu-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s var(--ease);
+}
+
+.toolbar-menu-chevron.open {
+  transform: rotate(180deg);
 }
 
 .toolbar-label-btn:active {
@@ -3494,9 +3507,10 @@
 .toolbar-rich-menu {
   z-index: 40;
   min-width: 300px;
-  /* Literal white (shadcn's bg-popover in light mode), not the app's own --c-panel-2 gray token —
-     matches the reference's actual color instead of ONEFLOW's usual dark-UI-derived surface. */
-  background: #ffffff;
+  /* Slightly gray off-white (shadcn's bg-popover in light mode reads as a subtle gray, not pure
+     white), and not the app's own --c-panel-2 gray token either — matches the reference's actual
+     color instead of ONEFLOW's usual dark-UI-derived surface. */
+  background: #fafafa;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 10px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);

@@ -18,6 +18,10 @@ interface ToolbarRichMenuProps {
   anchorRef: RefObject<HTMLElement>;
   align?: 'left' | 'right';
   wide?: boolean;
+  /** Hover-intent support: keep the menu open while the pointer is over the portalled panel
+   * itself (it lives outside the trigger's DOM subtree once portalled to document.body). */
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }
 
 // Richer sibling of DropdownMenu.tsx — icon box + title + description per item (ported from a
@@ -29,7 +33,15 @@ interface ToolbarRichMenuProps {
 // app-shell root since .canvas-area doesn't isolate it) once this menu grows tall enough to
 // physically reach that far down — the old plain DropdownMenu never hit that ceiling because its
 // items had no description line. Portaling sidesteps the whole stacking-context question.
-export default function ToolbarRichMenu({ items, onClose, anchorRef, align = 'left', wide = false }: ToolbarRichMenuProps) {
+export default function ToolbarRichMenu({
+  items,
+  onClose,
+  anchorRef,
+  align = 'left',
+  wide = false,
+  onMouseEnter,
+  onMouseLeave,
+}: ToolbarRichMenuProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left?: number; right?: number } | null>(null);
 
@@ -69,6 +81,8 @@ export default function ToolbarRichMenu({ items, onClose, anchorRef, align = 'le
       className={`toolbar-rich-menu ${wide ? 'wide' : ''}`}
       style={{ position: 'fixed', top: pos.top, left: pos.left, right: pos.right }}
       ref={panelRef}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       {items.map((item, i) =>
         'type' in item ? (

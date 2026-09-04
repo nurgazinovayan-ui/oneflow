@@ -47,7 +47,7 @@ import PhotoEditorModal from './components/PhotoEditorModal';
 import StartScreen, { type StartScreenChoice } from './components/StartScreen';
 import ReloadGuard from './components/ReloadGuard';
 import LegalModal from './components/LegalModal';
-import ToolbarRichMenu from './components/ToolbarRichMenu';
+import ToolbarMenu from './components/ToolbarMenu';
 import type { LegalDoc } from './legalContent';
 import { BUSINESS_PRESET_ORDER, BUSINESS_PRESET_PROMPTS, type BusinessPresetKey } from './businessPresets';
 import {
@@ -384,14 +384,9 @@ function Canvas() {
   const [authEmail, setAuthEmail] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
-  const [fileMenuOpen, setFileMenuOpen] = useState(false);
-  const [templatesMenuOpen, setTemplatesMenuOpen] = useState(false);
-  const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
-  const [aboutMenuOpen, setAboutMenuOpen] = useState(false);
-  const fileMenuAnchorRef = useRef<HTMLDivElement>(null);
-  const templatesMenuAnchorRef = useRef<HTMLDivElement>(null);
-  const toolsMenuAnchorRef = useRef<HTMLDivElement>(null);
-  const aboutMenuAnchorRef = useRef<HTMLDivElement>(null);
+  // Radix NavigationMenu-style single-value model: only one toolbar menu open at a time, so
+  // hovering a new trigger switches instantly without a close/reopen flicker.
+  const [openToolbarMenu, setOpenToolbarMenu] = useState<'file' | 'templates' | 'tools' | 'about' | null>(null);
   const [bgRemoverOpen, setBgRemoverOpen] = useState(false);
   const [upscalerOpen, setUpscalerOpen] = useState(false);
   const [photoEditorOpen, setPhotoEditorOpen] = useState(false);
@@ -862,122 +857,70 @@ function Canvas() {
             <LottieLoader path="/lottie/generating.json" className="toolbar-brand-lottie" />
             <Logo className="toolbar-logo" />
           </div>
-          <div className="toolbar-menu-wrapper" ref={fileMenuAnchorRef}>
-            <button
-              className="toolbar-label-btn"
-              onClick={() => {
-                setTemplatesMenuOpen(false);
-                setToolsMenuOpen(false);
-                setAboutMenuOpen(false);
-                setFileMenuOpen((v) => !v);
-              }}
-            >
-              <IconSave size={13} /> {t.toolbar.file} ▾
-            </button>
-            {fileMenuOpen && (
-              <ToolbarRichMenu
-                align="left"
-                anchorRef={fileMenuAnchorRef}
-                onClose={() => setFileMenuOpen(false)}
-                items={[
-                  { title: t.toolbar.saveProject, description: t.toolbarMenu.saveProjectDesc, icon: IconSave, onClick: handleSaveProject },
-                  { title: t.toolbar.openProject, description: t.toolbarMenu.openProjectDesc, icon: IconFolderOpen, onClick: handleOpenProject },
-                  { title: t.toolbar.saveWorkspace, description: t.toolbarMenu.saveWorkspaceDesc, icon: IconSave, onClick: handleSaveWorkspace },
-                  { title: t.toolbar.openWorkspace, description: t.toolbarMenu.openWorkspaceDesc, icon: IconFolderOpen, onClick: handleOpenWorkspace },
-                ]}
-              />
-            )}
-          </div>
-          <div className="toolbar-menu-wrapper" ref={templatesMenuAnchorRef}>
-            <button
-              className="toolbar-label-btn"
-              onClick={() => {
-                setFileMenuOpen(false);
-                setToolsMenuOpen(false);
-                setAboutMenuOpen(false);
-                setTemplatesMenuOpen((v) => !v);
-              }}
-            >
-              <IconFlow size={13} /> {t.toolbar.templates} ▾
-            </button>
-            {templatesMenuOpen && (
-              <ToolbarRichMenu
-                align="left"
-                wide
-                anchorRef={templatesMenuAnchorRef}
-                onClose={() => setTemplatesMenuOpen(false)}
-                items={[
-                  { type: 'header', label: t.toolbar.templatesBusinessSection },
-                  ...(
-                    [
-                      { key: 'horeca', icon: IconImage, desc: t.toolbarMenu.horecaDesc },
-                      { key: 'auto', icon: IconVideo, desc: t.toolbarMenu.autoDesc },
-                      { key: 'apartment', icon: IconDocument, desc: t.toolbarMenu.apartmentDesc },
-                      { key: 'furniture', icon: IconCrop, desc: t.toolbarMenu.furnitureDesc },
-                      { key: 'electronics', icon: IconGauge, desc: t.toolbarMenu.electronicsDesc },
-                    ] as { key: BusinessPresetKey; icon: typeof IconImage; desc: string }[]
-                  ).map(({ key, icon, desc }) => ({
-                    title: businessTileLabels[key],
-                    description: desc,
-                    icon,
-                    onClick: () => handleStartScreenBusinessChoice(BUSINESS_PRESET_PROMPTS[key]),
-                  })),
-                  { type: 'header', label: t.toolbar.templatesMarketplacesSection },
-                ]}
-              />
-            )}
-          </div>
-          <div className="toolbar-menu-wrapper" ref={toolsMenuAnchorRef}>
-            <button
-              className="toolbar-label-btn"
-              onClick={() => {
-                setFileMenuOpen(false);
-                setTemplatesMenuOpen(false);
-                setAboutMenuOpen(false);
-                setToolsMenuOpen((v) => !v);
-              }}
-            >
-              <IconTool size={13} /> {t.tools.menuLabel} ▾
-            </button>
-            {toolsMenuOpen && (
-              <ToolbarRichMenu
-                align="left"
-                anchorRef={toolsMenuAnchorRef}
-                onClose={() => setToolsMenuOpen(false)}
-                items={[
-                  { title: t.tools.bgRemoverLabel, description: t.toolbarMenu.bgRemoverDesc, icon: IconCrop, onClick: () => setBgRemoverOpen(true) },
-                  { title: t.tools.upscalerLabel, description: t.toolbarMenu.upscalerDesc, icon: IconVector, onClick: () => setUpscalerOpen(true) },
-                  { title: t.tools.photoEditorLabel, description: t.toolbarMenu.photoEditorDesc, icon: IconImage, onClick: () => setPhotoEditorOpen(true) },
-                ]}
-              />
-            )}
-          </div>
-          <div className="toolbar-menu-wrapper" ref={aboutMenuAnchorRef}>
-            <button
-              className="toolbar-label-btn"
-              onClick={() => {
-                setFileMenuOpen(false);
-                setTemplatesMenuOpen(false);
-                setToolsMenuOpen(false);
-                setAboutMenuOpen((v) => !v);
-              }}
-            >
-              <IconInfo size={13} /> {t.toolbarMenu.aboutMenuLabel} ▾
-            </button>
-            {aboutMenuOpen && (
-              <ToolbarRichMenu
-                align="left"
-                anchorRef={aboutMenuAnchorRef}
-                onClose={() => setAboutMenuOpen(false)}
-                items={[
-                  { title: t.legal.privacyLink, description: t.toolbarMenu.privacyDesc, icon: IconInfo, onClick: () => setLegalDoc('privacy') },
-                  { title: t.legal.termsLink, description: t.toolbarMenu.termsDesc, icon: IconDocument, onClick: () => setLegalDoc('terms') },
-                  { title: t.legal.refundLink, description: t.toolbarMenu.refundDesc, icon: IconCreditCard, onClick: () => setLegalDoc('refund') },
-                  { title: t.legal.helpLink, description: t.toolbarMenu.helpDesc, icon: IconChat, onClick: () => setLegalDoc('help') },
-                ]}
-              />
-            )}
-          </div>
+          <ToolbarMenu
+            label={t.toolbar.file}
+            icon={IconSave}
+            isOpen={openToolbarMenu === 'file'}
+            onOpen={() => setOpenToolbarMenu('file')}
+            onClose={() => setOpenToolbarMenu((v) => (v === 'file' ? null : v))}
+            items={[
+              { title: t.toolbar.saveProject, description: t.toolbarMenu.saveProjectDesc, icon: IconSave, onClick: handleSaveProject },
+              { title: t.toolbar.openProject, description: t.toolbarMenu.openProjectDesc, icon: IconFolderOpen, onClick: handleOpenProject },
+              { title: t.toolbar.saveWorkspace, description: t.toolbarMenu.saveWorkspaceDesc, icon: IconSave, onClick: handleSaveWorkspace },
+              { title: t.toolbar.openWorkspace, description: t.toolbarMenu.openWorkspaceDesc, icon: IconFolderOpen, onClick: handleOpenWorkspace },
+            ]}
+          />
+          <ToolbarMenu
+            label={t.toolbar.templates}
+            icon={IconFlow}
+            wide
+            isOpen={openToolbarMenu === 'templates'}
+            onOpen={() => setOpenToolbarMenu('templates')}
+            onClose={() => setOpenToolbarMenu((v) => (v === 'templates' ? null : v))}
+            items={[
+              { type: 'header', label: t.toolbar.templatesBusinessSection },
+              ...(
+                [
+                  { key: 'horeca', icon: IconImage, desc: t.toolbarMenu.horecaDesc },
+                  { key: 'auto', icon: IconVideo, desc: t.toolbarMenu.autoDesc },
+                  { key: 'apartment', icon: IconDocument, desc: t.toolbarMenu.apartmentDesc },
+                  { key: 'furniture', icon: IconCrop, desc: t.toolbarMenu.furnitureDesc },
+                  { key: 'electronics', icon: IconGauge, desc: t.toolbarMenu.electronicsDesc },
+                ] as { key: BusinessPresetKey; icon: typeof IconImage; desc: string }[]
+              ).map(({ key, icon, desc }) => ({
+                title: businessTileLabels[key],
+                description: desc,
+                icon,
+                onClick: () => handleStartScreenBusinessChoice(BUSINESS_PRESET_PROMPTS[key]),
+              })),
+              { type: 'header', label: t.toolbar.templatesMarketplacesSection },
+            ]}
+          />
+          <ToolbarMenu
+            label={t.tools.menuLabel}
+            icon={IconTool}
+            isOpen={openToolbarMenu === 'tools'}
+            onOpen={() => setOpenToolbarMenu('tools')}
+            onClose={() => setOpenToolbarMenu((v) => (v === 'tools' ? null : v))}
+            items={[
+              { title: t.tools.bgRemoverLabel, description: t.toolbarMenu.bgRemoverDesc, icon: IconCrop, onClick: () => setBgRemoverOpen(true) },
+              { title: t.tools.upscalerLabel, description: t.toolbarMenu.upscalerDesc, icon: IconVector, onClick: () => setUpscalerOpen(true) },
+              { title: t.tools.photoEditorLabel, description: t.toolbarMenu.photoEditorDesc, icon: IconImage, onClick: () => setPhotoEditorOpen(true) },
+            ]}
+          />
+          <ToolbarMenu
+            label={t.toolbarMenu.aboutMenuLabel}
+            icon={IconInfo}
+            isOpen={openToolbarMenu === 'about'}
+            onOpen={() => setOpenToolbarMenu('about')}
+            onClose={() => setOpenToolbarMenu((v) => (v === 'about' ? null : v))}
+            items={[
+              { title: t.legal.privacyLink, description: t.toolbarMenu.privacyDesc, icon: IconInfo, onClick: () => setLegalDoc('privacy') },
+              { title: t.legal.termsLink, description: t.toolbarMenu.termsDesc, icon: IconDocument, onClick: () => setLegalDoc('terms') },
+              { title: t.legal.refundLink, description: t.toolbarMenu.refundDesc, icon: IconCreditCard, onClick: () => setLegalDoc('refund') },
+              { title: t.legal.helpLink, description: t.toolbarMenu.helpDesc, icon: IconChat, onClick: () => setLegalDoc('help') },
+            ]}
+          />
         </div>
         <div className="toolbar-group toolbar-right">
           {/* Shown in demo mode (no real subscription there) and to real users without an
