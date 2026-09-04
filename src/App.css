@@ -161,10 +161,11 @@
    than the light --c-canvas-bg the node canvas itself uses — so buttons/pills inside now need a
    subtle --c-divider outline (see .toolbar-label-btn, .toolbar-icon-btn, .mode-switch-pill,
    .project-tab, etc.) to still read as distinct controls against this equally-dark row. .topbar
-   (project tabs + mode switcher, just below) shares the same treatment so the whole chrome
-   above the canvas reads as one continuous surface. */
-.top-toolbar,
-.topbar {
+   (project tabs + mode switcher, just below) no longer shares this fill — see its own rule below,
+   which extends the node canvas's own dot pattern up into that row instead, by request (its
+   project tabs / mode-switch pill / Assets-with-balance all carry their own background already,
+   so there was no need for a separate solid strip behind them). */
+.top-toolbar {
   background-color: var(--c-panel);
 }
 
@@ -183,23 +184,14 @@
 }
 
 /* Only lit while the node canvas (with its own dot-grid, gap 20) is the active mode — App.tsx
-   toggles this class on .top-toolbar/.topbar based on mainView. Other modes (Генерация/Работа с
-   текстом/Оценка/...) render their panels as flat --c-canvas-bg with no dots (see
-   .text-work-panel etc.), so the chrome stays flat to match them instead of always showing dots.
-   Same radial-gradient recipe already used by .web-auth-gate for the same "paper canvas"
-   backdrop, kept identical here for a consistent look. */
+   toggles this class on .topbar based on mainView. Other modes (Генерация/Работа с текстом/
+   Оценка/...) render their panels as flat --c-canvas-bg with no dots (see .text-work-panel etc.),
+   so the chrome stays flat to match them instead of always showing dots. Same radial-gradient
+   recipe already used by .web-auth-gate for the same "paper canvas" backdrop, kept identical here
+   for a consistent look. */
 .dot-grid-bg {
   background-image: radial-gradient(circle, rgba(0, 0, 0, 0.15) 1px, transparent 1px);
   background-size: 20px 20px;
-}
-
-.toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  min-width: 0;
-  -webkit-app-region: no-drag;
 }
 
 /* The 150px padding-right above reserves room for the desktop window's native traffic-light/
@@ -208,8 +200,9 @@
   padding-right: 14px;
 }
 
-/* Far left of .toolbar-left, before the Файл/Шаблоны/Инструменты/О программе menu — ported
-   layout from a shadcn/Tailwind reference header (logo + nav grouped together on the left). */
+/* Far left of .top-toolbar, alone now that Файл/Шаблоны/Инструменты/О программе moved to the
+   far right (see .toolbar-right) — .top-toolbar's own justify-content:space-between does the
+   rest. */
 .toolbar-brand {
   display: flex;
   align-items: center;
@@ -244,14 +237,16 @@
   -webkit-app-region: no-drag;
 }
 
-/* No plaque at all now — just the bare buttons, same as the left menu group. .top-toolbar's own
-   background is always the light --c-canvas-bg regardless of app theme (see above), so the
-   ghost-style icons (settings/about/avatar), which otherwise follow --c-text and turn near-white
-   in dark theme, need a fixed-dark override here to stay legible against that light backdrop in
-   both themes. */
+/* Файл/Шаблоны/Инструменты/О программе plus the admin/settings/about/avatar icons, all grouped
+   on the far right now (was split with the menu on the left, by request). No plaque at all —
+   just the bare buttons. .top-toolbar's own background is always the light --c-canvas-bg
+   regardless of app theme (see above), so the ghost-style icons (settings/about/avatar), which
+   otherwise follow --c-text and turn near-white in dark theme, need a fixed-dark override here to
+   stay legible against that light backdrop in both themes. */
 .toolbar-right {
   justify-content: flex-end;
   flex-wrap: wrap;
+  gap: 10px;
 }
 
 /* Send/settings/info/avatar — plain white icons, no border, so they stay visible against the
@@ -348,10 +343,9 @@
 /* The button's name, mounted/animated by FloatingDockGroup.tsx's AnimatePresence (not a CSS
    :hover rule — framer-motion drives the mount, fade and x/y offset via inline style, this class
    only supplies the static box: position, padding, colors). Colors ported from the reference's
-   own tooltip (border border-gray-200 bg-gray-100 text-neutral-700) — see the "снизу" (from
-   below) placement the user asked for previously: it sits just under the icon rather than above
-   it, since this toolbar already sits at the very top of the canvas and a label above would
-   spill into the topbar. */
+   own tooltip (border border-gray-200 bg-gray-100 text-neutral-700) — sits just under the icon by
+   default, matching the (now horizontal-only) MusicAudioPanel dock this class is still shared
+   with. */
 .toolbar-icon-label {
   position: absolute;
   top: calc(100% + 8px);
@@ -366,6 +360,14 @@
   white-space: nowrap;
   pointer-events: none;
   z-index: 10;
+}
+
+/* The vertical left-edge dock's own tooltip placement — to the right of the icon (into the
+   canvas, away from the screen edge) instead of below it, since a vertical column has no room
+   underneath each item. */
+.toolbar-icon-label-side {
+  top: 50%;
+  left: calc(100% + 8px);
 }
 
 /* DSP/settings/about/avatar/budget in the app's own top-right chrome read as plain icons at
@@ -477,56 +479,6 @@
 
 .toolbar-dsp-btn:active {
   transform: translateY(0);
-}
-
-/* Unpaid-subscription indicator — always lit (unlike .toolbar-dsp-btn, which is a ghost
-   button that only lights on hover) so it stays noticeable without blocking the rest of the
-   toolbar. Outline-only (no fill), same shape as .project-tab and same outline/hover-fill
-   pattern as .pricing-card-btn; the ambient-glow pulse on top keeps it from fading into the
-   background chrome. */
-.toolbar-pay-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 16px;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  border: 1px solid var(--c-pink);
-  color: var(--c-pink);
-  font-size: 12.5px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  flex-shrink: 0;
-  cursor: pointer;
-  box-shadow: var(--glow-shadow);
-  animation: pay-btn-pulse 2.4s ease-in-out infinite;
-  transition:
-    transform 0.15s var(--ease),
-    background 0.15s var(--ease),
-    color 0.15s var(--ease);
-}
-
-.toolbar-pay-btn:hover {
-  transform: translateY(-1px);
-  background: var(--c-pink);
-  color: #fff;
-  box-shadow: var(--glow-shadow-hover);
-}
-
-.toolbar-pay-btn:active {
-  transform: translateY(0);
-}
-
-@keyframes pay-btn-pulse {
-  0%,
-  100% {
-    box-shadow: var(--glow-shadow);
-  }
-  50% {
-    box-shadow: var(--glow-shadow-hover);
-  }
 }
 
 /* Pricing overview modal (PaymentModal.tsx). The overlay's own dark fill is kept fairly light
@@ -651,8 +603,8 @@
   box-shadow: 0 0 0 1px var(--c-divider);
 }
 
-/* The "Популярный" tier gets the same glow treatment as .toolbar-pay-btn so it reads as the
-   recommended pick without needing a separate ribbon/badge. */
+/* The "Популярный" tier gets a pink outline glow so it reads as the recommended pick without
+   needing a separate ribbon/badge. */
 .pricing-card.accent {
   box-shadow: 0 0 0 2px var(--c-pink);
 }
@@ -872,6 +824,8 @@
    never competes for space with .topbar-right, regardless of how wide the pill gets (it grows
    with VITE_WEB_MODE's extra tabs) or whether .project-tabs is even rendered (it's conditional
    on mainView==='canvas', so column position can't rely on DOM auto-placement order). */
+/* .dot-grid-bg (see above) supplies the actual dot pattern; this rule only adds the matching
+   canvas-gray base color underneath it. */
 .topbar {
   position: relative;
   display: grid;
@@ -881,6 +835,7 @@
   padding: 8px 12px;
   flex-shrink: 0;
   -webkit-app-region: drag;
+  background-color: var(--c-canvas-bg);
 }
 
 .project-tabs {
@@ -1163,9 +1118,6 @@
    against the equally-light canvas underneath. */
 .canvas-toolbar {
   position: absolute;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
   z-index: 6;
   display: flex;
   align-items: center;
@@ -1175,6 +1127,28 @@
   background: #f9fafb;
   border: 1px solid rgba(0, 0, 0, 0.06);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
+
+/* Vertical variant — pinned to the canvas's left edge, centered top-to-bottom, by request
+   (was horizontal/top-centered). Rotates the whole plaque onto the column axis: the two
+   .toolbar-group rows inside (node-add dock + adaptation presets) and the divider between them
+   all flip from row to column here too. */
+.canvas-toolbar.vertical {
+  top: 50%;
+  left: 16px;
+  transform: translateY(-50%);
+  flex-direction: column;
+}
+
+.canvas-toolbar.vertical .toolbar-group {
+  flex-direction: column;
+}
+
+.canvas-toolbar.vertical .toolbar-divider {
+  width: 100%;
+  height: 1px;
+  align-self: stretch;
+  margin: 2px 4px;
 }
 
 .react-flow__panel.bottom {
@@ -3656,12 +3630,12 @@
 }
 
 .ai-assistant-btn {
-  background: var(--c-pink);
+  background: #000;
   color: #fff;
 }
 
 .ai-assistant-btn:hover {
-  background: var(--c-pink-hover);
+  background: #262626;
 }
 
 .ai-panel {

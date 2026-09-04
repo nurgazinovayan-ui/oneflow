@@ -66,7 +66,6 @@ import {
   IconUser,
   IconSend,
   IconFlow,
-  IconDiamond,
   IconGauge,
   IconRocket,
   IconTool,
@@ -383,7 +382,6 @@ function Canvas() {
     'canvas' | 'text' | 'generate' | 'evaluate' | 'onelaunch' | 'musicaudio' | 'strategy' | 'assets'
   >('canvas');
   const [authEmail, setAuthEmail] = useState<string | null>(null);
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   // Radix NavigationMenu-style single-value model: only one toolbar menu open at a time, so
   // hovering a new trigger switches instantly without a close/reopen flicker.
@@ -416,7 +414,6 @@ function Canvas() {
   useEffect(() => {
     window.api.getAuthStatus().then((status) => {
       setAuthEmail(status.email);
-      setIsDemoMode(Boolean(status.isDemo));
     });
   }, []);
 
@@ -853,11 +850,11 @@ function Canvas() {
   return (
     <div className={`app-shell${import.meta.env.VITE_WEB_MODE === '1' ? ' web-mode' : ''}`}>
       <div className="top-toolbar">
-        <div className="toolbar-left">
-          <div className="toolbar-brand">
-            <LottieLoader path="/lottie/generating.json" className="toolbar-brand-lottie" />
-            <Logo className="toolbar-logo" />
-          </div>
+        <div className="toolbar-brand">
+          <LottieLoader path="/lottie/generating.json" className="toolbar-brand-lottie" />
+          <Logo className="toolbar-logo" />
+        </div>
+        <div className="toolbar-group toolbar-right">
           <ToolbarMenu
             label={t.toolbar.file}
             icon={IconSave}
@@ -922,15 +919,6 @@ function Canvas() {
               { title: t.legal.helpLink, description: t.toolbarMenu.helpDesc, icon: IconChat, onClick: () => setLegalDoc('help') },
             ]}
           />
-        </div>
-        <div className="toolbar-group toolbar-right">
-          {/* Shown in demo mode (no real subscription there) and to real users without an
-              active subscription — hidden for real users who already have one. */}
-          {(isDemoMode || !subscriptionActive) && (
-            <button className="toolbar-pay-btn" onClick={() => setPaymentModalOpen(true)}>
-              <IconDiamond size={14} /> {t.paymentModal.topBarBtn}
-            </button>
-          )}
           {authEmail === ADMIN_EMAIL && (
             <button
               className="toolbar-icon-btn toolbar-icon-btn-ghost"
@@ -964,7 +952,7 @@ function Canvas() {
         </div>
       </div>
       <div className="main-area">
-        <div className="topbar">
+        <div className={`topbar${mainView === 'canvas' ? ' dot-grid-bg' : ''}`}>
           {mainView === 'canvas' && (
           <div className="project-tabs">
             {projects.map((p) => (
@@ -1057,8 +1045,9 @@ function Canvas() {
           </div>
         </div>
         <div className="canvas-area" onDragOver={onCanvasDragOver} onDrop={onCanvasDrop}>
-          <div className="canvas-toolbar">
+          <div className="canvas-toolbar vertical">
             <FloatingDockGroup
+              orientation="vertical"
               items={[
                 ...SIDEBAR_ADD_NODE_OPTIONS.map((opt) => {
                   const Icon = opt.icon;
@@ -1076,7 +1065,7 @@ function Canvas() {
             <div className="toolbar-divider" />
             <div
               className="toolbar-group"
-              onMouseMove={handleDockMouseMove}
+              onMouseMove={(e) => handleDockMouseMove(e, 'vertical')}
               onMouseLeave={handleDockMouseLeave}
             >
               {ADAPT_PRESETS.map((preset) => (
