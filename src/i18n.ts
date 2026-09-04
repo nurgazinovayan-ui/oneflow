@@ -659,9 +659,13 @@ export interface Translations {
     refundLink: string;
     helpLink: string;
   };
-  landingHeader: {
+  // Rich icon+title+description dropdown content for the in-app top toolbar's
+  // Файл/Шаблоны/Инструменты/О программе menus (ToolbarRichMenu.tsx).
+  toolbarMenu: {
     saveProjectDesc: string;
     openProjectDesc: string;
+    saveWorkspaceDesc: string;
+    openWorkspaceDesc: string;
     templatesForBusinessGroup: string;
     templatesMarketplacesGroup: string;
     forBusinessDesc: string;
@@ -679,8 +683,6 @@ export interface Translations {
     termsDesc: string;
     refundDesc: string;
     helpDesc: string;
-    signInBtn: string;
-    signUpBtn: string;
   };
   startScreen: {
     greeting: string;
@@ -1492,9 +1494,11 @@ export const ru: Translations = {
     refundLink: 'Политика возврата',
     helpLink: 'Справка',
   },
-  landingHeader: {
+  toolbarMenu: {
     saveProjectDesc: 'Сохранить текущий холст в файл проекта',
     openProjectDesc: 'Загрузить ранее сохранённый проект',
+    saveWorkspaceDesc: 'Сохранить все проекты и вкладки разом',
+    openWorkspaceDesc: 'Загрузить ранее сохранённую рабочую область',
     templatesForBusinessGroup: 'Для бизнеса',
     templatesMarketplacesGroup: 'Маркетплейсы',
     forBusinessDesc: 'Готовые сценарии под нишу вашего бизнеса',
@@ -1512,8 +1516,6 @@ export const ru: Translations = {
     termsDesc: 'Правила использования сервиса',
     refundDesc: 'Условия возврата средств',
     helpDesc: 'Как начать работу и куда обратиться за поддержкой',
-    signInBtn: 'Войти',
-    signUpBtn: 'Регистрация',
   },
   startScreen: {
     greeting: 'Начнем генерить?',
@@ -2336,9 +2338,11 @@ export const en: Translations = {
     refundLink: 'Refund Policy',
     helpLink: 'Help',
   },
-  landingHeader: {
+  toolbarMenu: {
     saveProjectDesc: 'Save the current canvas to a project file',
     openProjectDesc: 'Load a previously saved project',
+    saveWorkspaceDesc: 'Save all projects and tabs at once',
+    openWorkspaceDesc: 'Load a previously saved workspace',
     templatesForBusinessGroup: 'For business',
     templatesMarketplacesGroup: 'Marketplaces',
     forBusinessDesc: 'Ready-made scenarios for your business niche',
@@ -2356,8 +2360,6 @@ export const en: Translations = {
     termsDesc: 'Rules for using the service',
     refundDesc: 'Refund conditions',
     helpDesc: 'How to get started and where to get support',
-    signInBtn: 'Sign In',
-    signUpBtn: 'Sign Up',
   },
   startScreen: {
     greeting: "Let's start generating?",

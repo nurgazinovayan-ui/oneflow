@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { AuthStatus, SubscriptionInfo, GenerationLogEntry } from '../types';
-import { IconMoon, IconSave, IconSun, IconUser } from './Icons';
+import { IconSave, IconUser } from './Icons';
 import { useGenerationCounter } from '../store/generationCounter';
 import { useT, useLanguageStore, type Language } from '../i18n';
-import { useThemeStore, type Theme } from '../theme';
 import { formatGenerationError } from '../errorMessages';
 
 const YANDEX_CLIENT_ID = import.meta.env.VITE_YANDEX_CLIENT_ID as string;
@@ -33,8 +32,6 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
   const t = useT();
   const language = useLanguageStore((s) => s.language);
   const setLanguage = useLanguageStore((s) => s.setLanguage);
-  const theme = useThemeStore((s) => s.theme);
-  const setTheme = useThemeStore((s) => s.setTheme);
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [history, setHistory] = useState<GenerationLogEntry[]>([]);
@@ -258,25 +255,6 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
                     onClick={() => setLanguage('en' as Language)}
                   >
                     English
-                  </button>
-                </div>
-              </div>
-              <div className="profile-preference-row">
-                <span className="profile-preference-label">{t.profileModal.themeLabel}</span>
-                <div className="segmented-control">
-                  <button
-                    className={theme === 'dark' ? 'active' : ''}
-                    onClick={() => setTheme('dark' as Theme)}
-                    title={t.profileModal.themeDark}
-                  >
-                    <IconMoon size={13} /> {t.profileModal.themeDark}
-                  </button>
-                  <button
-                    className={theme === 'light' ? 'active' : ''}
-                    onClick={() => setTheme('light' as Theme)}
-                    title={t.profileModal.themeLight}
-                  >
-                    <IconSun size={13} /> {t.profileModal.themeLight}
                   </button>
                 </div>
               </div>

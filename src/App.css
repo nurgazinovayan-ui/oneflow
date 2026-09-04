@@ -2218,212 +2218,6 @@
   color: #fff;
 }
 
-/* Landing header (WebAuthHeader) — ported from a shadcn/Tailwind reference. Fixed light/black
-   palette regardless of the app's own dark/light theme toggle, same reasoning as
-   .web-auth-footer above: it floats over the same grayscale DomeGallery backdrop either way, so
-   it needs guaranteed contrast rather than theme-following tokens. */
-.landing-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 5;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-.landing-header-inner {
-  height: 56px;
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.landing-header-left {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-}
-
-.landing-header-logo {
-  display: flex;
-  align-items: center;
-  color: #050505;
-}
-
-.landing-header-logo svg {
-  height: 16px;
-  width: auto;
-  display: block;
-}
-
-.landing-header-nav {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.landing-header-menu-wrap {
-  position: relative;
-}
-
-.landing-header-trigger {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 13.5px;
-  font-weight: 500;
-  color: #1c1c1f;
-  background: transparent;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.landing-header-trigger svg {
-  transition: transform 0.15s var(--ease);
-}
-
-.landing-header-trigger:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.landing-header-trigger.open {
-  background: rgba(0, 0, 0, 0.06);
-}
-
-.landing-header-trigger.open svg {
-  transform: rotate(180deg);
-}
-
-.landing-header-panel {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: 6;
-  min-width: 300px;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 14px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14);
-  padding: 8px;
-}
-
-.landing-header-panel.wide {
-  min-width: 480px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px;
-}
-
-.landing-header-panel-header {
-  grid-column: 1 / -1;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: rgba(0, 0, 0, 0.4);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 10px 10px 4px;
-}
-
-.landing-header-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px;
-  border-radius: 10px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-}
-
-.landing-header-item:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.landing-header-item-icon {
-  flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  border-radius: 9px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: #fafafa;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #1c1c1f;
-}
-
-.landing-header-item-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.landing-header-item-title {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #111114;
-}
-
-.landing-header-item-desc {
-  font-size: 11px;
-  color: rgba(0, 0, 0, 0.5);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.landing-header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.landing-header-signin,
-.landing-header-signup {
-  font-size: 13px;
-  font-weight: 600;
-  padding: 7px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.landing-header-signin {
-  background: transparent;
-  border: 1px solid rgba(0, 0, 0, 0.16);
-  color: #111114;
-}
-
-.landing-header-signin:hover {
-  background: rgba(0, 0, 0, 0.04);
-}
-
-.landing-header-signup {
-  background: #111114;
-  border: 1px solid #111114;
-  color: #fff;
-}
-
-.landing-header-signup:hover {
-  background: #000;
-}
-
-@media (max-width: 860px) {
-  .landing-header-nav {
-    display: none;
-  }
-}
-
 .web-auth-fields {
   display: flex;
   flex-direction: column;
@@ -3685,6 +3479,95 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--c-text-dim);
+  white-space: nowrap;
+}
+
+/* ToolbarRichMenu — icon+title+description dropdown cards for Файл/Шаблоны/Инструменты/О
+   программе, ported from a shadcn/Tailwind NavigationMenu reference onto ONEFLOW's own --c-*
+   tokens (this app has no Tailwind/shadcn). Portalled to document.body and positioned via inline
+   `style` (position:fixed + top/left computed off the trigger's rect) rather than an
+   absolutely-positioned child of .toolbar-menu-wrapper — .top-toolbar's own stacking context
+   (position:relative; z-index:2) would otherwise cap it below the floating .canvas-toolbar pill
+   row once it grows tall enough (these items have a description line; the old plain
+   .dropdown-menu never hit that ceiling). z-index here just needs to clear document.body's other
+   content, not any particular in-app layer. */
+.toolbar-rich-menu {
+  z-index: 40;
+  min-width: 300px;
+  background: var(--c-panel-2);
+  border: 1px solid var(--c-divider);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md), 0 0 0 1px var(--c-divider);
+  padding: 8px;
+}
+
+.toolbar-rich-menu.wide {
+  min-width: 480px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+}
+
+.toolbar-rich-menu-header {
+  grid-column: 1 / -1;
+  padding: 8px 10px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-text-dim);
+  white-space: nowrap;
+}
+
+.toolbar-rich-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.toolbar-rich-menu-item:hover {
+  background: var(--c-panel-3);
+}
+
+.toolbar-rich-menu-item-icon {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  border: 1px solid var(--c-divider);
+  background: var(--c-panel-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-text);
+}
+
+.toolbar-rich-menu-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.toolbar-rich-menu-item-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.toolbar-rich-menu-item-desc {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

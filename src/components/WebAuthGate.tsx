@@ -3,7 +3,6 @@ import { setWebSession, type WebSession } from '../webAuthSession';
 import { installMockApiIfNeeded } from '../mockApi';
 import { useT } from '../i18n';
 import DomeGallery from './DomeGallery';
-import WebAuthHeader from './WebAuthHeader';
 import LegalModal from './LegalModal';
 import type { LegalDoc } from '../legalContent';
 import { IconEye, IconEyeOff } from './Icons';
@@ -225,7 +224,6 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
           overlayBlurColor="#eceef1"
         />
       </div>
-      <WebAuthHeader onSignIn={() => switchMode('login')} onSignUp={() => switchMode('register')} onOpenLegal={setLegalDoc} />
       <div className={`web-auth-toast ${toastVisible ? 'visible' : ''}`}>{toast}</div>
       <div className="web-auth-card">
         <section className="web-auth-form-side">

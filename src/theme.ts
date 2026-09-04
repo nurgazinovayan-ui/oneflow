@@ -4,12 +4,10 @@ export type Theme = 'dark' | 'light';
 
 const THEME_STORAGE_KEY = 'oneflow-theme';
 
+// Dark theme is disabled for now (light-only) — see the removed toggle in ProfileModal.tsx.
+// Kept as a one-line change to re-enable rather than ripping out the dark CSS/store plumbing.
 function loadInitialTheme(): Theme {
-  try {
-    return localStorage.getItem(THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark';
-  } catch {
-    return 'dark';
-  }
+  return 'light';
 }
 
 interface ThemeState {
