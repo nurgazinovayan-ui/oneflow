@@ -12,6 +12,7 @@ import type {
   CreativeEvaluationResult,
   AudioGenParams,
   YandexAsset,
+  MarketingAIResponse,
 } from './types';
 import { estimateImageCost, estimateVideoCost, DSP_URL } from './types';
 import { getWebSession, setWebSession, type WebSession } from './webAuthSession';
@@ -420,6 +421,8 @@ export function installWebApi(): void {
     },
     generateChat: async (messages, images, mode) =>
       callFunction<string>('generate-chat', { messages, images, mode }),
+    marketingAI: async (task, context, mock) =>
+      callFunction<MarketingAIResponse>('marketing-ai', { task, context, mock }),
 
     saveFile: async (url, suggestedName) => {
       const dataUrl = await urlToDataUrl(url);

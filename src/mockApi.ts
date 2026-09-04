@@ -14,6 +14,189 @@ function bumpMockUsage(costUsd: number): void {
   localStorage.setItem('mock-usage-cost', String(total));
 }
 
+// Dev-preview fixture for window.api.marketingAI (Strategy mode v4, see
+// supabase/functions/marketing-ai/index.ts for the real server-side provider this mirrors).
+// Every field name matches that function's JSON Schemas exactly so UI code built against one
+// works unmodified against the other.
+function mockMarketingAIResult(task: string): unknown {
+  const humanExplanation = `[MOCK] ${task} — тестовые данные для локальной разработки.`;
+  switch (task) {
+    case 'understandBusiness':
+      return {
+        product: 'AI-платформа для производства маркетингового контента',
+        category: 'Marketing content generation SaaS',
+        customerProblem: 'Долго и дорого производить много рекламных материалов вручную',
+        value: 'Больше готовых материалов за меньшее время',
+        differentiators: ['Генерация из одного фото', 'Много форматов сразу'],
+        businessModel: 'Подписка/usage',
+        geography: 'Казахстан',
+        goal: 'Продажи',
+        solvesTodayVia: 'Дизайнер, агентство, несколько AI-сервисов',
+        mainPurchaseRisk: 'AI исказит товар или сделает плохой дизайн',
+        ambiguities: [],
+        evidenceIds: [],
+        missingData: ['Данные рекламных кабинетов'],
+        humanExplanation,
+      };
+    case 'analyzeSegments':
+      return {
+        segments: [
+          {
+            name: 'Marketplace sellers',
+            buyingSituation: 'Нужно быстро выпускать много SKU',
+            needFrequency: 'Часто',
+            abilityToPay: 'Средняя',
+            accessibility: 'Высокая',
+            urgencyTrigger: 'Запуск нового сезона/товара',
+            productFit: 'Высокий',
+            priority: 'now',
+            priorityRationale: 'Частая задача, легко демонстрируется визуально',
+            evidenceIds: [],
+            confidence: 'medium',
+            assumptions: ['Оценка по структуре бизнеса'],
+          },
+        ],
+        missingData: [],
+        humanExplanation,
+      };
+    case 'analyzeJTBD':
+      return {
+        jtbd: [
+          {
+            segmentId: 'seg-1',
+            situation: 'Нужно быстро запустить рекламу под новый товар',
+            motivation: 'Получить готовые материалы без дизайнера',
+            desiredOutcome: 'Быстрее вывести товар в продажу',
+            alternativesToday: 'Дизайнер, агентство',
+            anxieties: 'AI изменит сам товар',
+            evidenceIds: [],
+          },
+        ],
+        humanExplanation,
+      };
+    case 'proposePositioning':
+      return {
+        directions: [
+          {
+            segmentId: 'seg-1',
+            alternative: 'Дизайнер/агентство',
+            value: 'Реклама из одного фото за минуты',
+            reasonToBelieve: 'Автоматическая генерация из фото товара',
+            proofNeeded: 'Пример до/после',
+            style: 'outcome',
+            evidenceIds: [],
+            recommended: true,
+          },
+        ],
+        humanExplanation,
+      };
+    case 'proposeOffers':
+      return {
+        offers: [
+          {
+            segmentId: 'seg-1',
+            motive: 'speed',
+            promise: 'Вся реклама товара из одного фото',
+            mechanism: 'AI-генерация карточек и креативов',
+            proof: 'Демо-workflow',
+            objectionHandled: 'AI исказит товар',
+            cta: 'Попробовать бесплатно',
+            evidenceType: 'hypothesis',
+            confidence: 'medium',
+            experimentNeeded: true,
+            recommended: true,
+          },
+        ],
+        humanExplanation,
+      };
+    case 'analyzeChannels':
+      return {
+        channels: [
+          {
+            channel: 'TikTok',
+            role: 'Создавать спрос через визуальную демонстрацию',
+            targetSegmentId: 'seg-1',
+            funnelStage: 'awareness',
+            contentTypes: ['Before/After', 'Demo'],
+            whyTest: 'Высокая доля целевой аудитории, дешёвый тест',
+            requiredData: ['Рекламный кабинет TikTok'],
+            scaleCriteria: ['Устойчивый CAC ниже цели 2 недели подряд'],
+            pauseCriteria: ['CAC выше цели без признаков улучшения'],
+            evidenceIds: [],
+            confidence: 'low',
+          },
+        ],
+        humanExplanation,
+      };
+    case 'proposeCreativeStrategy':
+      return {
+        concepts: [
+          {
+            archetype: 'before_after',
+            hook: 'Одно фото → готовая реклама за секунды',
+            visualFormat: 'demo',
+            messagingTheme: 'benefit-led',
+            offerId: 'offer-1',
+            cta: 'Попробовать бесплатно',
+            persona: 'not_observable',
+            intentStage: 'prospecting',
+            variantsToTest: ['Разный hook', 'Разный товар'],
+            evidenceIds: [],
+          },
+        ],
+        humanExplanation,
+      };
+    case 'designExperiments':
+      return {
+        experiments: [
+          {
+            hypothesisId: 'hyp-1',
+            name: 'Offer A vs Offer B',
+            variable: 'Offer message',
+            control: 'Offer A',
+            variants: ['Offer B'],
+            audienceId: 'seg-1',
+            primaryMetric: 'Qualified signup rate',
+            guardrailMetrics: ['Activation rate'],
+            minDataRule: 'Минимум 200 конверсий на вариант',
+            durationRule: 'Не менее 7 дней',
+            decisionRule: 'Статистически значимый лифт и не хуже guardrail',
+          },
+        ],
+        humanExplanation,
+      };
+    case 'interpretResults':
+      return {
+        whatHappened: 'Вариант B дал более высокий qualified signup rate',
+        likelyDrivers: ['Более конкретный оффер'],
+        unsupportedExplanations: ['Сезонность (не подтверждено)'],
+        evidenceIds: [],
+        confidence: 'medium',
+        strength: 'moderate',
+        affectedStrategyPaths: ['offers'],
+        strategyUpdateProposal: {
+          changes: [{ field: 'primaryOffer', before: 'Offer A', after: 'Offer B' }],
+          why: 'Offer B показал статистически значимый лифт без ухудшения guardrail',
+          evidenceIds: [],
+          affectedModules: ['offers', 'creative'],
+          requiresUserApproval: true,
+          rollbackLabel: 'Вернуть Offer A как основной',
+        },
+        humanExplanation,
+      };
+    case 'explainRecommendation':
+      return {
+        whatWeSaw: 'Вариант B дал более высокий qualified signup rate',
+        whyItMatters: 'Это основной оффер, который увидит большинство новой аудитории',
+        howConfirmed: 'Один завершённый эксперимент, статистически значимый лифт',
+        whatToCheckNext: 'Повторить тест на другом сегменте',
+        whatChangesOnApply: 'Offer B станет основным оффером в плане и креативах',
+      };
+    default:
+      return { humanExplanation };
+  }
+}
+
 // A short, real, playable 440Hz beep — built at runtime rather than a hardcoded base64 blob, so
 // there's something genuine for the audio player UI to load/play/seek during dev-mode testing.
 function makeMockAudioDataUrl(): string {
@@ -190,159 +373,6 @@ export function installMockApiIfNeeded(): void {
     generateChat: async (messages, images, mode) => {
       await new Promise((r) => setTimeout(r, 500));
       const lastMessage = messages[messages.length - 1]?.content ?? '';
-      // Strategy mode's onboarding call (see strategyPrompts.ts) sends a recognizable marker —
-      // checked before the generic images?.length branch below, since a strategy brief can
-      // include an optional product photo too.
-      if (/AI Marketing Strategist/i.test(lastMessage)) {
-        return JSON.stringify({
-          title: 'Q4 Growth Strategy',
-          goalSummary: 'Увеличить платные конверсии на 25% за 3 месяца.',
-          positioning: {
-            primaryStatement: 'AI-рабочее пространство, которое превращает одно фото товара в готовую маркетинговую кампанию.',
-            valueProposition: 'Полноценная кампания без найма дизайнера и агентства.',
-            reasonsToBelieve: ['Генерация карточек за минуты, а не дни', 'Один инструмент вместо пяти подрядчиков'],
-            differentiators: ['AI-скоринг креативов встроен в продукт', 'Работает из одного фото товара'],
-            tone: 'уверенный, экспертный',
-            alternatives: [
-              { label: 'Рациональный', statement: 'Экономит бюджет на дизайне и подрядчиках — считаемая выгода в деньгах.' },
-              { label: 'Эмоциональный', statement: 'Больше не нужно ждать дизайнера — идея становится кампанией за минуты.' },
-            ],
-            confidence: 78,
-          },
-          offers: [
-            {
-              text: 'Создать полноценную кампанию из одного фото товара за 5 минут.',
-              angle: 'Скорость',
-              targetSegmentName: 'Marketplace Sellers',
-              funnelStage: 'conversion',
-              score: 88,
-              isPrimary: true,
-            },
-            {
-              text: 'Первая карточка товара — бесплатно, без привязки карты.',
-              angle: 'Снижение риска',
-              targetSegmentName: 'Small Businesses',
-              funnelStage: 'consideration',
-              score: 74,
-              isPrimary: false,
-            },
-          ],
-          scoreBreakdown: { audience: 92, positioning: 86, offer: 88, channels: 74, content: 79, funnel: 81, retention: 63, measurement: 70 },
-          audience: [
-            {
-              name: 'Marketplace Sellers',
-              potential: 'High',
-              description: 'Быстро создают карточки товаров для большого количества SKU.',
-              mainJob: 'Выпустить много карточек товаров без роста издержек на дизайн.',
-              painPoints: ['Высокая стоимость продакшена', 'Медленный процесс согласований'],
-              purchaseTriggers: ['Запуск нового сезона SKU', 'Рост конкуренции на маркетплейсе'],
-              objections: ['Не уверены в качестве AI-дизайна'],
-              recommendedMessage: 'Из одного фото — готовая карточка за 5 минут.',
-              confidence: 82,
-            },
-            {
-              name: 'Small Businesses',
-              potential: 'Medium',
-              description: 'Нужен маркетинг без найма отдельной команды.',
-              mainJob: 'Запускать рекламу самостоятельно, без агентства.',
-              painPoints: ['Ограниченный бюджет', 'Нет времени на дизайн'],
-              purchaseTriggers: ['Сезонная распродажа', 'Запуск нового продукта'],
-              objections: ['Не хватает бюджета на подписку'],
-              recommendedMessage: 'Полноценная кампания без найма дизайнера.',
-              confidence: 68,
-            },
-          ],
-          competitors: [],
-          channels: [
-            { name: 'TikTok', percent: 35, rationale: 'Основная аудитория продавцов маркетплейсов активна в TikTok.', confidence: 74, cpcRange: { min: 60, max: 120 } },
-            { name: 'Instagram', percent: 30, rationale: 'Высокая вовлечённость в визуальный контент карточек товаров.', confidence: 78, cpcRange: { min: 90, max: 160 } },
-            { name: 'Google Ads', percent: 18, rationale: 'Захват прямого поискового спроса на инструмент.', confidence: 65 },
-            { name: 'Influencers', percent: 12, rationale: 'Доверие через нишевых блогеров-продавцов.', confidence: 55 },
-            { name: 'Email', percent: 5, rationale: 'Удержание и повторные покупки существующей базы.', confidence: 60 },
-          ],
-          contentMatrix: [
-            { format: 'UGC', stages: ['awareness', 'consideration', 'conversion'], audienceName: 'Marketplace Sellers', objective: 'Показать реальный результат использования', hook: 'Одно фото → готовая карточка за 5 минут', message: 'Реальные продавцы показывают процесс', cta: 'Попробовать бесплатно', recommendedAssets: ['video', 'copy'], priority: 'high' },
-            { format: 'Product Demo', stages: ['awareness', 'consideration', 'conversion'], audienceName: 'Marketplace Sellers', objective: 'Снять сомнение в качестве результата', hook: 'Покажите исходное фото в первые 2 секунды', message: 'Одна фотография → готовая карточка', cta: 'Try Free', recommendedAssets: ['video', 'image'], priority: 'high' },
-            { format: 'Education', stages: ['awareness', 'consideration'], audienceName: 'Small Businesses', objective: 'Объяснить, как работает AI-генерация', hook: 'Как AI создаёт карточку из одного фото', message: 'Пошаговый разбор процесса', cta: 'Узнать больше', recommendedAssets: ['video'], priority: 'medium' },
-            { format: 'Comparison', stages: ['consideration', 'conversion'], audienceName: 'Small Businesses', objective: 'Показать выгоду против найма дизайнера', hook: 'Дизайнер vs ONEFLOW: 3 дня против 5 минут', message: 'Сравнение цены и скорости', cta: 'Сравнить', recommendedAssets: ['image', 'copy'], priority: 'medium' },
-            { format: 'Testimonials', stages: ['consideration', 'conversion'], audienceName: 'Marketplace Sellers', objective: 'Снять последние сомнения перед покупкой', hook: 'Отзыв продавца с ростом конверсии', message: 'Реальные цифры роста продаж', cta: 'Начать', recommendedAssets: ['video', 'copy'], priority: 'medium' },
-          ],
-          funnel: [
-            { label: 'Impressions', volume: 1_000_000, conversionToNext: 2.8 },
-            { label: 'Clicks', volume: 28_000, conversionToNext: 12 },
-            { label: 'Sign Ups', volume: 3_360, conversionToNext: 7 },
-            { label: 'Purchases', volume: 235 },
-          ],
-          journey: [
-            { stage: 'discover', customerThought: 'Мне надоело тратить часы на карточки товаров.', message: 'Один инструмент — вся кампания', channel: 'TikTok', content: 'UGC-видео', cta: 'Узнать больше' },
-            { stage: 'interest', customerThought: 'Похоже, это быстрее, чем нанимать дизайнера.', message: 'Из фото — в кампанию за 5 минут', channel: 'Instagram', content: 'Product Demo', cta: 'Смотреть демо' },
-            { stage: 'research', customerThought: 'А результат правда такой же качественный?', message: 'Сравнение с дизайнером', channel: 'Google Ads', content: 'Comparison', cta: 'Сравнить' },
-            { stage: 'try', customerThought: 'Попробую на одном товаре.', message: 'Первая карточка бесплатно', channel: 'Email', content: 'Onboarding', cta: 'Попробовать' },
-            { stage: 'buy', customerThought: 'Это экономит мне время и деньги.', message: 'Полноценная кампания за 5 минут', channel: 'Продукт', content: 'Оффер', cta: 'Оформить' },
-            { stage: 'return', customerThought: 'Хочу так же для новых товаров.', message: 'Новые SKU — новые карточки', channel: 'Email', content: 'Retention-рассылка', cta: 'Создать ещё' },
-          ],
-          kpis: [
-            { label: 'Платные конверсии', target: '+25%', unit: 'за 3 мес.' },
-            { label: 'CAC', target: '≤ 3 500', unit: '₸' },
-            { label: 'Активные сегменты', target: '2', unit: 'шт.' },
-          ],
-          risks: [
-            { title: 'Low retention', description: 'Повторные продажи почти не используются в текущей стратегии.', evidence: 'В плане нет задач на удержание после первой покупки.', affectedEntities: ['Retention', 'KPI'] },
-            { title: 'High CAC on paid search', description: 'Google Ads может оказаться дороже прогноза на этом рынке.', evidence: 'CPC-диапазон для Google Ads на этом рынке шире, чем у TikTok/Instagram.', affectedEntities: ['Channels', 'Budget'] },
-          ],
-          opportunities: [
-            { title: 'TikTok potential', description: 'TikTok уже получает наибольшую долю бюджета и показывает лучший потенциальный охват для этого сегмента.', evidence: 'Основной сегмент Marketplace Sellers активнее всего в TikTok.', affectedEntities: ['Channels'] },
-          ],
-          plan: [
-            { day: 'MON 03', title: 'Create 3 UGC creatives', tag: 'Conversion · Marketplace Sellers', type: 'generate' },
-            { day: 'TUE 04', title: 'Create Product Demo campaign', tag: 'Awareness · Marketplace Sellers', type: 'generate' },
-            { day: 'WED 05', title: 'Compare 3 offers', tag: 'Conversion · Small Businesses', type: 'compare' },
-            { day: 'THU 06', title: 'Score last week creatives', tag: 'Content · All segments', type: 'score' },
-            { day: 'FRI 07', title: 'Launch campaign in ad account', tag: 'Manual · Marketing team', type: 'manual' },
-            { day: 'SAT 08', title: 'Review weekly results', tag: 'Retention · All segments', type: 'review' },
-          ],
-          topInsight: {
-            title: 'TikTok уже получает наибольшую долю бюджета',
-            description: 'Instagram показывает более высокий CPC на этом рынке — перераспределить ещё 10% с Instagram на TikTok?',
-          },
-          assumptions: [
-            { field: 'CPC Google Ads', value: 'диапазон не указан', confidenceLabel: 'гипотеза AI' },
-          ],
-        });
-      }
-      // Offer Engine "Generate alternatives" (see strategyPrompts.ts buildOfferAlternativesPrompt).
-      if (/Предложи 3 новых оффера/i.test(lastMessage)) {
-        return JSON.stringify({
-          offers: [
-            { text: 'Подписка на 3 месяца — цена как за одну карточку у фрилансера.', angle: 'Ценность за деньги', targetSegmentName: 'Small Businesses', funnelStage: 'consideration', score: 71 },
-            { text: 'Загрузите каталог — получите готовые карточки для всех SKU за ночь.', angle: 'Масштаб', targetSegmentName: 'Marketplace Sellers', funnelStage: 'conversion', score: 79 },
-            { text: 'AI-скоринг покажет, какая карточка продаст лучше, ещё до запуска.', angle: 'Снижение риска', targetSegmentName: 'Marketplace Sellers', funnelStage: 'awareness', score: 68 },
-          ],
-        });
-      }
-      // Strategy Assistant calls (see strategyPrompts.ts buildAssistantActionSystemPrompt) — a
-      // change-intent question ("перераспредели бюджет...") gets a structured action JSON back,
-      // matching the real contract; anything else gets a plain-text answer.
-      if (/Доступные id для действий/i.test(lastMessage)) {
-        if (/бюджет|раздели|перераспредел/i.test(lastMessage)) {
-          const channelLine = /каналы: ([^\n]+)/.exec(lastMessage)?.[1] ?? '';
-          const ids: Record<string, string> = {};
-          for (const m of channelLine.matchAll(/([\w-]+) \(([^)]+)\)/g)) ids[m[2]] = m[1];
-          const tiktok = ids['TikTok'];
-          const instagram = ids['Instagram'];
-          if (tiktok && instagram) {
-            return JSON.stringify({
-              type: 'reallocate_budget',
-              rationale: 'TikTok показывает более высокий потенциальный охват для основного сегмента при более низком CPC, чем Instagram.',
-              channelChanges: [
-                { channelId: tiktok, allocation: 45 },
-                { channelId: instagram, allocation: 20 },
-              ],
-            });
-          }
-        }
-        return 'Сейчас основной сегмент — Marketplace Sellers, он получает наибольший потенциал по охвату. Рекомендую в первую очередь протестировать Product Demo в TikTok — это самый сильный формат по текущим предположениям.';
-      }
       if (images?.length) {
         return `Mock reply: received ${images.length} attached photo(s) and message: "${lastMessage}"`;
       }
@@ -431,6 +461,10 @@ export function installMockApiIfNeeded(): void {
         );
       }
       return `Mock reply to: "${lastMessage}"`;
+    },
+    marketingAI: async (task, _context, _mock) => {
+      await new Promise((r) => setTimeout(r, 400));
+      return { result: mockMarketingAIResult(task), schemaVersion: '4.0.0', promptVersion: '4.0.0', mock: true };
     },
     getUsage: async () => {
       const month = new Date().toISOString().slice(0, 7);

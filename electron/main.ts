@@ -1312,6 +1312,124 @@ ipcMain.handle(
   }
 );
 
+// Desktop-build mirror of supabase/functions/marketing-ai/index.ts. The web build gets the real
+// OpenAI Responses API with strict Structured Outputs (spec §80-104) via that server-side Edge
+// Function; the Electron main process has no equivalent server-side secret infrastructure of its
+// own (it already reuses the desktop app's own configured Replicate key for generate:chat above,
+// same trust boundary), so this is a best-effort mirror: same task names, same JSON field names,
+// same prompt-policy rules, but schema-conformance is asked for in the prompt and validated
+// defensively client-side (src/strategy/services/*) rather than enforced by the provider. Kept
+// duplicated rather than shared with the Edge Function because tsconfig.electron.json compiles
+// this directory in isolation (CommonJS, rootDir "electron") and cannot import from src/.
+const MARKETING_AI_POLICY =
+  'Ты — маркетинговый аналитик ONEFLOW Marketing Intelligence Engine. Никогда не выдавай ' +
+  'предположение за факт; связывай выводы с evidenceIds или помечай как hypothesis; никогда не ' +
+  'выдумывай точные метрики эффективности (их считает код); для неизвестного возвращай пустую ' +
+  'строку/массив, не правдоподобный текст. Ответь СТРОГО валидным JSON без markdown по описанной ' +
+  'схеме полей, без пояснений вне JSON.';
+
+const MARKETING_AI_TASKS: Record<string, { instructions: string; schemaHint: string }> = {
+  understandBusiness: {
+    instructions: 'Business Understanding: пойми бизнес из брифа пользователя.',
+    schemaHint:
+      '{"product":"","category":"","customerProblem":"","value":"","differentiators":[""],' +
+      '"businessModel":"","geography":"","goal":"","solvesTodayVia":"","mainPurchaseRisk":"",' +
+      '"ambiguities":[""],"evidenceIds":[""],"missingData":[""],"humanExplanation":""}',
+  },
+  analyzeSegments: {
+    instructions: 'Segmentation: верни 3-5 сегментов на основе реальной ситуации покупки.',
+    schemaHint:
+      '{"segments":[{"name":"","buyingSituation":"","needFrequency":"","abilityToPay":"",' +
+      '"accessibility":"","urgencyTrigger":"","productFit":"","priority":"now|test|later",' +
+      '"priorityRationale":"","evidenceIds":[""],"confidence":"high|medium|low","assumptions":[""]}],' +
+      '"missingData":[""],"humanExplanation":""}',
+  },
+  analyzeJTBD: {
+    instructions: 'JTBD: для каждого сегмента из relevantSegments сформулируй Jobs To Be Done.',
+    schemaHint:
+      '{"jtbd":[{"segmentId":"","situation":"","motivation":"","desiredOutcome":"",' +
+      '"alternativesToday":"","anxieties":"","evidenceIds":[""]}],"humanExplanation":""}',
+  },
+  proposePositioning: {
+    instructions: 'Positioning: 2-3 направления, ровно одно recommended:true.',
+    schemaHint:
+      '{"directions":[{"segmentId":"","alternative":"","value":"","reasonToBelieve":"",' +
+      '"proofNeeded":"","style":"rational|outcome|technological","evidenceIds":[""],"recommended":false}],' +
+      '"humanExplanation":""}',
+  },
+  proposeOffers: {
+    instructions: 'Offer Strategy: 3-5 offer-гипотез на разных мотивах, ровно одна recommended:true.',
+    schemaHint:
+      '{"offers":[{"segmentId":"","motive":"speed|savings|simplicity|quality|volume|risk|growth",' +
+      '"promise":"","mechanism":"","proof":"","objectionHandled":"","cta":"",' +
+      '"evidenceType":"fact|research|hypothesis|unknown","confidence":"high|medium|low",' +
+      '"experimentNeeded":true,"recommended":false}],"humanExplanation":""}',
+  },
+  analyzeChannels: {
+    instructions: 'Channel Strategy: выбирай каналы по роли/тестируемости, без псевдоточных % бюджета.',
+    schemaHint:
+      '{"channels":[{"channel":"","role":"","targetSegmentId":"","funnelStage":"awareness|consideration|conversion",' +
+      '"contentTypes":[""],"whyTest":"","requiredData":[""],"scaleCriteria":[""],"pauseCriteria":[""],' +
+      '"evidenceIds":[""],"confidence":"high|medium|low"}],"humanExplanation":""}',
+  },
+  proposeCreativeStrategy: {
+    instructions: 'Creative Strategy: 4-6 creative hypotheses с конкретным archetype/hook/format.',
+    schemaHint:
+      '{"concepts":[{"archetype":"problem_solution|demo|before_after|ugc_testimonial|comparison|' +
+      'objection_handling|offer_led|proof_case","hook":"","visualFormat":"ugc|studio|product|lifestyle|' +
+      'demo|text_graphic|animation|catalog|not_observable","messagingTheme":"","offerId":"","cta":"",' +
+      '"persona":"","intentStage":"prospecting|consideration|conversion","variantsToTest":[""],' +
+      '"evidenceIds":[""]}],"humanExplanation":""}',
+  },
+  designExperiments: {
+    instructions: 'Experiment Plan: одна крупная переменная за раз, зафиксируй primaryMetric до запуска.',
+    schemaHint:
+      '{"experiments":[{"hypothesisId":"","name":"","variable":"","control":"","variants":[""],' +
+      '"audienceId":"","primaryMetric":"","guardrailMetrics":[""],"minDataRule":"","durationRule":"",' +
+      '"decisionRule":""}],"humanExplanation":""}',
+  },
+  interpretResults: {
+    instructions:
+      'Learning: интерпретируй уже посчитанные кодом метрики из metricsSnapshot. Верни strategyUpdateProposal, не применяй изменение сам.',
+    schemaHint:
+      '{"whatHappened":"","likelyDrivers":[""],"unsupportedExplanations":[""],"evidenceIds":[""],' +
+      '"confidence":"high|medium|low","strength":"strong|moderate|weak","affectedStrategyPaths":[""],' +
+      '"strategyUpdateProposal":{"changes":[{"field":"","before":"","after":""}],"why":"","evidenceIds":[""],' +
+      '"affectedModules":[""],"requiresUserApproval":true,"rollbackLabel":""},"humanExplanation":""}',
+  },
+  explainRecommendation: {
+    instructions: 'Explanation: короткое понятное объяснение поверх уже структурированного результата.',
+    schemaHint: '{"whatWeSaw":"","whyItMatters":"","howConfirmed":"","whatToCheckNext":"","whatChangesOnApply":""}',
+  },
+};
+
+function extractJsonLoose(text: string): unknown {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end === -1 || end < start) throw new Error('Model response had no JSON object');
+  return JSON.parse(text.slice(start, end + 1));
+}
+
+ipcMain.handle(
+  'marketing:ai',
+  async (_event, task: string, context: Record<string, unknown>, mock?: boolean) => {
+    const def = MARKETING_AI_TASKS[task];
+    if (!def) throw new Error(`Unknown marketing AI task "${task}".`);
+    if (mock) {
+      return { result: { humanExplanation: `[MOCK] ${task}` }, schemaVersion: '4.0.0', promptVersion: '4.0.0', mock: true };
+    }
+    const replicate = getReplicate();
+    const output = await replicate.run('openai/gpt-5.6-terra', {
+      input: {
+        prompt: JSON.stringify({ taskType: task, ...context }),
+        system_prompt: `${MARKETING_AI_POLICY}\n\n${def.instructions}\n\nJSON-схема ответа:\n${def.schemaHint}`,
+      },
+    });
+    const text = normalizeChatOutput(output);
+    return { result: extractJsonLoose(text), schemaVersion: '4.0.0', promptVersion: '4.0.0', model: 'openai/gpt-5.6-terra' };
+  }
+);
+
 async function urlToBuffer(url: string): Promise<{ buffer: Buffer; contentType: string }> {
   if (url.startsWith('data:')) {
     // Same fix as downloadToBuffer above — the media-type segment can carry extra

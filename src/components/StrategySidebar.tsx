@@ -1,41 +1,34 @@
-import { IconGauge, IconFlow, IconDocument, IconVector, IconTarget, IconChevronRight } from './Icons';
+import { IconGauge, IconVector, IconFlow, IconDocument, IconTarget, IconChevronRight, IconCheck } from './Icons';
 import { useT } from '../i18n';
+import type { Readiness } from '../strategy/domain/types';
 
-export type StrategyTab = 'overview' | 'map' | 'plan';
+export type StrategyTab = 'plan' | 'analysis' | 'experiments' | 'results';
 
 interface StrategySidebarProps {
   tab: StrategyTab;
   onTabChange: (tab: StrategyTab) => void;
-  onOpenScenarios: () => void;
   onReset: () => void;
   collapsed: boolean;
   onToggleCollapsed: () => void;
-  score: number;
+  readiness: Readiness;
   title: string;
 }
 
-// Ported from the shadcn-dashboard-landing-template's AppSidebar/nav-main pattern (grouped,
-// collapsible-to-icon-only left nav) onto ONEFLOW's own --c-* tokens — no Tailwind/shadcn here,
-// same porting approach as GlowMenuBar.tsx and the login screen earlier. Replaces the
-// Overview/Map/Plan pill row that used to live in .strategy-header; those three destinations,
-// plus the scenario-compare and reset actions that used to sit next to them, now live here.
-export default function StrategySidebar({
-  tab,
-  onTabChange,
-  onOpenScenarios,
-  onReset,
-  collapsed,
-  onToggleCollapsed,
-  score,
-  title,
-}: StrategySidebarProps) {
+// Ported from the shadcn-dashboard-landing-template's AppSidebar/nav-main pattern onto ONEFLOW's
+// own --c-* tokens. Footer shows a readiness checklist (spec §36) instead of a raw numeric
+// "Strategy Score" — the spec explicitly forbids defaulting to "82/100" without explanation.
+export default function StrategySidebar({ tab, onTabChange, onReset, collapsed, onToggleCollapsed, readiness, title }: StrategySidebarProps) {
   const t = useT();
 
   const navItems: { key: StrategyTab; label: string; icon: typeof IconGauge }[] = [
-    { key: 'overview', label: t.strategy.tabOverview, icon: IconGauge },
-    { key: 'map', label: t.strategy.tabMap, icon: IconFlow },
-    { key: 'plan', label: t.strategy.tabPlan, icon: IconDocument },
+    { key: 'plan', label: t.strategy.tabPlanV4, icon: IconGauge },
+    { key: 'analysis', label: t.strategy.tabAnalysisV4, icon: IconFlow },
+    { key: 'experiments', label: t.strategy.tabExperimentsV4, icon: IconVector },
+    { key: 'results', label: t.strategy.tabResultsV4, icon: IconDocument },
   ];
+
+  const doneCount = readiness.items.filter((i) => i.done).length;
+  const allReady = readiness.items.length > 0 && doneCount === readiness.items.length;
 
   return (
     <aside className={`strategy-sidebar ${collapsed ? 'collapsed' : ''}`}>
@@ -67,41 +60,47 @@ export default function StrategySidebar({
             })}
           </div>
         </div>
-
-        <div className="strategy-sidebar-group">
-          {!collapsed && <div className="strategy-sidebar-group-label">{t.strategy.sidebarToolsGroupLabel}</div>}
-          <div className="strategy-sidebar-menu">
-            <button
-              type="button"
-              className="strategy-sidebar-item"
-              onClick={onOpenScenarios}
-              title={collapsed ? t.strategy.scenarioCompareBtn : undefined}
-            >
-              <IconVector size={16} />
-              {!collapsed && <span>{t.strategy.scenariosNavLabel}</span>}
-            </button>
-          </div>
-        </div>
       </div>
 
       <div className="strategy-sidebar-footer">
-        <div className="strategy-sidebar-score" title="Strategy Score">
-          <span className="strategy-sidebar-score-value">{score}</span>
-          {!collapsed && <span className="strategy-sidebar-score-suffix">/100</span>}
-        </div>
         {!collapsed && (
-          <button type="button" className="secondary-btn strategy-sidebar-reset-btn" onClick={onReset}>
-            {t.strategy.newStrategyBtn}
-          </button>
+          <div className={`strategy-sidebar-readiness ${allReady ? 'ready' : ''}`}>
+            <div className="strategy-sidebar-readiness-title">{allReady ? t.strategy.readinessReadyTitle : t.strategy.readinessNeedsTitle}</div>
+            <ul className="strategy-sidebar-readiness-list">
+              {readiness.items.map((item) => (
+                <li key={item.label} className={item.done ? 'done' : ''}>
+                  {item.done ? <IconCheck size={10} /> : <span className="strategy-sidebar-readiness-dot" />}
+                  {item.label}
+                </li>
+              ))}
+              {readiness.blockers.map((b) => (
+                <li key={b.label} className="blocker">
+                  ! {b.label}
+                </li>
+              ))}
+            </ul>
+            {readiness.nextStepLabel && (
+              <div className="strategy-sidebar-readiness-next">
+                <span>{t.strategy.readinessNextStepLabel}:</span> {readiness.nextStepLabel}
+              </div>
+            )}
+          </div>
         )}
-        <button
-          type="button"
-          className="strategy-sidebar-toggle"
-          onClick={onToggleCollapsed}
-          title={collapsed ? t.strategy.sidebarExpandTooltip : t.strategy.sidebarCollapseTooltip}
-        >
-          <IconChevronRight size={13} />
-        </button>
+        <div className="strategy-sidebar-footer-actions">
+          {!collapsed && (
+            <button type="button" className="secondary-btn strategy-sidebar-reset-btn" onClick={onReset}>
+              {t.strategy.newStrategyBtn}
+            </button>
+          )}
+          <button
+            type="button"
+            className="strategy-sidebar-toggle"
+            onClick={onToggleCollapsed}
+            title={collapsed ? t.strategy.sidebarExpandTooltip : t.strategy.sidebarCollapseTooltip}
+          >
+            <IconChevronRight size={13} />
+          </button>
+        </div>
       </div>
     </aside>
   );

@@ -389,6 +389,92 @@ export interface Translations {
     riskMedium: string;
     riskHigh: string;
     scenarioDisclaimer: string;
+    // v4 — Business Understanding confirmation (spec §6/§29)
+    businessConfirmEyebrow: string;
+    businessConfirmProductLabel: string;
+    businessConfirmValueLabel: string;
+    businessConfirmTodayLabel: string;
+    businessConfirmRiskLabel: string;
+    businessConfirmAllCorrectBtn: string;
+    businessConfirmFixBtn: string;
+    // v4 — pipeline loading stages (spec §58)
+    loadingUnderstandBusiness: string;
+    loadingSegments: string;
+    loadingJtbd: string;
+    loadingOffers: string;
+    loadingCreative: string;
+    loadingPlan: string;
+    // v4 — Evidence & Confidence (spec §8-9/§55)
+    confidenceHigh: string;
+    confidenceMedium: string;
+    confidenceLow: string;
+    evidenceTypeFact: string;
+    evidenceTypeResearch: string;
+    evidenceTypeHypothesis: string;
+    evidenceTypeUnknown: string;
+    whyBtn: string;
+    evidenceDrawerTitle: string;
+    evidenceDrawerConfidenceLabel: string;
+    evidenceDrawerMissingDataLabel: string;
+    evidenceDrawerHowToVerifyLabel: string;
+    evidenceDrawerEmpty: string;
+    // v4 — Readiness (spec §36, replaces the raw score pill)
+    readinessReadyTitle: string;
+    readinessNeedsTitle: string;
+    readinessNextStepLabel: string;
+    // v4 — main tabs (spec §53)
+    tabPlanV4: string;
+    tabAnalysisV4: string;
+    tabExperimentsV4: string;
+    tabResultsV4: string;
+    // v4 — "Ваш план" simple mode (spec §27-34)
+    planBusinessTitle: string;
+    planAudienceTitle: string;
+    planMessageTitle: string;
+    planOfferTitle: string;
+    planChannelsTitle: string;
+    planCreativeTitle: string;
+    planActionTitle: string;
+    planNextStepTitle: string;
+    planWhyStrategyLink: string;
+    planProfessionalLink: string;
+    planNoDataYet: string;
+    // v4 — Анализ (professional mode)
+    analysisSegmentsTitle: string;
+    analysisJtbdTitle: string;
+    analysisPositioningTitle: string;
+    analysisOffersTitle: string;
+    analysisChannelsTitle: string;
+    analysisCreativeTitle: string;
+    analysisFunnelTitle: string;
+    analysisEconomicsTitle: string;
+    analysisHistoryTitle: string;
+    // v4 — Эксперименты
+    experimentsTitle: string;
+    experimentsEmpty: string;
+    experimentDesignBtn: string;
+    experimentEnterResultBtn: string;
+    experimentControlLabel: string;
+    experimentVariantLabel: string;
+    experimentConversionsLabel: string;
+    experimentVolumeLabel: string;
+    experimentSubmitResultBtn: string;
+    experimentStatusPlanned: string;
+    experimentStatusRunning: string;
+    experimentStatusCompleted: string;
+    experimentStatusStopped: string;
+    experimentDecisionWinner: string;
+    experimentDecisionLoser: string;
+    experimentDecisionInconclusive: string;
+    // v4 — Результаты
+    resultsLearningsTitle: string;
+    resultsProposalsTitle: string;
+    resultsEmpty: string;
+    proposalApplyBtn: string;
+    proposalRejectBtn: string;
+    proposalAppliedLabel: string;
+    proposalRejectedLabel: string;
+    proposalWhyLabel: string;
   };
   tools: {
     menuLabel: string;
@@ -1109,6 +1195,83 @@ export const ru: Translations = {
     riskMedium: 'Средний',
     riskHigh: 'Высокий',
     scenarioDisclaimer: 'Оценка на основе текущей воронки и бюджета, не гарантированный прогноз.',
+    businessConfirmEyebrow: 'Вот как ONEFLOW понял ваш бизнес',
+    businessConfirmProductLabel: 'Вы продаёте',
+    businessConfirmValueLabel: 'Клиент получает',
+    businessConfirmTodayLabel: 'Сегодня он решает задачу',
+    businessConfirmRiskLabel: 'Главный риск покупки',
+    businessConfirmAllCorrectBtn: 'Всё верно',
+    businessConfirmFixBtn: 'Исправить',
+    loadingUnderstandBusiness: 'Поняли продукт',
+    loadingSegments: 'Определяем аудитории',
+    loadingJtbd: 'Формируем задачи клиента',
+    loadingOffers: 'Формируем офферы',
+    loadingCreative: 'Готовим креативные гипотезы',
+    loadingPlan: 'Готовим первый план тестов',
+    confidenceHigh: 'Высокая уверенность',
+    confidenceMedium: 'Средняя уверенность',
+    confidenceLow: 'Низкая уверенность',
+    evidenceTypeFact: 'Факт',
+    evidenceTypeResearch: 'Исследование',
+    evidenceTypeHypothesis: 'Гипотеза',
+    evidenceTypeUnknown: 'Недостаточно данных',
+    whyBtn: 'Почему так?',
+    evidenceDrawerTitle: 'Основания вывода',
+    evidenceDrawerConfidenceLabel: 'Уверенность',
+    evidenceDrawerMissingDataLabel: 'Каких данных не хватает',
+    evidenceDrawerHowToVerifyLabel: 'Как проверить',
+    evidenceDrawerEmpty: 'Пока нет данных — это модельная гипотеза.',
+    readinessReadyTitle: 'Готово к тесту',
+    readinessNeedsTitle: 'Нужно подключить',
+    readinessNextStepLabel: 'Следующий шаг',
+    tabPlanV4: 'Ваш план',
+    tabAnalysisV4: 'Анализ',
+    tabExperimentsV4: 'Эксперименты',
+    tabResultsV4: 'Результаты',
+    planBusinessTitle: 'Ваш бизнес',
+    planAudienceTitle: 'Кому продавать',
+    planMessageTitle: 'Что говорить',
+    planOfferTitle: 'Что предложить',
+    planChannelsTitle: 'Где продвигаться',
+    planCreativeTitle: 'Что создавать',
+    planActionTitle: 'Что делать',
+    planNextStepTitle: 'Главный следующий шаг',
+    planWhyStrategyLink: 'Почему такая стратегия?',
+    planProfessionalLink: 'Профессиональный анализ →',
+    planNoDataYet: 'Пока нет данных для этого блока.',
+    analysisSegmentsTitle: 'Сегментация',
+    analysisJtbdTitle: 'Jobs To Be Done',
+    analysisPositioningTitle: 'Позиционирование',
+    analysisOffersTitle: 'Офферы',
+    analysisChannelsTitle: 'Каналы',
+    analysisCreativeTitle: 'Креативные гипотезы',
+    analysisFunnelTitle: 'Воронка',
+    analysisEconomicsTitle: 'Unit-экономика',
+    analysisHistoryTitle: 'История изменений',
+    experimentsTitle: 'Реестр экспериментов',
+    experimentsEmpty: 'Пока нет запланированных экспериментов.',
+    experimentDesignBtn: 'Спроектировать эксперимент',
+    experimentEnterResultBtn: 'Внести результат',
+    experimentControlLabel: 'Контроль',
+    experimentVariantLabel: 'Вариант',
+    experimentConversionsLabel: 'Конверсии',
+    experimentVolumeLabel: 'Объём (N)',
+    experimentSubmitResultBtn: 'Посчитать результат',
+    experimentStatusPlanned: 'Запланирован',
+    experimentStatusRunning: 'Идёт',
+    experimentStatusCompleted: 'Завершён',
+    experimentStatusStopped: 'Остановлен',
+    experimentDecisionWinner: 'Победитель',
+    experimentDecisionLoser: 'Проигравший',
+    experimentDecisionInconclusive: 'Неубедительно',
+    resultsLearningsTitle: 'Что мы узнали',
+    resultsProposalsTitle: 'Предложения по изменению стратегии',
+    resultsEmpty: 'Пока нет результатов — сначала завершите эксперимент.',
+    proposalApplyBtn: 'Применить',
+    proposalRejectBtn: 'Оставить как есть',
+    proposalAppliedLabel: 'Применено',
+    proposalRejectedLabel: 'Отклонено',
+    proposalWhyLabel: 'Почему',
   },
   tools: {
     menuLabel: 'Инструменты',
@@ -1852,6 +2015,83 @@ export const en: Translations = {
     riskMedium: 'Medium',
     riskHigh: 'High',
     scenarioDisclaimer: 'Estimate based on the current funnel and budget, not a guaranteed forecast.',
+    businessConfirmEyebrow: "Here's how ONEFLOW understood your business",
+    businessConfirmProductLabel: 'You sell',
+    businessConfirmValueLabel: 'The customer gets',
+    businessConfirmTodayLabel: 'Today they solve this via',
+    businessConfirmRiskLabel: 'Main purchase risk',
+    businessConfirmAllCorrectBtn: 'All correct',
+    businessConfirmFixBtn: 'Fix',
+    loadingUnderstandBusiness: 'Understood the product',
+    loadingSegments: 'Defining audiences',
+    loadingJtbd: "Mapping customers' jobs",
+    loadingOffers: 'Shaping offers',
+    loadingCreative: 'Preparing creative hypotheses',
+    loadingPlan: 'Preparing the first test plan',
+    confidenceHigh: 'High confidence',
+    confidenceMedium: 'Medium confidence',
+    confidenceLow: 'Low confidence',
+    evidenceTypeFact: 'Fact',
+    evidenceTypeResearch: 'Research',
+    evidenceTypeHypothesis: 'Hypothesis',
+    evidenceTypeUnknown: 'Not enough data',
+    whyBtn: 'Why?',
+    evidenceDrawerTitle: 'Basis for this conclusion',
+    evidenceDrawerConfidenceLabel: 'Confidence',
+    evidenceDrawerMissingDataLabel: 'What data is missing',
+    evidenceDrawerHowToVerifyLabel: 'How to verify',
+    evidenceDrawerEmpty: 'No data yet — this is a model hypothesis.',
+    readinessReadyTitle: 'Ready to test',
+    readinessNeedsTitle: 'Needs to connect',
+    readinessNextStepLabel: 'Next step',
+    tabPlanV4: 'Your plan',
+    tabAnalysisV4: 'Analysis',
+    tabExperimentsV4: 'Experiments',
+    tabResultsV4: 'Results',
+    planBusinessTitle: 'Your business',
+    planAudienceTitle: 'Who to sell to',
+    planMessageTitle: 'What to say',
+    planOfferTitle: 'What to offer',
+    planChannelsTitle: 'Where to promote',
+    planCreativeTitle: 'What to create',
+    planActionTitle: 'What to do',
+    planNextStepTitle: 'Main next step',
+    planWhyStrategyLink: 'Why this strategy?',
+    planProfessionalLink: 'Professional analysis →',
+    planNoDataYet: 'No data for this block yet.',
+    analysisSegmentsTitle: 'Segmentation',
+    analysisJtbdTitle: 'Jobs To Be Done',
+    analysisPositioningTitle: 'Positioning',
+    analysisOffersTitle: 'Offers',
+    analysisChannelsTitle: 'Channels',
+    analysisCreativeTitle: 'Creative hypotheses',
+    analysisFunnelTitle: 'Funnel',
+    analysisEconomicsTitle: 'Unit economics',
+    analysisHistoryTitle: 'Change history',
+    experimentsTitle: 'Experiment registry',
+    experimentsEmpty: 'No experiments planned yet.',
+    experimentDesignBtn: 'Design an experiment',
+    experimentEnterResultBtn: 'Enter result',
+    experimentControlLabel: 'Control',
+    experimentVariantLabel: 'Variant',
+    experimentConversionsLabel: 'Conversions',
+    experimentVolumeLabel: 'Volume (N)',
+    experimentSubmitResultBtn: 'Compute result',
+    experimentStatusPlanned: 'Planned',
+    experimentStatusRunning: 'Running',
+    experimentStatusCompleted: 'Completed',
+    experimentStatusStopped: 'Stopped',
+    experimentDecisionWinner: 'Winner',
+    experimentDecisionLoser: 'Loser',
+    experimentDecisionInconclusive: 'Inconclusive',
+    resultsLearningsTitle: 'What we learned',
+    resultsProposalsTitle: 'Strategy change proposals',
+    resultsEmpty: 'No results yet — finish an experiment first.',
+    proposalApplyBtn: 'Apply',
+    proposalRejectBtn: 'Leave as is',
+    proposalAppliedLabel: 'Applied',
+    proposalRejectedLabel: 'Rejected',
+    proposalWhyLabel: 'Why',
   },
   tools: {
     menuLabel: 'Tools',

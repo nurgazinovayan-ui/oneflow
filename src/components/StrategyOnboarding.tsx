@@ -1,24 +1,28 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { IconPlus, IconClose, IconTarget, IconCheck } from './Icons';
-import type { StrategyBrief, StrategyGoal } from '../strategyTypes';
+import type { StrategyGoal } from '../strategyTypes';
 import { STRATEGY_GOAL_LABELS } from '../strategyTypes';
 import { useT, useLanguageStore } from '../i18n';
+import type { StrategyV4 } from '../strategy/domain/types';
+import { runBusinessUnderstandingStage, runFullPipeline, type PipelineStage } from '../strategy/services/pipeline';
+import { useStrategyStore } from '../strategy/state/strategyStore';
+import { formatGenerationError } from '../errorMessages';
 
-interface StrategyOnboardingProps {
-  status: 'idle' | 'generating' | 'error';
-  error: string;
-  onGenerate: (brief: StrategyBrief) => void;
-}
+type Phase = 'brief' | 'understanding' | 'confirming' | 'pipeline' | 'error';
 
 const GOALS: StrategyGoal[] = ['sales', 'leads', 'awareness'];
 
-// Compact centered card, not a full landing page — per the spec's "Onboarding не должен
-// выглядеть как отдельный лендинг" note. Website-URL/competitor fields (spec section 4) are
-// collected as plain optional text hints for the AI prompt — there's no backend endpoint to
-// actually fetch/analyze an arbitrary URL, so "Analyze" (spec UI39) isn't wired up.
-export default function StrategyOnboarding({ status, error, onGenerate }: StrategyOnboardingProps) {
+// Compact centered card, not a full landing page. Owns the whole v4 pipeline orchestration
+// itself (spec §5/§6/§58/§84): Business Understanding first with an explicit confirmation step,
+// then the rest of the analysis stages run in sequence with live progress, and only the fully
+// assembled StrategyV4 is committed to the store — StrategyPanel switches away from this
+// component the moment that happens.
+export default function StrategyOnboarding() {
   const t = useT();
   const language = useLanguageStore((s) => s.language);
+  const setStrategy = useStrategyStore((s) => s.setStrategy);
+
+  const [phase, setPhase] = useState<Phase>('brief');
   const [step, setStep] = useState(0);
   const [goal, setGoal] = useState<StrategyGoal | null>(null);
   const [market, setMarket] = useState('Kazakhstan');
@@ -31,25 +35,22 @@ export default function StrategyOnboarding({ status, error, onGenerate }: Strate
   const [competitors, setCompetitors] = useState('');
   const [knownAudience, setKnownAudience] = useState('');
 
-  const LOADING_STEPS = [
-    t.strategy.loadingAnalyzeProduct,
-    t.strategy.loadingDefineAudience,
-    t.strategy.loadingAnalyzeCompetitors,
-    t.strategy.loadingPositioning,
-    t.strategy.loadingChannels,
-    t.strategy.loadingContentPlan,
-  ];
-  const [loadingStep, setLoadingStep] = useState(0);
+  const [draftStrategy, setDraftStrategy] = useState<StrategyV4 | null>(null);
+  const [pipelineStage, setPipelineStage] = useState<PipelineStage>('understandBusiness');
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (status !== 'generating') {
-      setLoadingStep(0);
-      return;
-    }
-    const id = setInterval(() => setLoadingStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1)), 900);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+  const LOADING_LABELS: Record<PipelineStage, string> = {
+    understandBusiness: t.strategy.loadingUnderstandBusiness,
+    segments: t.strategy.loadingSegments,
+    jtbd: t.strategy.loadingJtbd,
+    positioning: t.strategy.loadingPositioning,
+    offers: t.strategy.loadingOffers,
+    channels: t.strategy.loadingChannels,
+    creative: t.strategy.loadingCreative,
+    plan: t.strategy.loadingPlan,
+  };
+  const STAGE_ORDER: PipelineStage[] = ['understandBusiness', 'segments', 'jtbd', 'positioning', 'offers', 'channels', 'creative', 'plan'];
+  const stageIndex = STAGE_ORDER.indexOf(pipelineStage);
 
   const steps = [t.strategy.onboardGoalStep, t.strategy.onboardContextStep];
   const canContinue = step === 0 ? !!goal : productDescription.trim().length > 0;
@@ -59,23 +60,72 @@ export default function StrategyOnboarding({ status, error, onGenerate }: Strate
     if (dataUrl) setPhoto(dataUrl);
   };
 
-  const handleSubmit = () => {
-    if (!goal || !productDescription.trim()) return;
-    onGenerate({
-      goal,
-      market: market.trim() || 'Kazakhstan',
-      durationMonths,
-      budget,
-      currency: '₸',
-      productDescription: productDescription.trim(),
-      photo,
-      websiteUrl: websiteUrl.trim() || undefined,
-      competitors: competitors.trim() || undefined,
-      knownAudience: knownAudience.trim() || undefined,
-    });
+  const buildBriefText = (): string => {
+    const lines = [
+      `Цель: ${STRATEGY_GOAL_LABELS[goal ?? 'sales'].ru}`,
+      `Рынок: ${market.trim() || 'Kazakhstan'}`,
+      `Горизонт: ${durationMonths} мес.`,
+      `Бюджет: ${budget} ₸`,
+      `Описание продукта: ${productDescription.trim()}`,
+    ];
+    if (websiteUrl.trim()) lines.push(`Сайт: ${websiteUrl.trim()}`);
+    if (competitors.trim()) lines.push(`Конкуренты: ${competitors.trim()}`);
+    if (knownAudience.trim()) lines.push(`Известная аудитория: ${knownAudience.trim()}`);
+    return lines.join('\n');
   };
 
-  if (status === 'generating') {
+  const handleSubmitBrief = async () => {
+    if (!goal || !productDescription.trim()) return;
+    setPhase('understanding');
+    setError('');
+    try {
+      const strategy = await runBusinessUnderstandingStage(buildBriefText(), {
+        name: productDescription.trim().slice(0, 60) || 'Новая стратегия',
+        objective: STRATEGY_GOAL_LABELS[goal].ru,
+        market: market.trim() || 'Kazakhstan',
+        budget,
+        currency: '₸',
+        periodMonths: durationMonths,
+        locale: language,
+      }, false);
+      setDraftStrategy(strategy);
+      setPhase('confirming');
+    } catch (err) {
+      setError(formatGenerationError(err));
+      setPhase('brief');
+    }
+  };
+
+  const handleFix = () => {
+    setDraftStrategy(null);
+    setPhase('brief');
+    setStep(1);
+  };
+
+  const handleConfirm = async () => {
+    if (!draftStrategy) return;
+    const confirmed: StrategyV4 = {
+      ...draftStrategy,
+      businessUnderstanding: draftStrategy.businessUnderstanding
+        ? { ...draftStrategy.businessUnderstanding, confirmed: true }
+        : null,
+    };
+    setPhase('pipeline');
+    setPipelineStage('segments');
+    setError('');
+    try {
+      const finished = await runFullPipeline(confirmed, false, (stage) => setPipelineStage(stage));
+      setStrategy(finished);
+    } catch (err) {
+      setError(formatGenerationError(err));
+      setDraftStrategy(confirmed);
+      setPhase('confirming');
+    }
+  };
+
+  if (phase === 'understanding' || phase === 'pipeline') {
+    const label = phase === 'understanding' ? t.strategy.loadingUnderstandBusiness : LOADING_LABELS[pipelineStage];
+    const doneIndex = phase === 'understanding' ? -1 : stageIndex;
     return (
       <div className="strategy-onboarding-wrap">
         <div className="modal strategy-onboarding-modal strategy-loading-modal">
@@ -84,17 +134,65 @@ export default function StrategyOnboarding({ status, error, onGenerate }: Strate
           </div>
           <h2>{t.strategy.onboardGenerating}</h2>
           <div className="strategy-loading-steps">
-            {LOADING_STEPS.map((label, i) => (
+            {STAGE_ORDER.map((stage, i) => (
               <div
-                key={label}
-                className={`strategy-loading-step ${i < loadingStep ? 'done' : i === loadingStep ? 'active' : 'pending'}`}
+                key={stage}
+                className={`strategy-loading-step ${
+                  phase === 'pipeline' && i < doneIndex ? 'done' : phase === 'pipeline' && i === doneIndex ? 'active' : 'pending'
+                }`}
               >
                 <span className="strategy-loading-step-icon">
-                  {i < loadingStep ? <IconCheck size={11} /> : i === loadingStep ? <span className="strategy-loading-dot" /> : null}
+                  {phase === 'pipeline' && i < doneIndex ? (
+                    <IconCheck size={11} />
+                  ) : (phase === 'pipeline' && i === doneIndex) || (phase === 'understanding' && stage === 'understandBusiness') ? (
+                    <span className="strategy-loading-dot" />
+                  ) : null}
                 </span>
-                {label}
+                {LOADING_LABELS[stage]}
               </div>
             ))}
+          </div>
+          <div className="strategy-loading-current">{label}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === 'confirming' && draftStrategy?.businessUnderstanding) {
+    const bu = draftStrategy.businessUnderstanding;
+    return (
+      <div className="strategy-onboarding-wrap">
+        <div className="modal strategy-onboarding-modal strategy-confirm-modal">
+          <div className="strategy-onboarding-eyebrow">
+            <IconTarget size={14} /> {t.strategy.title}
+          </div>
+          <h2>{t.strategy.businessConfirmEyebrow}</h2>
+          <div className="strategy-confirm-rows">
+            <div className="strategy-confirm-row">
+              <div className="strategy-confirm-label">{t.strategy.businessConfirmProductLabel}</div>
+              <div className="strategy-confirm-value">{bu.product}</div>
+            </div>
+            <div className="strategy-confirm-row">
+              <div className="strategy-confirm-label">{t.strategy.businessConfirmValueLabel}</div>
+              <div className="strategy-confirm-value">{bu.value}</div>
+            </div>
+            <div className="strategy-confirm-row">
+              <div className="strategy-confirm-label">{t.strategy.businessConfirmTodayLabel}</div>
+              <div className="strategy-confirm-value">{bu.solvesTodayVia}</div>
+            </div>
+            <div className="strategy-confirm-row">
+              <div className="strategy-confirm-label">{t.strategy.businessConfirmRiskLabel}</div>
+              <div className="strategy-confirm-value">{bu.mainPurchaseRisk}</div>
+            </div>
+          </div>
+          {error && <div className="error-text">{error}</div>}
+          <div className="modal-actions strategy-onboarding-actions">
+            <button type="button" className="secondary-btn" onClick={handleFix}>
+              {t.strategy.businessConfirmFixBtn}
+            </button>
+            <button type="button" className="generate-btn" onClick={handleConfirm}>
+              {t.strategy.businessConfirmAllCorrectBtn}
+            </button>
           </div>
         </div>
       </div>
@@ -135,12 +233,7 @@ export default function StrategyOnboarding({ status, error, onGenerate }: Strate
           <div className="strategy-onboarding-fields">
             <label className="strategy-field-label">
               {t.strategy.marketLabel}
-              <input
-                className="node-select"
-                type="text"
-                value={market}
-                onChange={(e) => setMarket(e.target.value)}
-              />
+              <input className="node-select" type="text" value={market} onChange={(e) => setMarket(e.target.value)} />
             </label>
             <div className="strategy-field-row">
               <label className="strategy-field-label">
@@ -208,12 +301,7 @@ export default function StrategyOnboarding({ status, error, onGenerate }: Strate
                 </label>
                 <label className="strategy-field-label">
                   {t.strategy.competitorsLabel}
-                  <input
-                    className="node-select"
-                    type="text"
-                    value={competitors}
-                    onChange={(e) => setCompetitors(e.target.value)}
-                  />
+                  <input className="node-select" type="text" value={competitors} onChange={(e) => setCompetitors(e.target.value)} />
                 </label>
                 <label className="strategy-field-label">
                   {t.strategy.knownAudienceLabel}
@@ -229,7 +317,7 @@ export default function StrategyOnboarding({ status, error, onGenerate }: Strate
           </div>
         )}
 
-        {status === 'error' && <div className="error-text">{error}</div>}
+        {error && <div className="error-text">{error}</div>}
 
         <div className="modal-actions strategy-onboarding-actions">
           {step > 0 && (
@@ -238,16 +326,11 @@ export default function StrategyOnboarding({ status, error, onGenerate }: Strate
             </button>
           )}
           {step < steps.length - 1 ? (
-            <button
-              type="button"
-              className="generate-btn"
-              disabled={!canContinue}
-              onClick={() => setStep((s) => s + 1)}
-            >
+            <button type="button" className="generate-btn" disabled={!canContinue} onClick={() => setStep((s) => s + 1)}>
               {t.strategy.onboardContinue}
             </button>
           ) : (
-            <button type="button" className="generate-btn" disabled={!canContinue} onClick={handleSubmit}>
+            <button type="button" className="generate-btn" disabled={!canContinue} onClick={handleSubmitBrief}>
               {t.strategy.onboardCreate}
             </button>
           )}

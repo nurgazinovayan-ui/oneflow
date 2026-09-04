@@ -177,6 +177,30 @@ export interface ChatMessage {
 // 'text' = the standalone Работа с текстом chat — general-purpose, never builds nodes.
 export type ChatMode = 'assistant' | 'text';
 
+// Marketing Intelligence Engine v4 — one MarketingAITask per MarketingAIProvider method
+// (spec §86). Kept as string literals (not an enum re-exported from src/strategy/domain) so this
+// file — the one both webApi.ts and electron/preload.ts import from — has no dependency on the
+// strategy module tree.
+export type MarketingAITask =
+  | 'understandBusiness'
+  | 'analyzeSegments'
+  | 'analyzeJTBD'
+  | 'proposePositioning'
+  | 'proposeOffers'
+  | 'analyzeChannels'
+  | 'proposeCreativeStrategy'
+  | 'designExperiments'
+  | 'interpretResults'
+  | 'explainRecommendation';
+
+export interface MarketingAIResponse {
+  result: unknown;
+  schemaVersion: string;
+  promptVersion: string;
+  model?: string;
+  mock?: boolean;
+}
+
 export interface BudgetUsage {
   costUsd: number;
   limit: number;
@@ -340,6 +364,12 @@ export interface NodeApi {
   openWorkspaceFile: () => Promise<WorkspaceFile | null>;
   getAdaptPreset: (key: string) => Promise<AdaptPresetFormat[]>;
   generateChat: (messages: ChatMessage[], images?: string[], mode?: ChatMode) => Promise<string>;
+  // Server-side OpenAI Structured-Outputs provider for Strategy mode (Marketing Intelligence
+  // Master Spec v4, §80-104). `context` is the minimal per-task package built by
+  // src/strategy/services/contextBuilder.ts, never the whole strategy. `mock` forces the
+  // explicit dev/test fixture regardless of provider availability — never set true in production
+  // code paths.
+  marketingAI: (task: MarketingAITask, context: Record<string, unknown>, mock?: boolean) => Promise<MarketingAIResponse>;
   getUsage: () => Promise<BudgetUsage>;
   setGenerationLimit: (limit: number) => Promise<boolean>;
   listArchive: (projectId: string) => Promise<ArchiveEntry[]>;

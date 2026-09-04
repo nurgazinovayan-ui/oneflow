@@ -1,234 +1,70 @@
 import { useState } from 'react';
 import StrategyOnboarding from './StrategyOnboarding';
-import StrategyOverview from './StrategyOverview';
-import StrategyMap from './StrategyMap';
-import StrategyPlanView from './StrategyPlanView';
 import StrategySidebar, { type StrategyTab } from './StrategySidebar';
-import StrategyAssistantPanel from './StrategyAssistantPanel';
-import StrategyDetailDrawer, { type StrategyDetailTarget } from './StrategyDetailDrawer';
-import StrategyScenarioModal from './StrategyScenarioModal';
-import CreateFromStrategyModal from './CreateFromStrategyModal';
-import type { AudienceSegment, ChannelAllocation, PlanTask, StrategyAction, StrategyBrief, StrategyData } from '../strategyTypes';
-import {
-  buildStrategyPrompt,
-  buildStrategyWorkflowPrompt,
-  buildOfferAlternativesPrompt,
-  parseStrategyResponse,
-  parseOfferAlternatives,
-} from '../strategyPrompts';
-import { applyStrategyAction, StrategyActionError } from '../strategyActions';
-import { computeOverallScore } from '../strategyCompute';
-import { formatGenerationError } from '../errorMessages';
 import { useT } from '../i18n';
+import { useStrategyStore } from '../strategy/state/strategyStore';
+import StrategyPlanTab from '../strategy/components/StrategyPlanTab';
+import StrategyAnalysisTab from '../strategy/components/StrategyAnalysisTab';
+import StrategyExperimentsTab from '../strategy/components/StrategyExperimentsTab';
+import StrategyResultsTab from '../strategy/components/StrategyResultsTab';
 
 interface StrategyPanelProps {
   active: boolean;
   onCreateWorkflow: (prompt: string) => void;
 }
 
-// Top-level "Стратегия" mode — see the implementation brief this was built from for the full
-// spec. Mounted like every other main-view panel in App.tsx (always in the DOM, hidden via CSS
-// when `active` is false, per the existing OneLaunchPanel/EvaluationPanel/MusicAudioPanel
-// pattern), so its own state (the generated strategy) survives switching tabs and back.
-//
-// Not persisted to a project file — there's no backend schema for strategy data yet, unlike
-// node-canvas projects — so it lives in this component's state for the session. Every mutation
-// (funnel edit, budget normalize, offer/positioning switch, Insight Apply, Assistant action)
-// goes through applyStrategyAction so it's validated and logged to data.history the same way,
-// per spec §20/§25.
-export default function StrategyPanel({ active, onCreateWorkflow }: StrategyPanelProps) {
+// Top-level "Стратегия" mode — v4, built against the ONEFLOW Marketing Intelligence Master Spec
+// v4 (OpenAI Runtime). Mounted like every other main-view panel in App.tsx (always in the DOM,
+// hidden via CSS when `active` is false). Onboarding owns the whole AI pipeline orchestration
+// (src/strategy/services/pipeline.ts) and only commits a fully-assembled StrategyV4 to
+// useStrategyStore — this component just decides onboarding vs. shell based on that store.
+export default function StrategyPanel({ active, onCreateWorkflow: _onCreateWorkflow }: StrategyPanelProps) {
   const t = useT();
-  const [brief, setBrief] = useState<StrategyBrief | null>(null);
-  const [data, setData] = useState<StrategyData | null>(null);
-  const [status, setStatus] = useState<'idle' | 'generating' | 'error'>('idle');
-  const [error, setError] = useState('');
-  const [actionError, setActionError] = useState('');
-  const [tab, setTab] = useState<StrategyTab>('overview');
+  const strategy = useStrategyStore((s) => s.strategy);
+  const resetStrategy = useStrategyStore((s) => s.reset);
+  const [tab, setTab] = useState<StrategyTab>('plan');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [assistantCollapsed, setAssistantCollapsed] = useState(false);
-  const [drawerTarget, setDrawerTarget] = useState<StrategyDetailTarget | null>(null);
-  const [createModalAudience, setCreateModalAudience] = useState<string | null | undefined>(undefined);
-  const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
-  const [generatingOffers, setGeneratingOffers] = useState(false);
-
-  const handleGenerate = async (b: StrategyBrief) => {
-    setBrief(b);
-    setStatus('generating');
-    setError('');
-    try {
-      const images = b.photo ? [b.photo] : undefined;
-      const reply = await window.api.generateChat([{ role: 'user', content: buildStrategyPrompt(b) }], images, 'text');
-      const parsed = parseStrategyResponse(reply);
-      setData(parsed);
-      setStatus('idle');
-    } catch (err) {
-      setStatus('error');
-      setError(formatGenerationError(err));
-    }
-  };
 
   const handleReset = () => {
-    setBrief(null);
-    setData(null);
-    setStatus('idle');
-    setTab('overview');
-    setDrawerTarget(null);
-  };
-
-  const handleApplyAction = (action: StrategyAction) => {
-    if (!data) return;
-    setActionError('');
-    try {
-      const { data: next, event } = applyStrategyAction(data, action);
-      setData({ ...next, history: [...next.history, event] });
-    } catch (err) {
-      setActionError(err instanceof StrategyActionError ? err.message : formatGenerationError(err));
-    }
-  };
-
-  const handleGenerateOfferAlternatives = async () => {
-    if (!data || !brief || generatingOffers) return;
-    setGeneratingOffers(true);
-    setActionError('');
-    try {
-      const reply = await window.api.generateChat(
-        [{ role: 'user', content: buildOfferAlternativesPrompt(data, brief) }],
-        undefined,
-        'text'
-      );
-      const newOffers = parseOfferAlternatives(reply, data.audience);
-      setData((prev) => (prev ? { ...prev, offers: [...prev.offers, ...newOffers] } : prev));
-    } catch (err) {
-      setActionError(formatGenerationError(err));
-    } finally {
-      setGeneratingOffers(false);
-    }
-  };
-
-  const handleToggleTaskDone = (taskId: string) => {
-    setData((prev) =>
-      prev ? { ...prev, plan: prev.plan.map((task) => (task.id === taskId ? { ...task, done: !task.done } : task)) } : prev
-    );
-  };
-
-  const handleReview = () => {
-    setAssistantCollapsed(false);
-  };
-
-  const handleCreateFromDrawer = (target: StrategyDetailTarget) => {
-    const audienceName = target.kind === 'audience' ? target.segment.name : undefined;
-    setDrawerTarget(null);
-    setCreateModalAudience(audienceName ?? null);
-  };
-
-  const handleCreateFromPlanTask = (task: PlanTask) => {
-    if (!data) return;
-    onCreateWorkflow(buildStrategyWorkflowPrompt(data, undefined, task.title));
-  };
-
-  const handleCreateModalSubmit = (prompt: string) => {
-    onCreateWorkflow(prompt);
+    resetStrategy();
+    setTab('plan');
   };
 
   return (
     <div className={`strategy-panel ${active ? '' : 'strategy-hidden'}`}>
-      {!data ? (
-        <StrategyOnboarding status={status} error={error} onGenerate={handleGenerate} />
+      {!strategy ? (
+        <StrategyOnboarding />
       ) : (
         <div className="strategy-shell">
           <StrategySidebar
             tab={tab}
             onTabChange={setTab}
-            onOpenScenarios={() => setScenarioModalOpen(true)}
             onReset={handleReset}
             collapsed={sidebarCollapsed}
             onToggleCollapsed={() => setSidebarCollapsed((c) => !c)}
-            score={computeOverallScore(data.scoreBreakdown)}
-            title={data.title}
+            readiness={strategy.readiness}
+            title={strategy.name}
           />
           <div className="strategy-main">
             <div className="strategy-header">
               <div className="strategy-header-left">
-                <div className="strategy-header-title">{data.title}</div>
+                <div className="strategy-header-title">{strategy.name}</div>
                 <div className="strategy-header-subtitle">{t.strategy.headerSubtitle}</div>
                 <div className="strategy-header-meta">
-                  {brief!.market} · {brief!.durationMonths} {t.strategy.months} ·{' '}
-                  {brief!.budget.toLocaleString('ru-RU')} {brief!.currency}
+                  {strategy.market} · {strategy.periodMonths} {t.strategy.months} · {strategy.budget.toLocaleString('ru-RU')}{' '}
+                  {strategy.currency}
                 </div>
               </div>
             </div>
 
-            {actionError && (
-              <div className="strategy-action-error">
-                {actionError}
-                <button type="button" className="strategy-inline-link" onClick={() => setActionError('')}>
-                  {t.strategy.dismissBtn}
-                </button>
-              </div>
-            )}
-
             <div className="strategy-content">
-              {tab === 'overview' && (
-                <StrategyOverview
-                  data={data}
-                  brief={brief!}
-                  onOpenAudience={(segment) => setDrawerTarget({ kind: 'audience', segment })}
-                  onOpenChannel={(channel) => setDrawerTarget({ kind: 'channel', channel })}
-                  onOpenOffer={() => setDrawerTarget({ kind: 'offer' })}
-                  onCreateFromAudience={(segment: AudienceSegment) => setCreateModalAudience(segment.name)}
-                  onApplyAction={handleApplyAction}
-                  onGenerateOfferAlternatives={handleGenerateOfferAlternatives}
-                  generatingOffers={generatingOffers}
-                />
-              )}
-              {tab === 'map' && (
-                <StrategyMap
-                  data={data}
-                  onOpenAudience={(segment) => setDrawerTarget({ kind: 'audience', segment })}
-                  onOpenChannel={(channel: ChannelAllocation) => setDrawerTarget({ kind: 'channel', channel })}
-                  onOpenOffer={() => setDrawerTarget({ kind: 'offer' })}
-                />
-              )}
-              {tab === 'plan' && (
-                <StrategyPlanView
-                  tasks={data.plan}
-                  onGenerate={handleCreateFromPlanTask}
-                  onToggleDone={handleToggleTaskDone}
-                  onReview={handleReview}
-                />
-              )}
+              {tab === 'plan' && <StrategyPlanTab strategy={strategy} />}
+              {tab === 'analysis' && <StrategyAnalysisTab strategy={strategy} />}
+              {tab === 'experiments' && <StrategyExperimentsTab strategy={strategy} />}
+              {tab === 'results' && <StrategyResultsTab strategy={strategy} />}
             </div>
           </div>
-
-          <StrategyAssistantPanel
-            data={data}
-            brief={brief!}
-            collapsed={assistantCollapsed}
-            onToggleCollapsed={() => setAssistantCollapsed((c) => !c)}
-            onApplyAction={handleApplyAction}
-          />
         </div>
-      )}
-
-      {drawerTarget && (
-        <StrategyDetailDrawer
-          target={drawerTarget}
-          data={data!}
-          budget={brief!.budget}
-          onClose={() => setDrawerTarget(null)}
-          onCreate={handleCreateFromDrawer}
-        />
-      )}
-      {createModalAudience !== undefined && data && (
-        <CreateFromStrategyModal
-          data={data}
-          initialAudienceName={createModalAudience ?? undefined}
-          onClose={() => setCreateModalAudience(undefined)}
-          onCreate={handleCreateModalSubmit}
-        />
-      )}
-      {scenarioModalOpen && data && brief && (
-        <StrategyScenarioModal data={data} brief={brief} onClose={() => setScenarioModalOpen(false)} />
       )}
     </div>
   );

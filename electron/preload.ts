@@ -63,6 +63,26 @@ export interface ChatMessage {
 
 export type ChatMode = 'assistant' | 'text';
 
+export type MarketingAITask =
+  | 'understandBusiness'
+  | 'analyzeSegments'
+  | 'analyzeJTBD'
+  | 'proposePositioning'
+  | 'proposeOffers'
+  | 'analyzeChannels'
+  | 'proposeCreativeStrategy'
+  | 'designExperiments'
+  | 'interpretResults'
+  | 'explainRecommendation';
+
+export interface MarketingAIResponse {
+  result: unknown;
+  schemaVersion: string;
+  promptVersion: string;
+  model?: string;
+  mock?: boolean;
+}
+
 export interface BudgetUsage {
   costUsd: number;
   limit: number;
@@ -150,6 +170,8 @@ const api = {
     ipcRenderer.invoke('presets:get-adapt', key),
   generateChat: (messages: ChatMessage[], images?: string[], mode?: ChatMode): Promise<string> =>
     ipcRenderer.invoke('generate:chat', messages, images, mode),
+  marketingAI: (task: MarketingAITask, context: Record<string, unknown>, mock?: boolean): Promise<MarketingAIResponse> =>
+    ipcRenderer.invoke('marketing:ai', task, context, mock),
   getUsage: (): Promise<BudgetUsage> => ipcRenderer.invoke('budget:get-usage'),
   setGenerationLimit: (limit: number): Promise<boolean> =>
     ipcRenderer.invoke('budget:set-limit', limit),
