@@ -978,7 +978,7 @@ export const ru: Translations = {
     statsGenerationsCount: (n) => `${n} ${n === 1 ? 'генерация' : n < 5 ? 'генерации' : 'генераций'}`,
   },
   aiAssistant: {
-    title: 'ИИ ассистент (GPT-5.6)',
+    title: 'Floko',
     copyAllTooltip: 'Скопировать всю переписку',
     copiedLabel: 'Скопировано',
     closeTooltip: 'Закрыть',
@@ -1820,7 +1820,7 @@ export const en: Translations = {
     statsGenerationsCount: (n) => `${n} generation${n === 1 ? '' : 's'}`,
   },
   aiAssistant: {
-    title: 'AI assistant (GPT-5.6)',
+    title: 'Floko',
     copyAllTooltip: 'Copy the whole conversation',
     copiedLabel: 'Copied',
     closeTooltip: 'Close',

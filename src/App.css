@@ -1160,15 +1160,18 @@
 }
 
 /* Floko — the AI-assistant trigger, moved out of the vertical node-add dock into its own
-   bottom-right corner (by request). Ported from a shadcn/Tailwind "agent-dock" reference (see
-   FlokoDockButton.tsx) — same dark rounded-2xl card, own z-index tier as .canvas-toolbar so it's
-   covered by other-mode view panels the same way (only meaningfully live in canvas mode, where
-   AiAssistantPanel itself is gated). Sits above the MiniMap (bottom-right by default, ~150px
-   tall) rather than on top of it. */
+   bottom-left corner (by request — was bottom-right first). Ported from a shadcn/Tailwind
+   "agent-dock" reference (see FlokoDockButton.tsx) — same dark rounded-2xl card, own z-index
+   tier as .canvas-toolbar so it's covered by other-mode view panels the same way (only
+   meaningfully live in canvas mode, where AiAssistantPanel itself is gated). The vertical
+   node-add dock (.canvas-toolbar.vertical) also lives at left:16px but is vertically centered
+   and well clear of the true bottom edge, so no collision there. bottom:132px (like
+   .hotkey-hint/.react-flow__panel.bottom used to) clears .archive-strip on desktop; web mode
+   (no archive-strip) drops back to 16px, flush with the edge. */
 .floko-dock {
   position: absolute;
-  bottom: 170px;
-  right: 16px;
+  bottom: 132px;
+  left: 16px;
   z-index: 6;
   display: flex;
   align-items: center;
@@ -1264,13 +1267,10 @@
   bottom: 16px;
 }
 
-/* .floko-dock's own bottom offset (see above) has to clear the MiniMap the same way — its
-   default 170px assumes the MiniMap sits at .react-flow__panel.bottom's non-web 132px; web mode
-   needs a smaller offset to match the MiniMap's own 16px drop here (measured empirically —
-   MiniMap's actual rendered top edge, not just its own `bottom` CSS value, since its height adds
-   on top of that). */
+/* Web has no .archive-strip, so .floko-dock drops back down to the true edge like everything
+   else in .web-mode does. */
 .web-mode .floko-dock {
-  bottom: 200px;
+  bottom: 16px;
 }
 
 .archive-strip {
@@ -3741,6 +3741,10 @@
   background: var(--c-pink);
 }
 
+/* Always-dark, regardless of app theme — ported from a shadcn/Tailwind "agent-dock" reference
+   (same bg-neutral-950/text-white recipe as FlokoDockButton.tsx, the trigger that opens this)
+   rather than following the app's own light --c-panel/--c-text tokens like it used to. Every
+   rule below that overrides a --c-* token with a literal color exists for this reason. */
 .ai-panel {
   position: absolute;
   width: 360px;
@@ -3753,9 +3757,10 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: var(--c-panel);
+  background: #0a0a0a;
+  color: #fff;
   border-radius: var(--radius-lg);
-  box-shadow: 0 0 0 1px var(--c-divider);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
   z-index: 60;
 }
 
@@ -3790,7 +3795,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--c-divider);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
 }
 
@@ -3800,7 +3805,7 @@
   gap: 8px;
   font-weight: 600;
   font-size: 12.5px;
-  color: var(--c-pink);
+  color: #fff;
 }
 
 .ai-panel-header-actions {
@@ -3814,20 +3819,50 @@
   gap: 4px;
   background: none;
   border: none;
-  color: var(--c-text-muted);
+  color: rgba(255, 255, 255, 0.6);
   padding: 5px 7px;
   border-radius: var(--radius-sm);
   font-size: 11px;
 }
 
 .ai-panel-header-actions button:hover:not(:disabled) {
-  background: var(--c-panel-2);
-  color: var(--c-text);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
 .ai-panel-header-actions button:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+/* Scoped dark-mode overrides for elements shared with other (light) panels — .connected-hint,
+   .chat-attachment-*, and the input/textarea base rule in index.css all otherwise follow the
+   app's own light --c-* tokens. */
+.ai-panel .connected-hint {
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ai-panel .chat-attachment-chip {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ai-panel .chat-attachment-name {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.ai-panel .chat-attachment-remove {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.ai-panel .chat-input {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.ai-panel .chat-input:hover {
+  border-color: rgba(255, 255, 255, 0.28);
 }
 
 .ai-panel-body {
@@ -3879,6 +3914,22 @@
   align-self: flex-start;
   background: var(--c-panel-2);
   color: var(--c-text);
+}
+
+/* .chat-user's own --c-accent/--c-accent-text already render as a dark, white-text bubble in
+   light theme (see the token values), which is fine on .text-work-panel's light backdrop but too
+   low-contrast against .ai-panel's own dark background — pink accent instead, on-brand with
+   FlokoDockButton's avatar. .chat-assistant gets a translucent white fill for the same reason
+   (var(--c-panel-2) is a light gray, invisible here). */
+.ai-panel .chat-user {
+  background: var(--c-pink);
+  color: #fff;
+  box-shadow: none;
+}
+
+.ai-panel .chat-assistant {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
 }
 
 .chat-typing {
@@ -4426,7 +4477,7 @@
   align-items: center;
   justify-content: center;
   background: rgba(5, 5, 6, 0.72);
-  color: var(--c-text);
+  color: #fff;
   font-size: 13px;
   font-weight: 600;
   border-radius: var(--radius-md);
