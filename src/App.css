@@ -2132,6 +2132,12 @@
   z-index: 0;
 }
 
+/* Scaled down 30% (transform, not a resized box) so every element inside — fonts, padding,
+   gaps, the video panel, all of it — shrinks together proportionally, by request, rather than
+   just narrowing the box and leaving its contents at their original size. transform-origin stays
+   centered (the default) so it shrinks in place, still centered by .web-auth-gate's flex
+   centering — that centering itself operates on the pre-transform 1040x720 box, so the visual
+   result stays centered at the same point rather than drifting toward a corner. */
 .web-auth-card {
   position: relative;
   z-index: 1;
@@ -2143,6 +2149,7 @@
   flex-direction: column;
   background: var(--c-panel);
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  transform: scale(0.7);
 }
 
 .web-auth-form-side {
@@ -2160,6 +2167,16 @@
   gap: 24px;
   width: 100%;
   max-width: 448px;
+}
+
+/* Sits above the "Вход"/"Log in" title, by request — matches .web-auth-title's own color since
+   this side of the card is a light --c-panel surface, not the dark DomeGallery backdrop the
+   source file's white fill was meant for. */
+.web-auth-logo {
+  height: 22px;
+  width: auto;
+  display: block;
+  color: var(--c-text);
 }
 
 .web-auth-title {

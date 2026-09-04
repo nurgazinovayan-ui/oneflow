@@ -6,6 +6,7 @@ import DomeGallery from './DomeGallery';
 import LegalModal from './LegalModal';
 import type { LegalDoc } from '../legalContent';
 import { IconEye, IconEyeOff } from './Icons';
+import Logo from './Logo';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -228,6 +229,7 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
       <div className="web-auth-card">
         <section className="web-auth-form-side">
           <div className="web-auth-form-col">
+            <Logo className="web-auth-logo" />
             <h1 className="web-auth-title">{mode === 'login' ? t.webAuth.loginTitle : t.webAuth.registerTitle}</h1>
             <p className="web-auth-subtitle">{mode === 'login' ? t.webAuth.loginSubtitle : t.webAuth.registerSubtitle}</p>
 
