@@ -365,6 +365,11 @@ export interface Translations {
     kpiCardTitle: string;
     journeyCardTitle: string;
     scenarioCompareBtn: string;
+    sidebarNavGroupLabel: string;
+    sidebarToolsGroupLabel: string;
+    scenariosNavLabel: string;
+    sidebarCollapseTooltip: string;
+    sidebarExpandTooltip: string;
     planTypeGenerate: string;
     planTypeScore: string;
     planTypeCompare: string;
@@ -1080,6 +1085,11 @@ export const ru: Translations = {
     kpiCardTitle: 'KPI',
     journeyCardTitle: 'Путь клиента',
     scenarioCompareBtn: 'Сравнить сценарии',
+    sidebarNavGroupLabel: 'Навигация',
+    sidebarToolsGroupLabel: 'Инструменты',
+    scenariosNavLabel: 'Сценарии',
+    sidebarCollapseTooltip: 'Свернуть меню',
+    sidebarExpandTooltip: 'Развернуть меню',
     planTypeGenerate: 'Генерация',
     planTypeScore: 'Оценка',
     planTypeCompare: 'Сравнение',
@@ -1818,6 +1828,11 @@ export const en: Translations = {
     kpiCardTitle: 'KPI',
     journeyCardTitle: 'Customer Journey',
     scenarioCompareBtn: 'Compare scenarios',
+    sidebarNavGroupLabel: 'Navigation',
+    sidebarToolsGroupLabel: 'Tools',
+    scenariosNavLabel: 'Scenarios',
+    sidebarCollapseTooltip: 'Collapse menu',
+    sidebarExpandTooltip: 'Expand menu',
     planTypeGenerate: 'Generate',
     planTypeScore: 'Score',
     planTypeCompare: 'Compare',

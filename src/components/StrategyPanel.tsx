@@ -3,6 +3,7 @@ import StrategyOnboarding from './StrategyOnboarding';
 import StrategyOverview from './StrategyOverview';
 import StrategyMap from './StrategyMap';
 import StrategyPlanView from './StrategyPlanView';
+import StrategySidebar, { type StrategyTab } from './StrategySidebar';
 import StrategyAssistantPanel from './StrategyAssistantPanel';
 import StrategyDetailDrawer, { type StrategyDetailTarget } from './StrategyDetailDrawer';
 import StrategyScenarioModal from './StrategyScenarioModal';
@@ -18,15 +19,12 @@ import {
 import { applyStrategyAction, StrategyActionError } from '../strategyActions';
 import { computeOverallScore } from '../strategyCompute';
 import { formatGenerationError } from '../errorMessages';
-import { IconVector } from './Icons';
 import { useT } from '../i18n';
 
 interface StrategyPanelProps {
   active: boolean;
   onCreateWorkflow: (prompt: string) => void;
 }
-
-type StrategyTab = 'overview' | 'map' | 'plan';
 
 // Top-level "Стратегия" mode — see the implementation brief this was built from for the full
 // spec. Mounted like every other main-view panel in App.tsx (always in the DOM, hidden via CSS
@@ -46,6 +44,7 @@ export default function StrategyPanel({ active, onCreateWorkflow }: StrategyPane
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
   const [tab, setTab] = useState<StrategyTab>('overview');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [assistantCollapsed, setAssistantCollapsed] = useState(false);
   const [drawerTarget, setDrawerTarget] = useState<StrategyDetailTarget | null>(null);
   const [createModalAudience, setCreateModalAudience] = useState<string | null | undefined>(undefined);
@@ -137,6 +136,16 @@ export default function StrategyPanel({ active, onCreateWorkflow }: StrategyPane
         <StrategyOnboarding status={status} error={error} onGenerate={handleGenerate} />
       ) : (
         <div className="strategy-shell">
+          <StrategySidebar
+            tab={tab}
+            onTabChange={setTab}
+            onOpenScenarios={() => setScenarioModalOpen(true)}
+            onReset={handleReset}
+            collapsed={sidebarCollapsed}
+            onToggleCollapsed={() => setSidebarCollapsed((c) => !c)}
+            score={computeOverallScore(data.scoreBreakdown)}
+            title={data.title}
+          />
           <div className="strategy-main">
             <div className="strategy-header">
               <div className="strategy-header-left">
@@ -146,30 +155,6 @@ export default function StrategyPanel({ active, onCreateWorkflow }: StrategyPane
                   {brief!.market} · {brief!.durationMonths} {t.strategy.months} ·{' '}
                   {brief!.budget.toLocaleString('ru-RU')} {brief!.currency}
                 </div>
-              </div>
-              <div className="strategy-header-right">
-                <div className="strategy-tabs">
-                  <button
-                    type="button"
-                    className={`strategy-tab ${tab === 'overview' ? 'active' : ''}`}
-                    onClick={() => setTab('overview')}
-                  >
-                    {t.strategy.tabOverview}
-                  </button>
-                  <button type="button" className={`strategy-tab ${tab === 'map' ? 'active' : ''}`} onClick={() => setTab('map')}>
-                    {t.strategy.tabMap}
-                  </button>
-                  <button type="button" className={`strategy-tab ${tab === 'plan' ? 'active' : ''}`} onClick={() => setTab('plan')}>
-                    {t.strategy.tabPlan}
-                  </button>
-                </div>
-                <button type="button" className="secondary-btn strategy-small-btn" onClick={() => setScenarioModalOpen(true)}>
-                  <IconVector size={12} /> {t.strategy.scenarioCompareBtn}
-                </button>
-                <div className="strategy-score-pill">{computeOverallScore(data.scoreBreakdown)} / 100</div>
-                <button type="button" className="secondary-btn strategy-small-btn" onClick={handleReset}>
-                  {t.strategy.newStrategyBtn}
-                </button>
               </div>
             </div>
 

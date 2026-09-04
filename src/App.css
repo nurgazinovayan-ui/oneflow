@@ -6160,51 +6160,192 @@
   margin-top: 6px;
 }
 
-.strategy-header-right {
+/* Left sidebar — ported from the shadcn-dashboard-landing-template's AppSidebar/nav-main
+   pattern (see StrategySidebar.tsx). Replaces the old .strategy-tabs pill row that used to sit
+   in .strategy-header; Overview/Map/Plan navigation plus the scenario-compare and reset actions
+   moved here. */
+.strategy-sidebar {
+  flex: none;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--c-divider);
+  background: var(--c-panel-2);
+  transition: width 0.15s var(--ease);
+}
+
+.strategy-sidebar.collapsed {
+  width: 56px;
+}
+
+.strategy-sidebar-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  gap: 8px;
+  height: 56px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--c-divider);
+  flex-shrink: 0;
 }
 
-.strategy-tabs {
+.strategy-sidebar.collapsed .strategy-sidebar-header {
+  padding: 0;
+  justify-content: center;
+}
+
+.strategy-sidebar-logo {
   display: flex;
-  gap: 4px;
-  background: var(--c-panel-2);
-  border: 1px solid var(--c-divider);
-  border-radius: var(--radius-sm);
-  padding: 3px;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--c-pink);
+  color: #fff;
+  flex-shrink: 0;
 }
 
-.strategy-tab {
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 8px;
+.strategy-sidebar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.strategy-sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.strategy-sidebar-group-label {
+  padding: 0 8px 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--c-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.strategy-sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.strategy-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 8px;
   border: none;
+  border-radius: 8px;
   background: transparent;
   color: var(--c-text-muted);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
-.strategy-tab.active {
+.strategy-sidebar.collapsed .strategy-sidebar-item {
+  justify-content: center;
+  padding: 0;
+}
+
+.strategy-sidebar-item svg {
+  flex-shrink: 0;
+}
+
+.strategy-sidebar-item:hover {
+  background: var(--c-panel-3);
+  color: var(--c-text);
+}
+
+.strategy-sidebar-item.active {
   background: var(--c-panel);
   color: var(--c-text);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
-.strategy-score-pill {
-  height: 28px;
+.strategy-sidebar-footer {
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  gap: 8px;
+  padding: 10px 8px;
+  border-top: 1px solid var(--c-divider);
+  flex-shrink: 0;
+}
+
+.strategy-sidebar.collapsed .strategy-sidebar-footer {
+  flex-direction: column;
+}
+
+.strategy-sidebar-score {
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+  padding: 0 8px;
+  height: 28px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--c-pink) 16%, transparent);
   color: var(--c-pink);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
+  flex-shrink: 0;
+}
+
+.strategy-sidebar-score-suffix {
+  font-size: 10.5px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.strategy-sidebar-reset-btn {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.strategy-sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--c-divider);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--c-text-muted);
+  cursor: pointer;
+}
+
+.strategy-sidebar-toggle:hover {
+  background: var(--c-panel-3);
+  color: var(--c-text);
+}
+
+/* IconChevronRight points right by default (matches "expand" when collapsed); flipped to point
+   left — "collapse" — while the sidebar is expanded. */
+.strategy-sidebar-toggle svg {
+  transform: rotate(180deg);
+}
+
+.strategy-sidebar.collapsed .strategy-sidebar-toggle svg {
+  transform: none;
 }
 
 .strategy-content {
