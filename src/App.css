@@ -2132,12 +2132,14 @@
   z-index: 0;
 }
 
-/* Scaled down 30% (transform, not a resized box) so every element inside — fonts, padding,
-   gaps, the video panel, all of it — shrinks together proportionally, by request, rather than
-   just narrowing the box and leaving its contents at their original size. transform-origin stays
-   centered (the default) so it shrinks in place, still centered by .web-auth-gate's flex
-   centering — that centering itself operates on the pre-transform 1040x720 box, so the visual
-   result stays centered at the same point rather than drifting toward a corner. */
+/* Scaled via transform (not a resized box) so every element inside — fonts, padding, gaps, the
+   video panel, all of it — shrinks or grows together proportionally, by request, rather than
+   just resizing the container and leaving its contents at their original size. Was 0.7 (30%
+   down from the original 1040x720), then upsized 15% from there (0.7 * 1.15 = 0.805) per a
+   follow-up request. transform-origin stays centered (the default) so it scales in place, still
+   centered by .web-auth-gate's flex centering — that centering itself operates on the
+   pre-transform 1040x720 box, so the visual result stays centered at the same point rather than
+   drifting toward a corner. */
 .web-auth-card {
   position: relative;
   z-index: 1;
@@ -2149,7 +2151,7 @@
   flex-direction: column;
   background: var(--c-panel);
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
-  transform: scale(0.7);
+  transform: scale(0.805);
 }
 
 .web-auth-form-side {
@@ -2176,6 +2178,7 @@
   height: 22px;
   width: auto;
   display: block;
+  align-self: flex-start;
   color: var(--c-text);
 }
 
