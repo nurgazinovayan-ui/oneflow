@@ -191,9 +191,11 @@
 }
 
 /* The 150px padding-right above reserves room for the desktop window's native traffic-light/
-   minimize-maximize-close buttons — nothing occupies that space in a browser tab. */
+   minimize-maximize-close buttons — nothing occupies that space in a browser tab, so web mode
+   pulls the whole .toolbar-right group in flush against the edge instead (by request — "в
+   притык"), rather than matching .top-toolbar's own 14px left padding. */
 .web-mode .top-toolbar {
-  padding-right: 14px;
+  padding-right: 4px;
 }
 
 /* Far left of .top-toolbar, alone now that Файл/Шаблоны/Инструменты/О программе moved to the

@@ -352,27 +352,13 @@ export function IconTarget({ size = 15 }: IconProps) {
   );
 }
 
-// Deliberately filled/colored (not the shared `currentColor` outline style every other icon in
-// this file uses) — the "Ассеты" button needs to read as a distinct colored folder glyph at a
-// glance in the dark topbar, per the design ask, rather than blend in with the monochrome icons
-// around it.
+// Now the shared `currentColor` outline style like every other icon in this file — was
+// deliberately filled/colored blue, but the "Ассеты" button should read as monochrome like its
+// neighbors instead.
 export function IconAssetsFolder({ size = 15 }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24">
-      <path d="M3 6.5a2 2 0 0 1 2-2h4.4l2.2 2.2H19a2 2 0 0 1 2 2V8H3V6.5Z" fill="#2E6FE0" />
-      <path d="M3 8h18v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8Z" fill="#4F8CF7" />
-    </svg>
-  );
-}
-
-// Same deliberately-colored treatment as IconAssetsFolder — the "Тариф" button needs to read as
-// a distinct blue gem at a glance rather than blend into the glowing pill it sits in.
-export function IconDiamond({ size = 15 }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24">
-      <path d="M6.5 3h11L21 8l-9 13L3 8l3.5-5Z" fill="#2E6FE0" />
-      <path d="M6.5 3h11L19.5 7h-15L6.5 3Z" fill="#8FBBFF" />
-      <path d="M4.5 7h15L12 19 4.5 7Z" fill="#4F8CF7" />
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
+      <path d="M3 6.5a2 2 0 0 1 2-2h4.4l2.2 2.2H19a2 2 0 0 1 2 2V17.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6.5Z" />
     </svg>
   );
 }
