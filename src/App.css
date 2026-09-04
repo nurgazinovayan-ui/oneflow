@@ -1159,6 +1159,101 @@
   margin: 2px 4px;
 }
 
+/* Floko — the AI-assistant trigger, moved out of the vertical node-add dock into its own
+   bottom-right corner (by request). Ported from a shadcn/Tailwind "agent-dock" reference (see
+   FlokoDockButton.tsx) — same dark rounded-2xl card, own z-index tier as .canvas-toolbar so it's
+   covered by other-mode view panels the same way (only meaningfully live in canvas mode, where
+   AiAssistantPanel itself is gated). Sits above the MiniMap (bottom-right by default, ~150px
+   tall) rather than on top of it. */
+.floko-dock {
+  position: absolute;
+  bottom: 170px;
+  right: 16px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 16px;
+  background: #0a0a0a;
+  color: #fff;
+  border: none;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s var(--ease);
+}
+
+.floko-dock:hover {
+  transform: translateY(-1px);
+}
+
+.floko-dock:active {
+  transform: translateY(0);
+}
+
+.floko-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  background: var(--c-pink);
+  color: #fff;
+}
+
+.floko-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  align-items: flex-start;
+}
+
+.floko-name {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.floko-status {
+  font-size: 11px;
+  line-height: 1;
+  color: #a3a3a3;
+  white-space: nowrap;
+}
+
+.floko-chat-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 8px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.15s var(--ease);
+}
+
+.floko-dock:hover .floko-chat-btn {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.floko-kbd {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
 .react-flow__panel.bottom {
   bottom: 132px;
 }
@@ -1169,28 +1264,13 @@
   bottom: 16px;
 }
 
-.web-mode .hotkey-hint {
-  bottom: 16px;
-}
-
-/* Plain text, no plaque — sits just above .archive-strip (132px, matching the same offset
-   used for docked chat panels/react-flow's own bottom controls) so it never overlaps it.
-   Fixed gray rather than var(--c-text-dim): the canvas backdrop stays the same paper-light
-   color in both themes (see --c-canvas-bg), so the text needs a color tuned to that, not one
-   that flips with the surrounding chrome. */
-.hotkey-hint {
-  position: absolute;
-  left: 56px;
-  bottom: 132px;
-  z-index: 4;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 11px;
-  line-height: 1.5;
-  color: rgba(0, 0, 0, 0.4);
-  pointer-events: none;
-  user-select: none;
+/* .floko-dock's own bottom offset (see above) has to clear the MiniMap the same way — its
+   default 170px assumes the MiniMap sits at .react-flow__panel.bottom's non-web 132px; web mode
+   needs a smaller offset to match the MiniMap's own 16px drop here (measured empirically —
+   MiniMap's actual rendered top edge, not just its own `bottom` CSS value, since its height adds
+   on top of that). */
+.web-mode .floko-dock {
+  bottom: 200px;
 }
 
 .archive-strip {
@@ -3659,15 +3739,6 @@
   width: 2px;
   border-radius: 2px;
   background: var(--c-pink);
-}
-
-.ai-assistant-btn {
-  background: #000;
-  color: #fff;
-}
-
-.ai-assistant-btn:hover {
-  background: #262626;
 }
 
 .ai-panel {

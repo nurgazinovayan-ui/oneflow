@@ -3,7 +3,6 @@ import {
   ReactFlow,
   ReactFlowProvider,
   Background,
-  Controls,
   MiniMap,
   addEdge,
   useNodesState,
@@ -48,6 +47,7 @@ import LegalModal from './components/LegalModal';
 import ToolbarMenu from './components/ToolbarMenu';
 import FloatingDockGroup from './components/FloatingDockGroup';
 import AdaptDockMenuButton from './components/AdaptDockMenuButton';
+import FlokoDockButton from './components/FlokoDockButton';
 import type { LegalDoc } from './legalContent';
 import { BUSINESS_PRESET_ORDER, BUSINESS_PRESET_PROMPTS, type BusinessPresetKey } from './businessPresets';
 import {
@@ -1051,19 +1051,10 @@ function Canvas() {
           <div className="canvas-toolbar vertical">
             <FloatingDockGroup
               orientation="vertical"
-              items={[
-                ...SIDEBAR_ADD_NODE_OPTIONS.map((opt) => {
-                  const Icon = opt.icon;
-                  return { key: opt.type, label: opt.label, icon: <Icon />, onClick: () => addNode(opt.type) };
-                }),
-                {
-                  key: 'ai-assistant',
-                  label: t.nodeLabels.aiAssistantTooltip,
-                  icon: <IconChat />,
-                  onClick: () => setAiAssistantOpen(true),
-                  className: 'ai-assistant-btn',
-                },
-              ]}
+              items={SIDEBAR_ADD_NODE_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                return { key: opt.type, label: opt.label, icon: <Icon />, onClick: () => addNode(opt.type) };
+              })}
             />
             <div className="toolbar-divider" />
             <AdaptDockMenuButton
@@ -1080,11 +1071,12 @@ function Canvas() {
               }))}
             />
           </div>
-          <div className="hotkey-hint">
-            <span>{t.hotkeys.fitView}</span>
-            <span>{t.hotkeys.alignNodes}</span>
-            <span>{t.hotkeys.saveProject}</span>
-          </div>
+          <FlokoDockButton
+            name={t.nodeLabels.flokoName}
+            status={t.nodeLabels.flokoStatus}
+            chatLabel={t.nodeLabels.flokoChatLabel}
+            onClick={() => setAiAssistantOpen(true)}
+          />
           <ProjectIdContext.Provider value={activeProjectId}>
           <SubscriptionContext.Provider value={{ active: subscriptionActive, requestPayment }}>
             <ReactFlow
@@ -1103,7 +1095,6 @@ function Canvas() {
               onMoveStart={() => setContextMenu(null)}
             >
               <Background gap={20} />
-              <Controls />
               <MiniMap pannable zoomable />
             </ReactFlow>
             {aiAssistantOpen && mainView === 'canvas' && (

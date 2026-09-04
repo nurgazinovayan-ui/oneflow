@@ -74,6 +74,9 @@ export interface Translations {
     videoGenPro: string;
     adapt: string;
     aiAssistantTooltip: string;
+    flokoName: string;
+    flokoStatus: string;
+    flokoChatLabel: string;
   };
   archive: {
     title: (count: number) => string;
@@ -580,11 +583,6 @@ export interface Translations {
   common: {
     close: string;
   };
-  hotkeys: {
-    fitView: string;
-    alignNodes: string;
-    saveProject: string;
-  };
   contextMenu: {
     addNode: string;
   };
@@ -873,6 +871,9 @@ export const ru: Translations = {
     videoGenPro: 'Генерация видео PRO',
     adapt: 'Адаптация',
     aiAssistantTooltip: 'ИИ ассистент',
+    flokoName: 'Floko',
+    flokoStatus: 'Ваш помощник',
+    flokoChatLabel: 'Чат',
   },
   archive: {
     title: (count) => `Архив проекта (${count})`,
@@ -1414,11 +1415,6 @@ export const ru: Translations = {
   common: {
     close: 'Закрыть',
   },
-  hotkeys: {
-    fitView: 'F — общий вид холста со всеми нодами',
-    alignNodes: 'Ctrl+F — выровнять все ноды',
-    saveProject: 'Ctrl+S — сохранить проект',
-  },
   contextMenu: {
     addNode: 'Добавить узел',
   },
@@ -1717,6 +1713,9 @@ export const en: Translations = {
     videoGen: 'Video generation',
     videoGenPro: 'Video generation PRO',
     adapt: 'Adapt',
+    flokoName: 'Floko',
+    flokoStatus: 'Your assistant',
+    flokoChatLabel: 'Chat',
     aiAssistantTooltip: 'AI assistant',
   },
   archive: {
@@ -2257,11 +2256,6 @@ export const en: Translations = {
   },
   common: {
     close: 'Close',
-  },
-  hotkeys: {
-    fitView: 'F — fit all nodes in view',
-    alignNodes: 'Ctrl+F — align all nodes',
-    saveProject: 'Ctrl+S — save project',
   },
   contextMenu: {
     addNode: 'Add node',
