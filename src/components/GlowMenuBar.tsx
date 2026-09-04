@@ -1,21 +1,19 @@
 import { forwardRef, type FC } from 'react';
-import { motion, type Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
 
-// Ported from a shadcn/Tailwind "glow-menu" component into ONEFLOW's own stack: no Tailwind
-// utility classes here (this app has none — see App.css's --c-* token system instead), no
-// next-themes, and app icons (Icons.tsx) instead of lucide-react so we're not carrying two icon
-// sets. The animation structure (3D flip + per-item radial glow on hover) is kept via
-// framer-motion — that part is framework-agnostic. Unlike the original reference, the glow is
-// scoped to the hovered item only — the original also washed the whole bar's background in a
-// blended rainbow glow on hover, which read as "the panel lights up" rather than "this item is
-// highlighted", so that whole-bar layer was dropped.
+// Ported from a shadcn/Tailwind "tubelight-navbar" reference into ONEFLOW's own stack: no
+// Tailwind utility classes here (this app has none — see App.css's --c-* token system instead),
+// no next/link (onSelect callback instead), and app icons (Icons.tsx) instead of lucide-react so
+// we're not carrying two icon sets. The reference's single `--primary` accent is mapped onto the
+// app's own --c-pink accent (already used for the AI-assistant button, the Тариф pill, etc.)
+// rather than keeping this bar's old per-item rainbow color scheme. The "lamp" sliding highlight
+// is framer-motion's shared-layout animation (`layoutId="lamp"`) exactly as in the reference —
+// it automatically tweens position/size between whichever item is currently marked active.
 
 export interface GlowMenuItem {
   icon: FC<{ size?: number }>;
   label: string;
   value: string;
-  gradient: string;
-  iconColor: string;
 }
 
 interface GlowMenuBarProps {
@@ -25,86 +23,45 @@ interface GlowMenuBarProps {
   onSelect?: (value: string) => void;
 }
 
-const EASE_OUT = [0.4, 0, 0.2, 1] as const;
-
-const itemVariants: Variants = {
-  initial: { rotateX: 0, opacity: 1 },
-  hover: { rotateX: -90, opacity: 0 },
-};
-
-const backVariants: Variants = {
-  initial: { rotateX: 90, opacity: 0 },
-  hover: { rotateX: 0, opacity: 1 },
-};
-
-const glowVariants: Variants = {
-  initial: { opacity: 0, scale: 0.8 },
-  hover: {
-    opacity: 1,
-    scale: 2,
-    transition: {
-      opacity: { duration: 0.5, ease: EASE_OUT },
-      scale: { duration: 0.5, type: 'spring', stiffness: 300, damping: 25 },
-    },
-  },
-};
-
-const sharedTransition = {
-  type: 'spring' as const,
-  stiffness: 100,
-  damping: 20,
-  duration: 0.5,
-};
-
 export const GlowMenuBar = forwardRef<HTMLElement, GlowMenuBarProps>(
   ({ className, items, activeValue, onSelect }, ref) => {
     return (
-      <motion.nav ref={ref} className={`glow-menu ${className ?? ''}`}>
+      <nav ref={ref} className={`glow-menu ${className ?? ''}`}>
         <ul className="glow-menu-list">
           {items.map((item) => {
             const Icon = item.icon;
             const isActive = item.value === activeValue;
             return (
-              <motion.li key={item.value} className="glow-menu-item">
-                <button type="button" className="glow-menu-item-btn" onClick={() => onSelect?.(item.value)}>
-                  <motion.div className="glow-menu-item-inner" initial="initial" whileHover="hover">
-                    {/* Hover glow only — no `animate` override here, so it purely follows this
-                        item's own whileHover state instead of the whole bar's. */}
+              <li key={item.value} className="glow-menu-item">
+                <button
+                  type="button"
+                  className={`glow-menu-item-btn${isActive ? ' active' : ''}`}
+                  onClick={() => onSelect?.(item.value)}
+                >
+                  <span className="glow-menu-icon">
+                    <Icon size={17} />
+                  </span>
+                  <span>{item.label}</span>
+                  {isActive && (
                     <motion.div
-                      className="glow-menu-item-glow"
-                      variants={glowVariants}
-                      style={{ background: item.gradient }}
-                    />
-                    {isActive && (
-                      <div className="glow-menu-item-active-tint" style={{ background: `${item.iconColor}22` }} />
-                    )}
-                    <motion.div
-                      className={`glow-menu-item-face glow-menu-item-front ${isActive ? 'active' : ''}`}
-                      variants={itemVariants}
-                      transition={sharedTransition}
+                      layoutId="lamp"
+                      className="glow-menu-lamp"
+                      initial={false}
+                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                     >
-                      <span className="glow-menu-icon" style={{ color: isActive ? item.iconColor : undefined }}>
-                        <Icon size={17} />
-                      </span>
-                      <span>{item.label}</span>
+                      <div className="glow-menu-lamp-bar">
+                        <div className="glow-menu-lamp-blob glow-menu-lamp-blob-1" />
+                        <div className="glow-menu-lamp-blob glow-menu-lamp-blob-2" />
+                        <div className="glow-menu-lamp-blob glow-menu-lamp-blob-3" />
+                      </div>
                     </motion.div>
-                    <motion.div
-                      className={`glow-menu-item-face glow-menu-item-back ${isActive ? 'active' : ''}`}
-                      variants={backVariants}
-                      transition={sharedTransition}
-                    >
-                      <span className="glow-menu-icon" style={{ color: isActive ? item.iconColor : undefined }}>
-                        <Icon size={17} />
-                      </span>
-                      <span>{item.label}</span>
-                    </motion.div>
-                  </motion.div>
+                  )}
                 </button>
-              </motion.li>
+              </li>
             );
           })}
         </ul>
-      </motion.nav>
+      </nav>
     );
   }
 );

@@ -1021,61 +1021,28 @@ function Canvas() {
             onSelect={(value) => setMainView(value as typeof mainView)}
             items={
               [
-                {
-                  value: 'canvas',
-                  label: t.modeSwitch.nodesAndAdapt,
-                  icon: IconFlow,
-                  iconColor: '#60a5fa',
-                  gradient:
-                    'radial-gradient(circle, rgba(96,165,250,0.15) 0%, rgba(37,99,235,0.06) 50%, rgba(29,78,216,0) 100%)',
-                },
-                {
-                  value: 'generate',
-                  label: t.modeSwitch.quickGeneration,
-                  icon: IconSparkles,
-                  iconColor: '#c084fc',
-                  gradient:
-                    'radial-gradient(circle, rgba(192,132,252,0.15) 0%, rgba(147,51,234,0.06) 50%, rgba(107,33,168,0) 100%)',
-                },
-                {
-                  value: 'text',
-                  label: t.modeSwitch.textWork,
-                  icon: IconChat,
-                  iconColor: '#22d3ee',
-                  gradient:
-                    'radial-gradient(circle, rgba(34,211,238,0.15) 0%, rgba(8,145,178,0.06) 50%, rgba(21,94,117,0) 100%)',
-                },
+                { value: 'canvas', label: t.modeSwitch.nodesAndAdapt, icon: IconFlow },
+                { value: 'generate', label: t.modeSwitch.quickGeneration, icon: IconSparkles },
+                { value: 'text', label: t.modeSwitch.textWork, icon: IconChat },
                 import.meta.env.VITE_WEB_MODE === '1' && {
                   value: 'evaluate',
                   label: t.modeSwitch.evaluation,
                   icon: IconGauge,
-                  iconColor: '#22c55e',
-                  gradient:
-                    'radial-gradient(circle, rgba(34,197,94,0.15) 0%, rgba(22,163,74,0.06) 50%, rgba(21,128,61,0) 100%)',
                 },
                 import.meta.env.VITE_WEB_MODE === '1' && {
                   value: 'onelaunch',
                   label: t.modeSwitch.oneLaunch,
                   icon: IconRocket,
-                  iconColor: '#f97316',
-                  gradient:
-                    'radial-gradient(circle, rgba(249,115,22,0.15) 0%, rgba(234,88,12,0.06) 50%, rgba(194,65,12,0) 100%)',
                 },
                 import.meta.env.VITE_WEB_MODE === '1' && {
                   value: 'musicaudio',
                   label: t.modeSwitch.musicAudio,
                   icon: IconMusic,
-                  iconColor: '#f472b6',
-                  gradient:
-                    'radial-gradient(circle, rgba(244,114,182,0.15) 0%, rgba(219,39,119,0.06) 50%, rgba(157,23,77,0) 100%)',
                 },
                 import.meta.env.VITE_WEB_MODE === '1' && {
                   value: 'strategy',
                   label: t.modeSwitch.strategy,
                   icon: IconTarget,
-                  iconColor: '#f87171',
-                  gradient:
-                    'radial-gradient(circle, rgba(248,113,113,0.15) 0%, rgba(220,38,38,0.06) 50%, rgba(185,28,28,0) 100%)',
                 },
               ].filter(Boolean) as GlowMenuItem[]
             }

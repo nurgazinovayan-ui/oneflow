@@ -1030,16 +1030,17 @@
   -webkit-app-region: no-drag;
 }
 
-/* GlowMenuBar — ported from a shadcn/Tailwind component (see GlowMenuBar.tsx's header comment)
-   onto this app's own --c-* tokens instead of Tailwind utility classes/next-themes. */
-
+/* GlowMenuBar — ported from a shadcn/Tailwind "tubelight-navbar" reference (see GlowMenuBar.tsx's
+   header comment) onto this app's own --c-* tokens instead of Tailwind utility classes. Fully
+   rounded (rounded-full) pill, thin 1px border, translucent fill — matches the reference's
+   bg-background/5 + border-border treatment instead of the old solid gradient/18px-radius bar. */
 .glow-menu {
   position: relative;
   display: flex;
   align-items: stretch;
   padding: 3px;
-  border-radius: var(--radius-md);
-  background: linear-gradient(to bottom, var(--c-panel-2), var(--c-panel));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--c-text) 4%, transparent);
   border: 1px solid var(--c-divider);
   overflow: hidden;
 }
@@ -1059,80 +1060,94 @@
   position: relative;
 }
 
+/* Muted pill fill on the active item (reference's isActive && "bg-muted text-primary"), accent
+   text on hover otherwise (reference's "hover:text-primary") — the sliding "lamp" highlight
+   itself is .glow-menu-lamp below, a separate layoutId-animated layer on top of this. */
 .glow-menu-item-btn {
-  display: block;
-  height: 100%;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  color: inherit;
-  font: inherit;
-}
-
-.glow-menu-item-inner {
   position: relative;
-  height: 100%;
-  border-radius: 8px;
-  overflow: visible;
-  perspective: 600px;
-}
-
-.glow-menu-item-glow {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: 8px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* Static tint for the active item — separate from .glow-menu-item-glow (which is purely
-   hover-driven now) so the active item stays visibly marked without hovering it. */
-.glow-menu-item-active-tint {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: 8px;
-  pointer-events: none;
-}
-
-.glow-menu-item-face {
-  position: relative;
-  z-index: 1;
   display: flex;
   align-items: center;
   gap: 6px;
   height: 28px;
-  padding: 0 12px;
-  border-radius: 8px;
-  background: transparent;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: none;
+  border: none;
+  cursor: pointer;
   color: var(--c-text-muted);
+  font: inherit;
   font-size: 12.5px;
   font-weight: 600;
   white-space: nowrap;
-  transform-style: preserve-3d;
+  transition: color 0.2s var(--ease);
 }
 
-.glow-menu-item-front {
-  transform-origin: center bottom;
+.glow-menu-item-btn:hover {
+  color: var(--c-pink);
 }
 
-.glow-menu-item-back {
-  position: absolute;
-  inset: 0;
-  transform-origin: center top;
-}
-
-.glow-menu-item-face.active {
-  color: var(--c-text);
+.glow-menu-item-btn.active {
+  color: var(--c-pink);
+  background: var(--c-panel-2);
 }
 
 .glow-menu-icon {
   display: flex;
   align-items: center;
-  color: var(--c-text);
-  transition: color 0.2s var(--ease);
+}
+
+/* The lamp: a small glowing bar hovering just above the active pill, with three blurred blobs
+   underneath for the neon-tube spill — same recipe as the reference (w-8 h-1 bar + w-12/w-8/w-4
+   blur blobs), just re-expressed as plain absolutely-positioned divs instead of Tailwind
+   utilities. framer-motion's layoutId="lamp" (see GlowMenuBar.tsx) tweens this element's
+   position/size whenever a different item becomes active, instead of it just appearing/
+   disappearing per item. */
+.glow-menu-lamp {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.glow-menu-lamp-bar {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 3px;
+  background: var(--c-pink);
+  border-radius: 3px 3px 0 0;
+}
+
+.glow-menu-lamp-blob {
+  position: absolute;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--c-pink) 20%, transparent);
+}
+
+.glow-menu-lamp-blob-1 {
+  top: -8px;
+  left: -8px;
+  width: 44px;
+  height: 22px;
+  filter: blur(10px);
+}
+
+.glow-menu-lamp-blob-2 {
+  top: -4px;
+  left: 4px;
+  width: 28px;
+  height: 22px;
+  filter: blur(10px);
+}
+
+.glow-menu-lamp-blob-3 {
+  top: 0;
+  left: 8px;
+  width: 14px;
+  height: 14px;
+  filter: blur(4px);
 }
 
 /* One of the top menus that keeps its shadow (see App.tsx toolbar-usage sites) — and, unlike
