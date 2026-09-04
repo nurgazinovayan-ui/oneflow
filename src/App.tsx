@@ -856,8 +856,12 @@ function Canvas() {
 
   return (
     <div className={`app-shell${import.meta.env.VITE_WEB_MODE === '1' ? ' web-mode' : ''}`}>
-      <div className={`top-toolbar${mainView === 'canvas' ? ' dot-grid-bg' : ''}`}>
+      <div className="top-toolbar">
         <div className="toolbar-left">
+          <div className="toolbar-brand">
+            <LottieLoader path="/lottie/generating.json" className="toolbar-brand-lottie" />
+            <Logo className="toolbar-logo" />
+          </div>
           <div className="toolbar-menu-wrapper" ref={fileMenuAnchorRef}>
             <button
               className="toolbar-label-btn"
@@ -908,9 +912,9 @@ function Canvas() {
                     [
                       { key: 'horeca', icon: IconImage, desc: t.toolbarMenu.horecaDesc },
                       { key: 'auto', icon: IconVideo, desc: t.toolbarMenu.autoDesc },
-                      { key: 'apartment', icon: IconAssetsFolder, desc: t.toolbarMenu.apartmentDesc },
+                      { key: 'apartment', icon: IconDocument, desc: t.toolbarMenu.apartmentDesc },
                       { key: 'furniture', icon: IconCrop, desc: t.toolbarMenu.furnitureDesc },
-                      { key: 'electronics', icon: IconDiamond, desc: t.toolbarMenu.electronicsDesc },
+                      { key: 'electronics', icon: IconGauge, desc: t.toolbarMenu.electronicsDesc },
                     ] as { key: BusinessPresetKey; icon: typeof IconImage; desc: string }[]
                   ).map(({ key, icon, desc }) => ({
                     title: businessTileLabels[key],
@@ -942,7 +946,7 @@ function Canvas() {
                 onClose={() => setToolsMenuOpen(false)}
                 items={[
                   { title: t.tools.bgRemoverLabel, description: t.toolbarMenu.bgRemoverDesc, icon: IconCrop, onClick: () => setBgRemoverOpen(true) },
-                  { title: t.tools.upscalerLabel, description: t.toolbarMenu.upscalerDesc, icon: IconDiamond, onClick: () => setUpscalerOpen(true) },
+                  { title: t.tools.upscalerLabel, description: t.toolbarMenu.upscalerDesc, icon: IconVector, onClick: () => setUpscalerOpen(true) },
                   { title: t.tools.photoEditorLabel, description: t.toolbarMenu.photoEditorDesc, icon: IconImage, onClick: () => setPhotoEditorOpen(true) },
                 ]}
               />
@@ -975,10 +979,6 @@ function Canvas() {
             )}
           </div>
         </div>
-        <div className="toolbar-brand">
-          <LottieLoader path="/lottie/generating.json" className="toolbar-brand-lottie" />
-          <Logo className="toolbar-logo" />
-        </div>
         <div className="toolbar-group toolbar-right">
           {/* Shown in demo mode (no real subscription there) and to real users without an
               active subscription — hidden for real users who already have one. */}
@@ -987,13 +987,6 @@ function Canvas() {
               <IconDiamond size={14} /> {t.paymentModal.topBarBtn}
             </button>
           )}
-          <button
-            className="toolbar-dsp-btn"
-            onClick={() => window.api.openDsp()}
-            title={t.toolbar.dspTooltip}
-          >
-            DSP
-          </button>
           {authEmail === ADMIN_EMAIL && (
             <button
               className="toolbar-icon-btn toolbar-icon-btn-ghost"
@@ -1027,7 +1020,7 @@ function Canvas() {
         </div>
       </div>
       <div className="main-area">
-        <div className={`topbar${mainView === 'canvas' ? ' dot-grid-bg' : ''}`}>
+        <div className="topbar">
           {mainView === 'canvas' && (
           <div className="project-tabs">
             {projects.map((p) => (
