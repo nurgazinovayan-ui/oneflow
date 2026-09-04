@@ -67,6 +67,9 @@ function DockIcon({
 
   const sizeTransform = useTransform(distance, [-MAGNIFY_RADIUS, 0, MAGNIFY_RADIUS], [BASE_SIZE, MAGNIFY_SIZE, BASE_SIZE]);
   const size = useSpring(sizeTransform, SPRING);
+  // Icon grows in lockstep with the button (same spring value, just re-expressed as a scale
+  // ratio) instead of staying a fixed size inside a growing circle.
+  const iconScale = useTransform(size, (s) => s / BASE_SIZE);
 
   const tooltipInitial =
     orientation === 'vertical' ? { opacity: 0, x: -6, y: '-50%' } : { opacity: 0, y: -6, x: '-50%' };
@@ -84,7 +87,9 @@ function DockIcon({
         style={{ width: size, height: size }}
         className={`toolbar-icon-btn toolbar-dock-icon-btn${active ? ' active' : ''}${className ? ` ${className}` : ''}`}
       >
-        {icon}
+        <motion.span className="toolbar-dock-icon-inner" style={{ scale: iconScale }}>
+          {icon}
+        </motion.span>
       </motion.button>
       <AnimatePresence>
         {hovered && (

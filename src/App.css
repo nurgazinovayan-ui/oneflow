@@ -53,6 +53,13 @@
   --shadow-lg: 0 26px 64px rgba(0, 0, 0, 0.58);
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --font-mono: ui-monospace, 'Cascadia Code', 'Consolas', 'SFMono-Regular', Menlo, monospace;
+  /* .topbar's own rendered height (project tabs/mode-switch/Assets row) — now that it's an
+     absolute overlay pinned to .canvas-area's top edge rather than a chrome row that reserves its
+     own space, every other mode panel that fills .canvas-area (.quick-gen-panel,
+     .text-work-panel, .evaluation-panel, .onelaunch-panel, .musicaudio-panel, .assets-panel,
+     .strategy-panel) needs to inset its own top by this much so its content starts below the
+     floating topbar instead of underneath it. */
+  --topbar-height: 52px;
 }
 
 /* Light theme — toggled from Личный кабинет (see src/theme.ts), applied as data-theme on
@@ -176,22 +183,11 @@
   gap: 10px;
   padding: 8px 14px;
   padding-right: 150px;
-  border-bottom: 1px solid color-mix(in srgb, var(--c-pink) 14%, transparent);
+  border-bottom: 1px solid var(--c-divider);
   flex-shrink: 0;
   position: relative;
   z-index: 2;
   -webkit-app-region: drag;
-}
-
-/* Only lit while the node canvas (with its own dot-grid, gap 20) is the active mode — App.tsx
-   toggles this class on .topbar based on mainView. Other modes (Генерация/Работа с текстом/
-   Оценка/...) render their panels as flat --c-canvas-bg with no dots (see .text-work-panel etc.),
-   so the chrome stays flat to match them instead of always showing dots. Same radial-gradient
-   recipe already used by .web-auth-gate for the same "paper canvas" backdrop, kept identical here
-   for a consistent look. */
-.dot-grid-bg {
-  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.15) 1px, transparent 1px);
-  background-size: 20px 20px;
 }
 
 /* The 150px padding-right above reserves room for the desktop window's native traffic-light/
@@ -210,13 +206,6 @@
   flex-shrink: 0;
   background: transparent;
   -webkit-app-region: no-drag;
-}
-
-/* Sits left of the ONEFLOW wordmark — 2x .toolbar-logo's 26px height, by request. */
-.toolbar-brand-lottie {
-  width: 52px;
-  height: 52px;
-  flex-shrink: 0;
 }
 
 /* fill="currentColor" in the SVG + this color, rather than a fixed hex, so the wordmark stays
@@ -307,6 +296,15 @@
 .toolbar-dock-icon-btn:hover {
   background: #d1d5db;
   transform: none;
+}
+
+/* Wraps the icon so framer-motion's `scale` (see FloatingDockGroup.tsx's iconScale) has a
+   dedicated element to animate — scaling the button itself would also stretch its border-radius/
+   background, not just its contents. */
+.toolbar-dock-icon-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Dock-style hover magnification for the adaptation preset chips and MusicAudioPanel's
@@ -816,26 +814,33 @@
   min-height: 0;
 }
 
-/* No fill of its own beyond the shared --c-canvas-bg set alongside .top-toolbar above — the
-   project tabs, "+" button and mode-switch pill all carry their own background already, so
-   nothing here needs a dark strip behind them. */
+/* No fill of its own — the project tabs, "+" button and mode-switch pill all carry their own
+   background already, so nothing here needs a strip behind them. This row is now an absolute
+   overlay pinned to the top of .canvas-area (see App.tsx — it moved from a chrome row above the
+   canvas to the canvas's own first child) rather than a separate element with its own fake
+   background: fully transparent, so whatever is actually behind it shows through unmodified —
+   the node canvas's real, pannable dot pattern in canvas mode, or whichever flat view panel is
+   active otherwise. z-index:30 matches .dropdown-menu's own reasoning below: needs to stay above
+   .quick-gen-panel/.text-work-panel (z-index:20, absolute-covering .canvas-area in every other
+   mode) so project tabs/mode-switch/Assets stay usable — and visible — no matter which mode is
+   active, since mode-switch is the only way back out of them. */
 /* Grid rather than flex+absolutely-centered-child (same fix .top-toolbar already uses for its
    own left/center/right row) — explicit columns so .mode-switch-pill stays truly centered and
    never competes for space with .topbar-right, regardless of how wide the pill gets (it grows
    with VITE_WEB_MODE's extra tabs) or whether .project-tabs is even rendered (it's conditional
    on mainView==='canvas', so column position can't rely on DOM auto-placement order). */
-/* .dot-grid-bg (see above) supplies the actual dot pattern; this rule only adds the matching
-   canvas-gray base color underneath it. */
 .topbar {
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  flex-shrink: 0;
   -webkit-app-region: drag;
-  background-color: var(--c-canvas-bg);
 }
 
 .project-tabs {
@@ -857,7 +862,7 @@
   background: transparent;
   border: 1px solid var(--c-divider);
   font-size: 12.5px;
-  color: var(--c-text-muted);
+  color: #000;
   cursor: pointer;
   flex-shrink: 0;
   max-width: 200px;
@@ -869,7 +874,7 @@
 
 .project-tab.active {
   background: var(--c-panel-2);
-  color: var(--c-text);
+  color: #000;
   font-weight: 600;
 }
 
@@ -901,7 +906,7 @@
 .project-tab-add {
   background: var(--c-panel-2);
   border: 1px solid var(--c-divider);
-  color: var(--c-text-muted);
+  color: #000;
   border-radius: var(--radius-sm);
   width: 28px;
   height: 28px;
@@ -913,7 +918,7 @@
 
 .project-tab-add:hover {
   background: var(--c-panel-3);
-  color: var(--c-text);
+  color: #000;
 }
 
 .topbar-right {
@@ -987,16 +992,17 @@
 
 /* GlowMenuBar — ported from a shadcn/Tailwind "tubelight-navbar" reference (see GlowMenuBar.tsx's
    header comment) onto this app's own --c-* tokens instead of Tailwind utility classes. Fully
-   rounded (rounded-full) pill, thin 1px border, no fill at all — the reference's own
-   bg-background/5 already reads as "basically no background", and this app's version had gone
-   further and dropped it outright per an explicit "no white plaque background" request. */
+   rounded (rounded-full) pill, thin 1px border. White fill restored (was made transparent for a
+   time, then .topbar itself — the row this pill sits on — was made transparent instead so that
+   row shows the real canvas/view-panel behind it; this pill needs its own white plaque again so
+   it still reads as a solid control against that now-transparent row). */
 .glow-menu {
   position: relative;
   display: flex;
   align-items: stretch;
   padding: 3px;
   border-radius: 999px;
-  background: transparent;
+  background: #ffffff;
   border: 1px solid var(--c-divider);
 }
 
@@ -2730,7 +2736,7 @@
    same frosted material as .canvas-toolbar / .start-screen-inner. */
 .quick-gen-panel {
   position: absolute;
-  inset: 0;
+  inset: var(--topbar-height) 0 0 0;
   z-index: 20;
   display: flex;
   flex-direction: column;
@@ -3546,7 +3552,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--c-text-dim);
+  color: #111114;
   white-space: nowrap;
 }
 
@@ -3601,7 +3607,7 @@
 
 .toolbar-rich-menu-item-desc {
   font-size: 11px;
-  color: rgba(0, 0, 0, 0.5);
+  color: #111114;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4337,7 +4343,7 @@
    .canvas-area so switching modes doesn't jump between a light and a dark background. */
 .text-work-panel {
   position: absolute;
-  inset: 0;
+  inset: var(--topbar-height) 0 0 0;
   z-index: 20;
   display: flex;
   flex-direction: column;
@@ -4477,7 +4483,7 @@
    (a third canvas-area layer toggled via display:none). */
 .evaluation-panel {
   position: absolute;
-  inset: 0;
+  inset: var(--topbar-height) 0 0 0;
   z-index: 20;
   display: flex;
   flex-direction: column;
@@ -4908,7 +4914,7 @@
    top of it, same relationship as .canvas-area + .canvas-toolbar. */
 .onelaunch-panel {
   position: absolute;
-  inset: 0;
+  inset: var(--topbar-height) 0 0 0;
   z-index: 20;
   display: flex;
   flex-direction: column;
@@ -5567,7 +5573,7 @@
    the generated/loading audio to its right. */
 .musicaudio-panel {
   position: absolute;
-  inset: 0;
+  inset: var(--topbar-height) 0 0 0;
   z-index: 20;
   display: flex;
   flex-direction: column;
@@ -5852,7 +5858,7 @@
    mode-switch destinations' siblings rather than a separate overlay. */
 .assets-panel {
   position: absolute;
-  inset: 0;
+  inset: var(--topbar-height) 0 0 0;
   z-index: 20;
   display: flex;
   flex-direction: column;
@@ -6032,7 +6038,7 @@
 
 .strategy-panel {
   position: absolute;
-  inset: 0;
+  inset: var(--topbar-height) 0 0 0;
   z-index: 20;
   overflow-y: auto;
   background: var(--c-bg);

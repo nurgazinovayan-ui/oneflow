@@ -14,7 +14,6 @@ import {
   type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { handleDockMouseMove, handleDockMouseLeave } from './dockHover';
 import PromptNode from './nodes/PromptNode';
 import ImageGenNode from './nodes/ImageGenNode';
 import VideoGenNode from './nodes/VideoGenNode';
@@ -32,7 +31,6 @@ import AdminMessageToast from './components/AdminMessageToast';
 import AdminPanel from './components/AdminPanel';
 import BudgetBar from './components/BudgetBar';
 import Logo from './components/Logo';
-import LottieLoader from './components/LottieLoader';
 import PaymentModal from './components/PaymentModal';
 import QuickGenPanel from './components/QuickGenPanel';
 import EvaluationPanel from './components/EvaluationPanel';
@@ -49,6 +47,7 @@ import ReloadGuard from './components/ReloadGuard';
 import LegalModal from './components/LegalModal';
 import ToolbarMenu from './components/ToolbarMenu';
 import FloatingDockGroup from './components/FloatingDockGroup';
+import AdaptDockMenuButton from './components/AdaptDockMenuButton';
 import type { LegalDoc } from './legalContent';
 import { BUSINESS_PRESET_ORDER, BUSINESS_PRESET_PROMPTS, type BusinessPresetKey } from './businessPresets';
 import {
@@ -386,6 +385,7 @@ function Canvas() {
   // Radix NavigationMenu-style single-value model: only one toolbar menu open at a time, so
   // hovering a new trigger switches instantly without a close/reopen flicker.
   const [openToolbarMenu, setOpenToolbarMenu] = useState<'file' | 'templates' | 'tools' | 'about' | null>(null);
+  const [adaptMenuOpen, setAdaptMenuOpen] = useState(false);
   const [bgRemoverOpen, setBgRemoverOpen] = useState(false);
   const [upscalerOpen, setUpscalerOpen] = useState(false);
   const [photoEditorOpen, setPhotoEditorOpen] = useState(false);
@@ -851,7 +851,6 @@ function Canvas() {
     <div className={`app-shell${import.meta.env.VITE_WEB_MODE === '1' ? ' web-mode' : ''}`}>
       <div className="top-toolbar">
         <div className="toolbar-brand">
-          <LottieLoader path="/lottie/generating.json" className="toolbar-brand-lottie" />
           <Logo className="toolbar-logo" />
         </div>
         <div className="toolbar-group toolbar-right">
@@ -952,7 +951,12 @@ function Canvas() {
         </div>
       </div>
       <div className="main-area">
-        <div className={`topbar${mainView === 'canvas' ? ' dot-grid-bg' : ''}`}>
+        <div className="canvas-area" onDragOver={onCanvasDragOver} onDrop={onCanvasDrop}>
+          {/* Absolute overlay at the top of .canvas-area (not a chrome row above it) so this
+              row's own transparent background shows the real thing behind it — the node
+              canvas's live, pannable dot pattern in canvas mode, or whichever flat view panel is
+              active otherwise — instead of a static CSS imitation of it. */}
+          <div className="topbar">
           {mainView === 'canvas' && (
           <div className="project-tabs">
             {projects.map((p) => (
@@ -1043,8 +1047,7 @@ function Canvas() {
             )}
             <BudgetBar />
           </div>
-        </div>
-        <div className="canvas-area" onDragOver={onCanvasDragOver} onDrop={onCanvasDrop}>
+          </div>
           <div className="canvas-toolbar vertical">
             <FloatingDockGroup
               orientation="vertical"
@@ -1063,23 +1066,19 @@ function Canvas() {
               ]}
             />
             <div className="toolbar-divider" />
-            <div
-              className="toolbar-group"
-              onMouseMove={(e) => handleDockMouseMove(e, 'vertical')}
-              onMouseLeave={handleDockMouseLeave}
-            >
-              {ADAPT_PRESETS.map((preset) => (
-                <button
-                  key={preset.key}
-                  className="toolbar-label-btn"
-                  onClick={() => addAdaptWithPreset(preset.key)}
-                  data-dock-item
-                >
-                  <IconCrop size={13} />{' '}
-                  {preset.key === 'RSYA' ? t.nodes.modelMeta.yandexNetwork : preset.label}
-                </button>
-              ))}
-            </div>
+            <AdaptDockMenuButton
+              icon={IconCrop}
+              label={t.nodeLabels.adapt}
+              isOpen={adaptMenuOpen}
+              onOpen={() => setAdaptMenuOpen(true)}
+              onClose={() => setAdaptMenuOpen(false)}
+              items={ADAPT_PRESETS.map((preset) => ({
+                title: preset.key === 'RSYA' ? t.nodes.modelMeta.yandexNetwork : preset.label,
+                description: '',
+                icon: IconCrop,
+                onClick: () => addAdaptWithPreset(preset.key),
+              }))}
+            />
           </div>
           <div className="hotkey-hint">
             <span>{t.hotkeys.fitView}</span>

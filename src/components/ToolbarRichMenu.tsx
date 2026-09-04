@@ -18,6 +18,10 @@ interface ToolbarRichMenuProps {
   anchorRef: RefObject<HTMLElement>;
   align?: 'left' | 'right';
   wide?: boolean;
+  /** 'below' (default) opens under the anchor, aligned per `align`. 'side' opens to the anchor's
+   * right, top-aligned with it — used by the vertical left-edge dock's adaptation-preset button,
+   * where "below" would run toward the bottom of the screen instead of into open canvas. */
+  placement?: 'below' | 'side';
   /** Hover-intent support: keep the menu open while the pointer is over the portalled panel
    * itself (it lives outside the trigger's DOM subtree once portalled to document.body). */
   onMouseEnter?: () => void;
@@ -39,6 +43,7 @@ export default function ToolbarRichMenu({
   anchorRef,
   align = 'left',
   wide = false,
+  placement = 'below',
   onMouseEnter,
   onMouseLeave,
 }: ToolbarRichMenuProps) {
@@ -49,12 +54,47 @@ export default function ToolbarRichMenu({
     const anchor = anchorRef.current;
     if (!anchor) return;
     const rect = anchor.getBoundingClientRect();
+    if (placement === 'side') {
+      setPos({ top: rect.top, left: rect.right + 8 });
+      return;
+    }
     setPos(
       align === 'right'
         ? { top: rect.bottom + 6, right: window.innerWidth - rect.right }
         : { top: rect.bottom + 6, left: rect.left }
     );
-  }, [anchorRef, align]);
+  }, [anchorRef, align, placement]);
+
+  // Boundary clamp: a left-anchored menu near an edge of the window (Файл/Шаблоны/Инструменты/О
+  // программе all live at the right edge; the vertical dock's 'side' menu opens near the bottom
+  // of the screen) can extend past the viewport before its real size is known — this runs once
+  // the panel has actually rendered (with real dimensions to measure) and pulls it back in from
+  // whichever edge it overflows. Converges in one correction: after clamping, the new pos no
+  // longer overflows, so the effect is a no-op on rerun.
+  useLayoutEffect(() => {
+    if (!pos) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const margin = 8;
+    const rect = panel.getBoundingClientRect();
+    const next = { ...pos };
+    let changed = false;
+    if (pos.left !== undefined) {
+      const maxLeft = window.innerWidth - rect.width - margin;
+      const clampedLeft = Math.min(pos.left, Math.max(margin, maxLeft));
+      if (clampedLeft !== pos.left) {
+        next.left = clampedLeft;
+        changed = true;
+      }
+    }
+    const maxTop = window.innerHeight - rect.height - margin;
+    const clampedTop = Math.min(pos.top, Math.max(margin, maxTop));
+    if (clampedTop !== pos.top) {
+      next.top = clampedTop;
+      changed = true;
+    }
+    if (changed) setPos(next);
+  }, [pos]);
 
   useEffect(() => {
     const handlePointerDown = (e: MouseEvent) => {
