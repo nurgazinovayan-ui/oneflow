@@ -389,7 +389,7 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
         </section>
 
         <section className="web-auth-media-side">
-          <video className="web-auth-bg-video" src="/splash-bg.mp4" autoPlay loop muted playsInline />
+          <video className="web-auth-bg-video" src="/login-bg.webm" autoPlay loop muted playsInline />
         </section>
       </div>
       <div className="web-auth-footer">
