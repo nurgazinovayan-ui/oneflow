@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { IconDownload, IconImage, IconVideo } from './Icons';
 import type { YandexAsset } from '../types';
+import { resolutionTierFromPixels, type ResolutionTier } from '../resolutionBadge';
 import { useT } from '../i18n';
 
 interface AssetsPanelProps {
@@ -27,6 +28,9 @@ export default function AssetsPanel({ active }: AssetsPanelProps) {
   // through that proxy once assets load, keyed by path, and swapped in here as blob: URLs.
   const [blobUrls, setBlobUrls] = useState<Record<string, string>>({});
   const [failedPaths, setFailedPaths] = useState<Record<string, boolean>>({});
+  // Yandex Disk's listing carries no resolution metadata, so it's read off the actual decoded
+  // media once each tile loads (see the badge below) rather than off the asset record itself.
+  const [resolutionTiers, setResolutionTiers] = useState<Record<string, ResolutionTier>>({});
 
   useEffect(() => {
     if (!active || assets !== null) return;
@@ -133,14 +137,37 @@ export default function AssetsPanel({ active }: AssetsPanelProps) {
                       <div className="assets-tile-error">{t.assets.tileLoadError}</div>
                     ) : blobUrl ? (
                       asset.mediaType === 'image' ? (
-                        <img src={blobUrl} alt={asset.name} />
+                        <img
+                          src={blobUrl}
+                          alt={asset.name}
+                          onLoad={(e) => {
+                            const el = e.currentTarget;
+                            setResolutionTiers((prev) => ({
+                              ...prev,
+                              [asset.path]: resolutionTierFromPixels(Math.max(el.naturalWidth, el.naturalHeight)),
+                            }));
+                          }}
+                        />
                       ) : (
-                        <video src={blobUrl} muted preload="metadata" />
+                        <video
+                          src={blobUrl}
+                          muted
+                          preload="metadata"
+                          onLoadedMetadata={(e) => {
+                            const el = e.currentTarget;
+                            setResolutionTiers((prev) => ({
+                              ...prev,
+                              [asset.path]: resolutionTierFromPixels(Math.max(el.videoWidth, el.videoHeight)),
+                            }));
+                          }}
+                        />
                       )
                     ) : (
                       <div className="assets-tile-loading" />
                     )}
-                    <span className="assets-tile-name">{asset.name}</span>
+                    {resolutionTiers[asset.path] && (
+                      <span className="media-resolution-badge">{resolutionTiers[asset.path]}</span>
+                    )}
                     <button
                       className="assets-tile-download"
                       onClick={() => download(asset)}

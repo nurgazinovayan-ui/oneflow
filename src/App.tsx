@@ -77,6 +77,7 @@ import {
   ADAPT_PRESETS,
   IMAGE_REFERENCE_SLOTS,
   type ChatMessage,
+  type SubscriptionInfo,
 } from './types';
 import { ProjectIdContext } from './store/projectContext';
 import { SubscriptionContext } from './store/subscriptionContext';
@@ -93,6 +94,10 @@ import './App.css';
 // gray canvas-continuation look instead, so the topbar there stays transparent over the real
 // dot-grid canvas (or its gray flat-color siblings).
 const WHITE_TOPBAR_VIEWS = new Set(['text', 'generate', 'onelaunch', 'musicaudio', 'evaluate']);
+
+// LemonSqueezy subscription statuses that count as "has a subscription" for the avatar's ring
+// (see SubscriptionModal.tsx/ProfileModal.tsx, which use the same set for their own badge).
+const ACTIVE_SUB_STATUSES = new Set(['active', 'on_trial']);
 
 const nodeTypes = {
   prompt: PromptNode,
@@ -383,6 +388,7 @@ function Canvas() {
     'canvas' | 'text' | 'generate' | 'evaluate' | 'onelaunch' | 'musicaudio' | 'strategy' | 'assets'
   >('canvas');
   const [authEmail, setAuthEmail] = useState<string | null>(null);
+  const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   // Radix NavigationMenu-style single-value model: only one toolbar menu open at a time, so
   // hovering a new trigger switches instantly without a close/reopen flicker.
@@ -418,6 +424,14 @@ function Canvas() {
       setAuthEmail(status.email);
     });
   }, []);
+
+  useEffect(() => {
+    window.api.getSubscriptionInfo().then(setSubscriptionInfo);
+  }, []);
+
+  const hasActiveSubscription = Boolean(
+    subscriptionInfo?.status && ACTIVE_SUB_STATUSES.has(subscriptionInfo.status)
+  );
 
   const refreshSubscriptionStatus = useCallback(async (): Promise<boolean> => {
     const status = await window.api.getSubscriptionStatus();
@@ -917,6 +931,7 @@ function Canvas() {
             isOpen={avatarMenuOpen}
             onOpen={() => setAvatarMenuOpen(true)}
             onClose={() => setAvatarMenuOpen(false)}
+            hasActiveSubscription={hasActiveSubscription}
             items={[
               {
                 title: t.toolbarMenu.subscriptionMenuLabel,

@@ -24,6 +24,7 @@ import {
 } from '../types';
 import { useGenerationCounter } from '../store/generationCounter';
 import { formatGenerationError } from '../errorMessages';
+import { resolutionTierFromModelValue } from '../resolutionBadge';
 import { useT } from '../i18n';
 
 type GenKind = 'image' | 'video';
@@ -377,12 +378,16 @@ export default function QuickGenPanel({
             {entry.status === 'loading' && (
               <LottieLoader path="/lottie/generating.json" className="quick-gen-tile-lottie" />
             )}
-            {entry.status === 'done' &&
-              (entry.kind === 'image' ? (
-                <img src={entry.outputs[0]} alt="" className="quick-gen-tile-thumb" />
-              ) : (
-                <video src={entry.outputs[0]} className="quick-gen-tile-thumb" muted />
-              ))}
+            {entry.status === 'done' && (
+              <>
+                {entry.kind === 'image' ? (
+                  <img src={entry.outputs[0]} alt="" className="quick-gen-tile-thumb" />
+                ) : (
+                  <video src={entry.outputs[0]} className="quick-gen-tile-thumb" muted />
+                )}
+                <span className="media-resolution-badge">{resolutionTierFromModelValue(entry.resolution)}</span>
+              </>
+            )}
             {entry.status === 'error' && <div className="quick-gen-tile-error">!</div>}
           </button>
         ))}

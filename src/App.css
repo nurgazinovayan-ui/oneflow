@@ -195,7 +195,10 @@
    pulls the whole .toolbar-right group flush against the very edge instead (by request — "прям
    в край"), rather than matching .top-toolbar's own 14px left padding. */
 .web-mode .top-toolbar {
-  padding-right: 0;
+  /* Used to be flush against the edge (0) by request — the avatar button's new focus ring/glow
+     (see .toolbar-avatar-btn below) needs a little breathing room so it doesn't clip against the
+     viewport edge, so this now matches .top-toolbar's own 14px left padding instead. */
+  padding-right: 14px;
 }
 
 /* Far left of .top-toolbar, alone now that Файл/Шаблоны/Инструменты/О программе moved to the
@@ -395,6 +398,9 @@
   background: transparent;
   border: none;
   border-radius: 6px;
+  /* True black rather than --c-text (#17171b has a faint blue push that reads as navy at this
+     weight/size) — the trigger label is the one place that got called out for it. */
+  color: #000000;
 }
 
 .toolbar-label-btn:hover {
@@ -771,22 +777,40 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: transparent;
+  background: #000000;
   border: 1px solid var(--c-divider);
-  color: var(--c-text);
+  color: var(--c-text-dim);
   flex-shrink: 0;
   transition:
     background 0.15s var(--ease),
-    transform 0.15s var(--ease);
+    transform 0.15s var(--ease),
+    box-shadow 0.3s var(--ease),
+    border-color 0.3s var(--ease);
 }
 
 .toolbar-avatar-btn:hover {
-  background: var(--c-panel-3);
+  background: #1a1a1a;
   transform: translateY(-1px);
 }
 
 .toolbar-avatar-btn:active {
   transform: translateY(0);
+}
+
+/* Subscription-status ring — soft, low-alpha glow (see App.tsx, gated on subscriptionActive)
+   rather than a hard-edged badge, so it reads at a glance without competing with the icon. */
+.toolbar-avatar-btn.avatar-sub-active {
+  border-color: rgba(45, 212, 133, 0.7);
+  box-shadow:
+    0 0 0 2px rgba(45, 212, 133, 0.16),
+    0 0 8px rgba(45, 212, 133, 0.4);
+}
+
+.toolbar-avatar-btn.avatar-sub-inactive {
+  border-color: rgba(224, 36, 107, 0.7);
+  box-shadow:
+    0 0 0 2px rgba(224, 36, 107, 0.16),
+    0 0 8px rgba(224, 36, 107, 0.4);
 }
 
 .toolbar-menu-wrapper {
@@ -955,13 +979,12 @@
 
 .budget-bar-fill {
   height: 100%;
-  background: var(--c-pink);
   border-radius: 3px;
-  transition: width 0.4s ease;
-}
-
-.budget-bar-fill.over {
-  background: var(--c-error);
+  /* Width shrinks and the (inline-set) background color slides from green to raspberry together
+     as spend approaches the limit — see BudgetBar.tsx's budgetBarColor. */
+  transition:
+    width 0.4s ease,
+    background-color 0.4s ease;
 }
 
 .canvas-area {
@@ -2851,7 +2874,7 @@
   flex-wrap: wrap;
   align-content: flex-start;
   align-items: flex-start;
-  gap: 10px;
+  gap: 5px;
   padding: 20px;
   /* Room for the docked composer so the last row of tiles never sits underneath it. */
   padding-bottom: 140px;
@@ -2863,7 +2886,7 @@
   width: 160px;
   max-width: 100%;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: 3px;
   overflow: hidden;
   background: var(--c-panel-2);
   box-shadow: 0 0 0 1px var(--c-divider);
@@ -3704,12 +3727,12 @@
 .toolbar-rich-menu-item-title {
   font-size: 12.5px;
   font-weight: 600;
-  color: #111114;
+  color: #000000;
 }
 
 .toolbar-rich-menu-item-desc {
   font-size: 11px;
-  color: #111114;
+  color: var(--c-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -6186,13 +6209,13 @@
 .assets-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 14px;
+  gap: 5px;
 }
 
 .assets-tile {
   position: relative;
   aspect-ratio: 1;
-  border-radius: var(--radius-md);
+  border-radius: 3px;
   overflow: hidden;
   background: var(--c-panel-2);
   box-shadow: 0 0 0 1px var(--c-divider);
@@ -6238,20 +6261,22 @@
   color: var(--c-text-muted);
 }
 
-.assets-tile-name {
+/* 1K/2K/4K corner plaque — shared with .quick-gen-tile (QuickGenPanel.tsx), a coarse resolution
+   read for a generated tile now that the technical filename/model text is gone from the preview
+   itself. Gray rather than the download button's near-black chip so the two don't compete. */
+.media-resolution-badge {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 16px 8px 6px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.65), transparent);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  left: 6px;
+  bottom: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(107, 107, 116, 0.75);
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   pointer-events: none;
+  z-index: 1;
 }
 
 .assets-tile-download {
