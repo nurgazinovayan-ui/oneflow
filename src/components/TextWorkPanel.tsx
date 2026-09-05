@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { IconClose, IconCopy, IconDownload, IconNotePlus, IconSend } from './Icons';
+import { IconArrowUp, IconClose, IconCopy, IconDownload, IconNotePlus } from './Icons';
 import type { ChatMessage } from '../types';
 import { parseSuggestions } from '../chatSuggestions';
 import {
@@ -249,21 +249,23 @@ export default function TextWorkPanel({ active }: TextWorkPanelProps) {
 
           {status === 'error' && <div className="error-text">{error}</div>}
 
-          <div className="chat-input-row text-work-input-row">
+          <div className="text-work-composer text-work-input-row">
             <textarea
-              className="node-textarea chat-input"
+              className="text-work-composer-input"
               placeholder={t.textWork.inputPlaceholder}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={handleKeyDown}
             />
-            <button
-              className="generate-btn chat-send-btn"
-              onClick={() => handleSend()}
-              disabled={status === 'loading' || !draft.trim()}
-            >
-              <IconSend />
-            </button>
+            <div className="text-work-composer-footer">
+              <button
+                className="text-work-composer-send"
+                onClick={() => handleSend()}
+                disabled={status === 'loading' || !draft.trim()}
+              >
+                <IconArrowUp size={16} />
+              </button>
+            </div>
           </div>
         </div>
       </div>

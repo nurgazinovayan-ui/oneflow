@@ -4486,7 +4486,7 @@
   z-index: 20;
   display: flex;
   flex-direction: column;
-  background: var(--c-canvas-bg);
+  background: #ffffff;
 }
 
 .text-work-hidden {
@@ -4615,6 +4615,71 @@
   max-width: 780px;
   width: 100%;
   margin: 0 auto;
+}
+
+/* Composer card ported from a shadcn "AI assistant" reference — a white, rounded, bordered box
+   with a borderless textarea on top and a round accent send button in its own footer row, rather
+   than the app's usual bare textarea + pill button pair (still used by AiAssistantPanel's dark
+   dock, untouched here). */
+.text-work-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #ffffff;
+  border: 1px solid var(--c-divider);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 14px 10px;
+  flex-shrink: 0;
+}
+
+.text-work-composer-input {
+  width: 100%;
+  min-height: 24px;
+  max-height: 160px;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--c-text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.text-work-composer-input::placeholder {
+  color: var(--c-text-dim);
+}
+
+.text-work-composer-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.text-work-composer-send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--c-pink);
+  color: #ffffff;
+  flex-shrink: 0;
+  transition:
+    background 0.15s var(--ease),
+    opacity 0.15s var(--ease);
+}
+
+.text-work-composer-send:hover:not(:disabled) {
+  background: var(--c-pink-hover);
+}
+
+.text-work-composer-send:disabled {
+  background: var(--c-panel-3);
+  color: var(--c-text-dim);
+  cursor: default;
 }
 
 /* Web-only "Оценка" tab (see App.tsx — gated behind VITE_WEB_MODE) — a heuristic design read
