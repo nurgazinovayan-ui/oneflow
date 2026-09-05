@@ -240,20 +240,6 @@
   gap: 10px;
 }
 
-/* Send/settings/info/avatar — plain white icons, no border, so they stay visible against the
-   top-toolbar's dark background (the #17171b fixed dark color here was tuned for that row's old
-   light background and had gone invisible once it turned dark). */
-.toolbar-right .toolbar-icon-btn-ghost,
-.toolbar-right .toolbar-avatar-btn {
-  color: #ffffff;
-  border: none;
-}
-
-.toolbar-right .toolbar-icon-btn-ghost:hover,
-.toolbar-right .toolbar-avatar-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
 .toolbar-divider {
   width: 1px;
   align-self: stretch;
@@ -3302,9 +3288,14 @@
   flex: 1;
 }
 
-.about-modal {
-  align-items: center;
-  text-align: center;
+.profile-legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-legal-links .secondary-btn {
+  flex: 1 1 auto;
 }
 
 .profile-modal {

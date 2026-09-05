@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { AuthStatus, SubscriptionInfo, GenerationLogEntry } from '../types';
-import { IconSave, IconUser } from './Icons';
+import type { AuthStatus, GenerationLogEntry } from '../types';
+import { ADMIN_EMAIL } from '../types';
+import type { LegalDoc } from '../legalContent';
+import { IconSave, IconSend } from './Icons';
 import { useGenerationCounter } from '../store/generationCounter';
 import { useT, useLanguageStore, type Language } from '../i18n';
 import { formatGenerationError } from '../errorMessages';
@@ -9,36 +11,33 @@ const YANDEX_CLIENT_ID = import.meta.env.VITE_YANDEX_CLIENT_ID as string;
 
 interface ProfileModalProps {
   onClose: () => void;
-}
-
-// LemonSqueezy subscription statuses: on_trial, active, paused, past_due, unpaid,
-// cancelled, expired.
-const ACTIVE_STATUSES = new Set(['active', 'on_trial']);
-
-function formatDate(iso: string | null, locale: string): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString(locale, {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+  onOpenLegal: (doc: LegalDoc) => void;
+  onOpenAdminPanel: () => void;
 }
 
 function toDateInputValue(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export default function ProfileModal({ onClose }: ProfileModalProps) {
+// The single "Настройки" surface reached from the avatar dropdown — folds in what used to be
+// three separate modals (SettingsModal's account/API-token/budget, this component's own
+// stats/language/Yandex-Disk, plus entry points to the legal docs and, for the admin account,
+// AdminPanel) since the toolbar only exposes one trigger for all of it now. Subscription status
+// moved out to its own SubscriptionModal — "Моя подписка" is a separate dropdown item.
+export default function ProfileModal({ onClose, onOpenLegal, onOpenAdminPanel }: ProfileModalProps) {
   const t = useT();
   const language = useLanguageStore((s) => s.language);
   const setLanguage = useLanguageStore((s) => s.setLanguage);
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
-  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [history, setHistory] = useState<GenerationLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportSaved, setExportSaved] = useState(false);
+
+  const [apiKey, setApiKey] = useState('');
+  const [generationLimit, setGenerationLimit] = useState('50');
+  const [accountSaved, setAccountSaved] = useState(false);
 
   const [fromDate, setFromDate] = useState(() => {
     const d = new Date();
@@ -56,12 +55,14 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
   useEffect(() => {
     Promise.all([
       window.api.getAuthStatus(),
-      window.api.getSubscriptionInfo(),
       window.api.getGenerationHistory(),
-    ]).then(([auth, sub, hist]) => {
+      window.api.getApiKey(),
+      window.api.getUsage(),
+    ]).then(([auth, hist, key, usage]) => {
       setAuthStatus(auth);
-      setSubscription(sub);
       setHistory(hist);
+      setApiKey(key);
+      setGenerationLimit(String(usage.limit));
       setLoading(false);
     });
   }, []);
@@ -87,6 +88,18 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
 
   const totalCount = filtered.length;
   const totalCost = filtered.reduce((sum, e) => sum + e.costUsd, 0);
+
+  const handleLogout = () => {
+    window.api.logout();
+  };
+
+  const handleAccountSave = async () => {
+    await window.api.setApiKey(apiKey.trim());
+    const limit = Number(generationLimit);
+    if (limit > 0) await window.api.setGenerationLimit(Math.round(limit * 100) / 100);
+    setAccountSaved(true);
+    setTimeout(() => setAccountSaved(false), 1500);
+  };
 
   const handleExport = async () => {
     setExporting(true);
@@ -158,38 +171,56 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
     setYandexConnected(false);
   };
 
-  const statusLabel = subscription?.status
-    ? (t.profileModal.statusLabels[subscription.status] ?? subscription.status)
-    : null;
-  const isActiveSub = Boolean(subscription?.status && ACTIVE_STATUSES.has(subscription.status));
   const sessionGenerationCount = useGenerationCounter((s) => s.count);
+  const isAdmin = authStatus?.email === ADMIN_EMAIL;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal profile-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>
-          <IconUser /> {t.profileModal.title}
-        </h2>
+        <h2>{t.settingsModal.title}</h2>
 
         {loading ? (
           <p className="modal-hint">{t.profileModal.loading}</p>
         ) : (
           <>
-            <div className="profile-section">
-              <div className="profile-email">{authStatus?.email ?? t.profileModal.notLoggedIn}</div>
-              {subscription?.configured ? (
-                <div className={`profile-sub-badge ${isActiveSub ? 'active' : 'inactive'}`}>
-                  {statusLabel ?? t.profileModal.noSubscription}
-                  {subscription.currentPeriodEnd &&
-                    ` · ${t.profileModal.untilDate(formatDate(subscription.currentPeriodEnd, t.profileModal.locale))}`}
-                </div>
-              ) : (
-                <div className="profile-sub-badge muted">{t.profileModal.paymentNotConfigured}</div>
-              )}
-              <div className="profile-session-count">
-                {t.profileModal.sessionGenerations(sessionGenerationCount)}
-              </div>
+            <label className="field-label">{t.settingsModal.account}</label>
+            <div className="account-row">
+              <span className="connected-hint">{authStatus?.email ?? t.profileModal.notLoggedIn}</span>
+              <button className="secondary-btn" onClick={handleLogout}>
+                {t.settingsModal.logout}
+              </button>
             </div>
+            <div className="profile-session-count">
+              {t.profileModal.sessionGenerations(sessionGenerationCount)}
+            </div>
+
+            {import.meta.env.VITE_WEB_MODE !== '1' && (
+              <>
+                <label className="field-label">{t.settingsModal.apiToken}</label>
+                <input
+                  type="password"
+                  className="node-select"
+                  value={apiKey}
+                  placeholder="r8_..."
+                  onChange={(e) => setApiKey(e.target.value)}
+                />
+                <p className="modal-hint">{t.settingsModal.apiTokenHint}</p>
+              </>
+            )}
+
+            <label className="field-label">{t.settingsModal.budgetLimit}</label>
+            <input
+              type="number"
+              min={0.01}
+              step={0.01}
+              className="node-select"
+              value={generationLimit}
+              onChange={(e) => setGenerationLimit(e.target.value)}
+            />
+            <p className="modal-hint">{t.settingsModal.budgetHint}</p>
+            <button className="secondary-btn" onClick={handleAccountSave}>
+              <IconSave /> {accountSaved ? t.settingsModal.saved : t.settingsModal.save}
+            </button>
 
             <label className="field-label">{t.profileModal.periodLabel}</label>
             <div className="profile-date-range">
@@ -298,12 +329,37 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
                 </div>
               </>
             )}
+
+            <label className="field-label">{t.profileModal.legalSectionTitle}</label>
+            <div className="profile-legal-links">
+              <button type="button" className="secondary-btn" onClick={() => onOpenLegal('privacy')}>
+                {t.legal.privacyLink}
+              </button>
+              <button type="button" className="secondary-btn" onClick={() => onOpenLegal('terms')}>
+                {t.legal.termsLink}
+              </button>
+              <button type="button" className="secondary-btn" onClick={() => onOpenLegal('refund')}>
+                {t.legal.refundLink}
+              </button>
+              <button type="button" className="secondary-btn" onClick={() => onOpenLegal('help')}>
+                {t.legal.helpLink}
+              </button>
+            </div>
+
+            {isAdmin && (
+              <>
+                <label className="field-label">{t.adminModal.title}</label>
+                <button type="button" className="secondary-btn" onClick={onOpenAdminPanel}>
+                  <IconSend /> {t.adminModal.title}
+                </button>
+              </>
+            )}
           </>
         )}
 
         <div className="modal-actions">
           <button className="generate-btn" onClick={onClose}>
-            {t.profileModal.close}
+            {t.settingsModal.close}
           </button>
         </div>
       </div>

@@ -20,9 +20,9 @@ import VideoGenProNode from './nodes/VideoGenProNode';
 import AdaptNode from './nodes/AdaptNode';
 import ImageInputNode from './nodes/ImageInputNode';
 import VectorGenNode from './nodes/VectorGenNode';
-import SettingsModal from './components/SettingsModal';
-import AboutModal from './components/AboutModal';
 import ProfileModal from './components/ProfileModal';
+import SubscriptionModal from './components/SubscriptionModal';
+import AvatarMenuButton from './components/AvatarMenuButton';
 import ContextMenu, { type ContextMenuOption } from './components/ContextMenu';
 import AiAssistantPanel from './components/AiAssistantPanel';
 import TextWorkPanel from './components/TextWorkPanel';
@@ -59,11 +59,8 @@ import {
   IconSave,
   IconFolderOpen,
   IconSettings,
-  IconInfo,
   IconChat,
   IconVector,
-  IconUser,
-  IconSend,
   IconFlow,
   IconGauge,
   IconRocket,
@@ -79,7 +76,6 @@ import {
   IMAGE_MODEL_META,
   ADAPT_PRESETS,
   IMAGE_REFERENCE_SLOTS,
-  ADMIN_EMAIL,
   type ChatMessage,
 } from './types';
 import { ProjectIdContext } from './store/projectContext';
@@ -373,9 +369,9 @@ function Canvas() {
   const [projects, setProjects] = useState<Project[]>(() => [makeBlankProject(t.toolbar.projectName(1))]);
   const [activeProjectId, setActiveProjectId] = useState(() => projects[0].id);
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [aboutOpen, setAboutOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
   const [mainView, setMainView] = useState<
     'canvas' | 'text' | 'generate' | 'evaluate' | 'onelaunch' | 'musicaudio' | 'strategy' | 'assets'
@@ -384,7 +380,7 @@ function Canvas() {
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   // Radix NavigationMenu-style single-value model: only one toolbar menu open at a time, so
   // hovering a new trigger switches instantly without a close/reopen flicker.
-  const [openToolbarMenu, setOpenToolbarMenu] = useState<'file' | 'templates' | 'tools' | 'about' | null>(null);
+  const [openToolbarMenu, setOpenToolbarMenu] = useState<'file' | 'templates' | 'tools' | null>(null);
   const [adaptMenuOpen, setAdaptMenuOpen] = useState(false);
   const [bgRemoverOpen, setBgRemoverOpen] = useState(false);
   const [upscalerOpen, setUpscalerOpen] = useState(false);
@@ -905,49 +901,31 @@ function Canvas() {
               { title: t.tools.photoEditorLabel, description: t.toolbarMenu.photoEditorDesc, icon: IconImage, onClick: () => setPhotoEditorOpen(true) },
             ]}
           />
-          <ToolbarMenu
-            label={t.toolbarMenu.aboutMenuLabel}
-            icon={IconInfo}
-            isOpen={openToolbarMenu === 'about'}
-            onOpen={() => setOpenToolbarMenu('about')}
-            onClose={() => setOpenToolbarMenu((v) => (v === 'about' ? null : v))}
-            items={[
-              { title: t.legal.privacyLink, description: t.toolbarMenu.privacyDesc, icon: IconInfo, onClick: () => setLegalDoc('privacy') },
-              { title: t.legal.termsLink, description: t.toolbarMenu.termsDesc, icon: IconDocument, onClick: () => setLegalDoc('terms') },
-              { title: t.legal.refundLink, description: t.toolbarMenu.refundDesc, icon: IconCreditCard, onClick: () => setLegalDoc('refund') },
-              { title: t.legal.helpLink, description: t.toolbarMenu.helpDesc, icon: IconChat, onClick: () => setLegalDoc('help') },
-            ]}
-          />
-          {authEmail === ADMIN_EMAIL && (
-            <button
-              className="toolbar-icon-btn toolbar-icon-btn-ghost"
-              onClick={() => setAdminPanelOpen(true)}
-              title={t.toolbar.sendMessageTooltip}
-            >
-              <IconSend />
+          {import.meta.env.VITE_WEB_MODE === '1' && (
+            <button className="toolbar-label-btn assets-btn" onClick={() => setMainView('assets')}>
+              <IconAssetsFolder size={15} /> {t.assets.buttonLabel}
             </button>
           )}
-          <button
-            className="toolbar-icon-btn toolbar-icon-btn-ghost"
-            onClick={() => setSettingsOpen(true)}
-            title={t.toolbar.settingsTooltip}
-          >
-            <IconSettings />
-          </button>
-          <button
-            className="toolbar-icon-btn toolbar-icon-btn-ghost"
-            onClick={() => setAboutOpen(true)}
-            title={t.toolbar.aboutTooltip}
-          >
-            <IconInfo />
-          </button>
-          <button
-            className="toolbar-avatar-btn"
-            onClick={() => setProfileOpen(true)}
+          <AvatarMenuButton
             title={t.toolbar.profileTooltip}
-          >
-            <IconUser />
-          </button>
+            isOpen={avatarMenuOpen}
+            onOpen={() => setAvatarMenuOpen(true)}
+            onClose={() => setAvatarMenuOpen(false)}
+            items={[
+              {
+                title: t.toolbarMenu.subscriptionMenuLabel,
+                description: t.toolbarMenu.subscriptionMenuDesc,
+                icon: IconCreditCard,
+                onClick: () => setSubscriptionOpen(true),
+              },
+              {
+                title: t.settingsModal.title,
+                description: t.toolbarMenu.settingsMenuDesc,
+                icon: IconSettings,
+                onClick: () => setProfileOpen(true),
+              },
+            ]}
+          />
         </div>
       </div>
       <div className="main-area">
@@ -1040,11 +1018,6 @@ function Canvas() {
             }
           />
           <div className="topbar-right">
-            {import.meta.env.VITE_WEB_MODE === '1' && (
-              <button className="toolbar-label-btn assets-btn" onClick={() => setMainView('assets')}>
-                <IconAssetsFolder size={15} /> {t.assets.buttonLabel}
-              </button>
-            )}
             <BudgetBar />
           </div>
           </div>
@@ -1143,9 +1116,14 @@ function Canvas() {
           onClose={() => setContextMenu(null)}
         />
       )}
-      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
-      {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
-      {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
+      {profileOpen && (
+        <ProfileModal
+          onClose={() => setProfileOpen(false)}
+          onOpenLegal={setLegalDoc}
+          onOpenAdminPanel={() => setAdminPanelOpen(true)}
+        />
+      )}
+      {subscriptionOpen && <SubscriptionModal onClose={() => setSubscriptionOpen(false)} />}
       {adminPanelOpen && <AdminPanel onClose={() => setAdminPanelOpen(false)} />}
       {bgRemoverOpen && <BackgroundRemoverModal onClose={() => setBgRemoverOpen(false)} />}
       {upscalerOpen && <UpscalerModal onClose={() => setUpscalerOpen(false)} />}

@@ -128,6 +128,7 @@ export interface Translations {
     csvHeader: string;
     exportError: string;
     locale: string;
+    legalSectionTitle: string;
   };
   adminModal: {
     title: string;
@@ -681,6 +682,9 @@ export interface Translations {
     termsDesc: string;
     refundDesc: string;
     helpDesc: string;
+    subscriptionMenuLabel: string;
+    subscriptionMenuDesc: string;
+    settingsMenuDesc: string;
   };
   startScreen: {
     greeting: string;
@@ -941,6 +945,7 @@ export const ru: Translations = {
     csvHeader: 'Дата,Время,Модель,Категория,Стоимость USD',
     exportError: 'Не удалось сохранить файл',
     locale: 'ru-RU',
+    legalSectionTitle: 'Документы',
   },
   adminModal: {
     title: 'Админ-панель',
@@ -1512,6 +1517,9 @@ export const ru: Translations = {
     termsDesc: 'Правила использования сервиса',
     refundDesc: 'Условия возврата средств',
     helpDesc: 'Как начать работу и куда обратиться за поддержкой',
+    subscriptionMenuLabel: 'Моя подписка',
+    subscriptionMenuDesc: 'Статус вашей подписки',
+    settingsMenuDesc: 'Язык, статистика, Яндекс.Диск',
   },
   startScreen: {
     greeting: 'Начнем генерить?',
@@ -1783,6 +1791,7 @@ export const en: Translations = {
     csvHeader: 'Date,Time,Model,Category,Cost USD',
     exportError: 'Could not save the file',
     locale: 'en-US',
+    legalSectionTitle: 'Documents',
   },
   adminModal: {
     title: 'Admin panel',
@@ -2354,6 +2363,9 @@ export const en: Translations = {
     termsDesc: 'Rules for using the service',
     refundDesc: 'Refund conditions',
     helpDesc: 'How to get started and where to get support',
+    subscriptionMenuLabel: 'My subscription',
+    subscriptionMenuDesc: 'Your subscription status',
+    settingsMenuDesc: 'Language, stats, Yandex Disk',
   },
   startScreen: {
     greeting: "Let's start generating?",
