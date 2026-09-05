@@ -88,6 +88,12 @@ import { saveProjectToYandexDisk } from './webApi';
 import { formatGenerationError } from './errorMessages';
 import './App.css';
 
+// Modes whose panel is a flat white surface (see .topbar-flat in App.css) — the topbar row
+// above them gets the same flat white so there's no seam. Canvas/Strategy/Assets keep the
+// gray canvas-continuation look instead, so the topbar there stays transparent over the real
+// dot-grid canvas (or its gray flat-color siblings).
+const WHITE_TOPBAR_VIEWS = new Set(['text', 'generate', 'onelaunch', 'musicaudio', 'evaluate']);
+
 const nodeTypes = {
   prompt: PromptNode,
   imageGen: ImageGenNode,
@@ -930,11 +936,11 @@ function Canvas() {
       </div>
       <div className="main-area">
         <div className="canvas-area" onDragOver={onCanvasDragOver} onDrop={onCanvasDrop}>
-          {/* Absolute overlay at the top of .canvas-area (not a chrome row above it) so this
-              row's own transparent background shows the real thing behind it — the node
-              canvas's live, pannable dot pattern in canvas mode, or whichever flat view panel is
-              active otherwise — instead of a static CSS imitation of it. */}
-          <div className="topbar">
+          {/* Absolute overlay at the top of .canvas-area (not a chrome row above it). Stays
+              transparent in canvas/strategy/assets modes so the real gray canvas continues
+              behind it uninterrupted; gets a flat white fill (.topbar-flat) in the modes whose
+              own panel is already flat white, so there's no seam between the two. */}
+          <div className={`topbar${WHITE_TOPBAR_VIEWS.has(mainView) ? ' topbar-flat' : ''}`}>
           {mainView === 'canvas' && (
           <div className="project-tabs">
             {projects.map((p) => (

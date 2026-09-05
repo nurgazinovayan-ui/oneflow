@@ -48,6 +48,7 @@ export default function TextWorkPanel({ active }: TextWorkPanelProps) {
     null
   );
   const listRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const activeThread = threads.find((t) => t.id === activeThreadId) ?? threads[0];
 
@@ -155,6 +156,16 @@ export default function TextWorkPanel({ active }: TextWorkPanelProps) {
     setTimeout(() => setCopiedIndex((cur) => (cur === index ? null : cur)), 1200);
   };
 
+  const handleQuickPrompt = (prompt: string) => {
+    setDraft(prompt);
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    });
+  };
+
   return (
     <div className={`text-work-panel ${active ? '' : 'text-work-hidden'}`}>
       <div className="text-work-body">
@@ -203,6 +214,21 @@ export default function TextWorkPanel({ active }: TextWorkPanelProps) {
           </div>
         </div>
         <div className="text-work-chat">
+          <div className="text-work-quickprompts">
+            <span className="text-work-quickprompts-label">{t.textWork.quickPromptsLabel}</span>
+            <div className="text-work-quickprompts-list">
+              {t.textWork.quickPrompts.map((qp, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="text-work-quickprompt-chip"
+                  onClick={() => handleQuickPrompt(qp.prompt)}
+                >
+                  {qp.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="chat-log text-work-log" ref={listRef}>
             {activeThread.messages.length === 0 && (
               <div className="connected-hint">{t.textWork.emptyHint}</div>
@@ -251,6 +277,7 @@ export default function TextWorkPanel({ active }: TextWorkPanelProps) {
 
           <div className="text-work-composer text-work-input-row">
             <textarea
+              ref={textareaRef}
               className="text-work-composer-input"
               placeholder={t.textWork.inputPlaceholder}
               value={draft}

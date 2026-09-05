@@ -803,10 +803,11 @@
 }
 
 /* This row is an absolute overlay pinned to the top of .canvas-area (see App.tsx — it moved from
-   a chrome row above the canvas to the canvas's own first child). It used to stay fully
-   transparent so the node canvas's dot pattern showed through in canvas mode — now it carries a
-   flat white fill instead (matching .text-work-panel and the other flat view panels, which were
-   already opaque and covered it regardless), so the dot grid never shows through any mode.
+   a chrome row above the canvas to the canvas's own first child). Transparent by default so the
+   node canvas's live dot pattern (or Strategy's/Assets' own gray flat backdrop) shows through
+   uninterrupted in those modes — App.tsx adds .topbar-flat below for the modes whose own panel
+   is already flat white (Copywrite engine, Generation, One Launch, Music & audio, Creative
+   Predictor), so the row matches instead of showing gray behind it there.
    z-index:30 matches .dropdown-menu's own reasoning below: needs to stay above
    .quick-gen-panel/.text-work-panel (z-index:20, absolute-covering .canvas-area in every other
    mode) so project tabs/mode-switch/Assets stay usable — and visible — no matter which mode is
@@ -827,8 +828,11 @@
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  background: #ffffff;
   -webkit-app-region: drag;
+}
+
+.topbar-flat {
+  background: #ffffff;
 }
 
 .project-tabs {
@@ -4606,6 +4610,52 @@
   padding: 20px 24px;
 }
 
+/* One-click starter prompts for the content team/copywriter — sits above the chat log so it's
+   always reachable, not just on the empty-thread state. */
+.text-work-quickprompts {
+  max-width: 780px;
+  width: 100%;
+  margin: 0 auto;
+  padding-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.text-work-quickprompts-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-text-dim);
+  margin-bottom: 6px;
+}
+
+.text-work-quickprompts-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.text-work-quickprompt-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--c-pink-dim);
+  color: var(--c-pink-hover);
+  font-size: 11.5px;
+  font-weight: 600;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease),
+    border-color 0.15s var(--ease);
+}
+
+.text-work-quickprompt-chip:hover {
+  background: var(--c-pink);
+  border-color: var(--c-pink);
+  color: #fff;
+}
+
 .text-work-log {
   max-width: 780px;
   width: 100%;
@@ -4629,7 +4679,9 @@
   background: #ffffff;
   border: 1px solid var(--c-divider);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  /* Weak on purpose — --shadow-sm's usual 0.35 alpha reads as too heavy on this flat white
+     panel, where the composer is the only card on the page rather than one of several. */
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   padding: 14px 14px 10px;
   flex-shrink: 0;
 }

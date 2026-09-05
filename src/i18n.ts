@@ -580,6 +580,8 @@ export interface Translations {
     downloadPres: string;
     preparingFile: string;
     fileError: string;
+    quickPromptsLabel: string;
+    quickPrompts: { label: string; prompt: string }[];
   };
   common: {
     close: string;
@@ -860,8 +862,8 @@ export const ru: Translations = {
   modeSwitch: {
     nodesAndAdapt: 'Ноды и адаптация',
     quickGeneration: 'Генерация',
-    textWork: 'Работа с текстом',
-    evaluation: 'Оценка',
+    textWork: 'Copywrite engine',
+    evaluation: 'Creative Predictor',
     oneLaunch: 'One Launch',
     musicAudio: 'Музыка и аудио',
     strategy: 'Стратегия',
@@ -1000,7 +1002,7 @@ export const ru: Translations = {
     transcriptAssistant: 'Ассистент',
   },
   evaluation: {
-    title: 'Оценка креатива',
+    title: 'Creative Predictor',
     subtitle: 'Загрузите 1-3 варианта картинки и получите оценку визуальной силы каждого.',
     uploadSectionLabel: 'Варианты креатива',
     platformLabel: 'Площадка',
@@ -1416,6 +1418,35 @@ export const ru: Translations = {
     downloadPres: 'Скачать презентацию (.pptx)',
     preparingFile: 'Готовим файл...',
     fileError: 'Не удалось создать файл.',
+    quickPromptsLabel: 'Быстрые подсказки',
+    quickPrompts: [
+      {
+        label: 'Заголовки объявления',
+        prompt: 'Напиши 5 вариантов цепляющего заголовка для рекламного объявления о ',
+      },
+      {
+        label: 'Сделать убедительнее',
+        prompt: 'Перепиши следующий текст, сделав его более убедительным и продающим:\n\n',
+      },
+      {
+        label: 'Под соцсети',
+        prompt:
+          'Адаптируй этот текст под формат поста в Instagram/Telegram — коротко, с эмодзи и призывом к действию:\n\n',
+      },
+      {
+        label: 'SEO-описание',
+        prompt: 'Напиши SEO-оптимизированное описание товара для карточки на маркетплейсе: ',
+      },
+      {
+        label: 'Контент-план',
+        prompt:
+          'Составь контент-план на месяц для соцсетей бренда: укажи темы, форматы и частоту постов. Ниша: ',
+      },
+      {
+        label: 'Проверить текст',
+        prompt: 'Проверь этот текст на грамотность, стиль и тон, предложи правки:\n\n',
+      },
+    ],
   },
   common: {
     close: 'Закрыть',
@@ -1707,8 +1738,8 @@ export const en: Translations = {
   modeSwitch: {
     nodesAndAdapt: 'Nodes & adaptation',
     quickGeneration: 'Generation',
-    textWork: 'Text work',
-    evaluation: 'Evaluation',
+    textWork: 'Copywrite engine',
+    evaluation: 'Creative Predictor',
     oneLaunch: 'One Launch',
     musicAudio: 'Music & audio',
     strategy: 'Strategy',
@@ -1846,7 +1877,7 @@ export const en: Translations = {
     transcriptAssistant: 'Assistant',
   },
   evaluation: {
-    title: 'Creative evaluation',
+    title: 'Creative Predictor',
     subtitle: 'Upload 1-3 variants of an image and get a visual-strength score for each.',
     uploadSectionLabel: 'Creative variants',
     platformLabel: 'Platform',
@@ -2262,6 +2293,33 @@ export const en: Translations = {
     downloadPres: 'Download presentation (.pptx)',
     preparingFile: 'Preparing file...',
     fileError: 'Could not create the file.',
+    quickPromptsLabel: 'Quick prompts',
+    quickPrompts: [
+      {
+        label: 'Ad headlines',
+        prompt: 'Write 5 catchy ad headline variants for ',
+      },
+      {
+        label: 'Make more persuasive',
+        prompt: 'Rewrite the following text to make it more persuasive and sales-oriented:\n\n',
+      },
+      {
+        label: 'For social media',
+        prompt: 'Adapt this text for an Instagram/Telegram post — short, with emoji and a call to action:\n\n',
+      },
+      {
+        label: 'SEO description',
+        prompt: 'Write an SEO-optimized product description for a marketplace listing: ',
+      },
+      {
+        label: 'Content plan',
+        prompt: 'Put together a one-month social content plan — topics, formats and posting frequency. Niche: ',
+      },
+      {
+        label: 'Proofread',
+        prompt: 'Proofread this text for grammar, style, and tone, and suggest edits:\n\n',
+      },
+    ],
   },
   common: {
     close: 'Close',
