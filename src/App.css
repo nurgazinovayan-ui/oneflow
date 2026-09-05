@@ -802,13 +802,12 @@
   min-height: 0;
 }
 
-/* No fill of its own — the project tabs, "+" button and mode-switch pill all carry their own
-   background already, so nothing here needs a strip behind them. This row is now an absolute
-   overlay pinned to the top of .canvas-area (see App.tsx — it moved from a chrome row above the
-   canvas to the canvas's own first child) rather than a separate element with its own fake
-   background: fully transparent, so whatever is actually behind it shows through unmodified —
-   the node canvas's real, pannable dot pattern in canvas mode, or whichever flat view panel is
-   active otherwise. z-index:30 matches .dropdown-menu's own reasoning below: needs to stay above
+/* This row is an absolute overlay pinned to the top of .canvas-area (see App.tsx — it moved from
+   a chrome row above the canvas to the canvas's own first child). It used to stay fully
+   transparent so the node canvas's dot pattern showed through in canvas mode — now it carries a
+   flat white fill instead (matching .text-work-panel and the other flat view panels, which were
+   already opaque and covered it regardless), so the dot grid never shows through any mode.
+   z-index:30 matches .dropdown-menu's own reasoning below: needs to stay above
    .quick-gen-panel/.text-work-panel (z-index:20, absolute-covering .canvas-area in every other
    mode) so project tabs/mode-switch/Assets stay usable — and visible — no matter which mode is
    active, since mode-switch is the only way back out of them. */
@@ -828,6 +827,7 @@
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
+  background: #ffffff;
   -webkit-app-region: drag;
 }
 
@@ -992,6 +992,7 @@
   border-radius: 999px;
   background: #ffffff;
   border: 1px solid var(--c-divider);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .glow-menu-list {
