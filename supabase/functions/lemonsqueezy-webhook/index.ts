@@ -74,6 +74,9 @@
 //   end;
 //   $$;
 //
+//   -- Superseded by reserve_credit_balance/refund_credit_balance below (the generate-*/
+//   -- evaluate-creative functions no longer call this one) — kept only so an already-deployed
+//   -- copy in the database doesn't need dropping.
 //   create or replace function deduct_credit_balance(p_user_id uuid, p_amount_usd numeric)
 //   returns numeric
 //   language plpgsql
@@ -83,6 +86,54 @@
 //   begin
 //     update user_credits
 //       set balance_usd = greatest(balance_usd - p_amount_usd, 0),
+//           updated_at = now()
+//     where user_id = p_user_id
+//     returning balance_usd into new_balance;
+//     return coalesce(new_balance, 0);
+//   end;
+//   $$;
+//
+//   -- Atomic check-and-deduct: the security-review hard stop for point 2 ("лимиты на
+//   -- запросы") — called BEFORE the paid Replicate/OpenAI call in every generate-*/
+//   -- evaluate-creative function, instead of the old deduct_credit_balance's after-the-fact,
+//   -- always-succeeds (floors at 0) debit. The `and balance_usd >= p_amount_usd` clause makes
+//   -- this a single atomic statement: either it finds a row with enough balance and reserves
+//   -- it right there, or it matches no row (insufficient balance, OR the user has never been
+//   -- credited at all so no user_credits row exists yet) and returns null — the Edge Function
+//   -- reads null as "reject with 402" and never calls the paid API. Doing the check and the
+//   -- debit as one UPDATE (not a separate SELECT-then-UPDATE) is what avoids a race between two
+//   -- concurrent requests both reading a balance that only one of them can actually afford.
+//   create or replace function reserve_credit_balance(p_user_id uuid, p_amount_usd numeric)
+//   returns numeric
+//   language plpgsql
+//   as $$
+//   declare
+//     new_balance numeric;
+//   begin
+//     update user_credits
+//       set balance_usd = balance_usd - p_amount_usd,
+//           updated_at = now()
+//     where user_id = p_user_id
+//       and balance_usd >= p_amount_usd
+//     returning balance_usd into new_balance;
+//     return new_balance; -- null means insufficient balance (or no row at all) — caller must reject
+//   end;
+//   $$;
+//
+//   -- Pairs with reserve_credit_balance: called if the paid API call fails AFTER a successful
+//   -- reservation, so a failed generation doesn't leave the user permanently charged for
+//   -- nothing. Not the reverse of the >= guard above on purpose — a refund should always land,
+//   -- even if some other concurrent reservation has since dropped the balance below the
+//   -- refunded amount.
+//   create or replace function refund_credit_balance(p_user_id uuid, p_amount_usd numeric)
+//   returns numeric
+//   language plpgsql
+//   as $$
+//   declare
+//     new_balance numeric;
+//   begin
+//     update user_credits
+//       set balance_usd = balance_usd + p_amount_usd,
 //           updated_at = now()
 //     where user_id = p_user_id
 //     returning balance_usd into new_balance;

@@ -3,9 +3,9 @@
 // Secret needed: REPLICATE_API_KEY (Edge Functions → generate-video → Secrets). SUPABASE_URL
 // and SUPABASE_SERVICE_ROLE_KEY are normally already set automatically for Edge Functions.
 //
-// Requires the user_credits table and deduct_credit_balance() function — see the SQL comment
-// in lemonsqueezy-webhook/index.ts — and the generation_log table — see the SQL comment in
-// admin-list-generations/index.ts.
+// Requires the user_credits table and the reserve_credit_balance()/refund_credit_balance()
+// functions — see the SQL comment in lemonsqueezy-webhook/index.ts — and the generation_log
+// table — see the SQL comment in admin-list-generations/index.ts.
 
 import Replicate from 'npm:replicate';
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -50,6 +50,32 @@ async function logGeneration(
     .from('generation_log')
     .insert({ user_id: userId, email, model, category, cost_usd: costUsd });
   if (error) console.error('Failed to log generation', error);
+}
+
+// Hard stop: reserves costUsd from the caller's balance atomically, BEFORE the paid Replicate
+// call — returns false (caller must reject with 402) if the balance can't cover it, so an
+// unpaid/exhausted account can no longer spend the shared Replicate key at all. Throws (letting
+// the outer catch produce a generic 500) on a genuine DB error, so that's never confused with a
+// real "insufficient balance" rejection.
+async function reserveBalance(userId: string, costUsd: number): Promise<boolean> {
+  if (costUsd <= 0) return true;
+  const { data, error } = await supabaseAdmin.rpc('reserve_credit_balance', {
+    p_user_id: userId,
+    p_amount_usd: costUsd,
+  });
+  if (error) throw error;
+  return data !== null;
+}
+
+// Pairs with reserveBalance — called if the generation itself fails after a successful
+// reservation, so the user isn't left charged for nothing.
+async function refundBalance(userId: string, costUsd: number): Promise<void> {
+  if (costUsd <= 0) return;
+  const { error } = await supabaseAdmin.rpc('refund_credit_balance', {
+    p_user_id: userId,
+    p_amount_usd: costUsd,
+  });
+  if (error) console.error('Failed to refund credit balance', error);
 }
 
 // The web build is served from a different origin than *.supabase.co, so every browser call
@@ -143,20 +169,25 @@ Deno.serve(async (req) => {
     const params = await req.json();
     const { model, prompt, image, aspectRatio, duration, resolution } = params;
 
-    // Balance is no longer a hard gate here — see the matching comment in generate-image.
     const costUsd = estimateVideoCost(model, resolution, duration);
+
+    if (!(await reserveBalance(callerId, costUsd))) {
+      return new Response(JSON.stringify({ error: 'Insufficient balance.', code: 'insufficient_balance' }), {
+        status: 402,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const input = buildVideoInput(model, prompt, image, aspectRatio, duration, resolution);
     const replicate = new Replicate({ auth: REPLICATE_API_KEY });
-    const output = await replicate.run(model, { input });
-
-    if (costUsd > 0) {
-      const { error: deductError } = await supabaseAdmin.rpc('deduct_credit_balance', {
-        p_user_id: callerId,
-        p_amount_usd: costUsd,
-      });
-      if (deductError) console.error('Failed to deduct credit balance', deductError);
+    let output: unknown;
+    try {
+      output = await replicate.run(model, { input });
+    } catch (err) {
+      await refundBalance(callerId, costUsd);
+      throw err;
     }
+
     void logGeneration(callerId, caller.email, model, 'video', costUsd);
 
     return new Response(JSON.stringify(normalizeOutput(output)), {

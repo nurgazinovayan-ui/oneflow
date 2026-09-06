@@ -91,7 +91,10 @@ async function callFunction<T>(name: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data?.error || t().errors.generationError);
+  if (!res.ok) {
+    if (data?.code === 'insufficient_balance') throw new Error(t().errors.insufficientBalance);
+    throw new Error(data?.error || t().errors.generationError);
+  }
   return data as T;
 }
 

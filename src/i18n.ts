@@ -811,6 +811,7 @@ export interface Translations {
     contentFlagged: string;
     notLoggedIn: string;
     generationError: string;
+    insufficientBalance: string;
     sendFailed: string;
     userNotFound: string;
   };
@@ -1760,6 +1761,8 @@ export const ru: Translations = {
       'нейросети, а не ошибка программы — попробуйте другое фото или переформулируйте промпт.',
     notLoggedIn: 'Не выполнен вход.',
     generationError: 'Ошибка генерации.',
+    insufficientBalance:
+      'Недостаточно средств на балансе для этой генерации. Пополните баланс, чтобы продолжить.',
     sendFailed: 'Не удалось отправить.',
     userNotFound: 'Пользователь с таким email не найден.',
   },
@@ -2707,6 +2710,7 @@ export const en: Translations = {
       'error — try a different photo or rephrase the prompt.',
     notLoggedIn: 'Not signed in.',
     generationError: 'Generation error.',
+    insufficientBalance: 'Insufficient balance for this generation. Top up your balance to continue.',
     sendFailed: 'Could not send.',
     userNotFound: 'No user found with that email.',
   },
