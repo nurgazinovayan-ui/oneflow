@@ -1,10 +1,31 @@
 // Deploy in Supabase Studio → Edge Functions → Create a new function → name it
 // "generate-chat" → paste this file → Deploy. Keep "Verify JWT" ON (default).
 // Secret needed: REPLICATE_API_KEY (Edge Functions → generate-chat → Secrets).
+// SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY — usually already set automatically for every Edge
+// Function in this project; only add them by hand if they're missing.
 
 import Replicate from 'npm:replicate';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY') ?? '';
+
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+);
+
+// Every other generate-*/evaluate-creative function in this project checks the caller's JWT in
+// code (see the matching getCaller in generate-image/index.ts) rather than relying solely on
+// the Supabase dashboard's "Verify JWT" toggle for the function — this one was missing that
+// check entirely, which would let an unauthenticated caller who finds the function URL burn the
+// shared REPLICATE_API_KEY with no login and no rate limit. Matches the pattern everywhere else.
+async function getCaller(req: Request): Promise<{ id: string; email: string } | null> {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+  if (!token) return null;
+  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !data.user) return null;
+  return { id: data.user.id, email: data.user.email ?? '' };
+}
 
 // The web build is served from a different origin than *.supabase.co, so every browser call
 // here is cross-origin and triggers a CORS preflight (OPTIONS) first — without these headers
@@ -101,6 +122,14 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
   try {
+    const caller = await getCaller(req);
+    if (!caller) {
+      return new Response(JSON.stringify({ error: 'Not authenticated.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const body: {
       messages: { role: 'user' | 'assistant'; content: string }[];
       images?: string[];
