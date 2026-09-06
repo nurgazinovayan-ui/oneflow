@@ -582,11 +582,20 @@
   transform: translateX(100%);
 }
 
+/* A shared min-width forces both buttons to the same real footprint — "Yearly" plus its "Save
+   20%" badge is wider than "Monthly" alone, and in a shrink-to-fit flex row (no explicit track
+   width) flex-grow has no free space to distribute, so it can't equalize two unequal children on
+   its own. Without this the 50%-wide slider didn't match either button's true width and the
+   badge spilled past the track's rounded edge in the "Yearly" state. 170px comfortably fits the
+   longer label + badge combination in both RU ("В год Экономия 20%", ~159px) and EN. */
 .pricing-period-toggle button {
   position: relative;
   z-index: 1;
+  flex: 0 0 auto;
+  min-width: 170px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 8px 16px;
   border: none;
@@ -595,6 +604,7 @@
   color: var(--c-text-muted);
   font-size: 12.5px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
   transition: color 0.15s var(--ease);
 }
