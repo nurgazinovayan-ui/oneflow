@@ -21,7 +21,6 @@ import AdaptNode from './nodes/AdaptNode';
 import ImageInputNode from './nodes/ImageInputNode';
 import VectorGenNode from './nodes/VectorGenNode';
 import ProfileModal from './components/ProfileModal';
-import SubscriptionModal from './components/SubscriptionModal';
 import AvatarMenuButton from './components/AvatarMenuButton';
 import ContextMenu, { type ContextMenuOption } from './components/ContextMenu';
 import AiAssistantPanel from './components/AiAssistantPanel';
@@ -96,7 +95,7 @@ import './App.css';
 const WHITE_TOPBAR_VIEWS = new Set(['text', 'generate', 'onelaunch', 'musicaudio', 'evaluate']);
 
 // LemonSqueezy subscription statuses that count as "has a subscription" for the avatar's ring
-// (see SubscriptionModal.tsx/ProfileModal.tsx, which use the same set for their own badge).
+// (see ProfileModal.tsx, which uses the same set for its own badge).
 const ACTIVE_SUB_STATUSES = new Set(['active', 'on_trial']);
 
 const nodeTypes = {
@@ -381,7 +380,6 @@ function Canvas() {
   const [activeProjectId, setActiveProjectId] = useState(() => projects[0].id);
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
   const [mainView, setMainView] = useState<
@@ -932,7 +930,7 @@ function Canvas() {
               <IconAssetsFolder size={15} /> {t.assets.buttonLabel}
             </button>
           )}
-          <button className="toolbar-subscription-btn" onClick={() => setSubscriptionOpen(true)}>
+          <button className="toolbar-subscription-btn" onClick={requestPayment}>
             {t.toolbar.subscriptionButtonLabel}
           </button>
           <AvatarMenuButton
@@ -946,7 +944,7 @@ function Canvas() {
                 title: t.toolbarMenu.subscriptionMenuLabel,
                 description: t.toolbarMenu.subscriptionMenuDesc,
                 icon: IconCreditCard,
-                onClick: () => setSubscriptionOpen(true),
+                onClick: requestPayment,
               },
               {
                 title: t.settingsModal.title,
@@ -1126,7 +1124,7 @@ function Canvas() {
               email={authEmail}
               subscriptionLabel={hasActiveSubscription ? 'Pro' : 'Free'}
               onProfile={() => setProfileOpen(true)}
-              onSubscription={() => setSubscriptionOpen(true)}
+              onSubscription={requestPayment}
               onGenerate={(kind, prompt) => {
                 setCopywriteGeneration({ id: Date.now(), kind, prompt });
                 setMainView('generate');
@@ -1171,7 +1169,6 @@ function Canvas() {
           onOpenAdminPanel={() => setAdminPanelOpen(true)}
         />
       )}
-      {subscriptionOpen && <SubscriptionModal onClose={() => setSubscriptionOpen(false)} />}
       {adminPanelOpen && <AdminPanel onClose={() => setAdminPanelOpen(false)} />}
       {bgRemoverOpen && <BackgroundRemoverModal onClose={() => setBgRemoverOpen(false)} />}
       {upscalerOpen && <UpscalerModal onClose={() => setUpscalerOpen(false)} />}

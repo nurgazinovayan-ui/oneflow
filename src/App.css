@@ -5931,7 +5931,7 @@
   border-radius: var(--radius-sm);
 }
 
-/* Standalone "Подписка" entry point, next to the avatar — opens the same SubscriptionModal as
+/* Standalone "Подписка" entry point, next to the avatar — opens the same pricing modal as
    the avatar dropdown's "Моя подписка" item (two paths to the one modal), but made to stand out
    as a black pill with a soft black glow rather than blending in with the other ghost buttons. */
 .toolbar-subscription-btn {
@@ -5939,7 +5939,7 @@
   align-items: center;
   height: 34px;
   padding: 0 16px;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   background: #000000;
   border: none;
   color: #ffffff;

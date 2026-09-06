@@ -23,7 +23,7 @@ function toDateInputValue(d: Date): string {
 // three separate modals (SettingsModal's account/API-token/budget, this component's own
 // stats/language/Yandex-Disk, plus entry points to the legal docs and, for the admin account,
 // AdminPanel) since the toolbar only exposes one trigger for all of it now. Subscription status
-// moved out to its own SubscriptionModal — "Моя подписка" is a separate dropdown item.
+// moved out to the pricing modal — "Моя подписка" is a separate dropdown item.
 export default function ProfileModal({ onClose, onOpenLegal, onOpenAdminPanel }: ProfileModalProps) {
   const t = useT();
   const language = useLanguageStore((s) => s.language);
