@@ -932,6 +932,9 @@ function Canvas() {
               <IconAssetsFolder size={15} /> {t.assets.buttonLabel}
             </button>
           )}
+          <button className="toolbar-subscription-btn" onClick={() => setSubscriptionOpen(true)}>
+            {t.toolbar.subscriptionButtonLabel}
+          </button>
           <AvatarMenuButton
             title={t.toolbar.profileTooltip}
             isOpen={avatarMenuOpen}

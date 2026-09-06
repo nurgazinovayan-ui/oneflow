@@ -5931,6 +5931,40 @@
   border-radius: var(--radius-sm);
 }
 
+/* Standalone "Подписка" entry point, next to the avatar — opens the same SubscriptionModal as
+   the avatar dropdown's "Моя подписка" item (two paths to the one modal), but made to stand out
+   as a black pill with a soft black glow rather than blending in with the other ghost buttons. */
+.toolbar-subscription-btn {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: #000000;
+  border: none;
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 600;
+  flex-shrink: 0;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 0 10px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 0.15s var(--ease),
+    box-shadow 0.15s var(--ease);
+}
+
+.toolbar-subscription-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.7),
+    0 0 14px rgba(0, 0, 0, 0.45);
+}
+
+.toolbar-subscription-btn:active {
+  transform: translateY(0);
+}
+
 /* Gallery of files backed up to the account's Yandex Disk /ONEFLOW folder — same panel shape as
    .musicaudio-panel/.evaluation-panel/etc. (flat --c-canvas-bg, sits inside .canvas-area, shown
    or hidden via the `active` prop rather than mounted/unmounted) since it's now one of the

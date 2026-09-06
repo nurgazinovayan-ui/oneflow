@@ -48,6 +48,7 @@ export interface Translations {
     settingsTooltip: string;
     aboutTooltip: string;
     profileTooltip: string;
+    subscriptionButtonLabel: string;
     newProjectTooltip: string;
     closeProjectTooltip: string;
     projectName: (n: number) => string;
@@ -916,6 +917,7 @@ export const ru: Translations = {
     settingsTooltip: 'Настройки / API-ключ',
     aboutTooltip: 'О программе',
     profileTooltip: 'Личный кабинет',
+    subscriptionButtonLabel: 'Подписка',
     newProjectTooltip: 'Новый проект',
     closeProjectTooltip: 'Закрыть проект',
     projectName: (n) => `Проект ${n}`,
@@ -1860,6 +1862,7 @@ export const en: Translations = {
     settingsTooltip: 'Settings / API key',
     aboutTooltip: 'About',
     profileTooltip: 'Account',
+    subscriptionButtonLabel: 'Subscription',
     newProjectTooltip: 'New project',
     closeProjectTooltip: 'Close project',
     projectName: (n) => `Project ${n}`,
