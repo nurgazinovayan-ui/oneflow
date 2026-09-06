@@ -3631,6 +3631,18 @@
   background: var(--c-pink);
 }
 
+.dropdown-menu-item.danger {
+  color: var(--c-error);
+}
+
+.dropdown-menu-item.danger:hover {
+  background: var(--c-error-bg);
+}
+
+.dropdown-menu-item.danger:hover::before {
+  background: var(--c-error);
+}
+
 .dropdown-menu-header {
   padding: 8px 10px 4px;
   font-size: 10.5px;
@@ -4097,13 +4109,6 @@
   color: #fff;
 }
 
-.text-work-suggestions {
-  max-width: 780px;
-  width: 100%;
-  margin-left: auto;
-  margin-right: auto;
-}
-
 /* Online-users picker inside AdminPanel — a scrollable list of plain rows (same "line, not a
    button" spirit as .text-work-thread) so it reads as a live roster rather than a form
    control. Rows toggle membership in a multi-select now rather than filling a single email
@@ -4504,137 +4509,10 @@
   z-index: 5;
 }
 
-/* Работа с текстом — a full-size mode that replaces the canvas rather than a floating
-   overlay, so it stays mounted (visibility toggled via display:none) to keep thread state
-   alive when the user flips back to the node canvas and returns. Shares --c-canvas-bg with
-   .canvas-area so switching modes doesn't jump between a light and a dark background. */
-.text-work-panel {
-  position: absolute;
-  inset: var(--topbar-height) 0 0 0;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  background: #ffffff;
-}
-
-.text-work-hidden {
-  display: none;
-}
-
-.text-work-body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-}
-
-.text-work-sidebar {
-  width: 240px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  background: var(--c-panel);
-  border-right: 1px solid var(--c-divider);
-  padding: 14px 10px;
-}
-
-.text-work-new-btn {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 7px;
-  height: 30px;
-  padding: 0 4px;
-  border-radius: 6px;
-  background: transparent;
-  border: none;
-  color: var(--c-text-muted);
-  font-size: 12.5px;
-  font-weight: 600;
-  flex-shrink: 0;
-  transition: color 0.15s var(--ease);
-}
-
-.text-work-new-btn:hover {
-  color: var(--c-pink);
-}
-
-.text-work-thread-list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
-
-.text-work-thread {
-  position: relative;
-  display: flex;
-  align-items: center;
-  padding: 7px 26px 7px 4px;
-  cursor: pointer;
-}
-
-.text-work-thread-title {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--c-text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition: color 0.15s var(--ease);
-}
-
-.text-work-thread:hover .text-work-thread-title {
-  color: var(--c-text);
-}
-
-.text-work-thread.active .text-work-thread-title {
-  color: var(--c-pink);
-  font-weight: 600;
-}
-
-.text-work-thread-input {
-  width: 100%;
-  font-size: 12.5px;
-  padding: 3px 5px;
-}
-
-.text-work-thread-delete {
-  position: absolute;
-  right: 2px;
-  top: 5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  color: var(--c-text-dim);
-  padding: 4px;
-  border-radius: 4px;
-  opacity: 0;
-  transition: opacity 0.15s var(--ease);
-}
-
-.text-work-thread:hover .text-work-thread-delete {
-  opacity: 1;
-}
-
-.text-work-thread-delete:hover {
-  color: var(--c-error);
-  background: var(--c-error-bg);
-}
-
-.text-work-chat {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 20px 24px;
-}
-
-/* One-click starter prompts for the content team/copywriter — sits above the chat log so it's
-   always reachable, not just on the empty-thread state. */
+/* Copywrite engine ("Работа с текстом") — full layout now lives in the .cw-* block near the end
+   of this file (ported from a TailGrids-referenced redesign, see CLAUDE_COPYWRITE.md). These
+   .text-work-quickprompts* rules are the one piece that survived unchanged from the previous,
+   simpler panel — the content-team quick-start chips, reused as-is inside the new composer. */
 .text-work-quickprompts {
   max-width: 780px;
   width: 100%;
@@ -4679,88 +4557,9 @@
   color: #fff;
 }
 
-.text-work-log {
-  max-width: 780px;
-  width: 100%;
-  margin: 0 auto;
-}
-
-.text-work-input-row {
-  max-width: 780px;
-  width: 100%;
-  margin: 0 auto;
-}
-
-/* Composer card ported from a shadcn "AI assistant" reference — a white, rounded, bordered box
-   with a borderless textarea on top and a round accent send button in its own footer row, rather
-   than the app's usual bare textarea + pill button pair (still used by AiAssistantPanel's dark
-   dock, untouched here). */
-.text-work-composer {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: #ffffff;
-  border: 1px solid var(--c-divider);
-  border-radius: var(--radius-lg);
-  /* Weak on purpose — --shadow-sm's usual 0.35 alpha reads as too heavy on this flat white
-     panel, where the composer is the only card on the page rather than one of several. */
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-  padding: 14px 14px 10px;
-  flex-shrink: 0;
-}
-
-.text-work-composer-input {
-  width: 100%;
-  min-height: 24px;
-  max-height: 160px;
-  resize: none;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: var(--c-text);
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.text-work-composer-input::placeholder {
-  color: var(--c-text-dim);
-}
-
-.text-work-composer-footer {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.text-work-composer-send {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: var(--c-pink);
-  color: #ffffff;
-  flex-shrink: 0;
-  transition:
-    background 0.15s var(--ease),
-    opacity 0.15s var(--ease);
-}
-
-.text-work-composer-send:hover:not(:disabled) {
-  background: var(--c-pink-hover);
-}
-
-.text-work-composer-send:disabled {
-  background: var(--c-panel-3);
-  color: var(--c-text-dim);
-  cursor: default;
-}
-
 /* Web-only "Оценка" tab (see App.tsx — gated behind VITE_WEB_MODE) — a heuristic design read
-   on 1-3 uploaded creative variants, laid out the same way as .text-work-panel/.quick-gen-panel
-   (a third canvas-area layer toggled via display:none). */
+   on 1-3 uploaded creative variants, laid out the same way as .quick-gen-panel (a third
+   canvas-area layer toggled via display:none). */
 .evaluation-panel {
   position: absolute;
   inset: var(--topbar-height) 0 0 0;
@@ -8730,4 +8529,932 @@
 
 .strategy-sidebar-readiness-next span {
   color: var(--c-text-muted);
+}
+
+/* ==========================================================================
+   Copywrite engine ("Работа с текстом") — native port of a TailGrids-referenced redesign (see
+   CLAUDE_COPYWRITE.md): sidebar with projects/pinned/search, per-message actions, attachments.
+   Built with this app's own --c-* tokens and plain components rather than the reference's
+   Astryx/IndexedDB implementation, per an explicit "same design, project's own style" call —
+   see TextWorkPanel.tsx / copywrite/workspace.ts / copywrite/useWorkspace.ts.
+   ========================================================================== */
+.cw-panel {
+  position: absolute;
+  inset: var(--topbar-height) 0 0 0;
+  z-index: 20;
+  display: flex;
+  background: #ffffff;
+}
+
+.cw-panel.cw-hidden {
+  display: none;
+}
+
+.cw-mobile-backdrop {
+  display: none;
+}
+
+.cw-sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-panel);
+  border-right: 1px solid var(--c-divider);
+  padding: 16px 12px;
+  transition: width 0.15s var(--ease);
+}
+
+.cw-collapsed .cw-sidebar {
+  width: 64px;
+  padding-inline: 10px;
+}
+
+.cw-collapsed .cw-brand,
+.cw-collapsed .cw-sidebar-scroll,
+.cw-collapsed .cw-profile {
+  display: none;
+}
+
+.cw-collapsed .cw-nav-button span {
+  display: none;
+}
+
+.cw-collapsed .cw-nav-button {
+  justify-content: center;
+}
+
+.cw-collapsed .cw-sidebar-header {
+  justify-content: center;
+}
+
+.cw-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  flex-shrink: 0;
+  margin-bottom: 20px;
+}
+
+.cw-brand {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.cw-logo {
+  height: 18px;
+  width: auto;
+  color: var(--c-text);
+}
+
+.cw-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: none;
+  color: var(--c-text-muted);
+  flex-shrink: 0;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+
+.cw-icon-btn:hover:not(:disabled) {
+  background: var(--c-panel-3);
+  color: var(--c-text);
+}
+
+.cw-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.cw-main-links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-bottom: 16px;
+}
+
+.cw-nav-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: none;
+  color: var(--c-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  transition: background 0.15s var(--ease);
+}
+
+.cw-nav-button:hover {
+  background: var(--c-panel-3);
+}
+
+.cw-sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.cw-projects-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  margin-bottom: 6px;
+  min-height: 28px;
+}
+
+.cw-projects-heading > span {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-text-dim);
+}
+
+.cw-history-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+}
+
+.cw-history-row:hover,
+.cw-history-row.cw-selected {
+  background: var(--c-panel-3);
+}
+
+.cw-history-link {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 34px;
+  padding: 0 8px;
+  background: none;
+  border: none;
+  color: var(--c-text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.cw-history-row:hover .cw-history-link,
+.cw-history-row.cw-selected .cw-history-link {
+  color: var(--c-text);
+}
+
+.cw-history-row.cw-selected .cw-history-link {
+  font-weight: 600;
+}
+
+.cw-history-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cw-history-thinking {
+  flex-shrink: 0;
+  color: var(--c-pink);
+}
+
+.cw-count {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--c-panel-3);
+  font-size: 10px;
+  color: var(--c-text-dim);
+}
+
+.cw-row-menu-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.cw-row-menu {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-right: 4px;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: none;
+  color: var(--c-text-dim);
+  opacity: 0;
+  transition:
+    opacity 0.15s var(--ease),
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+
+.cw-history-row:hover .cw-row-menu,
+.cw-row-menu.cw-row-menu-open {
+  opacity: 1;
+}
+
+.cw-row-menu:hover {
+  background: var(--c-panel);
+  color: var(--c-text);
+}
+
+.cw-project-chats {
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 4px;
+}
+
+.cw-empty-project {
+  padding: 6px 8px;
+  font-size: 11.5px;
+  color: var(--c-text-dim);
+}
+
+.cw-project-new-chat {
+  color: var(--c-text-dim);
+  font-weight: 500;
+  height: 30px;
+}
+
+.cw-history-group {
+  margin-top: 18px;
+}
+
+.cw-group-label {
+  padding: 0 8px;
+  margin-bottom: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-text-dim);
+}
+
+.cw-archive-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 8px;
+  margin-top: 14px;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: none;
+  color: var(--c-text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.cw-archive-btn:hover {
+  background: var(--c-panel-3);
+  color: var(--c-text);
+}
+
+.cw-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-top: 14px;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  background: var(--c-panel-2);
+}
+
+.cw-avatar-mini {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--c-text);
+  color: var(--c-panel);
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cw-profile-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  overflow: hidden;
+}
+
+.cw-profile-email {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.cw-profile-plan-hint {
+  font-size: 10.5px;
+  color: var(--c-text-muted);
+}
+
+.cw-plan {
+  flex-shrink: 0;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--c-panel);
+  border: 1px solid var(--c-divider);
+  color: var(--c-text);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cw-stage {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+.cw-surface {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cw-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 52px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--c-divider);
+}
+
+.cw-empty .cw-chat-header {
+  border-bottom-color: transparent;
+}
+
+.cw-mobile-toggle {
+  display: none;
+}
+
+.cw-chat-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--c-text-muted);
+}
+
+.cw-chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.cw-share-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--c-text);
+  border: none;
+  color: var(--c-panel);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cw-share-btn:hover {
+  opacity: 0.85;
+}
+
+.cw-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.cw-message-column {
+  width: min(760px, calc(100% - 80px));
+  margin: 0 auto;
+  padding-block: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.cw-message {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.cw-message-user {
+  align-items: flex-end;
+}
+
+.cw-assistant-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-text-dim);
+}
+
+.cw-message-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cw-message-attachment {
+  display: flex;
+}
+
+.cw-message-image {
+  max-width: 220px;
+  max-height: 220px;
+  border-radius: var(--radius-md);
+  object-fit: contain;
+  box-shadow: 0 0 0 1px var(--c-divider);
+}
+
+.cw-message-doc-chip {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--c-panel-2);
+  font-size: 11.5px;
+  color: var(--c-text-muted);
+}
+
+.cw-user-bubble {
+  max-width: 85%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--c-panel-2);
+  padding: 12px 16px;
+  border-radius: var(--radius-lg) var(--radius-sm) var(--radius-lg) var(--radius-lg);
+  line-height: 1.6;
+  font-size: 13.5px;
+  color: var(--c-text);
+}
+
+.cw-assistant-text {
+  width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--c-text);
+}
+
+.cw-message-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--c-text-muted);
+}
+
+.cw-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: none;
+  color: var(--c-text-dim);
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+
+.cw-action-btn:hover:not(:disabled) {
+  background: var(--c-panel-3);
+  color: var(--c-text);
+}
+
+.cw-action-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.cw-action-btn.active {
+  color: var(--c-pink);
+  background: var(--c-panel-3);
+}
+
+.cw-thinking {
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
+.cw-welcome {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: min(680px, calc(100% - 40px));
+  margin: 0 auto;
+  padding-block: 32px;
+  overflow-y: auto;
+}
+
+.cw-composer-zone {
+  flex-shrink: 0;
+  padding: 12px 20px 18px;
+}
+
+.cw-greeting {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.cw-greeting-title {
+  margin: 0 0 8px;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.cw-subtitle {
+  margin: 0;
+  max-width: 440px;
+  line-height: 1.5;
+  color: var(--c-text-muted);
+  font-size: 13px;
+}
+
+.cw-composer-container {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cw-storage-error,
+.cw-error-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cw-retry-btn {
+  align-self: flex-start;
+}
+
+.cw-notice {
+  font-size: 11.5px;
+  color: var(--c-text-muted);
+}
+
+.cw-edit-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11.5px;
+  color: var(--c-text-muted);
+}
+
+.cw-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #ffffff;
+  border: 1px solid var(--c-divider);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  padding: 12px 12px 8px;
+  flex-shrink: 0;
+}
+
+.cw-composer:focus-within {
+  border-color: var(--c-text-dim);
+}
+
+.cw-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 2px 6px;
+}
+
+.cw-attachment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 200px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--c-panel-2);
+}
+
+.cw-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.cw-attachment-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--c-text-muted);
+}
+
+.cw-attachment-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: none;
+  border: none;
+  color: var(--c-text-dim);
+}
+
+.cw-attachment-remove:hover {
+  color: var(--c-error);
+}
+
+.cw-input {
+  width: 100%;
+  min-height: 24px;
+  max-height: 160px;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--c-text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 4px 4px 8px;
+}
+
+.cw-input::placeholder {
+  color: var(--c-text-dim);
+}
+
+.cw-composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.cw-composer-footer-left,
+.cw-composer-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cw-tools-menu-wrap .dropdown-menu {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+.cw-model-btn {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: none;
+  border: 1px solid transparent;
+  color: var(--c-text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.cw-model-btn:hover {
+  background: var(--c-panel-3);
+  color: var(--c-text);
+}
+
+.cw-send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--c-pink);
+  color: #ffffff;
+  flex-shrink: 0;
+  transition:
+    background 0.15s var(--ease),
+    opacity 0.15s var(--ease);
+}
+
+.cw-send:hover:not(:disabled) {
+  background: var(--c-pink-hover);
+}
+
+.cw-send:disabled {
+  background: var(--c-panel-3);
+  color: var(--c-text-dim);
+  cursor: default;
+}
+
+.cw-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.cw-quick-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid var(--c-divider);
+  color: var(--c-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  transition:
+    background 0.15s var(--ease),
+    transform 0.15s var(--ease);
+}
+
+.cw-quick-action:hover {
+  background: var(--c-panel-3);
+  transform: translateY(-1px);
+}
+
+.cw-modal {
+  width: 440px;
+}
+
+.cw-search-results {
+  max-height: 45vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cw-search-result-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cw-search-result {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: none;
+  text-align: left;
+}
+
+.cw-search-result:hover {
+  background: var(--c-panel-3);
+}
+
+.cw-search-result .cw-history-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.cw-search-result-preview {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  color: var(--c-text-muted);
+}
+
+.cw-move-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cw-move-list .secondary-btn {
+  justify-content: flex-start;
+}
+
+.cw-danger-btn {
+  background: var(--c-error);
+}
+
+.cw-danger-btn:hover {
+  background: var(--c-error);
+  opacity: 0.85;
+}
+
+@media (max-width: 767px) {
+  .cw-panel .cw-sidebar {
+    display: none;
+  }
+
+  .cw-panel.cw-mobile-open .cw-sidebar {
+    display: flex;
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 3;
+    width: min(300px, 88%);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .cw-mobile-open .cw-mobile-backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border: none;
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  .cw-mobile-toggle {
+    display: flex;
+  }
+
+  .cw-message-column {
+    width: calc(100% - 24px);
+  }
+
+  .cw-user-bubble {
+    max-width: 95%;
+  }
+
+  .cw-composer-zone {
+    padding: 10px 12px 14px;
+  }
+
+  .cw-quick-actions {
+    gap: 6px;
+  }
+
+  .cw-quick-action {
+    font-size: 11.5px;
+    padding: 0 10px;
+  }
 }

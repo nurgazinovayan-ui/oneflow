@@ -362,3 +362,141 @@ export function IconAssetsFolder({ size = 15 }: IconProps) {
     </svg>
   );
 }
+
+// Copywrite engine icon set — ported from a TailGrids reference (see CLAUDE_COPYWRITE.md) as
+// inline currentColor SVGs, same convention as every icon above, rather than the reference's
+// static <img> files (which can't pick up hover/active color changes).
+export function IconAttach({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="currentColor" stroke="none">
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M8.58 1.54c1.98 0 3.59 1.6 3.59 3.59v8.32a2.17 2.17 0 0 1-4.33 0V5.13a.75.75 0 0 1 1.5 0v8.32a.67.67 0 0 0 1.33 0V5.13c0-1.15-.93-2.09-2.09-2.09A2.09 2.09 0 0 0 6.5 5.13v8.32a3.5 3.5 0 0 0 7 0V7.96a.75.75 0 0 1 1.5 0v5.49a5 5 0 0 1-10 0V5.13c0-1.98 1.6-3.59 3.58-3.59Z"
+      />
+    </svg>
+  );
+}
+
+export function IconSearch({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20.5 20.5-4.6-4.6" />
+    </svg>
+  );
+}
+
+export function IconEdit({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
+      <path d="M14.86 6.1 17.9 9.14M18.77 4.31 19.69 5.23a1.65 1.65 0 0 1 0 2.34L9.4 17.64a1.9 1.9 0 0 1-.88.37l-3.75 1.22 1.22-4.01a2 2 0 0 1 .38-.65L16.65 4.31a1.65 1.65 0 0 1 2.12 0Z" />
+    </svg>
+  );
+}
+
+export function IconRegenerate({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
+      <path d="M3.55 9.74a8.75 8.75 0 0 1 16.9.83M20.46 14.26a8.75 8.75 0 0 1-16.9-.83" />
+      <path d="m17.49 9-3.08-1.73M6.51 15l-3.08-1.73" />
+    </svg>
+  );
+}
+
+export function IconThumb({ size = 15, down = false }: IconProps & { down?: boolean }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      {...base}
+      style={down ? { transform: 'scaleY(-1)' } : undefined}
+    >
+      <path d="M8.19 9a1.4 1.4 0 0 1 .42-1.04l4.42-4.62c.24-.25.57-.39.92-.39.8 0 1.4.75 1.22 1.53l-.88 3.9h5.47a1.5 1.5 0 0 1 1.36 2.03l-2.76 7.36c-.22.58-.78.97-1.4.97H9.69A1.5 1.5 0 0 1 8.19 17.25Z" />
+      <path d="M2.75 10.14A1 1 0 0 1 3.75 9.14h1.1a1 1 0 0 1 1 1v7.58a1 1 0 0 1-1 1h-1.1a1 1 0 0 1-1-1Z" />
+    </svg>
+  );
+}
+
+export function IconShare({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
+      <path d="M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5V16" />
+      <path d="M12 4v12M7.38 8.62 12 4l4.62 4.62" />
+    </svg>
+  );
+}
+
+export function IconSidebar({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
+      <rect x="4" y="4" width="16" height="16" rx="1.5" />
+      <path d="M9.33 4v16" />
+    </svg>
+  );
+}
+
+export function IconFolder({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
+      <path d="M9.7 5.1a1.5 1.5 0 0 0-1.2-.6h-4.25A1.25 1.25 0 0 0 2.75 5.75v12.5a1.25 1.25 0 0 0 1.25 1.25h15.5a1.25 1.25 0 0 0 1.25-1.25v-9a1.25 1.25 0 0 0-1.25-1.25h-7.5a1.5 1.5 0 0 1-1.2-.6Z" />
+    </svg>
+  );
+}
+
+export function IconFolderPlus({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" {...base}>
+      <path d="M9 14.25H3.75a1.5 1.5 0 0 1-1.5-1.5V4.5a1.5 1.5 0 0 1 1.5-1.5h2.58c.27 0 .52.1.71.29l1.66 1.66c.19.19.44.29.71.29h4.84a1.5 1.5 0 0 1 1.5 1.5v2.63" />
+      <path d="M12 14.25h4.5M14.25 12v4.5" />
+    </svg>
+  );
+}
+
+export function IconMore({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <circle cx="12" cy="6" r="1.75" />
+      <circle cx="12" cy="12" r="1.75" />
+      <circle cx="12" cy="18" r="1.75" />
+    </svg>
+  );
+}
+
+export function IconTools({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" {...base} strokeWidth={1.3}>
+      <path d="M11.72 4.72a2.06 2.06 0 1 1-4.11 0 2.06 2.06 0 0 1 4.11 0ZM14.17 4.72l-2.44 0M7.61 4.72l-5.78 0" />
+      <path d="M4.28 11.28a2.06 2.06 0 1 0 4.11 0 2.06 2.06 0 0 0-4.11 0ZM1.83 11.28l2.44 0M8.39 11.28l5.78 0" />
+    </svg>
+  );
+}
+
+export function IconNews({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
+      <rect x="2.75" y="5.25" width="18.5" height="13.5" rx="1.5" />
+      <path d="M8.75 8.25h4v4h-4zM15.75 9h2.5M15.75 12h2.5M8.75 15.39h9.5" />
+    </svg>
+  );
+}
+
+export function IconArchive({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
+      <rect x="3" y="4" width="18" height="4.5" rx="1" />
+      <path d="M4.5 8.5V19a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1V8.5" />
+      <path d="M10 13h4" />
+    </svg>
+  );
+}
+
+export function IconNewChat({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
+      <path d="M18.88 13.62v6a1.5 1.5 0 0 1-1.5 1.5H4.37a1.5 1.5 0 0 1-1.5-1.5l.01-9.87.07-3.27a1.5 1.5 0 0 1 1.5-1.5h5.93" />
+      <path d="m19.67 3.31 1.01 1.02a1.5 1.5 0 0 1 0 2.12l-8.42 8.42a1.9 1.9 0 0 1-.88.38l-3.53.75.75-3.53c.06-.28.2-.55.4-.75L17.55 3.31a1.5 1.5 0 0 1 2.12 0Z" />
+    </svg>
+  );
+}

@@ -568,18 +568,83 @@ export interface Translations {
     saveError: string;
   };
   textWork: {
-    newDialog: string;
-    dialogName: (n: number) => string;
-    emptyDialogPreview: string;
-    deleteDialogTooltip: string;
-    emptyHint: string;
+    newChat: string;
+    search: string;
+    searchPlaceholder: string;
+    noResults: string;
+    localHistory: string;
+    projects: string;
+    createProjectTitle: string;
+    projectNamePlaceholder: string;
+    namePlaceholder: string;
+    noProject: string;
+    pinnedSection: string;
+    todaySection: string;
+    yesterdaySection: string;
+    earlierSection: string;
+    archiveSection: string;
+    emptyProject: string;
+    greeting: string;
+    subtitle: string;
     inputPlaceholder: string;
+    toolsTooltip: string;
+    sendTooltip: string;
+    attachTooltip: string;
     copyTooltip: string;
     copiedLabel: string;
+    editTooltip: string;
+    editHelp: string;
+    regenerateTooltip: string;
+    goodResponseTooltip: string;
+    badResponseTooltip: string;
+    shareTooltip: string;
+    shareHelp: string;
+    exportMd: string;
+    exportJson: string;
+    exportAnswerMd: string;
+    moreTooltip: string;
+    renameLabel: string;
+    removeLabel: string;
+    cancelLabel: string;
+    saveLabel: string;
+    createLabel: string;
+    closeLabel: string;
+    collapseSidebarTooltip: string;
+    expandSidebarTooltip: string;
+    profileLabel: string;
+    planLabel: string;
+    moveToProject: string;
+    unpinLabel: string;
+    pinLabel: string;
+    restoreLabel: string;
+    archiveAction: string;
+    deleteChatTitle: string;
+    deleteProjectTitle: string;
+    deleteChatHelp: string;
+    deleteProjectHelp: string;
+    loadingLabel: string;
+    loadingHistory: string;
+    storageError: string;
+    loadError: string;
+    retryLabel: string;
     downloadDoc: string;
     downloadPres: string;
     preparingFile: string;
     fileError: string;
+    promptLimit: string;
+    writeQuick: string;
+    imagesQuick: string;
+    newsQuick: string;
+    videoQuick: string;
+    deepSearchLabel: string;
+    academicLabel: string;
+    developerLabel: string;
+    unavailableWebSearch: string;
+    modelHelp: string;
+    writePrompt: string;
+    researchPrompt: string;
+    codePrompt: string;
+    docPrompt: string;
     quickPromptsLabel: string;
     quickPrompts: { label: string; prompt: string }[];
   };
@@ -1405,19 +1470,87 @@ export const ru: Translations = {
     saveError: 'Не удалось сохранить проект.',
   },
   textWork: {
-    newDialog: 'Новый диалог',
-    dialogName: (n) => `Диалог ${n}`,
-    emptyDialogPreview: 'Пустой диалог',
-    deleteDialogTooltip: 'Удалить диалог',
-    emptyHint:
-      'Задайте вопрос — помощь с текстом для рекламы: заголовки, описания, редактура, перевод, идеи для кампаний. Можно также попросить подготовить документ или презентацию — например «сделай бриф для клиента» или «собери презентацию по кампании» — файл .docx/.pptx можно будет сразу скачать.',
-    inputPlaceholder: 'Сообщение...',
+    newChat: 'Новый чат',
+    search: 'Поиск',
+    searchPlaceholder: 'Поиск по названиям и сообщениям',
+    noResults: 'Ничего не найдено',
+    localHistory: 'История на этом устройстве',
+    projects: 'Проекты',
+    createProjectTitle: 'Новый проект',
+    projectNamePlaceholder: 'Введите название проекта',
+    namePlaceholder: 'Название',
+    noProject: 'Без проекта',
+    pinnedSection: 'Закреплённые',
+    todaySection: 'Сегодня',
+    yesterdaySection: 'Вчера',
+    earlierSection: 'Ранее',
+    archiveSection: 'Архив',
+    emptyProject: 'Пока нет чатов',
+    greeting: 'Привет! Чем могу помочь?',
+    subtitle:
+      'Ваш ИИ-ассистент для текстов, идей и документов — от первого наброска до готового результата.',
+    inputPlaceholder: 'Спросите о чём угодно...',
+    toolsTooltip: 'Инструменты',
+    sendTooltip: 'Отправить',
+    attachTooltip: 'Прикрепить файл',
     copyTooltip: 'Скопировать',
     copiedLabel: 'Скопировано',
+    editTooltip: 'Редактировать',
+    editHelp: 'После отправки этой версии последующие сообщения будут заменены новым ответом.',
+    regenerateTooltip: 'Повторить ответ',
+    goodResponseTooltip: 'Хороший ответ',
+    badResponseTooltip: 'Плохой ответ',
+    shareTooltip: 'Поделиться',
+    shareHelp: 'Скопируйте текст или скачайте переписку для отправки. Публичная ссылка не создаётся.',
+    exportMd: 'Скачать переписку (.md)',
+    exportJson: 'Скачать резервную копию (.json)',
+    exportAnswerMd: 'Скачать ответ (.md)',
+    moreTooltip: 'Действия с чатом',
+    renameLabel: 'Переименовать',
+    removeLabel: 'Удалить',
+    cancelLabel: 'Отмена',
+    saveLabel: 'Сохранить',
+    createLabel: 'Создать проект',
+    closeLabel: 'Закрыть',
+    collapseSidebarTooltip: 'Свернуть боковую панель',
+    expandSidebarTooltip: 'Открыть боковую панель',
+    profileLabel: 'Профиль',
+    planLabel: 'Подписка',
+    moveToProject: 'Переместить в проект',
+    unpinLabel: 'Открепить',
+    pinLabel: 'Закрепить',
+    restoreLabel: 'Вернуть из архива',
+    archiveAction: 'Архивировать',
+    deleteChatTitle: 'Удалить этот чат?',
+    deleteProjectTitle: 'Удалить проект?',
+    deleteChatHelp: 'Сообщения и вложения этого чата будут удалены с этого устройства.',
+    deleteProjectHelp: 'Чаты сохранятся в общей истории.',
+    loadingLabel: 'ONEFLOW готовит ответ...',
+    loadingHistory: 'Загружаем историю...',
+    storageError: 'Не удалось сохранить историю на этом устройстве. Скачайте резервную копию.',
+    loadError: 'Не удалось прочитать историю. Сохранённые данные не перезаписаны.',
+    retryLabel: 'Повторить запрос',
     downloadDoc: 'Скачать документ (.docx)',
     downloadPres: 'Скачать презентацию (.pptx)',
     preparingFile: 'Готовим файл...',
-    fileError: 'Не удалось создать файл.',
+    fileError:
+      'До 4 файлов: PNG, JPG, WebP, TXT, MD, CSV, JSON; до 4 МБ каждый, текст — до 30 000 символов.',
+    promptLimit: 'Запрос слишком длинный: максимум 30 000 символов.',
+    writeQuick: 'Написать текст',
+    imagesQuick: 'Создать изображение',
+    newsQuick: 'Последние новости',
+    videoQuick: 'Создать видео',
+    deepSearchLabel: 'Поиск в интернете',
+    academicLabel: 'Исследования',
+    developerLabel: 'Код',
+    unavailableWebSearch:
+      'Веб-поиск ещё не подключён в ONEFLOW. Можно прикрепить текст источников для анализа.',
+    modelHelp: 'Сейчас в ONEFLOW подключена одна модель. Другие появятся после подключения на сервере.',
+    writePrompt: 'Помоги написать текст. Сначала уточни продукт, аудиторию, площадку и цель.',
+    researchPrompt:
+      'Помоги проанализировать материалы. Я прикреплю источники. Отделяй факты от предположений и ссылайся на приложенные материалы.',
+    codePrompt: 'Помоги с кодом. Сначала уточни задачу, язык и ожидаемый результат.',
+    docPrompt: 'Подготовь документ. Сначала уточни тему, цель, аудиторию и желаемую структуру.',
     quickPromptsLabel: 'Быстрые подсказки',
     quickPrompts: [
       {
@@ -2280,19 +2413,84 @@ export const en: Translations = {
     saveError: 'Could not save the project.',
   },
   textWork: {
-    newDialog: 'New dialog',
-    dialogName: (n) => `Dialog ${n}`,
-    emptyDialogPreview: 'Empty dialog',
-    deleteDialogTooltip: 'Delete dialog',
-    emptyHint:
-      'Ask a question — help with ad copy: headlines, descriptions, editing, translation, campaign ideas. You can also ask for a document or presentation — e.g. "draft a client brief" or "put together a campaign deck" — a .docx/.pptx file will be ready to download right away.',
-    inputPlaceholder: 'Message...',
+    newChat: 'New chat',
+    search: 'Search',
+    searchPlaceholder: 'Search titles and messages',
+    noResults: 'No conversations found',
+    localHistory: 'History on this device',
+    projects: 'Projects',
+    createProjectTitle: 'Create new project',
+    projectNamePlaceholder: 'Enter project name',
+    namePlaceholder: 'Name',
+    noProject: 'No project',
+    pinnedSection: 'Pinned',
+    todaySection: 'Today',
+    yesterdaySection: 'Yesterday',
+    earlierSection: 'Earlier',
+    archiveSection: 'Archive',
+    emptyProject: 'No conversations yet',
+    greeting: 'Hey, how can I assist?',
+    subtitle: 'Your AI assistant for writing, ideas and documents — from the first draft to a finished result.',
+    inputPlaceholder: 'Ask me anything...',
+    toolsTooltip: 'Tools',
+    sendTooltip: 'Send',
+    attachTooltip: 'Attach a file',
     copyTooltip: 'Copy',
     copiedLabel: 'Copied',
+    editTooltip: 'Edit',
+    editHelp: 'Sending this revision replaces the messages that follow with a new response.',
+    regenerateTooltip: 'Regenerate',
+    goodResponseTooltip: 'Good response',
+    badResponseTooltip: 'Bad response',
+    shareTooltip: 'Share',
+    shareHelp: 'Copy or download this conversation to send it. No public link is created.',
+    exportMd: 'Download conversation (.md)',
+    exportJson: 'Download backup (.json)',
+    exportAnswerMd: 'Download answer (.md)',
+    moreTooltip: 'Chat actions',
+    renameLabel: 'Rename',
+    removeLabel: 'Delete',
+    cancelLabel: 'Cancel',
+    saveLabel: 'Save',
+    createLabel: 'Create Project',
+    closeLabel: 'Close',
+    collapseSidebarTooltip: 'Collapse sidebar',
+    expandSidebarTooltip: 'Open sidebar',
+    profileLabel: 'Profile',
+    planLabel: 'Subscription',
+    moveToProject: 'Move to project',
+    unpinLabel: 'Unpin',
+    pinLabel: 'Pin',
+    restoreLabel: 'Restore from archive',
+    archiveAction: 'Archive conversation',
+    deleteChatTitle: 'Delete this conversation?',
+    deleteProjectTitle: 'Delete this project?',
+    deleteChatHelp: 'Messages and attachments in this chat will be removed from this device.',
+    deleteProjectHelp: 'Conversations will stay in your history.',
+    loadingLabel: 'ONEFLOW is preparing a response...',
+    loadingHistory: 'Loading history...',
+    storageError: 'Could not save history on this device. Download a backup.',
+    loadError: 'Could not read history. Saved data has not been overwritten.',
+    retryLabel: 'Retry request',
     downloadDoc: 'Download document (.docx)',
     downloadPres: 'Download presentation (.pptx)',
     preparingFile: 'Preparing file...',
-    fileError: 'Could not create the file.',
+    fileError: 'Up to 4 files: PNG, JPG, WebP, TXT, MD, CSV, JSON; 4 MB each, text up to 30,000 characters.',
+    promptLimit: 'Your message is too long: maximum 30,000 characters.',
+    writeQuick: 'Write a Text',
+    imagesQuick: 'Create Images',
+    newsQuick: 'Latest News',
+    videoQuick: 'Generate Video',
+    deepSearchLabel: 'Web Search',
+    academicLabel: 'Academic',
+    developerLabel: 'Developer',
+    unavailableWebSearch: 'Web search is not connected in ONEFLOW yet. Attach source text for analysis.',
+    modelHelp: 'ONEFLOW currently has one connected model. More models require server integration.',
+    writePrompt: 'Help me write a text. First ask about the product, audience, channel and goal.',
+    researchPrompt:
+      'Help me analyze materials. I will attach sources. Separate facts from assumptions and cite the attached materials.',
+    codePrompt: 'Help me with code. First ask about the task, language and expected result.',
+    docPrompt: 'Prepare a document. First ask about the topic, goal, audience and structure.',
     quickPromptsLabel: 'Quick prompts',
     quickPrompts: [
       {

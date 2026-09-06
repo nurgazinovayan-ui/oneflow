@@ -387,6 +387,8 @@ function Canvas() {
   const [mainView, setMainView] = useState<
     'canvas' | 'text' | 'generate' | 'evaluate' | 'onelaunch' | 'musicaudio' | 'strategy' | 'assets'
   >('canvas');
+  const [copywriteGeneration, setCopywriteGeneration] = useState<{ id: number; kind: 'image' | 'video'; prompt: string }>();
+  const [copywriteAuthReady, setCopywriteAuthReady] = useState(false);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
@@ -420,9 +422,13 @@ function Canvas() {
   }, [nodes, edges, activeProjectId]);
 
   useEffect(() => {
-    window.api.getAuthStatus().then((status) => {
-      setAuthEmail(status.email);
-    });
+    window.api
+      .getAuthStatus()
+      .then((status) => {
+        setAuthEmail(status.email);
+        setCopywriteAuthReady(true);
+      })
+      .catch(() => setCopywriteAuthReady(true));
   }, []);
 
   useEffect(() => {
@@ -1106,8 +1112,26 @@ function Canvas() {
             )}
           </SubscriptionContext.Provider>
           </ProjectIdContext.Provider>
-          <TextWorkPanel active={mainView === 'text'} />
+          {copywriteAuthReady && (
+            <TextWorkPanel
+              // Remount (not just re-render) when the signed-in identity changes, so the panel
+              // never mixes one account's history into another's — see useWorkspace.ts's own
+              // comment on why it starts fresh per scope rather than migrating state.
+              key={authEmail ? `account:${authEmail.toLowerCase()}` : 'desktop-local'}
+              active={mainView === 'text'}
+              storageScope={authEmail ? `account:${authEmail.toLowerCase()}` : 'desktop-local'}
+              email={authEmail}
+              subscriptionLabel={hasActiveSubscription ? 'Pro' : 'Free'}
+              onProfile={() => setProfileOpen(true)}
+              onSubscription={() => setSubscriptionOpen(true)}
+              onGenerate={(kind, prompt) => {
+                setCopywriteGeneration({ id: Date.now(), kind, prompt });
+                setMainView('generate');
+              }}
+            />
+          )}
           <QuickGenPanel
+            launchRequest={copywriteGeneration}
             active={mainView === 'generate'}
             projectId={activeProjectId}
             subscriptionActive={subscriptionActive}

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { ComponentType } from 'react';
 
 export type DropdownMenuItem =
-  | { type?: 'item'; label: string; icon?: ComponentType<{ size?: number }>; onClick: () => void }
+  | { type?: 'item'; label: string; icon?: ComponentType<{ size?: number }>; danger?: boolean; onClick: () => void }
   | { type: 'header'; label: string };
 
 interface DropdownMenuProps {
@@ -45,7 +45,7 @@ export default function DropdownMenu({ items, onClose, align = 'left' }: Dropdow
         return (
           <button
             key={i}
-            className="dropdown-menu-item"
+            className={`dropdown-menu-item${item.danger ? ' danger' : ''}`}
             onClick={() => {
               item.onClick();
               onClose();
