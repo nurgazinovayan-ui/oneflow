@@ -137,28 +137,6 @@ export default function EvaluationPanel({ active }: EvaluationPanelProps) {
 
           {status === 'error' && <div className="error-text">{error}</div>}
         </div>
-
-        <div className="evaluation-note">
-          <div className="evaluation-note-title">{t.evaluation.noteTitle}</div>
-          <div className="evaluation-note-block">
-            <p>
-              <span className="evaluation-note-label">{t.evaluation.noteHowLabel}:</span>
-            </p>
-            <ul className="evaluation-note-list">
-              {t.evaluation.noteHowItems.map((item, i) => (
-                <li key={i}>{item}</li>
-              ))}
-            </ul>
-          </div>
-          <p>
-            <span className="evaluation-note-label">{t.evaluation.noteAccuracyLabel}:</span>{' '}
-            {t.evaluation.noteAccuracy}
-          </p>
-          <p>
-            <span className="evaluation-note-label">{t.evaluation.noteTipLabel}:</span>{' '}
-            {t.evaluation.noteTip}
-          </p>
-        </div>
       </div>
 
       <div className="evaluation-results">

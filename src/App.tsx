@@ -385,9 +385,9 @@ function Canvas() {
   const [mainView, setMainView] = useState<
     'canvas' | 'text' | 'generate' | 'evaluate' | 'onelaunch' | 'musicaudio' | 'strategy' | 'assets'
   >('canvas');
-  const [copywriteGeneration, setCopywriteGeneration] = useState<{ id: number; kind: 'image' | 'video'; prompt: string }>();
   const [copywriteAuthReady, setCopywriteAuthReady] = useState(false);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   // Radix NavigationMenu-style single-value model: only one toolbar menu open at a time, so
@@ -424,6 +424,7 @@ function Canvas() {
       .getAuthStatus()
       .then((status) => {
         setAuthEmail(status.email);
+        setIsDemoMode(Boolean(status.isDemo));
         setCopywriteAuthReady(true);
       })
       .catch(() => setCopywriteAuthReady(true));
@@ -436,6 +437,10 @@ function Canvas() {
   const hasActiveSubscription = Boolean(
     subscriptionInfo?.status && ACTIVE_SUB_STATUSES.has(subscriptionInfo.status)
   );
+  // The toolbar "Подписка" pill is an upsell prompt — it only makes sense to show it to someone
+  // who could plausibly subscribe: demo visitors, anyone not registered yet, or a registered
+  // user without an active subscription. A registered user who already has one never sees it.
+  const showSubscriptionButton = isDemoMode || !authEmail || !hasActiveSubscription;
 
   const refreshSubscriptionStatus = useCallback(async (): Promise<boolean> => {
     const status = await window.api.getSubscriptionStatus();
@@ -930,9 +935,11 @@ function Canvas() {
               <IconAssetsFolder size={15} /> {t.assets.buttonLabel}
             </button>
           )}
-          <button className="toolbar-subscription-btn" onClick={requestPayment}>
-            {t.toolbar.subscriptionButtonLabel}
-          </button>
+          {showSubscriptionButton && (
+            <button className="toolbar-subscription-btn" onClick={requestPayment}>
+              {t.toolbar.subscriptionButtonLabel}
+            </button>
+          )}
           <AvatarMenuButton
             title={t.toolbar.profileTooltip}
             isOpen={avatarMenuOpen}
@@ -1125,14 +1132,9 @@ function Canvas() {
               subscriptionLabel={hasActiveSubscription ? 'Pro' : 'Free'}
               onProfile={() => setProfileOpen(true)}
               onSubscription={requestPayment}
-              onGenerate={(kind, prompt) => {
-                setCopywriteGeneration({ id: Date.now(), kind, prompt });
-                setMainView('generate');
-              }}
             />
           )}
           <QuickGenPanel
-            launchRequest={copywriteGeneration}
             active={mainView === 'generate'}
             projectId={activeProjectId}
             subscriptionActive={subscriptionActive}

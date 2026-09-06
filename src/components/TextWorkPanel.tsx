@@ -9,7 +9,6 @@ import {
   IconEdit,
   IconFolder,
   IconFolderPlus,
-  IconImage,
   IconMore,
   IconNewChat,
   IconNews,
@@ -18,11 +17,8 @@ import {
   IconShare,
   IconSidebar,
   IconThumb,
-  IconTools,
-  IconVideo,
 } from './Icons';
 import DropdownMenu, { type DropdownMenuItem } from './DropdownMenu';
-import Logo from './Logo';
 import {
   buildDocxDataUrl,
   buildPptxDataUrl,
@@ -51,7 +47,6 @@ interface TextWorkPanelProps {
   subscriptionLabel?: string;
   onProfile: () => void;
   onSubscription: () => void;
-  onGenerate: (kind: 'image' | 'video', prompt: string) => void;
 }
 
 type Modal =
@@ -68,7 +63,6 @@ export default function TextWorkPanel({
   subscriptionLabel,
   onProfile,
   onSubscription,
-  onGenerate,
 }: TextWorkPanelProps) {
   const t = useT();
   const l = t.textWork;
@@ -86,7 +80,6 @@ export default function TextWorkPanel({
   const [openThreadMenu, setOpenThreadMenu] = useState<string | null>(null);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [openProjectMenu, setOpenProjectMenu] = useState<string | null>(null);
-  const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const [editIndex, setEditIndex] = useState<number>();
   const [editBackup, setEditBackup] = useState<{ draft: string; attachments: Attachment[] }>();
   const [notice, setNotice] = useState('');
@@ -375,9 +368,6 @@ export default function TextWorkPanel({
       {mobileOpen && <button className="cw-mobile-backdrop" onClick={() => setMobileOpen(false)} aria-label={l.closeLabel} />}
       <aside className="cw-sidebar">
         <div className="cw-sidebar-header">
-          <button className="cw-brand" onClick={() => addChat()}>
-            <Logo className="cw-logo" />
-          </button>
           <button
             className="cw-icon-btn"
             title={w.sidebarCollapsed ? l.expandSidebarTooltip : l.collapseSidebarTooltip}
@@ -664,17 +654,6 @@ export default function TextWorkPanel({
                 </div>
               )}
 
-              <div className="text-work-quickprompts">
-                <span className="text-work-quickprompts-label">{t.textWork.quickPromptsLabel}</span>
-                <div className="text-work-quickprompts-list">
-                  {t.textWork.quickPrompts.map((qp, i) => (
-                    <button key={i} type="button" className="text-work-quickprompt-chip" onClick={() => quickPrompt(qp.prompt)}>
-                      {qp.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               <div className="cw-composer">
                 {thread.attachments.length > 0 && (
                   <div className="cw-attachments">
@@ -733,23 +712,6 @@ export default function TextWorkPanel({
                         if (e.target.files) void attachFiles(e.target.files);
                       }}
                     />
-                    <div className="cw-row-menu-wrap cw-tools-menu-wrap">
-                      <button className="cw-icon-btn" title={l.toolsTooltip} onClick={() => setToolsMenuOpen((v) => !v)}>
-                        <IconTools size={16} />
-                      </button>
-                      {toolsMenuOpen && (
-                        <DropdownMenu
-                          align="left"
-                          onClose={() => setToolsMenuOpen(false)}
-                          items={[
-                            { label: l.writeQuick, onClick: () => quickPrompt(l.writePrompt) },
-                            { label: l.academicLabel, onClick: () => quickPrompt(l.researchPrompt) },
-                            { label: l.developerLabel, onClick: () => quickPrompt(l.codePrompt) },
-                            { label: l.deepSearchLabel, onClick: () => openModal({ kind: 'unavailable' }) },
-                          ]}
-                        />
-                      )}
-                    </div>
                   </div>
                   <div className="cw-composer-footer-right">
                     <button className="cw-model-btn" onClick={() => openModal({ kind: 'model' })}>
@@ -767,22 +729,16 @@ export default function TextWorkPanel({
                 </div>
               </div>
             </div>
-            {empty && (
-              <div className="cw-quick-actions">
-                <button className="cw-quick-action" onClick={() => quickPrompt(l.writePrompt)}>
-                  <IconNewChat size={14} /> {l.writeQuick}
-                </button>
-                <button className="cw-quick-action" onClick={() => onGenerate('image', thread.draft)}>
-                  <IconImage size={14} /> {l.imagesQuick}
-                </button>
-                <button className="cw-quick-action" onClick={() => openModal({ kind: 'unavailable' })}>
-                  <IconNews size={14} /> {l.newsQuick}
-                </button>
-                <button className="cw-quick-action" onClick={() => onGenerate('video', thread.draft)}>
-                  <IconVideo size={14} /> {l.videoQuick}
-                </button>
+            <div className="text-work-quickprompts">
+              <span className="text-work-quickprompts-label">{t.textWork.quickPromptsLabel}</span>
+              <div className="text-work-quickprompts-list">
+                {t.textWork.quickPrompts.map((qp, i) => (
+                  <button key={i} type="button" className="text-work-quickprompt-chip" onClick={() => quickPrompt(qp.prompt)}>
+                    {qp.label}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

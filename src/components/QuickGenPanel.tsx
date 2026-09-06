@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   IconPlus,
   IconChevronRight,
@@ -52,7 +52,6 @@ const readFileAsDataUrl = (file: File): Promise<string> =>
   });
 
 interface QuickGenPanelProps {
-  launchRequest?: { id: number; kind: GenKind; prompt: string };
   active: boolean;
   projectId: string;
   subscriptionActive: boolean;
@@ -77,7 +76,6 @@ function toCssAspectRatio(ratio: string): string {
 }
 
 export default function QuickGenPanel({
-  launchRequest,
   active,
   projectId,
   subscriptionActive,
@@ -125,15 +123,6 @@ export default function QuickGenPanel({
       setResolution(VIDEO_MODEL_META[first].resolutions[0]);
     }
   };
-
-  useEffect(() => {
-    if (!launchRequest) return;
-    handleKindChange(launchRequest.kind);
-    if (launchRequest.prompt.trim()) setPrompt(launchRequest.prompt);
-    // A launch request is a one-time bridge from Copywrite engine; ordinary mode switches
-    // preserve the generator's model, settings and draft.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [launchRequest]);
 
   const handleModelChange = (nextModel: string) => {
     setModel(nextModel);
