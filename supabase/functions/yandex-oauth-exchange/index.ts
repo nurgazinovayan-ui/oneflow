@@ -2,6 +2,12 @@
 // "yandex-oauth-exchange" → paste this file → Deploy. Keep "Verify JWT" ON (default).
 // Secrets needed (Edge Functions → yandex-oauth-exchange → Secrets):
 //   YANDEX_CLIENT_ID, YANDEX_CLIENT_SECRET — from the OAuth app registered at oauth.yandex.ru.
+//   YANDEX_TOKEN_ENCRYPTION_KEY — a random 32-byte AES-256 key, base64-encoded (generate once
+//     with e.g. `openssl rand -base64 32`), used to encrypt access_token/refresh_token before
+//     they're written to user_yandex_tokens — see encryptToken/decryptToken below. Set the SAME
+//     value on every Edge Function that touches this table (this one plus yandex-disk-upload,
+//     yandex-project-upload, yandex-list-assets, yandex-asset-download) — a mismatch means those
+//     other functions can no longer decrypt tokens this one writes.
 //
 // Also needs a table (SQL editor → run once):
 //   create table if not exists user_yandex_tokens (
@@ -26,6 +32,43 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const YANDEX_CLIENT_ID = Deno.env.get('YANDEX_CLIENT_ID') ?? '';
 const YANDEX_CLIENT_SECRET = Deno.env.get('YANDEX_CLIENT_SECRET') ?? '';
+const TOKEN_ENCRYPTION_KEY_B64 = Deno.env.get('YANDEX_TOKEN_ENCRYPTION_KEY') ?? '';
+
+// Security-review follow-up (point 4, "доступы пользователей в базе зашифрованы"): these are
+// real OAuth credentials giving access to a user's own Yandex Disk, so they're encrypted with
+// AES-256-GCM before ever reaching the database — RLS keeps other users out, but this also
+// protects them against a leaked SUPABASE_SERVICE_ROLE_KEY or a raw DB snapshot/backup. A fresh
+// random IV per encryption is required for GCM (reusing an IV with the same key breaks its
+// security guarantees), so it's generated per call and stored alongside the ciphertext rather
+// than reused.
+function toBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary);
+}
+
+function fromBase64(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function getAesKey(): Promise<CryptoKey> {
+  return crypto.subtle.importKey('raw', fromBase64(TOKEN_ENCRYPTION_KEY_B64), { name: 'AES-GCM' }, false, [
+    'encrypt',
+    'decrypt',
+  ]);
+}
+
+async function encryptToken(plaintext: string): Promise<string> {
+  const key = await getAesKey();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext = new Uint8Array(
+    await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(plaintext))
+  );
+  return `${toBase64(iv)}.${toBase64(ciphertext)}`;
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -78,8 +121,8 @@ Deno.serve(async (req) => {
     const expiresAt = new Date(Date.now() + (tokenData.expires_in ?? 3600) * 1000).toISOString();
     const { error: upsertError } = await admin.from('user_yandex_tokens').upsert({
       user_id: caller.id,
-      access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token ?? null,
+      access_token: await encryptToken(tokenData.access_token),
+      refresh_token: tokenData.refresh_token ? await encryptToken(tokenData.refresh_token) : null,
       expires_at: expiresAt,
       updated_at: new Date().toISOString(),
     });

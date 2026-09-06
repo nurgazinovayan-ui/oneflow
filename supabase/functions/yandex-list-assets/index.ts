@@ -1,6 +1,8 @@
 // Deploy in Supabase Studio → Edge Functions → Create a new function → name it
 // "yandex-list-assets" → paste this file → Deploy. Keep "Verify JWT" ON (default).
-// No extra secrets needed beyond SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY (auto-injected).
+// Secret needed beyond SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY (auto-injected):
+//   YANDEX_TOKEN_ENCRYPTION_KEY — same value as set on yandex-oauth-exchange, which encrypts
+//   the tokens this function reads. See that function's header comment for details.
 //
 // Backs the "Ассеты" panel (see src/components/AssetsPanel.tsx) — lists the image/video files
 // under the caller's /ONEFLOW folder (the same folder yandex-disk-upload/yandex-project-upload
@@ -11,6 +13,40 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+const TOKEN_ENCRYPTION_KEY_B64 = Deno.env.get('YANDEX_TOKEN_ENCRYPTION_KEY') ?? '';
+
+function fromBase64(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function getAesKey(): Promise<CryptoKey> {
+  return crypto.subtle.importKey('raw', fromBase64(TOKEN_ENCRYPTION_KEY_B64), { name: 'AES-GCM' }, false, [
+    'encrypt',
+    'decrypt',
+  ]);
+}
+
+// Rows written before encryption was added are plain text (no "iv.ciphertext" shape) — decrypt
+// falls back to returning them as-is rather than erroring, so already-connected accounts keep
+// working; the next time yandex-oauth-exchange writes this user's tokens, they're encrypted.
+async function decryptToken(stored: string): Promise<string> {
+  const parts = stored.split('.');
+  if (parts.length !== 2) return stored;
+  try {
+    const key = await getAesKey();
+    const plaintext = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: fromBase64(parts[0]) },
+      key,
+      fromBase64(parts[1])
+    );
+    return new TextDecoder().decode(plaintext);
+  } catch {
+    return stored;
+  }
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -63,10 +99,11 @@ Deno.serve(async (req) => {
       });
     }
 
+    const accessToken = await decryptToken(row.access_token);
     const listUrl =
       `https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent(ASSETS_FOLDER)}` +
       `&limit=1000&fields=${encodeURIComponent(FIELDS)}`;
-    const listRes = await fetch(listUrl, { headers: { Authorization: `OAuth ${row.access_token}` } });
+    const listRes = await fetch(listUrl, { headers: { Authorization: `OAuth ${accessToken}` } });
 
     // A 404 just means the folder hasn't been created yet (nothing saved there so far) — that's
     // an empty gallery, not an error.
