@@ -473,42 +473,35 @@
   transform: translateY(0);
 }
 
-/* Pricing overview modal (PaymentModal.tsx). The overlay's own dark fill is kept fairly light
-   (0.35, was 0.55) — stacked behind .pricing-modal's own translucent tint, the two used to
-   compound into what read as a flat solid gray box rather than glass; lighter here leaves more
-   of the actual blurred backdrop visible through both layers. */
+/* Pricing overview modal (PaymentModal.tsx) — ported 1:1 from a shadcn "pricing-section-3"
+   reference onto this app's own light-theme tokens: a plain white panel holding a light-gray
+   gradient tray, three flat cards inside it, and only the "popular" tier breaking the palette
+   with a solid near-black card (the same black-accent language as .toolbar-subscription-btn). */
 .modal-overlay.pricing-overlay {
   backdrop-filter: blur(14px);
   background: rgba(10, 10, 12, 0.35);
 }
 
-/* Matte glass panel — the exact same translucent recipe as .canvas-toolbar (the node-buttons
-   plaque), per the design ask to match it, at an opacity low enough (0.4) to actually read as
-   see-through rather than a solid fill. Every size below is the original value × 0.7 (width,
-   padding, headings, cards, buttons) per the earlier "shrink the whole window 30%" ask, not
-   just a narrower max-width. */
 .pricing-modal {
   position: relative;
-  width: min(784px, 92vw);
-  max-height: 88vh;
+  width: min(860px, 94vw);
+  max-height: 90vh;
   overflow-y: auto;
-  background: rgba(15, 15, 18, 0.4);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  background: var(--c-panel);
   border-radius: var(--radius-lg);
   box-shadow: 0 0 0 1px var(--c-divider), var(--shadow-lg);
-  padding: 34px;
+  padding: 30px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 18px;
 }
 
 .pricing-close {
   position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 22px;
-  height: 22px;
+  top: 16px;
+  right: 16px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: none;
   background: var(--c-panel-2);
@@ -517,6 +510,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  z-index: 2;
 }
 
 .pricing-close:hover {
@@ -524,204 +518,281 @@
   color: var(--c-text);
 }
 
+.pricing-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-right: 26px;
+}
+
+.pricing-header-text {
+  text-align: left;
+}
+
 .pricing-heading {
-  margin: 0;
-  text-align: center;
-  font-size: 21px;
-  line-height: 1.05;
-  font-weight: 800;
+  margin: 0 0 6px;
+  font-size: 26px;
+  line-height: 1.15;
+  font-weight: 700;
   color: var(--c-text);
 }
 
 .pricing-subheading {
-  margin: 0 0 4px;
-  text-align: center;
-  font-size: 11px;
+  margin: 0;
+  max-width: 380px;
+  font-size: 13px;
   color: var(--c-text-muted);
 }
 
 .pricing-balance {
-  margin: 0 0 14px;
-  text-align: center;
+  margin: 8px 0 0;
   font-size: 12px;
   font-weight: 700;
   color: var(--c-pink);
 }
 
+/* Pill switch with a sliding highlight behind the active label — the reference's framer-motion
+   layoutId indicator, done here as a plain absolutely-positioned span that transitions its
+   transform on state change. */
 .pricing-period-toggle {
-  align-self: center;
+  position: relative;
+  flex-shrink: 0;
   display: flex;
-  gap: 3px;
-  padding: 2px;
-  margin-bottom: 14px;
+  padding: 4px;
   border-radius: 999px;
   background: var(--c-panel-2);
+  border: 1px solid var(--c-divider);
+}
+
+.pricing-toggle-slider {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--c-panel-3), var(--c-panel-2));
+  box-shadow: 0 0 0 1px var(--c-divider), var(--shadow-sm);
+  transition: transform 0.25s var(--ease);
+}
+
+.pricing-toggle-slider.year {
+  transform: translateX(100%);
 }
 
 .pricing-period-toggle button {
-  padding: 5px 12px;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
   border: none;
   border-radius: 999px;
   background: transparent;
   color: var(--c-text-muted);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
-  transition:
-    background 0.15s var(--ease),
-    color 0.15s var(--ease);
+  transition: color 0.15s var(--ease);
 }
 
 .pricing-period-toggle button.active {
-  background: var(--c-pink);
-  color: #fff;
+  color: var(--c-text);
 }
 
+.pricing-save-badge {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--c-pink-dim);
+  color: var(--c-pink);
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+/* The tray — the reference's "bg-gradient-to-b from-neutral-100 to-neutral-200" wrapper that all
+   three cards sit inside. */
 .pricing-grid {
   display: flex;
+  align-items: stretch;
   gap: 14px;
   flex-wrap: wrap;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, var(--c-panel-2), var(--c-panel-3));
 }
 
 .pricing-card {
   position: relative;
-  flex: 1 1 182px;
-  min-width: 182px;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  /* Dark base so the Prism canvas's transparent areas still read as a solid card rather than
-     showing whatever's behind the now-translucent modal panel. */
-  background: #0a0a0c;
-  box-shadow: 0 0 0 1px var(--c-divider);
-}
-
-/* The "Популярный" tier gets a pink outline glow so it reads as the recommended pick without
-   needing a separate ribbon/badge. */
-.pricing-card.accent {
-  box-shadow: 0 0 0 2px var(--c-pink);
-}
-
-.pricing-card-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.8;
-}
-
-/* Free tier has no Prism crystal at all — just a small, subtle glow pooled at the bottom edge of
-   the card. */
-.pricing-card-glow {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 100% 36% at 50% 100%, rgba(0, 153, 255, 0.28), transparent 70%);
-}
-
-/* height: 100% (not just shrink-to-content) so this fills the card's full stretched height —
-   .pricing-grid's flex row already stretches every .pricing-card to match the tallest one, but
-   without this the content box itself stayed only as tall as its own benefit list, leaving the
-   button wherever the shortest tier's list happened to end instead of flush with the others. */
-.pricing-card-content {
-  position: relative;
-  z-index: 1;
-  height: 100%;
+  flex: 1 1 220px;
+  min-width: 220px;
   display: flex;
   flex-direction: column;
-  gap: 11px;
-  padding: 20px 17px 17px;
+  gap: 12px;
+  padding: 20px 18px;
+  border-radius: var(--radius-md);
+  color: var(--c-text);
 }
 
-/* Price now sits in normal flow at the top-left of the card, above the title, instead of as an
-   absolutely-positioned corner badge — the discount badge (yearly view only, on tiers that have
-   one) sits right next to it in the same row. */
-.pricing-price-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+/* Only the popular tier gets a visible card surface — a solid near-black slab that scales up
+   slightly and pops out of the tray, exactly like the reference's scale-110 + black gradient. */
+.pricing-card.popular {
+  transform: scale(1.05);
+  background: linear-gradient(180deg, #1a1a1a, #050505);
+  color: #f5f5f5;
+  box-shadow: 0 0 0 2px #050505, var(--shadow-md);
+  z-index: 1;
 }
 
-.pricing-discount-badge {
-  padding: 1px 6px;
+.pricing-popular-badge {
+  align-self: flex-start;
+  padding: 3px 10px;
   border-radius: 999px;
-  background: var(--c-pink);
+  background: #3a3a3a;
   color: #fff;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
 }
 
+.pricing-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
 .pricing-price {
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--c-pink);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.pricing-price-period {
+  font-size: 12.5px;
+  color: var(--c-text-muted);
+}
+
+.pricing-card.popular .pricing-price-period {
+  color: rgba(245, 245, 245, 0.65);
 }
 
 .pricing-card-title {
   margin: 0;
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--c-text);
+  font-size: 19px;
+  font-weight: 700;
 }
 
-.pricing-benefits {
+.pricing-card-desc {
+  margin: -6px 0 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--c-text-muted);
+}
+
+.pricing-card.popular .pricing-card-desc {
+  color: rgba(245, 245, 245, 0.65);
+}
+
+.pricing-includes {
+  flex: 1;
+  padding-top: 12px;
+  border-top: 1px solid var(--c-divider);
+}
+
+.pricing-card.popular .pricing-includes {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+.pricing-includes h4 {
+  margin: 0 0 9px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pricing-includes ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  flex: 1;
+  gap: 7px;
 }
 
-.pricing-benefit-row {
+.pricing-includes li {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 0;
-  color: var(--c-text);
-  font-size: 10px;
+  gap: 9px;
+  font-size: 12.5px;
+  font-weight: 600;
 }
 
-.pricing-benefit-row svg {
-  color: var(--c-pink);
+.pricing-check-circle {
   flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c-panel);
+  border: 1px solid var(--c-text);
+  color: var(--c-text);
 }
 
-.pricing-card-btn {
-  height: 28px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--c-pink);
-  background: transparent;
-  color: var(--c-pink);
-  font-size: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    background 0.15s var(--ease),
-    color 0.15s var(--ease);
-}
-
-.pricing-card-btn:hover {
-  background: var(--c-pink);
+.pricing-card.popular .pricing-check-circle {
+  background: #3a3a3a;
+  border-color: #4a4a4a;
   color: #fff;
 }
 
+/* Buttons invert relative to their card: a plain card gets a dark CTA, the already-dark popular
+   card gets a light one — same contrast trick as the reference. */
+.pricing-card-btn {
+  height: 42px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: linear-gradient(180deg, var(--c-text), var(--c-text-dim));
+  color: var(--c-panel);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 0.15s var(--ease),
+    box-shadow 0.15s var(--ease);
+}
+
+.pricing-card.popular .pricing-card-btn {
+  background: linear-gradient(180deg, #f5f5f5, #cfcfcf);
+  color: #0a0a0a;
+}
+
+.pricing-card-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
 .pricing-card-btn.disabled {
-  border-color: var(--c-divider);
-  background: transparent;
+  background: var(--c-panel-3);
   color: var(--c-text-muted);
+  box-shadow: none;
   cursor: default;
 }
 
 .pricing-card-btn.disabled:hover {
-  background: transparent;
-  color: var(--c-text-muted);
+  transform: none;
+  box-shadow: none;
 }
 
 .pricing-error {
-  margin-top: 11px;
+  margin-top: -6px;
   text-align: center;
 }
 
 .pricing-recheck-link {
   align-self: center;
-  margin-top: 11px;
+  margin-top: -6px;
   background: none;
   border: none;
   color: var(--c-text-muted);
@@ -736,7 +807,6 @@
 
 .pricing-legal-links {
   align-self: center;
-  margin-top: 8px;
   display: flex;
   gap: 14px;
 }

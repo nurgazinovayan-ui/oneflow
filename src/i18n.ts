@@ -703,6 +703,14 @@ export interface Translations {
     tierFreeTitle: string;
     tierPopularTitle: string;
     tierMaxTitle: string;
+    tierFreeDesc: string;
+    tierPopularDesc: string;
+    tierMaxDesc: string;
+    tierFreeIncludes: string;
+    tierPopularIncludes: string;
+    tierMaxIncludes: string;
+    popularBadge: string;
+    yearlySaveBadge: string;
     freeLabel: string;
     currentPlanBtn: string;
     selectBtn: string;
@@ -1638,6 +1646,14 @@ export const ru: Translations = {
     tierFreeTitle: 'Бесплатный тариф',
     tierPopularTitle: 'Популярный тариф',
     tierMaxTitle: 'Максимальный тариф',
+    tierFreeDesc: 'Чтобы попробовать ONEFLOW и понять, подходит ли он вам',
+    tierPopularDesc: 'Оптимальный вариант для регулярной работы с генерацией',
+    tierMaxDesc: 'Для команд, которым нужен доступ без ограничений',
+    tierFreeIncludes: 'Бесплатный тариф включает:',
+    tierPopularIncludes: 'Всё из бесплатного тарифа, плюс:',
+    tierMaxIncludes: 'Всё из популярного тарифа, плюс:',
+    popularBadge: 'Популярный',
+    yearlySaveBadge: 'Экономия 20%',
     freeLabel: 'Бесплатно',
     currentPlanBtn: 'Текущий тариф',
     selectBtn: 'Оформить',
@@ -2577,6 +2593,14 @@ export const en: Translations = {
     tierFreeTitle: 'Free plan',
     tierPopularTitle: 'Popular plan',
     tierMaxTitle: 'Maximum plan',
+    tierFreeDesc: 'Try ONEFLOW and see if it fits your workflow',
+    tierPopularDesc: 'Best value for teams generating on a regular basis',
+    tierMaxDesc: 'For teams that need access without limits',
+    tierFreeIncludes: 'Free plan includes:',
+    tierPopularIncludes: 'Everything in Free, plus:',
+    tierMaxIncludes: 'Everything in Popular, plus:',
+    popularBadge: 'Popular',
+    yearlySaveBadge: 'Save 20%',
     freeLabel: 'Free',
     currentPlanBtn: 'Current plan',
     selectBtn: 'Subscribe',
