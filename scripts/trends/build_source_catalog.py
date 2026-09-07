@@ -159,6 +159,12 @@ def parse_seedance(repo_dir: Path, repo_slug: str, commit: str):
         elif re.search(r'Seedance\s*2\.5\b', scan_text):
             model_value = 'bytedance/seedance-2.5'
 
+        if not thumbnail and not video_url:
+            # No usable preview from an authorized source (the README's own image link, if any,
+            # points at the un-authorized sibling repo awesome-seedance-2.0-prompts) -- drop it
+            # rather than ship a card with no preview at all.
+            continue
+
         cat_slug = re.sub(r'[^a-z0-9]+', '-', (category or 'uncategorized').lower()).strip('-')
         records.append(dict(
             id=f'{repo_slug}-{cat_slug}-case-{case_no}', title=title, description='', prompt=prompt,
