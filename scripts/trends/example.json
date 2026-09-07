@@ -1,0 +1,19 @@
+[
+  {
+    "id": "oneflow-original-product-studio",
+    "title": "Чистый студийный кадр товара",
+    "description": "Оригинальный пример ONEFLOW для проверки импорта. Добавьте своё фото товара перед генерацией.",
+    "prompt": "Create a premium studio photograph of the uploaded product. Preserve its geometry, materials, colors, branding and proportions exactly. Use a clean background, soft directional lighting and a subtle grounded shadow. Do not invent features or add text.",
+    "kind": "image",
+    "model": "Nano Banana Pro",
+    "categories": ["Товарная фотография", "Реклама"],
+    "collections": ["Студийная съёмка"],
+    "thumbnail_url": null,
+    "video_url": null,
+    "source_url": null,
+    "author": "ONEFLOW",
+    "published_at": null,
+    "popularity": null,
+    "aspect_ratio": "1:1"
+  }
+]

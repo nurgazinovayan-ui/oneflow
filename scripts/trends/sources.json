@@ -1,0 +1,21 @@
+{
+  "nano-banana-pro": {
+    "repo": "YouMind-OpenLab/awesome-nano-banana-pro-prompts",
+    "commit": "7db6229e755dfc7c6331448c66c634b1e9f97e2c",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/"
+  },
+  "gpt-image-2": {
+    "repo": "YouMind-OpenLab/awesome-gpt-image-2",
+    "commit": "671cabaea92a1bf5019550f2db90264b04f56996",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/"
+  },
+  "seedance-2.5": {
+    "repo": "EvoLinkAI/awesome-seedance-2.5-prompts",
+    "commit": "8d742ba749e9d08ddb29030b03568558bc5d2d0f",
+    "license": null,
+    "license_url": null,
+    "note": "Repo's own README 'License' section states no final open-source license has been chosen yet, and its 'Copyright Notice' section states copyright for prompt text remains with the original social-media authors. The committed LICENSE file (Apache-2.0 text) and the top badge (CC BY 4.0) contradict each other and the README body, so no license is asserted for entries from this source -- only author/source_url attribution is carried."
+  }
+}

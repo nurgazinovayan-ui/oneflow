@@ -1,3 +1,4 @@
+import { trendsRu, trendsEn } from './trends/strings';
 import { create } from 'zustand';
 
 export type Language = 'ru' | 'en';
@@ -35,6 +36,7 @@ export const useLanguageStore = create<LanguageState>((set) => ({
 // (e.g. AdaptNode's format-adaptation instructions, the assistant system prompts in
 // electron/main.ts) stays as-is — that's content for the model, not UI the user reads.
 export interface Translations {
+  trends: typeof trendsRu;
   toolbar: {
     file: string;
     saveProject: string;
@@ -913,6 +915,7 @@ export interface Translations {
 }
 
 export const ru: Translations = {
+  trends: trendsRu,
   toolbar: {
     file: 'Файл',
     saveProject: 'Сохранить проект',
@@ -1868,6 +1871,7 @@ export const ru: Translations = {
 };
 
 export const en: Translations = {
+  trends: trendsEn,
   toolbar: {
     file: 'File',
     saveProject: 'Save project',
