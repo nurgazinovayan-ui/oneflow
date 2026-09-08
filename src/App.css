@@ -25,6 +25,11 @@
   --c-pink: #e4e4e7;
   --c-pink-hover: #f4f4f5;
   --c-pink-dim: rgba(228, 228, 231, 0.45);
+  /* Text/icon color to pair with a --c-pink fill. --c-pink itself flips lightness between
+     themes (light gray here, dark gray in light theme below) so a badge/button painted with it
+     needs its foreground to flip the opposite way too — a single hardcoded #fff (fine when
+     --c-pink used to be an actual mid-tone pink) goes invisible once --c-pink is this light. */
+  --c-pink-text: #0a0a0c;
 
   /* Primary CTA — flat solid light-gray fill, no box-shadow (matches --c-accent's own CTA
      style now that both read as the same "light on dark" neutral). */
@@ -88,6 +93,7 @@
   --c-pink: #52525b;
   --c-pink-hover: #3f3f46;
   --c-pink-dim: rgba(82, 82, 91, 0.45);
+  --c-pink-text: #ffffff;
 
   /* Light-mode "Glow" accent — flat light-gray fill instead of the old sky-blue/pink gradient,
      dark text for contrast on it. */
@@ -1101,8 +1107,14 @@
   padding: 3px;
   border-radius: 999px;
   background: #ffffff;
-  border: 1px solid var(--c-divider);
+  border: 1px solid rgba(0, 0, 0, 0.09);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  /* This pill stays a fixed white plaque in both app themes (see background above) — pin the
+     tokens its children read to their light-theme values, or the active item's fill/text goes
+     near-black-on-near-black once the app itself is in dark mode (var(--c-panel-2) resolves to
+     #1a1a1a there, and .glow-menu-item-btn.active's text is a hardcoded #000). */
+  --c-text-muted: #6b6b74;
+  --c-panel-2: #eeeef1;
 }
 
 .glow-menu-list {
@@ -1277,6 +1289,10 @@
   border-radius: 16px;
   background: #0a0a0a;
   color: #fff;
+  /* Always-dark, like .ai-panel above — pin --c-pink to the light-gray dark-mode value so
+     .floko-avatar's fill reads against this card in both app themes. */
+  --c-pink: #e4e4e7;
+  --c-pink-text: #0a0a0c;
   border: none;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
   cursor: pointer;
@@ -1300,7 +1316,7 @@
   border-radius: 12px;
   flex-shrink: 0;
   background: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
 }
 
 .floko-info {
@@ -1555,7 +1571,7 @@
   padding: 6px 10px;
   border-radius: var(--radius-sm);
   background: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
   font-size: 11px;
   font-weight: 600;
   pointer-events: none;
@@ -2596,7 +2612,7 @@
   border: none;
   border-radius: 16px;
   background: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -3049,7 +3065,10 @@
   transform: translate(-50%, -50%);
   padding: 14px 16px 12px;
   border-radius: 26px;
-  background: rgba(15, 15, 18, 0.7);
+  /* Bumped from 0.7 — over the always-light --c-canvas-bg behind this composer, that opacity
+     only reached a mid gray (not a dark backdrop), too pale for the fixed light text/icons
+     inside (and the active Photo/Video pill below) to read reliably against. */
+  background: rgba(15, 15, 18, 0.9);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
@@ -3228,6 +3247,7 @@
 
 .quick-gen-kind-toggle button.active {
   background: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
   color: #f2f2f4;
 }
 
@@ -3540,7 +3560,7 @@
 
 .segmented-control button.active {
   background: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
 }
 
 .profile-date-range {
@@ -3873,6 +3893,12 @@
   flex-direction: column;
   background: #0a0a0a;
   color: #fff;
+  /* --c-pink flips lightness with the app theme (light gray in dark mode, dark gray in light
+     mode) — pin it to the dark-mode light-gray value so it always reads against this always-dark
+     panel, and pin --c-pink-text to match (dark text on that now-always-light pink fill). */
+  --c-pink: #e4e4e7;
+  --c-pink-hover: #f4f4f5;
+  --c-pink-text: #0a0a0c;
   border-radius: var(--radius-lg);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
   z-index: 60;
@@ -4037,7 +4063,7 @@
    (var(--c-panel-2) is a light gray, invisible here). */
 .ai-panel .chat-user {
   background: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
   box-shadow: none;
 }
 
@@ -4189,7 +4215,7 @@
 .chat-suggestion-chip:hover {
   background: var(--c-pink);
   border-color: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
 }
 
 /* Online-users picker inside AdminPanel — a scrollable list of plain rows (same "line, not a
@@ -4890,7 +4916,7 @@
   bottom: 6px;
   left: 6px;
   background: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
   font-size: 10px;
   font-weight: 700;
   padding: 3px 8px;
@@ -5047,6 +5073,10 @@
 .onelaunch-hero {
   text-align: center;
   margin-bottom: 6px;
+  /* Sits directly on --c-canvas-bg (paper-light in both themes, see the comment below) — pin
+     --c-pink to its light-theme dark-gray value so .onelaunch-beta-tag's white text stays
+     readable on it instead of going white-on-near-white in dark mode. */
+  --c-pink: #52525b;
 }
 
 .onelaunch-beta-tag {
@@ -5084,13 +5114,20 @@
    gaps between them (.onelaunch-composer's gap above) so the sequence reads as distinct
    moments. Fixed light text/control colors follow from the fixed-dark background. */
 .onelaunch-step {
-  background: rgba(15, 15, 18, 0.62);
+  /* Bumped from 0.62 — blended against the always-light --c-canvas-bg behind it (not a dark
+     app background), 0.62 alpha black only got partway to dark (~rgb(76,76,79)), too pale for
+     the fixed light text/controls inside to read reliably against. */
+  background: rgba(15, 15, 18, 0.88);
   border-radius: var(--radius-lg);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   padding: 22px 24px;
   transition: opacity 0.2s var(--ease);
+  /* Always-dark plaque — pin --c-pink to the dark-mode light-gray value so the step badge/style
+     tab/swatch badge fills below read against it in both app themes, with dark text on them. */
+  --c-pink: #e4e4e7;
+  --c-pink-text: #0a0a0c;
 }
 
 .onelaunch-step.locked {
@@ -5120,7 +5157,7 @@
 
 .onelaunch-step-badge.done {
   background: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
 }
 
 .onelaunch-step-title {
@@ -5231,7 +5268,7 @@
 
 .onelaunch-style-tab.active {
   background: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
 }
 
 .onelaunch-style-grid {
@@ -5359,7 +5396,7 @@
   top: -7px;
   right: -6px;
   background: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
   font-size: 8.5px;
   font-weight: 700;
   padding: 2px 6px;
@@ -5640,7 +5677,7 @@
 .photo-editor-btn.active {
   background: var(--c-pink);
   border-color: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
 }
 
 .photo-editor-mirrored-icon {
@@ -5673,7 +5710,7 @@
 .photo-editor-crop-btn.active {
   background: var(--c-pink);
   border-color: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
 }
 
 /* "Музыка и аудио" — web-only (see App.tsx). Same light dot-grid canvas backdrop as the node
@@ -5729,16 +5766,23 @@
   gap: 6px;
   padding: 6px;
   border-radius: var(--radius-md);
-  background: rgba(15, 15, 18, 0.62);
+  /* Bumped from 0.62, same reason as .onelaunch-step — over the always-light --c-canvas-bg
+     behind it this only reached a mid gray, not dark enough for the active pill below to read
+     reliably against. */
+  background: rgba(15, 15, 18, 0.88);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   box-shadow: var(--shadow-md);
+  /* Always-dark, like .onelaunch-step — pin --c-pink to the dark-mode light-gray value with
+     dark text on it, in both app themes. */
+  --c-pink: #e4e4e7;
+  --c-pink-text: #0a0a0c;
 }
 
 .musicaudio-mode-toolbar .toolbar-label-btn.active {
   background: var(--c-pink);
   border-color: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
 }
 
 .musicaudio-genre-grid {
@@ -5770,7 +5814,7 @@
 .musicaudio-genre-btn.active {
   background: var(--c-pink);
   border-color: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
 }
 
 .musicaudio-textarea {
@@ -5830,7 +5874,7 @@
 
 .musicaudio-voice-preview-btn:hover:not(:disabled) {
   background: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
 }
 
 .musicaudio-voice-preview-btn:disabled svg {
@@ -5927,7 +5971,7 @@
   border-radius: 50%;
   border: none;
   background: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6024,7 +6068,14 @@
   flex-direction: column;
   gap: 4px;
   padding: 16px 12px;
-  border-right: 1px solid var(--c-divider);
+  border-right: 1px solid rgba(0, 0, 0, 0.09);
+  /* Sits directly on --c-canvas-bg (paper-light in both themes) with no panel of its own — pin
+     the tokens its buttons read to their light-theme values, or the idle label goes low-contrast
+     gray-on-gray and the active pill white-on-near-white once the app itself is in dark mode. */
+  --c-text: #17171b;
+  --c-text-muted: #6b6b74;
+  --c-panel-2: #eeeef1;
+  --c-pink: #52525b;
 }
 
 .assets-sort-btn {
@@ -6149,7 +6200,7 @@
   height: 26px;
   border-radius: 50%;
   border: none;
-  background: rgba(15, 15, 18, 0.62);
+  background: rgba(15, 15, 18, 0.88);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   color: #fff;
@@ -6157,10 +6208,15 @@
   align-items: center;
   justify-content: center;
   transition: background 0.15s var(--ease);
+  /* Always-dark chip — pin --c-pink to the dark-mode light-gray value with dark text on it, in
+     both app themes, so the hover fill below doesn't go white-icon-on-near-white. */
+  --c-pink: #e4e4e7;
+  --c-pink-text: #0a0a0c;
 }
 
 .assets-tile-download:hover {
   background: var(--c-pink);
+  color: var(--c-pink-text);
 }
 
 .assets-tile-download:disabled {
@@ -6169,7 +6225,8 @@
 }
 
 .assets-tile-download:disabled:hover {
-  background: rgba(15, 15, 18, 0.62);
+  background: rgba(15, 15, 18, 0.88);
+  color: #fff;
 }
 
 /* ==========================================================================
@@ -6478,7 +6535,7 @@
   height: 26px;
   border-radius: 7px;
   background: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
   flex-shrink: 0;
 }
 
@@ -8975,6 +9032,23 @@
   flex: 1;
   min-width: 0;
   display: flex;
+  /* .cw-panel (this element's parent) is a fixed white "paper" surface in both app themes (see
+     its own background above) — .cw-sidebar sits outside .cw-stage and keeps following the real
+     theme with its own dark/light background, but everything in here needs light-theme text/
+     divider/accent tokens pinned, or they go near-white-on-white once the app itself is in dark
+     mode (var(--c-text) etc. would otherwise resolve to their dark-theme, light-on-dark values). */
+  --c-text: #17171b;
+  --c-text-muted: #6b6b74;
+  --c-text-dim: #a3a3ab;
+  --c-divider: rgba(0, 0, 0, 0.09);
+  --c-panel-2: #eeeef1;
+  --c-panel-3: #e3e3e8;
+  --c-accent: #17171b;
+  --c-accent-text: #ffffff;
+  --c-pink: #52525b;
+  --c-pink-hover: #3f3f46;
+  --c-pink-text: #ffffff;
+  --c-error-bg: rgba(229, 72, 77, 0.1);
 }
 
 .cw-surface {
@@ -9531,7 +9605,7 @@
 .trends-field { display: flex; flex-direction: column; gap: .5rem; margin: 1rem 0; font-size: .875rem; }
 .trends-dialog textarea { width: 100%; resize: vertical; min-height: 12rem; line-height: 1.6; background: var(--c-bg); }
 .trends-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
-.trends-dialog .trends-primary { background: var(--c-pink); color: var(--glow-text); border-color: var(--c-pink); }
+.trends-dialog .trends-primary { background: var(--c-pink); color: var(--c-pink-text); border-color: var(--c-pink); }
 .trends-dialog .trends-primary:hover { background: var(--c-pink-hover); }
 @media (max-width: 48rem) { .trends-detail-layout { grid-template-columns: 1fr; } .trends-toolbar { padding: 1rem; } .trends-filters { padding: 0 1rem 1rem; } .trends-scroll { padding: 1rem; } .trends-detail-preview img, .trends-detail-preview video { max-height: 35dvh; } }
 
@@ -9633,7 +9707,7 @@
   cursor: pointer;
   transition: background .15s var(--ease), color .15s var(--ease);
 }
-.messenger-tabs button[aria-pressed='true'] { color: var(--glow-text); background: var(--c-pink); }
+.messenger-tabs button[aria-pressed='true'] { color: var(--c-pink-text); background: var(--c-pink); }
 .messenger-tab-badge { min-width: 1.1rem; height: 1.1rem; padding: 0 .3rem; border-radius: 999px; background: #ff3b30; color: #fff; font-size: .62rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
 .messenger-list { flex: 1; min-height: 0; overflow-y: auto; padding: .75rem 1rem 1.1rem; display: flex; flex-direction: column; gap: .1rem; }
 .messenger-row { position: relative; display: flex; flex-direction: row; align-items: center; gap: .65rem; width: 100%; padding: .55rem .6rem; border: none; border-radius: 1rem; background: transparent; color: var(--c-text); text-align: left; cursor: pointer; transition: background .12s var(--ease); }
@@ -9692,7 +9766,7 @@
 .messenger-checkbox-row:hover { background: var(--c-panel-2); }
 .messenger-form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--c-divider); }
 .messenger-form-actions button { border-radius: 999px; padding: .5rem 1.1rem; }
-.messenger-primary { background: var(--c-pink); color: var(--glow-text); border-color: var(--c-pink); }
+.messenger-primary { background: var(--c-pink); color: var(--c-pink-text); border-color: var(--c-pink); }
 .messenger-primary:hover { background: var(--c-pink-hover); }
 .messenger-primary:disabled { opacity: .5; cursor: default; }
 .messenger-thread { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -9702,7 +9776,7 @@
 /* Telegram-style "tail": the corner nearest the sender's own side is squared off, the other
    three stay fully rounded — reads as a speech-bubble tail without an extra SVG shape. */
 .messenger-bubble-text { margin: 0; padding: .55rem .85rem; border-radius: 1.1rem 1.1rem 1.1rem .3rem; background: var(--c-panel-2); font-size: .875rem; line-height: 1.4; overflow-wrap: anywhere; white-space: pre-wrap; }
-.messenger-bubble-row.is-mine .messenger-bubble-text { border-radius: 1.1rem 1.1rem .3rem 1.1rem; background: var(--c-pink); color: var(--glow-text); }
+.messenger-bubble-row.is-mine .messenger-bubble-text { border-radius: 1.1rem 1.1rem .3rem 1.1rem; background: var(--c-pink); color: var(--c-pink-text); }
 .messenger-bubble-time { font-size: .7rem; color: var(--c-text-dim); padding: 0 .3rem; }
 .messenger-compose { display: flex; align-items: center; gap: .5rem; padding: .75rem 1.1rem; border-top: 1px solid var(--c-divider); flex-shrink: 0; }
 .messenger-compose input { flex: 1; border-radius: 999px; background: var(--c-panel-2); border-color: transparent; padding-left: 1rem; }
