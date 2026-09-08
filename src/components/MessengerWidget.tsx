@@ -2,15 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import { useT } from '../i18n';
 import { IconChat, IconClose, IconSend, IconPlus, IconSearch, IconChevronRight } from './Icons';
 import {
-  heartbeat, getRoster, listChannels, startDm, createGroup, listMessages, sendMessage,
-  type RosterEntry, type ChannelSummary, type ChatMessage, type MessengerStatus,
+  heartbeat, getRoster, listChannels, startDm, createGroup, listMessages, sendMessage, sendSticker, sendGif, searchGifs,
+  type RosterEntry, type ChannelSummary, type ChatMessage, type MessengerStatus, type GifResult,
 } from '../messenger/client';
 
 const HEARTBEAT_MS = 20_000;
 const POLL_MS = 4_000;
 const BACKGROUND_POLL_MS = 15_000; // keeps the unread badge live while the widget is closed or on another tab
+const GIF_SEARCH_DEBOUNCE_MS = 400;
 const READ_KEY_PREFIX = 'oneflow-messenger-read:';
 const AVATAR_COLORS = ['#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ef4444'];
+const STICKERS = ['🎉', '😂', '❤️', '👍', '🔥', '😢', '😮', '🙏', '💯', '✅', '❌', '🤔', '🥳', '😍', '😅', '🙌', '👏', '😴', '🤝', '💪', '🚀', '☕', '😎', '🤯'];
 
 type View = 'chats' | 'people' | 'newGroup';
 type Translations = ReturnType<typeof useT>['messenger'];
@@ -74,6 +76,11 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
   const [nameDraft, setNameDraft] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [readMap, setReadMap] = useState<Record<string, string>>(() => loadReadMap(email));
+  const [stickerPickerOpen, setStickerPickerOpen] = useState(false);
+  const [gifPickerOpen, setGifPickerOpen] = useState(false);
+  const [gifQuery, setGifQuery] = useState('');
+  const [gifResults, setGifResults] = useState<GifResult[] | null>(null);
+  const [gifLoading, setGifLoading] = useState(false);
   const activeChannelRef = useRef<string | null>(null);
   const activityRef = useRef(activity);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -137,6 +144,18 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ block: 'end' }); }, [messages]);
 
+  useEffect(() => {
+    if (!gifPickerOpen) return;
+    let cancelled = false;
+    setGifLoading(true);
+    const id = window.setTimeout(() => {
+      searchGifs(gifQuery).then(results => { if (!cancelled) setGifResults(results); })
+        .catch(() => { if (!cancelled) setGifResults([]); })
+        .finally(() => { if (!cancelled) setGifLoading(false); });
+    }, gifQuery ? GIF_SEARCH_DEBOUNCE_MS : 0);
+    return () => { cancelled = true; window.clearTimeout(id); };
+  }, [gifPickerOpen, gifQuery]);
+
   const openThread = async (channelId: string) => {
     setActiveChannelId(channelId);
     setMessages([]);
@@ -179,6 +198,26 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
       setMessages(prev => [...prev, created]);
       markRead(activeChannelId, created.createdAt);
     } catch { setError(true); setDraft(text); }
+  };
+
+  const pickSticker = async (emoji: string) => {
+    if (!activeChannelId) return;
+    setStickerPickerOpen(false);
+    try {
+      const created = await sendSticker(activeChannelId, emoji);
+      setMessages(prev => [...prev, created]);
+      markRead(activeChannelId, created.createdAt);
+    } catch { setError(true); }
+  };
+
+  const pickGif = async (url: string) => {
+    if (!activeChannelId) return;
+    setGifPickerOpen(false);
+    try {
+      const created = await sendGif(activeChannelId, url);
+      setMessages(prev => [...prev, created]);
+      markRead(activeChannelId, created.createdAt);
+    } catch { setError(true); }
   };
 
   const saveName = async () => {
@@ -235,7 +274,9 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
             <span className="messenger-row-body">
               <span className="messenger-row-title">{channelLabel(c, email)}</span>
               <span className="messenger-row-preview">
-                {c.lastMessage ? `${c.lastMessage.senderEmail === email ? t.you + ': ' : ''}${c.lastMessage.body}` : ''}
+                {c.lastMessage ? `${c.lastMessage.senderEmail === email ? t.you + ': ' : ''}${
+                  c.lastMessage.kind === 'gif' ? `\u{1F3AC} GIF${c.lastMessage.body ? ' · ' + c.lastMessage.body : ''}` : c.lastMessage.body
+                }` : ''}
               </span>
             </span>
             {unread && <span className="messenger-row-dot" />}
@@ -281,13 +322,42 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
       {activeChannelId && <section className="messenger-thread">
         <div className="messenger-messages">
           {messages.map(m => <div key={m.id} className={`messenger-bubble-row ${m.senderEmail === email ? 'is-mine' : ''}`}>
-            <p className="messenger-bubble-text">{m.body}</p>
+            {m.kind === 'sticker' && <p className="messenger-sticker">{m.body}</p>}
+            {m.kind === 'gif' && <figure className="messenger-gif">
+              <img src={m.mediaUrl ?? ''} alt={t.gifs} loading="lazy" />
+              {m.body && <figcaption>{m.body}</figcaption>}
+            </figure>}
+            {m.kind === 'text' && <p className="messenger-bubble-text">{m.body}</p>}
             <span className="messenger-bubble-time">{timeLabel(m.createdAt)}</span>
           </div>)}
           {!messages.length && <p className="messenger-empty">{t.noMessages}</p>}
           <div ref={messagesEndRef} />
         </div>
+
+        {stickerPickerOpen && <div className="messenger-picker">
+          <div className="messenger-sticker-grid">
+            {STICKERS.map(s => <button key={s} type="button" onClick={() => void pickSticker(s)}>{s}</button>)}
+          </div>
+        </div>}
+        {gifPickerOpen && <div className="messenger-picker">
+          <div className="messenger-search messenger-gif-search">
+            <IconSearch size={14} />
+            <input value={gifQuery} onChange={e => setGifQuery(e.target.value)} placeholder={t.searchGifs} autoFocus />
+          </div>
+          {gifLoading && <p className="messenger-empty">{t.loading}</p>}
+          {!gifLoading && gifResults && !gifResults.length && <p className="messenger-empty">{t.noGifs}</p>}
+          {!gifLoading && gifResults && gifResults.length > 0 && <div className="messenger-gif-grid">
+            {gifResults.map(g => <button key={g.id} type="button" onClick={() => void pickGif(g.url)}>
+              <img src={g.previewUrl} alt={g.title} loading="lazy" />
+            </button>)}
+          </div>}
+        </div>}
+
         <form className="messenger-compose" onSubmit={e => { e.preventDefault(); void submitMessage(); }}>
+          <button type="button" className="messenger-picker-toggle" aria-pressed={stickerPickerOpen} aria-label={t.stickers}
+            onClick={() => { setStickerPickerOpen(v => !v); setGifPickerOpen(false); }}>🙂</button>
+          <button type="button" className="messenger-picker-toggle messenger-gif-toggle" aria-pressed={gifPickerOpen} aria-label={t.gifs}
+            onClick={() => { setGifPickerOpen(v => !v); setStickerPickerOpen(false); if (!gifResults) setGifQuery(''); }}>GIF</button>
           <input value={draft} onChange={e => setDraft(e.target.value)} placeholder={t.messagePlaceholder} />
           <button type="submit" aria-label={t.send} disabled={!draft.trim()}><IconSend size={16} /></button>
         </form>

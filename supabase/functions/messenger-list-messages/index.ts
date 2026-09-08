@@ -10,7 +10,8 @@
 // messenger_messages carries no RLS write/read policy beyond SELECT for members, and this
 // function additionally guards against a non-member polling a channelId they don't belong to.
 //
-// Requires supabase/migrations/202609070003_messenger.sql to have been applied first.
+// Requires supabase/migrations/202609070003_messenger.sql AND
+// 202609070004_messenger_media.sql to have been applied first.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -64,7 +65,7 @@ Deno.serve(async (req) => {
 
     let query = admin
       .from('messenger_messages')
-      .select('id, sender_email, body, created_at')
+      .select('id, sender_email, body, created_at, kind, media_url')
       .eq('channel_id', channelId)
       .order('created_at', { ascending: after ? true : false })
       .limit(MAX_MESSAGES);
@@ -73,11 +74,13 @@ Deno.serve(async (req) => {
     if (error) throw error;
 
     const messages = (after ? data ?? [] : [...(data ?? [])].reverse()).map(
-      (m: { id: string; sender_email: string; body: string; created_at: string }) => ({
+      (m: { id: string; sender_email: string; body: string; created_at: string; kind: string; media_url: string | null }) => ({
         id: m.id,
         senderEmail: m.sender_email,
         body: m.body,
         createdAt: m.created_at,
+        kind: m.kind,
+        mediaUrl: m.media_url,
       })
     );
 

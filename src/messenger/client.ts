@@ -24,10 +24,13 @@ export interface ChannelMember {
   online: boolean;
   isSelf: boolean;
 }
+export type MessageKind = 'text' | 'sticker' | 'gif';
 export interface LastMessage {
   body: string;
   senderEmail: string;
   createdAt: string;
+  kind: MessageKind;
+  mediaUrl: string | null;
 }
 export interface ChannelSummary {
   id: string;
@@ -41,6 +44,14 @@ export interface ChatMessage {
   senderEmail: string;
   body: string;
   createdAt: string;
+  kind: MessageKind;
+  mediaUrl: string | null;
+}
+export interface GifResult {
+  id: string;
+  title: string;
+  previewUrl: string;
+  url: string;
 }
 
 async function call<T>(name: string, body: unknown): Promise<T> {
@@ -75,5 +86,14 @@ export function listMessages(channelId: string, after?: string): Promise<ChatMes
   return call('messenger-list-messages', after ? { channelId, after } : { channelId });
 }
 export function sendMessage(channelId: string, text: string): Promise<ChatMessage> {
-  return call('messenger-send-message', { channelId, text });
+  return call('messenger-send-message', { channelId, kind: 'text', text });
+}
+export function sendSticker(channelId: string, emoji: string): Promise<ChatMessage> {
+  return call('messenger-send-message', { channelId, kind: 'sticker', text: emoji });
+}
+export function sendGif(channelId: string, url: string, caption = ''): Promise<ChatMessage> {
+  return call('messenger-send-message', { channelId, kind: 'gif', mediaUrl: url, text: caption });
+}
+export function searchGifs(query: string): Promise<GifResult[]> {
+  return call('messenger-gif-search', { query });
 }

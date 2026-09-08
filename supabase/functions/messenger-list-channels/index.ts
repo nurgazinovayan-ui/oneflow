@@ -6,7 +6,8 @@
 // Returns the caller's DM/group channels with their members and a last-message preview, in one
 // round trip. Restricted to @mechta.kz callers, checked against the caller's own verified JWT.
 //
-// Requires supabase/migrations/202609070003_messenger.sql to have been applied first.
+// Requires supabase/migrations/202609070003_messenger.sql AND
+// 202609070004_messenger_media.sql to have been applied first.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -60,7 +61,7 @@ Deno.serve(async (req) => {
         admin.from('messenger_profiles').select('email, display_name, status, last_seen_at'),
         admin
           .from('messenger_messages')
-          .select('channel_id, sender_email, body, created_at')
+          .select('channel_id, sender_email, body, created_at, kind, media_url')
           .in('channel_id', channelIds)
           .order('created_at', { ascending: false })
           .limit(RECENT_MESSAGES_SCANNED),
@@ -83,10 +84,13 @@ Deno.serve(async (req) => {
       list.push(m.email);
       membersByChannel.set(m.channel_id, list);
     }
-    const lastMessageByChannel = new Map<string, { body: string; senderEmail: string; createdAt: string }>();
+    const lastMessageByChannel = new Map<string, { body: string; senderEmail: string; createdAt: string; kind: string; mediaUrl: string | null }>();
     for (const msg of recent ?? []) {
       if (!lastMessageByChannel.has(msg.channel_id)) {
-        lastMessageByChannel.set(msg.channel_id, { body: msg.body, senderEmail: msg.sender_email, createdAt: msg.created_at });
+        lastMessageByChannel.set(msg.channel_id, {
+          body: msg.body, senderEmail: msg.sender_email, createdAt: msg.created_at,
+          kind: msg.kind, mediaUrl: msg.media_url,
+        });
       }
     }
 
