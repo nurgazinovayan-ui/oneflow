@@ -4,10 +4,17 @@ export type Theme = 'dark' | 'light';
 
 const THEME_STORAGE_KEY = 'oneflow-theme';
 
-// Dark theme is disabled for now (light-only) — see the removed toggle in ProfileModal.tsx.
-// Kept as a one-line change to re-enable rather than ripping out the dark CSS/store plumbing.
+// Re-enabled (see the theme row next to language in ProfileModal.tsx) with a saved choice
+// taking priority; new sessions default to dark, since that's the theme this app is built
+// around (see the App.css :root comment — light is the explicit override, not the base).
 function loadInitialTheme(): Theme {
-  return 'light';
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved === 'dark' || saved === 'light') return saved;
+  } catch {
+    // Private-browsing/quota edge case — falls through to the default below.
+  }
+  return 'dark';
 }
 
 interface ThemeState {

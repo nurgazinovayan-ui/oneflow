@@ -1,9 +1,12 @@
 :root {
-  /* Dark theme rebuilt to match framer.com/ai (computed styles pulled straight from the live
-     site): pure black canvas, flat solid-gray panels — no blur/glass, no neon glow — and a
-     single restrained blue accent instead of the earlier pink/purple "Glow kit" gradient.
-     --c-pink keeps its name (47 call sites reference it) but holds Framer's #0099ff in dark
-     mode; light theme restores the original pink explicitly below so it's unaffected. */
+  /* Monochrome dark theme (by explicit request — black and light gray only, no pink/blue/
+     colored accent anywhere in the UI chrome): pure black canvas, flat solid-gray panels, and
+     the former accent (--c-pink, still keeping its name — 150 call sites reference it) now
+     resolves to a light gray instead of a color, so every button/highlight/badge that used it
+     follows along automatically. Light theme's own --c-pink is neutralized to gray the same way
+     below. Functional signal colors that carry real meaning rather than decorate — node-canvas
+     input/transform hues, the online/offline status dots, budget-warning red — are untouched;
+     "no pink" was about the brand accent, not those. */
   --c-bg: #000000;
   --c-panel: #111111;
   --c-panel-2: #1a1a1a;
@@ -19,16 +22,16 @@
   --c-divider: rgba(255, 255, 255, 0.08);
   --c-error: #e5484d;
   --c-error-bg: rgba(229, 72, 77, 0.12);
-  --c-pink: #0099ff;
-  --c-pink-hover: #33aaff;
-  --c-pink-dim: rgba(0, 153, 255, 0.45);
+  --c-pink: #e4e4e7;
+  --c-pink-hover: #f4f4f5;
+  --c-pink-dim: rgba(228, 228, 231, 0.45);
 
-  /* Primary CTA — Framer's "Publish" button is a flat solid fill with no box-shadow at all, so
-     glow-shadow is empty here (kept as a var, not deleted, since light theme still glows). */
-  --glow-gradient: #0099ff;
+  /* Primary CTA — flat solid light-gray fill, no box-shadow (matches --c-accent's own CTA
+     style now that both read as the same "light on dark" neutral). */
+  --glow-gradient: #e4e4e7;
   --glow-shadow: none;
   --glow-shadow-hover: none;
-  --glow-text: #ffffff;
+  --glow-text: #0a0a0c;
 
   /* Shared by .canvas-area and .text-work-panel — both "working modes" (node canvas /
      Работа с текстом) read as one system rather than a jarring light/dark swap on toggle. */
@@ -64,9 +67,9 @@
 
 /* Light theme — toggled from Личный кабинет (see src/theme.ts), applied as data-theme on
    <html>. Only the chrome/surface tokens flip; node signal colors and the node-editor's
-   paper-white canvas stay put so they read the same in both themes. --c-pink is restored to
-   the original ONEFLOW brand pink here explicitly — the dark theme's base :root now holds
-   Framer's blue instead (see the comment up there), and light mode was never asked to change. */
+   paper-white canvas stay put so they read the same in both themes. --c-pink is neutralized to
+   a dark gray here too (by the same "no pink anywhere" request as the dark theme above) —
+   it used to be the original ONEFLOW brand pink. */
 :root[data-theme='light'] {
   --c-bg: #f3f3f5;
   --c-panel: #ffffff;
@@ -82,16 +85,16 @@
   --c-accent-hover: #303036;
   --c-divider: rgba(0, 0, 0, 0.09);
   --c-error-bg: rgba(229, 72, 77, 0.1);
-  --c-pink: #ff2d78;
-  --c-pink-hover: #ff4d8f;
-  --c-pink-dim: rgba(255, 45, 120, 0.45);
+  --c-pink: #52525b;
+  --c-pink-hover: #3f3f46;
+  --c-pink-dim: rgba(82, 82, 91, 0.45);
 
-  /* Light-mode "Glow" accent — the kit's own light theme is a soft sky blue rather than the
-     dark neon pink/purple, so the primary pill controls swap palette here too. */
-  --glow-gradient: linear-gradient(135deg, #dbeefc 0%, #a9d8f5 100%);
-  --glow-shadow: 0 4px 14px rgba(90, 169, 230, 0.35);
-  --glow-shadow-hover: 0 6px 22px rgba(90, 169, 230, 0.5);
-  --glow-text: #10293f;
+  /* Light-mode "Glow" accent — flat light-gray fill instead of the old sky-blue/pink gradient,
+     dark text for contrast on it. */
+  --glow-gradient: linear-gradient(135deg, #f4f4f5 0%, #d4d4d8 100%);
+  --glow-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  --glow-shadow-hover: 0 6px 22px rgba(0, 0, 0, 0.18);
+  --glow-text: #17171b;
 }
 
 @media (prefers-reduced-motion: reduce) {
