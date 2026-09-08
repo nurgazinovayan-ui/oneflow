@@ -8,6 +8,8 @@ import {
 
 const HEARTBEAT_MS = 20_000;
 const POLL_MS = 4_000;
+const BACKGROUND_POLL_MS = 15_000; // keeps the unread badge live while the widget is closed or on another tab
+const READ_KEY_PREFIX = 'oneflow-messenger-read:';
 const AVATAR_COLORS = ['#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ef4444'];
 
 type View = 'chats' | 'people' | 'newGroup';
@@ -39,6 +41,15 @@ function statusLabel(t: Translations, status: MessengerStatus): string {
   return t.statusIdle;
 }
 
+function loadReadMap(email: string): Record<string, string> {
+  try { return JSON.parse(localStorage.getItem(READ_KEY_PREFIX + email) ?? '{}'); }
+  catch { return {}; }
+}
+function saveReadMap(email: string, map: Record<string, string>) {
+  try { localStorage.setItem(READ_KEY_PREFIX + email, JSON.stringify(map)); }
+  catch { /* per-device convenience only; a full page reload just re-derives from the server */ }
+}
+
 function Avatar({ name, email, online }: { name: string; email: string; online: boolean }) {
   const letter = (name || email).trim().charAt(0).toUpperCase();
   return <span className={`messenger-avatar ${online ? 'is-online' : 'is-offline'}`} style={{ background: avatarColor(email) }}>
@@ -62,11 +73,21 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
   const [busy, setBusy] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [editingName, setEditingName] = useState(false);
+  const [readMap, setReadMap] = useState<Record<string, string>>(() => loadReadMap(email));
   const activeChannelRef = useRef<string | null>(null);
   const activityRef = useRef(activity);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   activeChannelRef.current = activeChannelId;
   activityRef.current = activity;
+
+  const markRead = (channelId: string, at: string) => {
+    setReadMap(prev => {
+      if (prev[channelId] && prev[channelId] >= at) return prev;
+      const next = { ...prev, [channelId]: at };
+      saveReadMap(email, next);
+      return next;
+    });
+  };
 
   useEffect(() => { void heartbeat(undefined, activity); }, [activity]);
 
@@ -74,6 +95,18 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
     const id = window.setInterval(() => void heartbeat(undefined, activityRef.current), HEARTBEAT_MS);
     return () => window.clearInterval(id);
   }, []);
+
+  // Keeps the unread badge accurate while the panel is closed, or open on a tab other than
+  // Chats — the fast poll below already refreshes channels every 4s in that one case, so this
+  // steps aside instead of doubling up.
+  useEffect(() => {
+    if (open && view === 'chats') return;
+    let cancelled = false;
+    const poll = () => { void listChannels().then(list => { if (!cancelled) setChannels(list); }).catch(() => {}); };
+    poll();
+    const id = window.setInterval(poll, BACKGROUND_POLL_MS);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [open, view]);
 
   useEffect(() => {
     if (!open) return;
@@ -83,7 +116,10 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
         if (activeChannelRef.current) {
           const last = messages.length ? messages[messages.length - 1].createdAt : undefined;
           const fresh = await listMessages(activeChannelRef.current, last);
-          if (!cancelled && fresh.length) setMessages(prev => [...prev, ...fresh]);
+          if (!cancelled && fresh.length) {
+            setMessages(prev => [...prev, ...fresh]);
+            markRead(activeChannelRef.current, fresh[fresh.length - 1].createdAt);
+          }
         } else if (view === 'chats') {
           const list = await listChannels();
           if (!cancelled) setChannels(list);
@@ -105,8 +141,12 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
     setActiveChannelId(channelId);
     setMessages([]);
     setError(false);
-    try { setMessages(await listMessages(channelId)); }
-    catch { setError(true); }
+    markRead(channelId, new Date().toISOString());
+    try {
+      const history = await listMessages(channelId);
+      setMessages(history);
+      if (history.length) markRead(channelId, history[history.length - 1].createdAt);
+    } catch { setError(true); }
   };
 
   const backToList = () => { setActiveChannelId(null); setMessages([]); };
@@ -137,6 +177,7 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
     try {
       const created = await sendMessage(activeChannelId, text);
       setMessages(prev => [...prev, created]);
+      markRead(activeChannelId, created.createdAt);
     } catch { setError(true); setDraft(text); }
   };
 
@@ -151,10 +192,19 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
   const activeOther = activeChannel?.kind === 'dm' ? activeChannel.members.find(m => m.email !== email) : null;
   const filteredRoster = (roster ?? []).filter(p => !p.isSelf &&
     p.displayName.toLowerCase().includes(peopleQuery.toLowerCase()));
+  const unreadChannelIds = new Set(
+    (channels ?? [])
+      .filter(c => c.lastMessage && c.lastMessage.senderEmail !== email &&
+        (!readMap[c.id] || c.lastMessage.createdAt > readMap[c.id]))
+      .map(c => c.id)
+  );
+  const unreadCount = unreadChannelIds.size;
+  const unreadLabel = unreadCount > 9 ? '9+' : `+${unreadCount}`;
 
   return <>
     <button className="messenger-bubble" aria-label={t.bubbleLabel} onClick={() => setOpen(v => !v)}>
       {open ? <IconClose size={20} /> : <IconChat size={20} />}
+      {!open && unreadCount > 0 && <span className="messenger-badge">{unreadLabel}</span>}
     </button>
     {open && <section className="messenger-panel" aria-label={t.title}>
       <header className="messenger-header">
@@ -169,7 +219,9 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
       </header>
 
       {!activeChannelId && <nav className="messenger-tabs">
-        <button aria-pressed={view === 'chats'} onClick={() => setView('chats')}>{t.tabChats}</button>
+        <button aria-pressed={view === 'chats'} onClick={() => setView('chats')}>
+          {t.tabChats}{unreadCount > 0 && <span className="messenger-tab-badge">{unreadLabel}</span>}
+        </button>
         <button aria-pressed={view === 'people'} onClick={() => setView('people')}>{t.tabPeople}</button>
       </nav>}
 
@@ -177,7 +229,8 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
         {!channels?.length && <p className="messenger-empty">{t.noChannels}</p>}
         {channels?.map(c => {
           const other = c.kind === 'dm' ? c.members.find(m => m.email !== email) : null;
-          return <button key={c.id} className="messenger-row" onClick={() => void openThread(c.id)}>
+          const unread = unreadChannelIds.has(c.id);
+          return <button key={c.id} className={`messenger-row ${unread ? 'is-unread' : ''}`} onClick={() => void openThread(c.id)}>
             {c.kind === 'dm' && other && <Avatar name={other.displayName} email={other.email} online={other.online} />}
             <span className="messenger-row-body">
               <span className="messenger-row-title">{channelLabel(c, email)}</span>
@@ -185,6 +238,7 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
                 {c.lastMessage ? `${c.lastMessage.senderEmail === email ? t.you + ': ' : ''}${c.lastMessage.body}` : ''}
               </span>
             </span>
+            {unread && <span className="messenger-row-dot" />}
           </button>;
         })}
       </section>}

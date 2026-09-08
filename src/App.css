@@ -9535,31 +9535,52 @@
 /* Messenger — floating widget for @mechta.kz accounts only (gated in App.tsx), unrelated to
    mainView so it stays visible across every section. Positioned opposite Floko (bottom-left,
    canvas-mode-only) to avoid overlap; z-index above mode panels (20) but below the app's
-   handful of truly-blocking overlays. */
+   handful of truly-blocking overlays. Visual language leans on Telegram's app (per explicit
+   request): a gradient FAB, pill-shaped segmented tabs/input, and tailed message bubbles —
+   layered on ONEFLOW's own --c-* tokens rather than importing a separate palette. */
 .messenger-bubble {
   position: fixed;
   right: 1.5rem;
   bottom: 1.5rem;
   z-index: 80;
-  width: 3.25rem;
-  height: 3.25rem;
+  width: 3.5rem;
+  height: 3.5rem;
   border-radius: 50%;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--c-pink);
+  background: linear-gradient(135deg, var(--c-pink), var(--c-pink-hover));
   color: var(--glow-text);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--c-pink) 45%, transparent), var(--shadow-md);
   cursor: pointer;
-  transition: background .15s var(--ease), transform .15s var(--ease);
+  transition: transform .18s var(--ease), box-shadow .18s var(--ease);
 }
-.messenger-bubble:hover { background: var(--c-pink-hover); transform: translateY(-1px); }
+.messenger-bubble:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 14px 32px color-mix(in srgb, var(--c-pink) 55%, transparent), var(--shadow-md); }
+.messenger-bubble:active { transform: translateY(0) scale(.98); }
 .web-mode .messenger-bubble { bottom: 1.5rem; }
+.messenger-badge {
+  position: absolute;
+  top: -.2rem;
+  right: -.2rem;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 .3rem;
+  border-radius: 999px;
+  border: 2px solid var(--c-bg);
+  background: #ff3b30;
+  color: #fff;
+  font-size: .68rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
 .messenger-panel {
   position: fixed;
   right: 1.5rem;
-  bottom: 5.25rem;
+  bottom: 5.5rem;
   z-index: 80;
   width: min(23rem, calc(100vw - 2rem));
   height: min(32rem, calc(100dvh - 8rem));
@@ -9568,22 +9589,56 @@
   background: var(--c-panel);
   color: var(--c-text);
   border: 1px solid var(--c-divider);
-  border-radius: var(--radius-lg);
+  border-radius: 1.5rem;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
+  animation: messenger-panel-in .16s var(--ease);
 }
-.messenger-header { display: flex; align-items: center; gap: .6rem; padding: 1rem 1.1rem; border-bottom: 1px solid var(--c-divider); flex-shrink: 0; }
-.messenger-header h2 { margin: 0; font-size: 1rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.messenger-close, .messenger-back { background: transparent; border: none; color: var(--c-text-muted); cursor: pointer; padding: .3rem; border-radius: var(--radius-sm); display: flex; }
-.messenger-close:hover, .messenger-back:hover { color: var(--c-text); background: var(--c-panel-2); }
+@keyframes messenger-panel-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+.messenger-header { display: flex; align-items: center; gap: .6rem; padding: 1.1rem 1.2rem; border-bottom: 1px solid var(--c-divider); flex-shrink: 0; }
+.messenger-header h2 { margin: 0; font-size: 1.05rem; font-weight: 650; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.messenger-close, .messenger-back {
+  background: var(--c-panel-2);
+  border: none;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s var(--ease), color .15s var(--ease);
+}
+.messenger-close:hover, .messenger-back:hover { color: var(--c-text); background: var(--c-panel-3); }
 .messenger-back svg { transform: rotate(180deg); }
-.messenger-tabs { display: flex; gap: .4rem; padding: .75rem 1.1rem 0; flex-shrink: 0; }
-.messenger-tabs button { flex: 1; padding: .45rem .6rem; border-radius: var(--radius-sm); border: 1px solid var(--c-divider); background: transparent; color: var(--c-text-muted); font-size: .8rem; cursor: pointer; }
-.messenger-tabs button[aria-pressed='true'] { color: var(--c-pink); border-color: var(--c-pink); }
-.messenger-list { flex: 1; min-height: 0; overflow-y: auto; padding: .75rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: .25rem; }
-.messenger-row { display: flex; flex-direction: row; align-items: center; gap: .65rem; width: 100%; padding: .5rem; border: none; border-radius: var(--radius-sm); background: transparent; color: var(--c-text); text-align: left; cursor: pointer; }
+.messenger-tabs { display: flex; gap: .2rem; margin: .8rem 1.1rem 0; padding: .25rem; border-radius: 999px; background: var(--c-panel-2); flex-shrink: 0; }
+.messenger-tabs button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+  padding: .45rem .6rem;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--c-text-muted);
+  font-size: .8rem;
+  font-weight: 550;
+  cursor: pointer;
+  transition: background .15s var(--ease), color .15s var(--ease);
+}
+.messenger-tabs button[aria-pressed='true'] { color: var(--glow-text); background: var(--c-pink); }
+.messenger-tab-badge { min-width: 1.1rem; height: 1.1rem; padding: 0 .3rem; border-radius: 999px; background: #ff3b30; color: #fff; font-size: .62rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.messenger-list { flex: 1; min-height: 0; overflow-y: auto; padding: .75rem 1rem 1.1rem; display: flex; flex-direction: column; gap: .1rem; }
+.messenger-row { position: relative; display: flex; flex-direction: row; align-items: center; gap: .65rem; width: 100%; padding: .55rem .6rem; border: none; border-radius: 1rem; background: transparent; color: var(--c-text); text-align: left; cursor: pointer; transition: background .12s var(--ease); }
 .messenger-row:hover:not(:disabled) { background: var(--c-panel-2); }
 .messenger-row:disabled { opacity: .6; cursor: default; }
+.messenger-row.is-unread .messenger-row-title { font-weight: 700; }
+.messenger-row.is-unread .messenger-row-preview { color: var(--c-text); }
+.messenger-row-dot { width: .55rem; height: .55rem; border-radius: 50%; background: var(--c-pink); flex-shrink: 0; }
 .messenger-row-body { display: flex; flex-direction: column; gap: .1rem; min-width: 0; flex: 1; }
 .messenger-row-title { font-size: .9rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .messenger-row-preview { font-size: .8rem; color: var(--c-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
@@ -9593,14 +9648,14 @@
    ring — green for online, raspberry/malinovy for offline, per the explicit color request. */
 .messenger-avatar {
   position: relative;
-  width: 2.1rem;
-  height: 2.1rem;
+  width: 2.3rem;
+  height: 2.3rem;
   flex-shrink: 0;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: .85rem;
+  font-size: .9rem;
   font-weight: 600;
   color: #fff;
   box-shadow: 0 0 0 2px var(--c-panel);
@@ -9622,32 +9677,51 @@
 .messenger-header-title h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .messenger-header-status { font-size: .75rem; color: var(--c-text-muted); }
 .messenger-empty { padding: 2rem 1rem; text-align: center; color: var(--c-text-muted); font-size: .85rem; }
-.messenger-search { display: flex; align-items: center; gap: .5rem; padding: .5rem .6rem; margin-bottom: .5rem; border: 1px solid var(--c-divider); border-radius: var(--radius-sm); color: var(--c-text-muted); }
+.messenger-search { display: flex; align-items: center; gap: .5rem; padding: .55rem .8rem; margin: 0 .1rem .5rem; border-radius: 999px; background: var(--c-panel-2); color: var(--c-text-muted); }
 .messenger-search input { flex: 1; border: none; background: transparent; padding: 0; }
-.messenger-link { align-self: flex-start; background: transparent; border: none; color: var(--c-pink); font-size: .8rem; cursor: pointer; padding: .3rem .5rem .6rem; }
-.messenger-name-edit { display: flex; gap: .4rem; padding: 0 .5rem .6rem; }
-.messenger-name-edit input { flex: 1; }
-.messenger-new-group { display: flex; align-items: center; gap: .4rem; margin-top: .5rem; padding: .6rem .5rem; border: 1px dashed var(--c-divider); border-radius: var(--radius-sm); background: transparent; color: var(--c-text-muted); font-size: .85rem; cursor: pointer; }
-.messenger-new-group:hover { color: var(--c-text); border-color: var(--c-text-dim); }
-.messenger-group-title { width: 100%; margin-bottom: .5rem; }
-.messenger-checkbox-row { display: flex; align-items: center; gap: .5rem; padding: .4rem .5rem; font-size: .875rem; cursor: pointer; }
+.messenger-link { align-self: flex-start; background: transparent; border: none; color: var(--c-pink); font-size: .8rem; font-weight: 550; cursor: pointer; padding: .3rem .6rem .6rem; }
+.messenger-name-edit { display: flex; gap: .4rem; padding: 0 .1rem .6rem; }
+.messenger-name-edit input { flex: 1; border-radius: 999px; }
+.messenger-new-group { display: flex; align-items: center; gap: .4rem; margin: .3rem .1rem 0; padding: .6rem .8rem; border-radius: 999px; border: 1px dashed var(--c-divider); background: transparent; color: var(--c-text-muted); font-size: .85rem; font-weight: 550; cursor: pointer; transition: background .15s var(--ease), color .15s var(--ease); }
+.messenger-new-group:hover { color: var(--c-pink); border-color: var(--c-pink); background: color-mix(in srgb, var(--c-pink) 8%, transparent); }
+.messenger-group-title { width: 100%; margin-bottom: .5rem; border-radius: 999px; }
+.messenger-checkbox-row { display: flex; align-items: center; gap: .6rem; padding: .4rem .5rem; border-radius: 1rem; font-size: .875rem; cursor: pointer; }
+.messenger-checkbox-row:hover { background: var(--c-panel-2); }
 .messenger-form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--c-divider); }
+.messenger-form-actions button { border-radius: 999px; padding: .5rem 1.1rem; }
 .messenger-primary { background: var(--c-pink); color: var(--glow-text); border-color: var(--c-pink); }
 .messenger-primary:hover { background: var(--c-pink-hover); }
 .messenger-primary:disabled { opacity: .5; cursor: default; }
 .messenger-thread { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.messenger-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: .5rem; }
-.messenger-bubble-row { max-width: 80%; align-self: flex-start; display: flex; flex-direction: column; gap: .2rem; }
+.messenger-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: .4rem; }
+.messenger-bubble-row { max-width: 78%; align-self: flex-start; display: flex; flex-direction: column; gap: .2rem; }
 .messenger-bubble-row.is-mine { align-self: flex-end; align-items: flex-end; }
-.messenger-bubble-text { margin: 0; padding: .5rem .75rem; border-radius: var(--radius-sm); background: var(--c-panel-2); font-size: .875rem; line-height: 1.4; overflow-wrap: anywhere; white-space: pre-wrap; }
-.messenger-bubble-row.is-mine .messenger-bubble-text { background: var(--c-pink); color: var(--glow-text); }
-.messenger-bubble-time { font-size: .7rem; color: var(--c-text-dim); }
-.messenger-compose { display: flex; gap: .5rem; padding: .75rem 1.1rem; border-top: 1px solid var(--c-divider); flex-shrink: 0; }
-.messenger-compose input { flex: 1; }
-.messenger-compose button { display: flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; padding: 0; border-radius: var(--radius-sm); background: var(--c-pink); color: var(--glow-text); border: none; cursor: pointer; flex-shrink: 0; }
-.messenger-compose button:disabled { opacity: .5; cursor: default; }
+/* Telegram-style "tail": the corner nearest the sender's own side is squared off, the other
+   three stay fully rounded — reads as a speech-bubble tail without an extra SVG shape. */
+.messenger-bubble-text { margin: 0; padding: .55rem .85rem; border-radius: 1.1rem 1.1rem 1.1rem .3rem; background: var(--c-panel-2); font-size: .875rem; line-height: 1.4; overflow-wrap: anywhere; white-space: pre-wrap; }
+.messenger-bubble-row.is-mine .messenger-bubble-text { border-radius: 1.1rem 1.1rem .3rem 1.1rem; background: var(--c-pink); color: var(--glow-text); }
+.messenger-bubble-time { font-size: .7rem; color: var(--c-text-dim); padding: 0 .3rem; }
+.messenger-compose { display: flex; align-items: center; gap: .5rem; padding: .75rem 1.1rem; border-top: 1px solid var(--c-divider); flex-shrink: 0; }
+.messenger-compose input { flex: 1; border-radius: 999px; background: var(--c-panel-2); border-color: transparent; padding-left: 1rem; }
+.messenger-compose button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  padding: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--c-pink), var(--c-pink-hover));
+  color: var(--glow-text);
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform .12s var(--ease);
+}
+.messenger-compose button:hover:not(:disabled) { transform: scale(1.06); }
+.messenger-compose button:disabled { opacity: .5; cursor: default; background: var(--c-panel-3); }
 .messenger-error { margin: 0; padding: .5rem 1.1rem; font-size: .8rem; color: var(--c-error); background: var(--c-error-bg); flex-shrink: 0; }
 @media (max-width: 30rem) {
-  .messenger-panel { right: .75rem; left: .75rem; width: auto; bottom: 5rem; }
+  .messenger-panel { right: .75rem; left: .75rem; width: auto; bottom: 5.25rem; }
   .messenger-bubble { right: 1rem; bottom: 1rem; }
 }
