@@ -13,6 +13,10 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const MECHTA_DOMAIN = '@mechta.kz';
+const ADMIN_EMAIL = 'nurgazinov.ayan@gmail.com';
+function isAllowed(email: string): boolean {
+  return email.endsWith(MECHTA_DOMAIN) || email === ADMIN_EMAIL;
+}
 const ONLINE_WINDOW_SECONDS = 45;
 const RECENT_MESSAGES_SCANNED = 1000; // enough to find each channel's latest message in one query
 
@@ -32,7 +36,7 @@ Deno.serve(async (req) => {
     const { data: callerData } = await admin.auth.getUser(token);
     const caller = callerData.user;
     const callerEmail = caller?.email?.toLowerCase() ?? '';
-    if (!caller || !callerEmail.endsWith(MECHTA_DOMAIN)) {
+    if (!caller || !isAllowed(callerEmail)) {
       return new Response(JSON.stringify({ error: 'Доступ запрещён.' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -53,7 +57,7 @@ Deno.serve(async (req) => {
       await Promise.all([
         admin.from('messenger_channels').select('id, kind, title, created_at').in('id', channelIds),
         admin.from('messenger_members').select('channel_id, email').in('channel_id', channelIds),
-        admin.from('messenger_profiles').select('email, display_name, last_seen_at'),
+        admin.from('messenger_profiles').select('email, display_name, status, last_seen_at'),
         admin
           .from('messenger_messages')
           .select('channel_id, sender_email, body, created_at')
@@ -68,9 +72,9 @@ Deno.serve(async (req) => {
 
     const since = Date.now() - ONLINE_WINDOW_SECONDS * 1000;
     const profileByEmail = new Map(
-      (profiles ?? []).map((p: { email: string; display_name: string; last_seen_at: string }) => [
+      (profiles ?? []).map((p: { email: string; display_name: string; status: string; last_seen_at: string }) => [
         p.email,
-        { displayName: p.display_name || p.email.split('@')[0], online: new Date(p.last_seen_at).getTime() >= since },
+        { displayName: p.display_name || p.email.split('@')[0], status: p.status, online: new Date(p.last_seen_at).getTime() >= since },
       ])
     );
     const membersByChannel = new Map<string, string[]>();
@@ -92,6 +96,7 @@ Deno.serve(async (req) => {
         const members = memberEmails.map((email) => ({
           email,
           displayName: profileByEmail.get(email)?.displayName ?? email.split('@')[0],
+          status: profileByEmail.get(email)?.status ?? 'idle',
           online: profileByEmail.get(email)?.online ?? false,
           isSelf: email === callerEmail,
         }));

@@ -17,6 +17,10 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const MECHTA_DOMAIN = '@mechta.kz';
+const ADMIN_EMAIL = 'nurgazinov.ayan@gmail.com';
+function isAllowed(email: string): boolean {
+  return email.endsWith(MECHTA_DOMAIN) || email === ADMIN_EMAIL;
+}
 const MAX_MESSAGES = 200;
 
 const corsHeaders = {
@@ -42,7 +46,7 @@ Deno.serve(async (req) => {
     const { data: callerData } = await admin.auth.getUser(token);
     const caller = callerData.user;
     const callerEmail = caller?.email?.toLowerCase() ?? '';
-    if (!caller || !callerEmail.endsWith(MECHTA_DOMAIN)) return jsonError('Доступ запрещён.', 403);
+    if (!caller || !isAllowed(callerEmail)) return jsonError('Доступ запрещён.', 403);
 
     const body = await req.json().catch(() => ({}));
     const channelId = typeof body?.channelId === 'string' ? body.channelId : '';

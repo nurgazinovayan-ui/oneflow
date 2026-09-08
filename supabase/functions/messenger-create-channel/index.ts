@@ -17,7 +17,10 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const MECHTA_DOMAIN = '@mechta.kz';
-const MECHTA_EMAIL_RE = /^[^@\s]+@mechta\.kz$/i;
+const ADMIN_EMAIL = 'nurgazinov.ayan@gmail.com';
+function isAllowed(email: string): boolean {
+  return email.endsWith(MECHTA_DOMAIN) || email === ADMIN_EMAIL;
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -42,7 +45,7 @@ Deno.serve(async (req) => {
     const { data: callerData } = await admin.auth.getUser(token);
     const caller = callerData.user;
     const callerEmail = caller?.email?.toLowerCase() ?? '';
-    if (!caller || !callerEmail.endsWith(MECHTA_DOMAIN)) return jsonError('Доступ запрещён.', 403);
+    if (!caller || !isAllowed(callerEmail)) return jsonError('Доступ запрещён.', 403);
 
     const body = await req.json().catch(() => ({}));
     const kind = body?.kind === 'group' ? 'group' : body?.kind === 'dm' ? 'dm' : null;
@@ -50,7 +53,7 @@ Deno.serve(async (req) => {
       ? [...new Set(body.memberEmails.filter((e: unknown) => typeof e === 'string').map((e: string) => e.toLowerCase().trim()))]
       : [];
     if (!kind) return jsonError('kind должен быть dm или group.', 400);
-    if (memberEmails.some((e) => !MECHTA_EMAIL_RE.test(e))) return jsonError('Все участники должны быть с почтой @mechta.kz.', 400);
+    if (memberEmails.some((e) => !isAllowed(e))) return jsonError('Собеседник должен быть допущенным пользователем мессенджера.', 400);
 
     if (kind === 'dm') {
       const other = memberEmails.find((e) => e !== callerEmail);

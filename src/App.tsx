@@ -1185,8 +1185,16 @@ function Canvas() {
           {import.meta.env.VITE_WEB_MODE === '1' && <AssetsPanel active={mainView === 'assets'} />}
         </div>
       </div>
-      {import.meta.env.VITE_WEB_MODE === '1' && authEmail?.toLowerCase().endsWith('@mechta.kz') && (
-        <MessengerWidget key={authEmail} email={authEmail.toLowerCase()} />
+      {import.meta.env.VITE_WEB_MODE === '1' &&
+        (authEmail?.toLowerCase().endsWith('@mechta.kz') || authEmail?.toLowerCase() === 'nurgazinov.ayan@gmail.com') && (
+        <MessengerWidget
+          key={authEmail}
+          email={authEmail!.toLowerCase()}
+          activity={
+            mainView === 'text' ? 'copywriting' : mainView === 'evaluate' ? 'evaluating'
+              : mainView === 'generate' || mainView === 'canvas' ? 'generating' : 'idle'
+          }
+        />
       )}
       {contextMenu && (
         <ContextMenu

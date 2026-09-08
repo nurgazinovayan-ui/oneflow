@@ -9,15 +9,18 @@ import { getValidSession } from '../webApi';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
+export type MessengerStatus = 'idle' | 'generating' | 'copywriting' | 'evaluating';
 export interface RosterEntry {
   email: string;
   displayName: string;
+  status: MessengerStatus;
   online: boolean;
   isSelf: boolean;
 }
 export interface ChannelMember {
   email: string;
   displayName: string;
+  status: MessengerStatus;
   online: boolean;
   isSelf: boolean;
 }
@@ -53,8 +56,8 @@ async function call<T>(name: string, body: unknown): Promise<T> {
   return data as T;
 }
 
-export function heartbeat(displayName?: string): Promise<{ ok: true }> {
-  return call('messenger-heartbeat', displayName ? { displayName } : {});
+export function heartbeat(displayName?: string, status?: MessengerStatus): Promise<{ ok: true }> {
+  return call('messenger-heartbeat', { ...(displayName ? { displayName } : {}), ...(status ? { status } : {}) });
 }
 export function getRoster(): Promise<RosterEntry[]> {
   return call('messenger-roster', {});

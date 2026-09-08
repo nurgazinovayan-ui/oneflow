@@ -9581,13 +9581,46 @@
 .messenger-tabs button { flex: 1; padding: .45rem .6rem; border-radius: var(--radius-sm); border: 1px solid var(--c-divider); background: transparent; color: var(--c-text-muted); font-size: .8rem; cursor: pointer; }
 .messenger-tabs button[aria-pressed='true'] { color: var(--c-pink); border-color: var(--c-pink); }
 .messenger-list { flex: 1; min-height: 0; overflow-y: auto; padding: .75rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: .25rem; }
-.messenger-row { display: flex; flex-direction: column; align-items: flex-start; gap: .15rem; width: 100%; padding: .6rem .5rem; border: none; border-radius: var(--radius-sm); background: transparent; color: var(--c-text); text-align: left; cursor: pointer; }
+.messenger-row { display: flex; flex-direction: row; align-items: center; gap: .65rem; width: 100%; padding: .5rem; border: none; border-radius: var(--radius-sm); background: transparent; color: var(--c-text); text-align: left; cursor: pointer; }
 .messenger-row:hover:not(:disabled) { background: var(--c-panel-2); }
 .messenger-row:disabled { opacity: .6; cursor: default; }
-.messenger-row-title { display: flex; align-items: center; gap: .45rem; font-size: .9rem; font-weight: 500; }
+.messenger-row-body { display: flex; flex-direction: column; gap: .1rem; min-width: 0; flex: 1; }
+.messenger-row-title { font-size: .9rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .messenger-row-preview { font-size: .8rem; color: var(--c-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .messenger-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--c-text-dim); flex-shrink: 0; }
 .messenger-dot.is-online { background: #2ecc71; }
+/* Avatar: deterministic color per email (see avatarColor in MessengerWidget.tsx) with a status
+   ring — green for online, raspberry/malinovy for offline, per the explicit color request. */
+.messenger-avatar {
+  position: relative;
+  width: 2.1rem;
+  height: 2.1rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .85rem;
+  font-weight: 600;
+  color: #fff;
+  box-shadow: 0 0 0 2px var(--c-panel);
+}
+.messenger-avatar.is-online { box-shadow: 0 0 0 2px var(--c-panel), 0 0 0 4px #2ecc71; }
+.messenger-avatar.is-offline { box-shadow: 0 0 0 2px var(--c-panel), 0 0 0 4px #e6317a; }
+.messenger-avatar-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: .6rem;
+  height: .6rem;
+  border-radius: 50%;
+  border: 2px solid var(--c-panel);
+  background: #e6317a;
+}
+.messenger-avatar.is-online .messenger-avatar-dot { background: #2ecc71; }
+.messenger-header-title { display: flex; flex-direction: column; gap: 0; flex: 1; min-width: 0; }
+.messenger-header-title h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.messenger-header-status { font-size: .75rem; color: var(--c-text-muted); }
 .messenger-empty { padding: 2rem 1rem; text-align: center; color: var(--c-text-muted); font-size: .85rem; }
 .messenger-search { display: flex; align-items: center; gap: .5rem; padding: .5rem .6rem; margin-bottom: .5rem; border: 1px solid var(--c-divider); border-radius: var(--radius-sm); color: var(--c-text-muted); }
 .messenger-search input { flex: 1; border: none; background: transparent; padding: 0; }

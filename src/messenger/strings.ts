@@ -13,6 +13,8 @@ export const messengerRu = {
   cancel: 'Отмена', membersCount: (n: number) => `${n} участ.`,
   displayNamePrompt: 'Ваше имя для коллег', save: 'Сохранить',
   restricted: 'Мессенджер доступен только сотрудникам с почтой @mechta.kz.',
+  statusIdle: 'Чилит', statusGenerating: 'Жестко генерит шедевры',
+  statusCopywriting: 'Жестко пишет текста', statusEvaluating: 'Оценивает свою работу',
 };
 export const messengerEn: typeof messengerRu = {
   bubbleLabel: 'Open messenger', title: 'Messenger', close: 'Close',
@@ -29,4 +31,6 @@ export const messengerEn: typeof messengerRu = {
   cancel: 'Cancel', membersCount: (n: number) => `${n} member${n === 1 ? '' : 's'}`,
   displayNamePrompt: 'Your name for colleagues', save: 'Save',
   restricted: 'The messenger is only available to @mechta.kz staff.',
+  statusIdle: 'Chilling', statusGenerating: 'Cranking out masterpieces',
+  statusCopywriting: 'Cranking out copy', statusEvaluating: 'Reviewing their work',
 };
