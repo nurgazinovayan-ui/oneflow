@@ -1,4 +1,5 @@
 import TrendsPanel from './components/TrendsPanel';
+import MessengerWidget from './components/MessengerWidget';
 import type { TrendLaunch } from './trends/catalog';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -1184,6 +1185,9 @@ function Canvas() {
           {import.meta.env.VITE_WEB_MODE === '1' && <AssetsPanel active={mainView === 'assets'} />}
         </div>
       </div>
+      {import.meta.env.VITE_WEB_MODE === '1' && authEmail?.toLowerCase().endsWith('@mechta.kz') && (
+        <MessengerWidget key={authEmail} email={authEmail.toLowerCase()} />
+      )}
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}

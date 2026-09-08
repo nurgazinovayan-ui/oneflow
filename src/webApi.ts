@@ -64,7 +64,7 @@ async function refreshSession(session: WebSession): Promise<WebSession | null> {
   }
 }
 
-async function getValidSession(): Promise<WebSession | null> {
+export async function getValidSession(): Promise<WebSession | null> {
   const session = getWebSession();
   if (!session) return null;
   if (Date.now() < session.expiresAt - TOKEN_REFRESH_BUFFER_MS) return session;

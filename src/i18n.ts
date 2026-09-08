@@ -1,4 +1,5 @@
 import { trendsRu, trendsEn } from './trends/strings';
+import { messengerRu, messengerEn } from './messenger/strings';
 import { create } from 'zustand';
 
 export type Language = 'ru' | 'en';
@@ -37,6 +38,7 @@ export const useLanguageStore = create<LanguageState>((set) => ({
 // electron/main.ts) stays as-is — that's content for the model, not UI the user reads.
 export interface Translations {
   trends: typeof trendsRu;
+  messenger: typeof messengerRu;
   toolbar: {
     file: string;
     saveProject: string;
@@ -916,6 +918,7 @@ export interface Translations {
 
 export const ru: Translations = {
   trends: trendsRu,
+  messenger: messengerRu,
   toolbar: {
     file: 'Файл',
     saveProject: 'Сохранить проект',
@@ -1872,6 +1875,7 @@ export const ru: Translations = {
 
 export const en: Translations = {
   trends: trendsEn,
+  messenger: messengerEn,
   toolbar: {
     file: 'File',
     saveProject: 'Save project',

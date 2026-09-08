@@ -9531,3 +9531,90 @@
 .trends-dialog .trends-primary { background: var(--c-pink); color: var(--glow-text); border-color: var(--c-pink); }
 .trends-dialog .trends-primary:hover { background: var(--c-pink-hover); }
 @media (max-width: 48rem) { .trends-detail-layout { grid-template-columns: 1fr; } .trends-toolbar { padding: 1rem; } .trends-filters { padding: 0 1rem 1rem; } .trends-scroll { padding: 1rem; } .trends-detail-preview img, .trends-detail-preview video { max-height: 35dvh; } }
+
+/* Messenger — floating widget for @mechta.kz accounts only (gated in App.tsx), unrelated to
+   mainView so it stays visible across every section. Positioned opposite Floko (bottom-left,
+   canvas-mode-only) to avoid overlap; z-index above mode panels (20) but below the app's
+   handful of truly-blocking overlays. */
+.messenger-bubble {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 80;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c-pink);
+  color: var(--glow-text);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: background .15s var(--ease), transform .15s var(--ease);
+}
+.messenger-bubble:hover { background: var(--c-pink-hover); transform: translateY(-1px); }
+.web-mode .messenger-bubble { bottom: 1.5rem; }
+.messenger-panel {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 5.25rem;
+  z-index: 80;
+  width: min(23rem, calc(100vw - 2rem));
+  height: min(32rem, calc(100dvh - 8rem));
+  display: flex;
+  flex-direction: column;
+  background: var(--c-panel);
+  color: var(--c-text);
+  border: 1px solid var(--c-divider);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.messenger-header { display: flex; align-items: center; gap: .6rem; padding: 1rem 1.1rem; border-bottom: 1px solid var(--c-divider); flex-shrink: 0; }
+.messenger-header h2 { margin: 0; font-size: 1rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.messenger-close, .messenger-back { background: transparent; border: none; color: var(--c-text-muted); cursor: pointer; padding: .3rem; border-radius: var(--radius-sm); display: flex; }
+.messenger-close:hover, .messenger-back:hover { color: var(--c-text); background: var(--c-panel-2); }
+.messenger-back svg { transform: rotate(180deg); }
+.messenger-tabs { display: flex; gap: .4rem; padding: .75rem 1.1rem 0; flex-shrink: 0; }
+.messenger-tabs button { flex: 1; padding: .45rem .6rem; border-radius: var(--radius-sm); border: 1px solid var(--c-divider); background: transparent; color: var(--c-text-muted); font-size: .8rem; cursor: pointer; }
+.messenger-tabs button[aria-pressed='true'] { color: var(--c-pink); border-color: var(--c-pink); }
+.messenger-list { flex: 1; min-height: 0; overflow-y: auto; padding: .75rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: .25rem; }
+.messenger-row { display: flex; flex-direction: column; align-items: flex-start; gap: .15rem; width: 100%; padding: .6rem .5rem; border: none; border-radius: var(--radius-sm); background: transparent; color: var(--c-text); text-align: left; cursor: pointer; }
+.messenger-row:hover:not(:disabled) { background: var(--c-panel-2); }
+.messenger-row:disabled { opacity: .6; cursor: default; }
+.messenger-row-title { display: flex; align-items: center; gap: .45rem; font-size: .9rem; font-weight: 500; }
+.messenger-row-preview { font-size: .8rem; color: var(--c-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.messenger-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--c-text-dim); flex-shrink: 0; }
+.messenger-dot.is-online { background: #2ecc71; }
+.messenger-empty { padding: 2rem 1rem; text-align: center; color: var(--c-text-muted); font-size: .85rem; }
+.messenger-search { display: flex; align-items: center; gap: .5rem; padding: .5rem .6rem; margin-bottom: .5rem; border: 1px solid var(--c-divider); border-radius: var(--radius-sm); color: var(--c-text-muted); }
+.messenger-search input { flex: 1; border: none; background: transparent; padding: 0; }
+.messenger-link { align-self: flex-start; background: transparent; border: none; color: var(--c-pink); font-size: .8rem; cursor: pointer; padding: .3rem .5rem .6rem; }
+.messenger-name-edit { display: flex; gap: .4rem; padding: 0 .5rem .6rem; }
+.messenger-name-edit input { flex: 1; }
+.messenger-new-group { display: flex; align-items: center; gap: .4rem; margin-top: .5rem; padding: .6rem .5rem; border: 1px dashed var(--c-divider); border-radius: var(--radius-sm); background: transparent; color: var(--c-text-muted); font-size: .85rem; cursor: pointer; }
+.messenger-new-group:hover { color: var(--c-text); border-color: var(--c-text-dim); }
+.messenger-group-title { width: 100%; margin-bottom: .5rem; }
+.messenger-checkbox-row { display: flex; align-items: center; gap: .5rem; padding: .4rem .5rem; font-size: .875rem; cursor: pointer; }
+.messenger-form-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--c-divider); }
+.messenger-primary { background: var(--c-pink); color: var(--glow-text); border-color: var(--c-pink); }
+.messenger-primary:hover { background: var(--c-pink-hover); }
+.messenger-primary:disabled { opacity: .5; cursor: default; }
+.messenger-thread { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.messenger-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: .5rem; }
+.messenger-bubble-row { max-width: 80%; align-self: flex-start; display: flex; flex-direction: column; gap: .2rem; }
+.messenger-bubble-row.is-mine { align-self: flex-end; align-items: flex-end; }
+.messenger-bubble-text { margin: 0; padding: .5rem .75rem; border-radius: var(--radius-sm); background: var(--c-panel-2); font-size: .875rem; line-height: 1.4; overflow-wrap: anywhere; white-space: pre-wrap; }
+.messenger-bubble-row.is-mine .messenger-bubble-text { background: var(--c-pink); color: var(--glow-text); }
+.messenger-bubble-time { font-size: .7rem; color: var(--c-text-dim); }
+.messenger-compose { display: flex; gap: .5rem; padding: .75rem 1.1rem; border-top: 1px solid var(--c-divider); flex-shrink: 0; }
+.messenger-compose input { flex: 1; }
+.messenger-compose button { display: flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; padding: 0; border-radius: var(--radius-sm); background: var(--c-pink); color: var(--glow-text); border: none; cursor: pointer; flex-shrink: 0; }
+.messenger-compose button:disabled { opacity: .5; cursor: default; }
+.messenger-error { margin: 0; padding: .5rem 1.1rem; font-size: .8rem; color: var(--c-error); background: var(--c-error-bg); flex-shrink: 0; }
+@media (max-width: 30rem) {
+  .messenger-panel { right: .75rem; left: .75rem; width: auto; bottom: 5rem; }
+  .messenger-bubble { right: 1rem; bottom: 1rem; }
+}
