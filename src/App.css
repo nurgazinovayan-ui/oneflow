@@ -2544,28 +2544,29 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  /* The image/body/dots stack below is sized to its own content, not stretched to fill this
+     panel (see .web-auth-advantage-image-wrap's aspect-ratio) — centering it here turns any
+     leftover height into ordinary panel padding above/below the whole card instead of a visible
+     bar inside the image itself. */
+  justify-content: center;
   background: var(--c-panel-2);
   border: 1px solid var(--c-divider);
 }
 
 .web-auth-advantage-image-wrap {
-  flex: 1;
-  min-height: 0;
+  width: 100%;
+  /* The illustrations are wide screenshots ranging ~1.75:1-2.23:1 — this splits the difference
+     so object-fit:cover below only trims a modest ~10-12% off whichever edge runs long on a
+     given image, instead of the letterboxing an exact-fit "contain" produced or the much
+     heavier crop the old flex:1-filled (near-square) box caused under "cover". */
+  aspect-ratio: 2 / 1;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* The illustrations are wide screenshots (~1.9:1–2.2:1) shown in a much closer-to-square
-     panel — "contain" keeps the whole image visible instead of "cover" zooming in and cropping
-     the sides/edges off; this near-black fill matches the images' own dark backgrounds so the
-     letterboxed strips above/below read as part of the panel, not empty space. */
-  background: var(--c-bg);
 }
 
 .web-auth-advantage-image {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   display: block;
   animation: web-auth-advantage-fade 0.4s var(--ease);
 }
