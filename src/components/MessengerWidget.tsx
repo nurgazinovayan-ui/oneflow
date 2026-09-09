@@ -83,9 +83,11 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
   const [gifLoading, setGifLoading] = useState(false);
   const activeChannelRef = useRef<string | null>(null);
   const activityRef = useRef(activity);
+  const messagesRef = useRef<ChatMessage[]>(messages);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   activeChannelRef.current = activeChannelId;
   activityRef.current = activity;
+  messagesRef.current = messages;
 
   const markRead = (channelId: string, at: string) => {
     setReadMap(prev => {
@@ -121,7 +123,12 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
     const refresh = async () => {
       try {
         if (activeChannelRef.current) {
-          const last = messages.length ? messages[messages.length - 1].createdAt : undefined;
+          // Read via the ref, not the `messages` state closed over when this effect last ran
+          // (only when open/view/activeChannelId change) — otherwise this cursor stays frozen at
+          // whatever the channel's history ended at on open, so every 4s tick re-fetches and
+          // re-appends everything sent since then, duplicating each message on every poll.
+          const current = messagesRef.current;
+          const last = current.length ? current[current.length - 1].createdAt : undefined;
           const fresh = await listMessages(activeChannelRef.current, last);
           if (!cancelled && fresh.length) {
             setMessages(prev => [...prev, ...fresh]);

@@ -967,7 +967,10 @@
   background: transparent;
   border: 1px solid var(--c-divider);
   font-size: 12.5px;
-  color: #000;
+  /* Was a hardcoded #000 — invisible against .topbar's transparent row (showing the dark canvas
+     behind it) in dark theme. Theme-following instead: light gray text in dark theme, the same
+     near-black it always was in light theme. */
+  color: var(--c-text-muted);
   cursor: pointer;
   flex-shrink: 0;
   max-width: 200px;
@@ -975,11 +978,12 @@
 
 .project-tab:hover {
   background: var(--c-panel-2);
+  color: var(--c-text);
 }
 
 .project-tab.active {
   background: var(--c-panel-2);
-  color: #000;
+  color: var(--c-text);
   font-weight: 600;
 }
 
@@ -1011,7 +1015,7 @@
 .project-tab-add {
   background: var(--c-panel-2);
   border: 1px solid var(--c-divider);
-  color: #000;
+  color: var(--c-text-muted);
   border-radius: var(--radius-sm);
   width: 28px;
   height: 28px;
@@ -1023,7 +1027,7 @@
 
 .project-tab-add:hover {
   background: var(--c-panel-3);
-  color: #000;
+  color: var(--c-text);
 }
 
 .topbar-right {
@@ -1083,6 +1087,15 @@
   background: var(--c-canvas-bg);
 }
 
+/* The node-editing surface itself goes properly black in dark theme (by request) — the other
+   panels that share --c-canvas-bg (Generation, One Launch, Assets, ...) keep the light "paper"
+   look in both themes, so this is scoped to .canvas-area alone rather than changing the shared
+   token. The dot color itself is set on ReactFlow's own <Background color> prop in App.tsx,
+   which is theme-aware there. */
+:root:not([data-theme='light']) .canvas-area {
+  background: #000000;
+}
+
 /* Switches the whole main area between the node canvas and Работа с текстом — lives in the
    persistent .topbar (not floating over the canvas). .mode-switch-pill here only places the
    GlowMenuBar within .topbar's grid; the pill's own look (background/border/radius) is
@@ -1096,23 +1109,30 @@
 
 /* GlowMenuBar — ported from a shadcn/Tailwind "tubelight-navbar" reference (see GlowMenuBar.tsx's
    header comment) onto this app's own --c-* tokens instead of Tailwind utility classes. Fully
-   rounded (rounded-full) pill, thin 1px border. White fill restored (was made transparent for a
-   time, then .topbar itself — the row this pill sits on — was made transparent instead so that
-   row shows the real canvas/view-panel behind it; this pill needs its own white plaque again so
-   it still reads as a solid control against that now-transparent row). */
+   rounded (rounded-full) pill, thin 1px border. .topbar itself (the row this pill sits on) is
+   transparent so that row shows the real canvas/view-panel behind it — this pill needs its own
+   solid plaque so it still reads as a control against that. Dark theme (by request): black
+   plaque with a thin light-gray border, buttons the same muted gray they've always been —
+   var(--c-text-muted)/var(--c-panel-2) already resolve to the right dark-theme values here since
+   nothing pins them light-only any more (see the light override below, which now carries that
+   pin instead). */
 .glow-menu {
   position: relative;
   display: flex;
   align-items: stretch;
   padding: 3px;
   border-radius: 999px;
+  background: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+:root[data-theme='light'] .glow-menu {
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.09);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-  /* This pill stays a fixed white plaque in both app themes (see background above) — pin the
-     tokens its children read to their light-theme values, or the active item's fill/text goes
-     near-black-on-near-black once the app itself is in dark mode (var(--c-panel-2) resolves to
-     #1a1a1a there, and .glow-menu-item-btn.active's text is a hardcoded #000). */
+  /* This plaque stays white in light theme — pin the tokens its children read to their
+     light-theme values explicitly rather than relying on the (already-light) real theme, so this
+     doesn't quietly break again if the light palette ever changes. */
   --c-text-muted: #6b6b74;
   --c-panel-2: #eeeef1;
 }
@@ -1155,10 +1175,19 @@
 }
 
 .glow-menu-item-btn:hover {
-  color: #000;
+  color: #fff;
 }
 
 .glow-menu-item-btn.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+:root[data-theme='light'] .glow-menu-item-btn:hover {
+  color: #000;
+}
+
+:root[data-theme='light'] .glow-menu-item-btn.active {
   color: #000;
   background: var(--c-panel-2);
 }
@@ -1171,9 +1200,11 @@
 /* The lamp: reproduced pixel-for-pixel from the reference's own Tailwind values (w-8 h-1 bar at
    -top-2, three blur-md/blur-md/blur-sm blobs at w-12/w-8/w-4, all bg-primary at various
    opacities), just re-expressed as literal px/hex instead of Tailwind utilities. Recolored to
-   plain black — no pink anywhere in this bar. framer-motion's layoutId="lamp" (see
-   GlowMenuBar.tsx) tweens this element's position/size whenever a different item becomes active,
-   instead of it just appearing/disappearing per item. */
+   plain black/white — no pink anywhere in this bar — matching whichever way the plaque itself
+   goes (white in light theme, black in dark theme) so the lamp still reads as "brighten the
+   plaque" rather than fighting it. framer-motion's layoutId="lamp" (see GlowMenuBar.tsx) tweens
+   this element's position/size whenever a different item becomes active, instead of it just
+   appearing/disappearing per item. */
 .glow-menu-lamp {
   position: absolute;
   inset: 0;
@@ -1181,7 +1212,7 @@
   border-radius: 999px;
   /* bg-primary/5 — the reference's own subtle active-item tint, separate from the immediate
      .glow-menu-item-btn.active background above. */
-  background: color-mix(in srgb, #000 5%, transparent);
+  background: color-mix(in srgb, #fff 6%, transparent);
   pointer-events: none;
 }
 
@@ -1192,13 +1223,25 @@
   transform: translateX(-50%);
   width: 32px;
   height: 4px;
-  background: #000;
+  background: #fff;
   border-radius: 999px 999px 0 0;
 }
 
 .glow-menu-lamp-blob {
   position: absolute;
   border-radius: 999px;
+  background: color-mix(in srgb, #fff 22%, transparent);
+}
+
+:root[data-theme='light'] .glow-menu-lamp {
+  background: color-mix(in srgb, #000 5%, transparent);
+}
+
+:root[data-theme='light'] .glow-menu-lamp-bar {
+  background: #000;
+}
+
+:root[data-theme='light'] .glow-menu-lamp-blob {
   background: color-mix(in srgb, #000 20%, transparent);
 }
 

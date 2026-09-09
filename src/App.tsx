@@ -1120,13 +1120,13 @@ function Canvas() {
               nodeTypes={nodeTypes}
               fitView
               fitViewOptions={{ padding: FIT_VIEW_PADDING }}
-              colorMode="light"
+              colorMode={theme === 'dark' ? 'dark' : 'light'}
               deleteKeyCode={['Delete', 'Backspace']}
               onPaneContextMenu={onPaneContextMenu}
               onPaneClick={() => setContextMenu(null)}
               onMoveStart={() => setContextMenu(null)}
             >
-              <Background gap={20} />
+              <Background gap={20} color={theme === 'dark' ? '#2a2a2e' : undefined} />
               <MiniMap pannable zoomable />
             </ReactFlow>
             {aiAssistantOpen && mainView === 'canvas' && (
