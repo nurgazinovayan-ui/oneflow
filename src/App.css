@@ -2544,17 +2544,13 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  /* The image/body/dots stack below is sized to its own content, not stretched to fill this
-     panel (see .web-auth-advantage-image-wrap's aspect-ratio) — centering it here turns any
-     leftover height into ordinary panel padding above/below the whole card instead of a visible
-     bar inside the image itself. */
-  justify-content: center;
   background: var(--c-panel-2);
   border: 1px solid var(--c-divider);
 }
 
 .web-auth-advantage-image-wrap {
   width: 100%;
+  flex-shrink: 0;
   /* The illustrations are wide screenshots ranging ~1.75:1-2.23:1 — this splits the difference
      so object-fit:cover below only trims a modest ~10-12% off whichever edge runs long on a
      given image, instead of the letterboxing an exact-fit "contain" produced or the much
@@ -2580,16 +2576,24 @@
   }
 }
 
+/* flex:1 so this section — not the image — absorbs whatever height the panel has left over
+   after the fixed-aspect-ratio image above and the dots below; centering the text inside that
+   now-generous space (instead of centering the whole image+text+dots stack as one small clump
+   inside the panel, the old behavior) is what actually uses the free area rather than just
+   padding around it equally. */
 .web-auth-advantage-body {
-  padding: 20px 24px 4px;
+  flex: 1;
+  min-height: 0;
+  padding: 12px 32px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  justify-content: center;
+  gap: 10px;
 }
 
 .web-auth-advantage-title {
   margin: 0;
-  font-size: 19px;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1.25;
   color: var(--c-text);
@@ -2598,8 +2602,8 @@
 
 .web-auth-advantage-description {
   margin: 0;
-  font-size: 13.5px;
-  line-height: 1.45;
+  font-size: 15.5px;
+  line-height: 1.5;
   color: var(--c-text-muted);
   animation: web-auth-advantage-fade 0.4s var(--ease);
 }
@@ -2607,24 +2611,25 @@
 .web-auth-advantage-benefit {
   margin: 4px 0 0;
   align-self: flex-start;
-  padding: 5px 12px;
+  padding: 7px 16px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--c-pink) 16%, transparent);
   color: var(--c-pink);
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 600;
   animation: web-auth-advantage-fade 0.4s var(--ease);
 }
 
 .web-auth-advantage-dots {
   display: flex;
-  gap: 6px;
-  padding: 14px 24px 18px;
+  flex-shrink: 0;
+  gap: 7px;
+  padding: 0 32px 24px;
 }
 
 .web-auth-advantage-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   padding: 0;
   border: none;
   border-radius: 999px;
@@ -2635,7 +2640,7 @@
 }
 
 .web-auth-advantage-dot.active {
-  width: 18px;
+  width: 20px;
   background: var(--c-pink);
 }
 
