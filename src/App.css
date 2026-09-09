@@ -408,8 +408,18 @@
   border: none;
   border-radius: 6px;
   /* True black rather than --c-text (#17171b has a faint blue push that reads as navy at this
-     weight/size) — the trigger label is the one place that got called out for it. */
+     weight/size) — the trigger label is the one place that got called out for it. Light theme
+     only: .top-toolbar's own background is theme-following (var(--c-panel)), so dark theme needs
+     the opposite, light-gray text instead — see the override below. */
   color: #000000;
+}
+
+:root:not([data-theme='light']) .toolbar-menu-wrapper .toolbar-label-btn {
+  color: var(--c-text-muted);
+}
+
+:root:not([data-theme='light']) .toolbar-menu-wrapper .toolbar-label-btn:hover {
+  color: var(--c-text);
 }
 
 .toolbar-label-btn:hover {
@@ -1287,6 +1297,33 @@
   background: #f9fafb;
   border: 1px solid rgba(0, 0, 0, 0.06);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
+
+/* Dark theme, by request: black plaque with a thin light-gray border instead of the always-light
+   #f9fafb above, and its buttons/chips go dark gray with light icons/text instead of the
+   light-gray-chip-on-light-plaque look those were designed for. */
+:root:not([data-theme='light']) .canvas-toolbar {
+  background: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+:root:not([data-theme='light']) .toolbar-dock-icon-btn {
+  background: #242424;
+  color: #f2f2f4;
+}
+
+:root:not([data-theme='light']) .toolbar-dock-icon-btn:hover {
+  background: #2f2f2f;
+}
+
+:root:not([data-theme='light']) .canvas-toolbar .toolbar-label-btn {
+  background: #242424;
+  color: #f2f2f4;
+}
+
+:root:not([data-theme='light']) .canvas-toolbar .toolbar-label-btn:hover {
+  background: #2f2f2f;
 }
 
 /* Vertical variant — pinned to the canvas's left edge, centered top-to-bottom, by request
@@ -3894,6 +3931,35 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Dark theme, by request: this menu was fixed-light in both app themes (see the comments above)
+   — inverted here instead. Icons use stroke: currentColor throughout (see Icons.tsx), so
+   .toolbar-rich-menu-item-icon's color flips them along with everything else; .desc already
+   reads var(--c-text-muted), which resolves correctly once the backdrop it sits on is dark too. */
+:root:not([data-theme='light']) .toolbar-rich-menu {
+  background: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+:root:not([data-theme='light']) .toolbar-rich-menu-header {
+  color: #a3a3ab;
+}
+
+:root:not([data-theme='light']) .toolbar-rich-menu-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+:root:not([data-theme='light']) .toolbar-rich-menu-item-icon {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #1a1a1a;
+  box-shadow: none;
+  color: #f2f2f4;
+}
+
+:root:not([data-theme='light']) .toolbar-rich-menu-item-title {
+  color: #f2f2f4;
 }
 
 .dropdown-menu-header:not(:first-child) {

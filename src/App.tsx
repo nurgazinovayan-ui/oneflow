@@ -1126,7 +1126,7 @@ function Canvas() {
               onPaneClick={() => setContextMenu(null)}
               onMoveStart={() => setContextMenu(null)}
             >
-              <Background gap={20} color={theme === 'dark' ? '#2a2a2e' : undefined} />
+              <Background gap={20} color={theme === 'dark' ? '#3a3a40' : undefined} />
               <MiniMap pannable zoomable />
             </ReactFlow>
             {aiAssistantOpen && mainView === 'canvas' && (
