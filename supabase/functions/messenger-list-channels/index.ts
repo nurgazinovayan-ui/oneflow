@@ -6,8 +6,8 @@
 // Returns the caller's DM/group channels with their members and a last-message preview, in one
 // round trip. Restricted to @mechta.kz callers, checked against the caller's own verified JWT.
 //
-// Requires supabase/migrations/202609070003_messenger.sql AND
-// 202609070004_messenger_media.sql to have been applied first.
+// Requires supabase/migrations/202609070003_messenger.sql, 202609070004_messenger_media.sql AND
+// 202609090001_messenger_read_files.sql to have been applied first.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -57,11 +57,11 @@ Deno.serve(async (req) => {
     const [{ data: channels, error: chErr }, { data: allMembers, error: allMemErr }, { data: profiles, error: profErr }, { data: recent, error: msgErr }] =
       await Promise.all([
         admin.from('messenger_channels').select('id, kind, title, created_at').in('id', channelIds),
-        admin.from('messenger_members').select('channel_id, email').in('channel_id', channelIds),
+        admin.from('messenger_members').select('channel_id, email, last_read_at').in('channel_id', channelIds),
         admin.from('messenger_profiles').select('email, display_name, status, last_seen_at'),
         admin
           .from('messenger_messages')
-          .select('channel_id, sender_email, body, created_at, kind, media_url')
+          .select('channel_id, sender_email, body, created_at, kind, media_url, file_size')
           .in('channel_id', channelIds)
           .order('created_at', { ascending: false })
           .limit(RECENT_MESSAGES_SCANNED),
@@ -78,31 +78,32 @@ Deno.serve(async (req) => {
         { displayName: p.display_name || p.email.split('@')[0], status: p.status, online: new Date(p.last_seen_at).getTime() >= since },
       ])
     );
-    const membersByChannel = new Map<string, string[]>();
+    const membersByChannel = new Map<string, { email: string; lastReadAt: string | null }[]>();
     for (const m of allMembers ?? []) {
       const list = membersByChannel.get(m.channel_id) ?? [];
-      list.push(m.email);
+      list.push({ email: m.email, lastReadAt: m.last_read_at });
       membersByChannel.set(m.channel_id, list);
     }
-    const lastMessageByChannel = new Map<string, { body: string; senderEmail: string; createdAt: string; kind: string; mediaUrl: string | null }>();
+    const lastMessageByChannel = new Map<string, { body: string; senderEmail: string; createdAt: string; kind: string; mediaUrl: string | null; fileSize: number | null }>();
     for (const msg of recent ?? []) {
       if (!lastMessageByChannel.has(msg.channel_id)) {
         lastMessageByChannel.set(msg.channel_id, {
           body: msg.body, senderEmail: msg.sender_email, createdAt: msg.created_at,
-          kind: msg.kind, mediaUrl: msg.media_url,
+          kind: msg.kind, mediaUrl: msg.media_url, fileSize: msg.file_size,
         });
       }
     }
 
     const result = (channels ?? [])
       .map((c: { id: string; kind: string; title: string; created_at: string }) => {
-        const memberEmails = membersByChannel.get(c.id) ?? [];
-        const members = memberEmails.map((email) => ({
+        const memberRows = membersByChannel.get(c.id) ?? [];
+        const members = memberRows.map(({ email, lastReadAt }) => ({
           email,
           displayName: profileByEmail.get(email)?.displayName ?? email.split('@')[0],
           status: profileByEmail.get(email)?.status ?? 'idle',
           online: profileByEmail.get(email)?.online ?? false,
           isSelf: email === callerEmail,
+          lastReadAt,
         }));
         const lastMessage = lastMessageByChannel.get(c.id) ?? null;
         return {

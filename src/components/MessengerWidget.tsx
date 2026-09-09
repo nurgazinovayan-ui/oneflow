@@ -1,18 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import { useT } from '../i18n';
-import { IconChat, IconClose, IconSend, IconPlus, IconSearch, IconChevronRight } from './Icons';
+import { IconChat, IconClose, IconSend, IconPlus, IconSearch, IconChevronRight, IconAttach, IconCheck, IconDocument, IconDownload } from './Icons';
 import {
   heartbeat, getRoster, listChannels, startDm, createGroup, listMessages, sendMessage, sendSticker, sendGif, searchGifs,
+  markReadServer, sendFile, messageReadByOthers,
   type RosterEntry, type ChannelSummary, type ChatMessage, type MessengerStatus, type GifResult,
 } from '../messenger/client';
 
 const HEARTBEAT_MS = 20_000;
 const POLL_MS = 4_000;
-const BACKGROUND_POLL_MS = 15_000; // keeps the unread badge live while the widget is closed or on another tab
+const BACKGROUND_POLL_MS = 15_000; // keeps the unread badge + facepile roster live while the widget is closed or on another tab
 const GIF_SEARCH_DEBOUNCE_MS = 400;
 const READ_KEY_PREFIX = 'oneflow-messenger-read:';
 const AVATAR_COLORS = ['#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ef4444'];
 const STICKERS = ['🎉', '😂', '❤️', '👍', '🔥', '😢', '😮', '🙏', '💯', '✅', '❌', '🤔', '🥳', '😍', '😅', '🙌', '👏', '😴', '🤝', '💪', '🚀', '☕', '😎', '🤯'];
+const MAX_FACEPILE_AVATARS = 4;
+const MAX_FILE_BYTES = 25 * 1024 * 1024;
 
 type View = 'chats' | 'people' | 'newGroup';
 type Translations = ReturnType<typeof useT>['messenger'];
@@ -22,6 +25,13 @@ function timeLabel(iso: string): string {
   const sameDay = d.toDateString() === new Date().toDateString();
   return sameDay ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : d.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+}
+
+function formatFileSize(bytes: number | null): string {
+  if (!bytes || bytes <= 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function channelLabel(channel: ChannelSummary, myEmail: string): string {
@@ -81,10 +91,12 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
   const [gifQuery, setGifQuery] = useState('');
   const [gifResults, setGifResults] = useState<GifResult[] | null>(null);
   const [gifLoading, setGifLoading] = useState(false);
+  const [fileSending, setFileSending] = useState(false);
   const activeChannelRef = useRef<string | null>(null);
   const activityRef = useRef(activity);
   const messagesRef = useRef<ChatMessage[]>(messages);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   activeChannelRef.current = activeChannelId;
   activityRef.current = activity;
   messagesRef.current = messages;
@@ -105,13 +117,16 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
     return () => window.clearInterval(id);
   }, []);
 
-  // Keeps the unread badge accurate while the panel is closed, or open on a tab other than
-  // Chats — the fast poll below already refreshes channels every 4s in that one case, so this
-  // steps aside instead of doubling up.
+  // Keeps the unread badge + facepile roster accurate while the panel is closed, or open on a
+  // tab other than Chats — the fast poll below already refreshes channels every 4s in that one
+  // case, so this steps aside instead of doubling up.
   useEffect(() => {
     if (open && view === 'chats') return;
     let cancelled = false;
-    const poll = () => { void listChannels().then(list => { if (!cancelled) setChannels(list); }).catch(() => {}); };
+    const poll = () => {
+      void listChannels().then(list => { if (!cancelled) setChannels(list); }).catch(() => {});
+      void getRoster().then(list => { if (!cancelled) setRoster(list); }).catch(() => {});
+    };
     poll();
     const id = window.setInterval(poll, BACKGROUND_POLL_MS);
     return () => { cancelled = true; window.clearInterval(id); };
@@ -133,6 +148,7 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
           if (!cancelled && fresh.length) {
             setMessages(prev => [...prev, ...fresh]);
             markRead(activeChannelRef.current, fresh[fresh.length - 1].createdAt);
+            void markReadServer(activeChannelRef.current).catch(() => {});
           }
         } else if (view === 'chats') {
           const list = await listChannels();
@@ -168,6 +184,7 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
     setMessages([]);
     setError(false);
     markRead(channelId, new Date().toISOString());
+    void markReadServer(channelId).catch(() => {});
     try {
       const history = await listMessages(channelId);
       setMessages(history);
@@ -183,7 +200,18 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
       const { id } = await startDm(otherEmail);
       setView('chats');
       await openThread(id);
+      // Refreshes .channels right away so the just-opened thread's member list (and their
+      // lastReadAt, for read receipts) is available immediately rather than waiting for the
+      // next background/foreground poll.
+      void listChannels().then(setChannels).catch(() => {});
     } catch { setError(true); } finally { setBusy(false); }
+  };
+
+  // Facepile avatars call this directly instead of opening the panel first — it opens the panel
+  // and starts/resumes the DM with that person in one step.
+  const startChatFromFacepile = async (otherEmail: string) => {
+    setOpen(true);
+    await openDm(otherEmail);
   };
 
   const submitGroup = async () => {
@@ -227,6 +255,17 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
     } catch { setError(true); }
   };
 
+  const pickFile = async (file: File) => {
+    if (!activeChannelId) return;
+    if (file.size > MAX_FILE_BYTES) { window.alert(t.fileTooBig); return; }
+    setFileSending(true);
+    try {
+      const created = await sendFile(activeChannelId, file);
+      setMessages(prev => [...prev, created]);
+      markRead(activeChannelId, created.createdAt);
+    } catch { setError(true); } finally { setFileSending(false); }
+  };
+
   const saveName = async () => {
     const name = nameDraft.trim();
     if (!name) { setEditingName(false); return; }
@@ -247,11 +286,33 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
   const unreadCount = unreadChannelIds.size;
   const unreadLabel = unreadCount > 9 ? '9+' : `+${unreadCount}`;
 
+  // Facepile trigger: online colleagues first, capped at MAX_FACEPILE_AVATARS with a "+N"
+  // overflow circle (opens the full Colleagues list) beyond that.
+  const facepileOthers = (roster ?? []).filter(p => !p.isSelf)
+    .sort((a, b) => (a.online !== b.online ? (a.online ? -1 : 1) : a.displayName.localeCompare(b.displayName)));
+  const facepileShown = facepileOthers.slice(0, MAX_FACEPILE_AVATARS);
+  const facepileOverflow = facepileOthers.length - facepileShown.length;
+
   return <>
-    <button className="messenger-bubble" aria-label={t.bubbleLabel} onClick={() => setOpen(v => !v)}>
-      {open ? <IconClose size={20} /> : <IconChat size={20} />}
-      {!open && unreadCount > 0 && <span className="messenger-badge">{unreadLabel}</span>}
-    </button>
+    <div className="messenger-facepile">
+      {facepileShown.map(p => (
+        <button key={p.email} type="button" className="messenger-facepile-avatar" title={p.displayName}
+          onClick={() => void startChatFromFacepile(p.email)}>
+          <Avatar name={p.displayName} email={p.email} online={p.online} />
+        </button>
+      ))}
+      {facepileOverflow > 0 && (
+        <button type="button" className="messenger-facepile-avatar messenger-facepile-more"
+          aria-label={t.moreLabel(facepileOverflow)} onClick={() => { setView('people'); setOpen(true); }}>
+          +{facepileOverflow}
+        </button>
+      )}
+      <button type="button" className="messenger-facepile-avatar messenger-facepile-toggle"
+        aria-label={open ? t.close : t.openMessenger} onClick={() => setOpen(v => !v)}>
+        {open ? <IconClose size={18} /> : <IconChat size={18} />}
+        {!open && unreadCount > 0 && <span className="messenger-badge">{unreadLabel}</span>}
+      </button>
+    </div>
     {open && <section className="messenger-panel" aria-label={t.title}>
       <header className="messenger-header">
         {activeChannelId
@@ -282,7 +343,9 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
               <span className="messenger-row-title">{channelLabel(c, email)}</span>
               <span className="messenger-row-preview">
                 {c.lastMessage ? `${c.lastMessage.senderEmail === email ? t.you + ': ' : ''}${
-                  c.lastMessage.kind === 'gif' ? `\u{1F3AC} GIF${c.lastMessage.body ? ' · ' + c.lastMessage.body : ''}` : c.lastMessage.body
+                  c.lastMessage.kind === 'gif' ? `\u{1F3AC} GIF${c.lastMessage.body ? ' · ' + c.lastMessage.body : ''}`
+                    : c.lastMessage.kind === 'file' ? `\u{1F4CE} ${c.lastMessage.body}`
+                    : c.lastMessage.body
                 }` : ''}
               </span>
             </span>
@@ -328,15 +391,32 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
 
       {activeChannelId && <section className="messenger-thread">
         <div className="messenger-messages">
-          {messages.map(m => <div key={m.id} className={`messenger-bubble-row ${m.senderEmail === email ? 'is-mine' : ''}`}>
-            {m.kind === 'sticker' && <p className="messenger-sticker">{m.body}</p>}
-            {m.kind === 'gif' && <figure className="messenger-gif">
-              <img src={m.mediaUrl ?? ''} alt={t.gifs} loading="lazy" />
-              {m.body && <figcaption>{m.body}</figcaption>}
-            </figure>}
-            {m.kind === 'text' && <p className="messenger-bubble-text">{m.body}</p>}
-            <span className="messenger-bubble-time">{timeLabel(m.createdAt)}</span>
-          </div>)}
+          {messages.map(m => {
+            const mine = m.senderEmail === email;
+            const read = mine && !!activeChannel && messageReadByOthers(m, activeChannel.members);
+            return <div key={m.id} className={`messenger-bubble-row ${mine ? 'is-mine' : ''}`}>
+              {m.kind === 'sticker' && <p className="messenger-sticker">{m.body}</p>}
+              {m.kind === 'gif' && <figure className="messenger-gif">
+                <img src={m.mediaUrl ?? ''} alt={t.gifs} loading="lazy" />
+                {m.body && <figcaption>{m.body}</figcaption>}
+              </figure>}
+              {m.kind === 'file' && <a className="messenger-file" href={m.mediaUrl ?? '#'} target="_blank" rel="noreferrer" download={m.body} title={t.downloadFile}>
+                <span className="messenger-file-icon"><IconDocument size={18} /></span>
+                <span className="messenger-file-body">
+                  <span className="messenger-file-name">{m.body}</span>
+                  <span className="messenger-file-size">{formatFileSize(m.fileSize)}</span>
+                </span>
+                <IconDownload size={14} />
+              </a>}
+              {m.kind === 'text' && <p className="messenger-bubble-text">{m.body}</p>}
+              <span className="messenger-bubble-meta">
+                <span className="messenger-bubble-time">{timeLabel(m.createdAt)}</span>
+                {mine && <span className={`messenger-receipt${read ? ' is-read' : ''}`} title={read ? t.readLabel : t.sentLabel}>
+                  <IconCheck size={11} />{read && <IconCheck size={11} />}
+                </span>}
+              </span>
+            </div>;
+          })}
           {!messages.length && <p className="messenger-empty">{t.noMessages}</p>}
           <div ref={messagesEndRef} />
         </div>
@@ -361,6 +441,10 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
         </div>}
 
         <form className="messenger-compose" onSubmit={e => { e.preventDefault(); void submitMessage(); }}>
+          <input ref={fileInputRef} type="file" className="messenger-file-input"
+            onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void pickFile(f); }} />
+          <button type="button" className="messenger-picker-toggle" aria-label={t.attachFile} disabled={fileSending}
+            onClick={() => fileInputRef.current?.click()}><IconAttach size={16} /></button>
           <button type="button" className="messenger-picker-toggle" aria-pressed={stickerPickerOpen} aria-label={t.stickers}
             onClick={() => { setStickerPickerOpen(v => !v); setGifPickerOpen(false); }}>🙂</button>
           <button type="button" className="messenger-picker-toggle messenger-gif-toggle" aria-pressed={gifPickerOpen} aria-label={t.gifs}

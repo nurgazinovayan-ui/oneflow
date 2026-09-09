@@ -16,6 +16,9 @@ export const messengerRu = {
   statusIdle: 'Чилит', statusGenerating: 'Жестко генерит шедевры',
   statusCopywriting: 'Жестко пишет текста', statusEvaluating: 'Оценивает свою работу',
   stickers: 'Стикеры', gifs: 'GIF', searchGifs: 'Поиск GIF', noGifs: 'Ничего не найдено.',
+  attachFile: 'Прикрепить файл', fileTooBig: 'Файл больше 25 МБ.',
+  openMessenger: 'Открыть чаты', moreLabel: (n: number) => `Ещё ${n}`,
+  readLabel: 'Прочитано', sentLabel: 'Отправлено', downloadFile: 'Скачать',
 };
 export const messengerEn: typeof messengerRu = {
   bubbleLabel: 'Open messenger', title: 'Messenger', close: 'Close',
@@ -35,4 +38,7 @@ export const messengerEn: typeof messengerRu = {
   statusIdle: 'Chilling', statusGenerating: 'Cranking out masterpieces',
   statusCopywriting: 'Cranking out copy', statusEvaluating: 'Reviewing their work',
   stickers: 'Stickers', gifs: 'GIF', searchGifs: 'Search GIFs', noGifs: 'Nothing found.',
+  attachFile: 'Attach file', fileTooBig: 'File is larger than 25 MB.',
+  openMessenger: 'Open chats', moreLabel: (n: number) => `${n} more`,
+  readLabel: 'Read', sentLabel: 'Sent', downloadFile: 'Download',
 };

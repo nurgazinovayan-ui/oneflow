@@ -23,14 +23,19 @@ export interface ChannelMember {
   status: MessengerStatus;
   online: boolean;
   isSelf: boolean;
+  // ISO timestamp of this member's last visit to the channel, or null if they never have —
+  // compared against a message's createdAt to derive its read receipt (see messageReadByOthers
+  // below). Only meaningful for members other than the caller.
+  lastReadAt: string | null;
 }
-export type MessageKind = 'text' | 'sticker' | 'gif';
+export type MessageKind = 'text' | 'sticker' | 'gif' | 'file';
 export interface LastMessage {
   body: string;
   senderEmail: string;
   createdAt: string;
   kind: MessageKind;
   mediaUrl: string | null;
+  fileSize: number | null;
 }
 export interface ChannelSummary {
   id: string;
@@ -46,12 +51,22 @@ export interface ChatMessage {
   createdAt: string;
   kind: MessageKind;
   mediaUrl: string | null;
+  fileSize: number | null;
 }
 export interface GifResult {
   id: string;
   title: string;
   previewUrl: string;
   url: string;
+}
+
+// A message is "read" once every other member of its channel has visited it at or after the
+// message was sent — same threshold logic as a typical chat app's single/double tick, derived
+// client-side from the member list rather than a per-message-per-recipient receipts table.
+export function messageReadByOthers(message: Pick<ChatMessage, 'senderEmail' | 'createdAt'>, members: ChannelMember[]): boolean {
+  const others = members.filter((m) => m.email !== message.senderEmail);
+  if (!others.length) return false;
+  return others.every((m) => !!m.lastReadAt && m.lastReadAt >= message.createdAt);
 }
 
 async function call<T>(name: string, body: unknown): Promise<T> {
@@ -96,4 +111,23 @@ export function sendGif(channelId: string, url: string, caption = ''): Promise<C
 }
 export function searchGifs(query: string): Promise<GifResult[]> {
   return call('messenger-gif-search', { query });
+}
+export function markReadServer(channelId: string): Promise<{ ok: true }> {
+  return call('messenger-mark-read', { channelId });
+}
+// Multipart, not the JSON call() helper above — the file itself is the body.
+export async function sendFile(channelId: string, file: File): Promise<ChatMessage> {
+  const session = await getValidSession();
+  if (!session) throw new Error('Not signed in.');
+  const form = new FormData();
+  form.append('channelId', channelId);
+  form.append('file', file);
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/messenger-upload-file`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${session.accessToken}` },
+    body: form,
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error((data && typeof data.error === 'string' && data.error) || `Request failed (${res.status})`);
+  return data as ChatMessage;
 }
