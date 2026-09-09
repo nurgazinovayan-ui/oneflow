@@ -9950,8 +9950,9 @@
 .messenger-row-preview { font-size: .8rem; color: var(--c-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .messenger-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--c-text-dim); flex-shrink: 0; }
 .messenger-dot.is-online { background: #2ecc71; }
-/* Avatar: deterministic color per email (see avatarColor in MessengerWidget.tsx) with a status
-   ring — green for online, raspberry/malinovy for offline, per the explicit color request. */
+/* Avatar: deterministic pre-made illustration per email (see avatarImage in
+   MessengerWidget.tsx) with a status ring — green for online, raspberry/malinovy for offline,
+   per the explicit color request. */
 .messenger-avatar {
   position: relative;
   width: 2.3rem;
@@ -9961,13 +9962,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: .9rem;
-  font-weight: 600;
-  color: #fff;
   box-shadow: 0 0 0 2px var(--c-panel);
 }
 .messenger-avatar.is-online { box-shadow: 0 0 0 2px var(--c-panel), 0 0 0 4px #2ecc71; }
 .messenger-avatar.is-offline { box-shadow: 0 0 0 2px var(--c-panel), 0 0 0 4px #e6317a; }
+.messenger-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
 .messenger-avatar-dot {
   position: absolute;
   right: -1px;

@@ -12,7 +12,10 @@ const POLL_MS = 4_000;
 const BACKGROUND_POLL_MS = 15_000; // keeps the unread badge + facepile roster live while the widget is closed or on another tab
 const GIF_SEARCH_DEBOUNCE_MS = 400;
 const READ_KEY_PREFIX = 'oneflow-messenger-read:';
-const AVATAR_COLORS = ['#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ef4444'];
+// 30 pre-made avatar illustrations (public/avatars/avatar-01.png..avatar-30.png) — every person
+// gets one deterministically (hashed from their email, see avatarImage below), rather than the
+// same person's avatar changing on every render/reload.
+const AVATAR_COUNT = 30;
 const STICKERS = ['🎉', '😂', '❤️', '👍', '🔥', '😢', '😮', '🙏', '💯', '✅', '❌', '🤔', '🥳', '😍', '😅', '🙌', '👏', '😴', '🤝', '💪', '🚀', '☕', '😎', '🤯'];
 const MAX_FACEPILE_AVATARS = 4;
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
@@ -40,10 +43,11 @@ function channelLabel(channel: ChannelSummary, myEmail: string): string {
   return other?.displayName ?? channel.title;
 }
 
-function avatarColor(email: string): string {
+function avatarImage(email: string): string {
   let hash = 0;
   for (let i = 0; i < email.length; i++) hash = (hash * 31 + email.charCodeAt(i)) >>> 0;
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+  const n = (hash % AVATAR_COUNT) + 1;
+  return `/avatars/avatar-${String(n).padStart(2, '0')}.png`;
 }
 
 function statusLabel(t: Translations, status: MessengerStatus): string {
@@ -63,9 +67,9 @@ function saveReadMap(email: string, map: Record<string, string>) {
 }
 
 function Avatar({ name, email, online }: { name: string; email: string; online: boolean }) {
-  const letter = (name || email).trim().charAt(0).toUpperCase();
-  return <span className={`messenger-avatar ${online ? 'is-online' : 'is-offline'}`} style={{ background: avatarColor(email) }}>
-    {letter}<span className="messenger-avatar-dot" />
+  return <span className={`messenger-avatar ${online ? 'is-online' : 'is-offline'}`}>
+    <img src={avatarImage(email)} alt={name || email} className="messenger-avatar-img" />
+    <span className="messenger-avatar-dot" />
   </span>;
 }
 
