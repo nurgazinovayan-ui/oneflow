@@ -958,6 +958,15 @@
   background: #ffffff;
 }
 
+/* Copywrite engine / Generation only (see BLACK_TOPBAR_VIEWS in App.tsx) — their panels go black
+   in dark theme (by request), unlike .topbar-flat's other three modes which keep the light
+   canvas-bg "paper" look in both themes, so this needs to win over .topbar-flat's white above
+   rather than replace it (higher specificity via the compound selector, applied only in dark
+   theme so light theme's shared .topbar-flat white is untouched). */
+:root:not([data-theme='light']) .topbar.topbar-black {
+  background: #000000;
+}
+
 .project-tabs {
   grid-column: 1;
   display: flex;
@@ -3042,6 +3051,15 @@
   background: var(--c-canvas-bg);
 }
 
+/* Dark theme, by request: black instead of the shared light --c-canvas-bg "paper" the other
+   panels sharing that token (One Launch, Assets, ...) keep in both themes — scoped to this panel
+   alone rather than changing the shared token, same pattern as .canvas-area's own dark-theme
+   override. .quick-gen-tile/.quick-gen-composer etc. already use theme-following/fixed-dark
+   colors that read fine against black. */
+:root:not([data-theme='light']) .quick-gen-panel {
+  background: #000000;
+}
+
 .quick-gen-hidden {
   display: none;
 }
@@ -4212,7 +4230,7 @@
   border-radius: var(--radius-sm);
   background: var(--c-pink);
   border: none;
-  color: #fff;
+  color: var(--c-pink-text);
   font-size: 11.5px;
   font-weight: 600;
   transition: background 0.15s var(--ease);
@@ -8779,6 +8797,20 @@
   background: #ffffff;
 }
 
+/* Dark theme, by request: this whole panel (chat log, composer, sidebar) goes black instead of
+   staying the fixed-white "paper" it used everywhere else. .cw-sidebar/.cw-composer below get
+   their own dark-theme overrides for the same reason; .cw-stage's descendants (chat bubbles,
+   greeting text, composer input, send button, ...) no longer need a light-theme token pin now
+   that the real backdrop follows the real theme again — they just read var(--c-text) etc.
+   normally, same as the rest of the app's dark UI. */
+:root:not([data-theme='light']) .cw-panel {
+  background: #000000;
+}
+
+:root:not([data-theme='light']) .cw-sidebar {
+  background: #000000;
+}
+
 .cw-panel.cw-hidden {
   display: none;
 }
@@ -9137,27 +9169,18 @@
   font-weight: 600;
 }
 
+/* Used to pin every token used inside .cw-stage to light-theme values (.cw-panel, this element's
+   parent, was a fixed white "paper" surface in both app themes) — no longer needed now that
+   .cw-panel actually goes black in dark theme too (see its own dark-theme override above), so
+   var(--c-text) etc. resolve correctly against whichever background is really there without any
+   local override (and were already redundant in light theme, where the real theme's own values
+   matched the pin exactly). .cw-send/.chat-deliverable-btn below read var(--c-pink-text)
+   instead of a hardcoded white for the same reason — that flips correctly with --c-pink now
+   that nothing pins it dark-in-both-themes any more. */
 .cw-stage {
   flex: 1;
   min-width: 0;
   display: flex;
-  /* .cw-panel (this element's parent) is a fixed white "paper" surface in both app themes (see
-     its own background above) — .cw-sidebar sits outside .cw-stage and keeps following the real
-     theme with its own dark/light background, but everything in here needs light-theme text/
-     divider/accent tokens pinned, or they go near-white-on-white once the app itself is in dark
-     mode (var(--c-text) etc. would otherwise resolve to their dark-theme, light-on-dark values). */
-  --c-text: #17171b;
-  --c-text-muted: #6b6b74;
-  --c-text-dim: #a3a3ab;
-  --c-divider: rgba(0, 0, 0, 0.09);
-  --c-panel-2: #eeeef1;
-  --c-panel-3: #e3e3e8;
-  --c-accent: #17171b;
-  --c-accent-text: #ffffff;
-  --c-pink: #52525b;
-  --c-pink-hover: #3f3f46;
-  --c-pink-text: #ffffff;
-  --c-error-bg: rgba(229, 72, 77, 0.1);
 }
 
 .cw-surface {
@@ -9426,6 +9449,14 @@
   flex-shrink: 0;
 }
 
+/* A touch lighter than the now-black .cw-panel behind it (same "raised surface" pairing used
+   throughout the rest of the app's dark UI, --c-panel against --c-bg) so the input box still
+   reads as its own control rather than disappearing into the panel — one step below
+   --c-panel-2, which .cw-attachment chips inside it already use, so those still stand out too. */
+:root:not([data-theme='light']) .cw-composer {
+  background: var(--c-panel);
+}
+
 .cw-composer:focus-within {
   border-color: var(--c-text-dim);
 }
@@ -9540,7 +9571,7 @@
   border-radius: 50%;
   border: none;
   background: var(--c-pink);
-  color: #ffffff;
+  color: var(--c-pink-text);
   flex-shrink: 0;
   transition:
     background 0.15s var(--ease),

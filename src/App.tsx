@@ -6,7 +6,6 @@ import {
   ReactFlow,
   ReactFlowProvider,
   Background,
-  MiniMap,
   addEdge,
   useNodesState,
   useEdgesState,
@@ -96,6 +95,11 @@ import './App.css';
 // gray canvas-continuation look instead, so the topbar there stays transparent over the real
 // dot-grid canvas (or its gray flat-color siblings).
 const WHITE_TOPBAR_VIEWS = new Set(['text', 'generate', 'onelaunch', 'musicaudio', 'evaluate', 'trends']);
+// Of those, Copywrite engine and Generation go black instead of white in dark theme (by
+// request — see .topbar-black in App.css), since their own panels (.cw-panel, .quick-gen-panel)
+// go black in dark theme too, unlike the other four WHITE_TOPBAR_VIEWS modes which keep the
+// light canvas-bg "paper" look in both themes.
+const BLACK_TOPBAR_VIEWS = new Set(['text', 'generate']);
 
 // LemonSqueezy subscription statuses that count as "has a subscription" for the avatar's ring
 // (see ProfileModal.tsx, which uses the same set for its own badge).
@@ -992,7 +996,7 @@ function Canvas() {
               transparent in canvas/strategy/assets modes so the real gray canvas continues
               behind it uninterrupted; gets a flat white fill (.topbar-flat) in the modes whose
               own panel is already flat white, so there's no seam between the two. */}
-          <div className={`topbar${WHITE_TOPBAR_VIEWS.has(mainView) ? ' topbar-flat' : ''}`}>
+          <div className={`topbar${WHITE_TOPBAR_VIEWS.has(mainView) ? ' topbar-flat' : ''}${BLACK_TOPBAR_VIEWS.has(mainView) ? ' topbar-black' : ''}`}>
           {mainView === 'canvas' && (
           <div className="project-tabs">
             {projects.map((p) => (
@@ -1125,9 +1129,9 @@ function Canvas() {
               onPaneContextMenu={onPaneContextMenu}
               onPaneClick={() => setContextMenu(null)}
               onMoveStart={() => setContextMenu(null)}
+              proOptions={{ hideAttribution: true }}
             >
               <Background gap={20} color={theme === 'dark' ? '#3a3a40' : undefined} />
-              <MiniMap pannable zoomable />
             </ReactFlow>
             {aiAssistantOpen && mainView === 'canvas' && (
               <AiAssistantPanel
