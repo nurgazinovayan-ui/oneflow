@@ -237,21 +237,35 @@ export interface GenerationLogEntry {
 // price, update the matching entry here (and the duplicate copy in electron/main.ts, kept in
 // sync by hand across compile roots — electron/main.ts still targets Replicate directly, not
 // migrated to OpenRouter, so its own copy of this table keeps the old Replicate rates).
+// bytedance-seed/seedream-5-0-lite's 4K rate, recraft/recraft-v4-styles-pro's flat rate (base
+// single-style-reference price; extra references and moodboards cost slightly more) and
+// krea/krea-2-large's flat rate are the base/lowest published tier — not broken out further.
 export const IMAGE_PRICE_USD: Record<string, Record<string, number> | number> = {
   'google/nano-banana-pro': { '1K': 0.134, '2K': 0.202, '4K': 0.302 },
   'google/nano-banana-2': { '1K': 0.067, '2K': 0.101, '4K': 0.151 },
   'google/nano-banana-2-lite': { '1K': 0.034, '2K': 0.051, '4K': 0.076 },
   'openai/gpt-image-2': { auto: 0.03, low: 0.03, medium: 0.05, high: 0.08 },
   'recraft-ai/recraft-v4-svg': 0.08,
+  'bytedance-seed/seedream-5-0-pro': { '1K': 0.045, '2K': 0.09 },
+  'recraft/recraft-v4-styles-pro': 0.105,
+  'openai/gpt-image-2.5-sunburst': { '1K': 0.06, '2K': 0.1, '4K': 0.16 },
+  'openai/gpt-image-2.5-flare': { '1K': 0.06, '2K': 0.1, '4K': 0.16 },
+  'x-ai/grok-imagine-image-2.0': { '1K': 0.04, '2K': 0.08 },
+  'krea/krea-2-large': 0.06,
+  'bytedance-seed/seedream-5-0-lite': { '2K': 0.035, '4K': 0.07 },
 };
 
-// Seedance 2.0's 720p rate and Veo 3.1 Fast's 1080p rate are interpolated, not directly
-// confirmed on OpenRouter's own pricing page at the time this was written.
+// Seedance 2.0's 720p rate, Seedance 2.0 Mini's 720p rate, and Veo 3.1 Fast's 1080p rate are
+// interpolated, not directly confirmed on OpenRouter's own pricing page at the time this was
+// written.
 export const VIDEO_PRICE_PER_SECOND_USD: Record<string, Record<string, number>> = {
   'bytedance/seedance-2.0': { '480p': 0.067, '720p': 0.2 },
   'bytedance/seedance-2.5': { '480p': 0.103, '720p': 0.231, '1080p': 0.4 },
   'kwaivgi/kling-v3-video': { '720p': 0.126, '1080p': 0.168 },
   'google/veo-3.1-fast': { '720p': 0.1, '1080p': 0.15, '4K': 0.3 },
+  'minimax/hailuo-3-max': { '480p': 0.05, '768p': 0.08 },
+  'bytedance/seedance-2.0-mini': { '480p': 0.01345, '720p': 0.04 },
+  'black-forest-labs/flux-3-video': { '720p': 0.17, '1080p': 0.29 },
 };
 
 export function estimateImageCost(
@@ -444,13 +458,23 @@ export const IMAGE_MODELS = [
   { label: 'Nano Banana 2 (Google, editing)', value: 'google/nano-banana-2' },
   { label: 'Nano Banana 2 Lite (Google, fast)', value: 'google/nano-banana-2-lite' },
   { label: 'GPT Image 2 (OpenAI)', value: 'openai/gpt-image-2' },
+  { label: 'GPT Image 2.5 Sunburst (OpenAI, точное редактирование)', value: 'openai/gpt-image-2.5-sunburst' },
+  { label: 'GPT Image 2.5 Flare (OpenAI, быстрый)', value: 'openai/gpt-image-2.5-flare' },
+  { label: 'Seedream 5 Pro (ByteDance)', value: 'bytedance-seed/seedream-5-0-pro' },
+  { label: 'Seedream 5.0 Lite (ByteDance)', value: 'bytedance-seed/seedream-5-0-lite' },
+  { label: 'Recraft V4 Styles Pro (по референсу стиля)', value: 'recraft/recraft-v4-styles-pro' },
+  { label: 'Grok Imagine Image 2.0 (xAI)', value: 'x-ai/grok-imagine-image-2.0' },
+  { label: 'Krea 2 Large (Krea)', value: 'krea/krea-2-large' },
 ] as const;
 
 export const VIDEO_MODELS = [
   { label: 'Seedance 2.0 (ByteDance)', value: 'bytedance/seedance-2.0' },
+  { label: 'Seedance 2.0 Mini (ByteDance)', value: 'bytedance/seedance-2.0-mini' },
   { label: 'Seedance 2.5 (ByteDance)', value: 'bytedance/seedance-2.5' },
   { label: 'Kling 3.0 (Kuaishou)', value: 'kwaivgi/kling-v3-video' },
   { label: 'Veo 3.1 Fast (Google)', value: 'google/veo-3.1-fast' },
+  { label: 'MiniMax H3 Max', value: 'minimax/hailuo-3-max' },
+  { label: 'FLUX.3 Video (Black Forest Labs)', value: 'black-forest-labs/flux-3-video' },
 ] as const;
 
 // Model-select dropdowns show just the name — the "(vendor, ...)" suffix on the labels above
@@ -502,6 +526,46 @@ export const IMAGE_MODEL_META: Record<string, ImageModelMeta> = {
       { label: 'Medium', value: 'medium' },
       { label: 'High', value: 'high' },
     ],
+  },
+  'openai/gpt-image-2.5-sunburst': {
+    resolutions: [
+      { label: '1K', value: '1K' },
+      { label: '2K', value: '2K' },
+      { label: '4K', value: '4K' },
+    ],
+  },
+  'openai/gpt-image-2.5-flare': {
+    resolutions: [
+      { label: '1K', value: '1K' },
+      { label: '2K', value: '2K' },
+      { label: '4K', value: '4K' },
+    ],
+  },
+  'bytedance-seed/seedream-5-0-pro': {
+    resolutions: [
+      { label: '1K', value: '1K' },
+      { label: '2K', value: '2K' },
+    ],
+  },
+  'bytedance-seed/seedream-5-0-lite': {
+    resolutions: [
+      { label: '2K', value: '2K' },
+      { label: '4K', value: '4K' },
+    ],
+  },
+  // Requires at least one style reference image attached (see the Референс-фото slots) — the
+  // model has no separate resolution knob, so there's only one option here.
+  'recraft/recraft-v4-styles-pro': {
+    resolutions: [{ label: '2K', value: '2K' }],
+  },
+  'x-ai/grok-imagine-image-2.0': {
+    resolutions: [
+      { label: '1K', value: '1K' },
+      { label: '2K', value: '2K' },
+    ],
+  },
+  'krea/krea-2-large': {
+    resolutions: [{ label: '1K', value: '1K' }],
   },
 };
 
@@ -563,4 +627,9 @@ export const VIDEO_MODEL_META: Record<string, VideoModelMeta> = {
   'kwaivgi/kling-v3-video': { maxDuration: 15, minDuration: 3, resolutions: ['720p', '1080p'] },
   // Veo 3.1 Fast generates 4/6/8-second clips with native synchronized audio.
   'google/veo-3.1-fast': { maxDuration: 8, minDuration: 4, resolutions: ['720p', '1080p', '4K'] },
+  'bytedance/seedance-2.0-mini': { maxDuration: 15, minDuration: 4, resolutions: ['480p', '720p'] },
+  // H3 Max generates video with native synchronized audio, steerable via first/last frame.
+  'minimax/hailuo-3-max': { maxDuration: 15, minDuration: 5, resolutions: ['480p', '768p'] },
+  // Generates native synchronized audio alongside the video.
+  'black-forest-labs/flux-3-video': { maxDuration: 20, minDuration: 5, resolutions: ['720p', '1080p'] },
 };

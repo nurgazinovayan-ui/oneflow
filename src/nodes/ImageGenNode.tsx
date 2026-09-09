@@ -18,6 +18,7 @@ import {
   modelShortName,
 } from '../types';
 import type { PromptNodeData } from './PromptNode';
+import NodeOptionButtons from '../components/NodeOptionButtons';
 import { convertImageFormat } from '../imageAdapt';
 import { useGenerationCounter } from '../store/generationCounter';
 import { useProjectId } from '../store/projectContext';
@@ -190,50 +191,33 @@ function ImageGenNode({ id, data, selected }: NodeProps) {
         )}
 
         <label className="field-label">{t.nodes.common.aspectRatio}</label>
-        <select
-          className="node-select nodrag"
+        <NodeOptionButtons
+          options={ASPECT_RATIOS.map((r) => ({ value: r, label: r }))}
           value={nodeData.aspectRatio}
-          onChange={(e) => updateNodeData(id, { aspectRatio: e.target.value })}
-        >
-          {ASPECT_RATIOS.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
+          onChange={(aspectRatio) => updateNodeData(id, { aspectRatio })}
+        />
 
         {modelMeta && (
           <>
             <label className="field-label">{t.nodes.common.resolution}</label>
-            <select
-              className="node-select nodrag"
+            <NodeOptionButtons
+              options={modelMeta.resolutions.map((r) => ({
+                value: r.value,
+                label: QUALITY_LABEL_KEYS[r.value] ? t.nodes.modelMeta[QUALITY_LABEL_KEYS[r.value]] : r.label,
+              }))}
               value={nodeData.resolution}
-              onChange={(e) => updateNodeData(id, { resolution: e.target.value })}
+              onChange={(resolution) => updateNodeData(id, { resolution })}
               disabled={modelMeta.resolutions.length <= 1}
-            >
-              {modelMeta.resolutions.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {QUALITY_LABEL_KEYS[r.value]
-                    ? t.nodes.modelMeta[QUALITY_LABEL_KEYS[r.value]]
-                    : r.label}
-                </option>
-              ))}
-            </select>
+            />
           </>
         )}
 
         <label className="field-label">{t.nodes.imageGen.variantCount}</label>
-        <select
-          className="node-select nodrag"
-          value={nodeData.variantCount || 1}
-          onChange={(e) => updateNodeData(id, { variantCount: Number(e.target.value) })}
-        >
-          {IMAGE_VARIANT_COUNTS.map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
+        <NodeOptionButtons
+          options={IMAGE_VARIANT_COUNTS.map((n) => ({ value: String(n), label: String(n) }))}
+          value={String(nodeData.variantCount || 1)}
+          onChange={(v) => updateNodeData(id, { variantCount: Number(v) })}
+        />
 
         <label className="field-label">
           {t.nodes.imageGen.referencePhotos(connectedRefCount, IMAGE_REFERENCE_SLOTS)}

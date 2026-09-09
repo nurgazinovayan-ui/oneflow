@@ -15,6 +15,7 @@ import {
   VIDEO_PRO_REFERENCE_LIMITS,
 } from '../types';
 import type { PromptNodeData } from './PromptNode';
+import NodeOptionButtons from '../components/NodeOptionButtons';
 import { useGenerationCounter } from '../store/generationCounter';
 import { useProjectId } from '../store/projectContext';
 import { useSubscription } from '../store/subscriptionContext';
@@ -223,17 +224,11 @@ function VideoGenProNode({ id, data, selected }: NodeProps) {
         ))}
 
         <label className="field-label">{t.nodes.common.aspectRatio}</label>
-        <select
-          className="node-select nodrag"
+        <NodeOptionButtons
+          options={ASPECT_RATIOS.map((r) => ({ value: r, label: r }))}
           value={nodeData.aspectRatio}
-          onChange={(e) => updateNodeData(id, { aspectRatio: e.target.value })}
-        >
-          {ASPECT_RATIOS.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
+          onChange={(aspectRatio) => updateNodeData(id, { aspectRatio })}
+        />
 
         <label className="field-label">
           {t.nodes.videoGen.duration(nodeData.duration, modelMeta.minDuration ?? 1, modelMeta.maxDuration)}
@@ -250,17 +245,12 @@ function VideoGenProNode({ id, data, selected }: NodeProps) {
         />
 
         <label className="field-label">{t.nodes.common.resolution}</label>
-        <select
-          className="node-select nodrag"
+        <NodeOptionButtons
+          options={modelMeta.resolutions.map((r) => ({ value: r, label: r }))}
           value={nodeData.resolution}
-          onChange={(e) => updateNodeData(id, { resolution: e.target.value })}
-        >
-          {modelMeta.resolutions.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
+          onChange={(resolution) => updateNodeData(id, { resolution })}
+          disabled={modelMeta.resolutions.length <= 1}
+        />
 
         <button
           className="generate-btn"

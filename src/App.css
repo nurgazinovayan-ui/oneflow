@@ -1954,6 +1954,44 @@
   font-size: 12.5px;
 }
 
+/* Aspect ratio / resolution / variant-count pickers inside generation nodes — buttons instead
+   of a <select>, since there are only a handful of options and every choice stays visible. */
+.node-option-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.node-option-btn {
+  background: var(--c-panel-2);
+  border: 1px solid var(--c-divider);
+  border-radius: 999px;
+  color: var(--c-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease),
+    border-color 0.15s var(--ease);
+}
+
+.node-option-btn:hover:not(:disabled) {
+  border-color: var(--c-text-dim);
+  color: var(--c-text);
+}
+
+.node-option-btn.active {
+  background: var(--c-pink);
+  border-color: var(--c-pink);
+  color: var(--c-pink-text);
+}
+
+.node-option-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .size-row {
   display: flex;
   gap: 8px;

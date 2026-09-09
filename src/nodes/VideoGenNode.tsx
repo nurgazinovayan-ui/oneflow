@@ -11,6 +11,7 @@ import { memo, useState } from 'react';
 import { ASPECT_RATIOS, VIDEO_MODEL_META, VIDEO_MODELS, modelShortName } from '../types';
 import type { PromptNodeData } from './PromptNode';
 import type { ImageGenNodeData } from './ImageGenNode';
+import NodeOptionButtons from '../components/NodeOptionButtons';
 import { useGenerationCounter } from '../store/generationCounter';
 import { useProjectId } from '../store/projectContext';
 import { useSubscription } from '../store/subscriptionContext';
@@ -177,17 +178,11 @@ function VideoGenNode({ id, data, selected }: NodeProps) {
         {isImageToVideo ? (
           <div className="connected-hint">{t.nodes.videoGen.aspectDeterminedByImage}</div>
         ) : (
-          <select
-            className="node-select nodrag"
+          <NodeOptionButtons
+            options={ASPECT_RATIOS.map((r) => ({ value: r, label: r }))}
             value={nodeData.aspectRatio}
-            onChange={(e) => updateNodeData(id, { aspectRatio: e.target.value })}
-          >
-            {ASPECT_RATIOS.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
+            onChange={(aspectRatio) => updateNodeData(id, { aspectRatio })}
+          />
         )}
 
         <label className="field-label">
@@ -205,18 +200,12 @@ function VideoGenNode({ id, data, selected }: NodeProps) {
         />
 
         <label className="field-label">{t.nodes.common.resolution}</label>
-        <select
-          className="node-select nodrag"
+        <NodeOptionButtons
+          options={modelMeta.resolutions.map((r) => ({ value: r, label: r }))}
           value={nodeData.resolution}
-          onChange={(e) => updateNodeData(id, { resolution: e.target.value })}
+          onChange={(resolution) => updateNodeData(id, { resolution })}
           disabled={modelMeta.resolutions.length <= 1}
-        >
-          {modelMeta.resolutions.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
+        />
 
         <button
           className="generate-btn"

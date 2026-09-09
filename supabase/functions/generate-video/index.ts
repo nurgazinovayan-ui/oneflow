@@ -23,14 +23,17 @@ const supabaseAdmin = createClient(
 );
 
 // Kept in sync by hand with VIDEO_PRICE_PER_SECOND_USD/estimateVideoCost in src/types.ts.
-// Seedance 2.0's 720p rate and Veo 3.1 Fast's 1080p rate are interpolated (not directly
-// confirmed on OpenRouter's own pricing page at the time this was written) — the rest match
-// OpenRouter's published per-second rates.
+// Seedance 2.0's 720p rate, Seedance 2.0 Mini's 720p rate, and Veo 3.1 Fast's 1080p rate are
+// interpolated (not directly confirmed on OpenRouter's own pricing page at the time this was
+// written) — the rest match OpenRouter's published per-second rates.
 const VIDEO_PRICE_PER_SECOND_USD: Record<string, Record<string, number>> = {
   'bytedance/seedance-2.0': { '480p': 0.067, '720p': 0.2 },
   'bytedance/seedance-2.5': { '480p': 0.103, '720p': 0.231, '1080p': 0.4 },
   'kwaivgi/kling-v3-video': { '720p': 0.126, '1080p': 0.168 },
   'google/veo-3.1-fast': { '720p': 0.1, '1080p': 0.15, '4K': 0.3 },
+  'minimax/hailuo-3-max': { '480p': 0.05, '768p': 0.08 },
+  'bytedance/seedance-2.0-mini': { '480p': 0.01345, '720p': 0.04 },
+  'black-forest-labs/flux-3-video': { '720p': 0.17, '1080p': 0.29 },
 };
 
 function estimateVideoCost(model: string, resolution: string, duration: number): number {
@@ -148,6 +151,8 @@ function buildVideoInput(
     input.aspect_ratio = mapToSupportedRatio(aspectRatio, ['16:9', '9:16', '1:1']);
   } else if (model === 'google/veo-3.1-fast') {
     input.aspect_ratio = mapToSupportedRatio(aspectRatio, ['16:9', '9:16']);
+  } else if (model === 'minimax/hailuo-3-max' || model === 'black-forest-labs/flux-3-video') {
+    input.aspect_ratio = mapToSupportedRatio(aspectRatio, ['21:9', '16:9', '4:3', '1:1', '3:4', '9:16']);
   }
   return input;
 }

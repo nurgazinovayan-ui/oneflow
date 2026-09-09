@@ -51,12 +51,22 @@ const supabaseAdmin = createClient(
 // high to the matching resolution tier when calling OpenRouter. nano-banana-pro's 2K/4K and
 // nano-banana-2-lite's 2K/4K are derived from OpenRouter's per-model Image Output token rate
 // rather than independently confirmed.
+// bytedance-seed/seedream-5-0-lite's 4K rate, recraft/recraft-v4-styles-pro's flat rate (base
+// single-style-reference price; extra references and moodboards cost slightly more) and
+// krea/krea-2-large's flat rate are the base/lowest published tier — not broken out further.
 const IMAGE_PRICE_USD: Record<string, Record<string, number> | number> = {
   'google/nano-banana-pro': { '1K': 0.134, '2K': 0.202, '4K': 0.302 },
   'google/nano-banana-2': { '1K': 0.067, '2K': 0.101, '4K': 0.151 },
   'google/nano-banana-2-lite': { '1K': 0.034, '2K': 0.051, '4K': 0.076 },
   'openai/gpt-image-2': { auto: 0.03, low: 0.03, medium: 0.05, high: 0.08 },
   'recraft-ai/recraft-v4-svg': 0.08,
+  'bytedance-seed/seedream-5-0-pro': { '1K': 0.045, '2K': 0.09 },
+  'recraft/recraft-v4-styles-pro': 0.105,
+  'openai/gpt-image-2.5-sunburst': { '1K': 0.06, '2K': 0.1, '4K': 0.16 },
+  'openai/gpt-image-2.5-flare': { '1K': 0.06, '2K': 0.1, '4K': 0.16 },
+  'x-ai/grok-imagine-image-2.0': { '1K': 0.04, '2K': 0.08 },
+  'krea/krea-2-large': 0.06,
+  'bytedance-seed/seedream-5-0-lite': { '2K': 0.035, '4K': 0.07 },
 };
 
 function estimateImageCost(model: string, resolution: string | undefined): number {
@@ -213,6 +223,13 @@ function buildOpenRouterImageInput(
     'google/nano-banana-pro': ['1:1', '3:4', '4:3', '9:16', '16:9'],
     'google/nano-banana-2': ['1:1', '16:9', '9:16'],
     'openai/gpt-image-2': ['1:1', '3:2', '2:3'],
+    'openai/gpt-image-2.5-sunburst': ['1:1', '3:2', '2:3'],
+    'openai/gpt-image-2.5-flare': ['1:1', '3:2', '2:3'],
+    'x-ai/grok-imagine-image-2.0': ['1:1', '16:9', '9:16', '4:3', '3:4'],
+    'krea/krea-2-large': ['1:1', '16:9', '9:16', '4:3', '3:4'],
+    // bytedance-seed/seedream-5-0-pro and -lite support a much wider set (13+ ratios) — the
+    // app's own ASPECT_RATIOS list is a subset of that, so every value it can send already maps
+    // 1:1 without needing an entry here; same for recraft/recraft-v4-styles-pro.
   };
   const input: Record<string, unknown> = {
     model: OPENROUTER_IMAGE_MODEL_SLUGS[model] ?? model,
