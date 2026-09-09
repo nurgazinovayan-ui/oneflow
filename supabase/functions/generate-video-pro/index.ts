@@ -1,20 +1,29 @@
 // Deploy in Supabase Studio → Edge Functions → Create a new function → name it
 // "generate-video-pro" → paste this file → Deploy. Keep "Verify JWT" ON (default).
-// Secret needed: REPLICATE_API_KEY (Edge Functions → generate-video-pro → Secrets).
+// Secret needed: OPENROUTER_API_KEY (Edge Functions → generate-video-pro → Secrets;
+// openrouter.ai/settings/keys).
 // SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY are normally already set automatically.
 //
 // Field names for Seedance 2.5's multimodal reference arrays ("images"/"videos"/"audios")
-// aren't published in an exact machine-readable schema by Replicate — if Replicate rejects
-// these as unexpected properties, its error message names the actual expected key.
+// aren't published in an exact machine-readable schema by OpenRouter for this specific model —
+// if OpenRouter rejects these as unexpected properties, its error message names the actual
+// expected key (they map onto OpenRouter's general input_references field for other models, but
+// Seedance 2.5's own reference-array shape predates that and may differ — verify with a live
+// call and adjust buildVideoInput below).
 //
 // Requires the user_credits table and the reserve_credit_balance()/refund_credit_balance()
-// functions — see the SQL comment in lemonsqueezy-webhook/index.ts — and the generation_log
-// table — see the SQL comment in admin-list-generations/index.ts.
+// functions — see the SQL comment in lemonsqueezy-webhook/index.ts — the generation_log
+// table — see the SQL comment in admin-list-generations/index.ts — AND the
+// "ai-generated-videos" Storage bucket from supabase/migrations/202609090002_ai_video_bucket.sql
+// (OpenRouter's video content endpoint requires the shared API key on every request, so the
+// finished video is downloaded here and re-hosted as a plain public URL for the client).
 
-import Replicate from 'npm:replicate';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY') ?? '';
+const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY') ?? '';
+const OPENROUTER_VIDEOS_URL = 'https://openrouter.ai/api/v1/videos';
+const VIDEO_BUCKET = 'ai-generated-videos';
+const VIDEO_MODEL = 'bytedance/seedance-2.5';
 
 const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -51,9 +60,9 @@ async function logGeneration(
   if (error) console.error('Failed to log generation', error);
 }
 
-// Hard stop: reserves costUsd from the caller's balance atomically, BEFORE the paid Replicate
+// Hard stop: reserves costUsd from the caller's balance atomically, BEFORE the paid OpenRouter
 // call — returns false (caller must reject with 402) if the balance can't cover it, so an
-// unpaid/exhausted account can no longer spend the shared Replicate key at all. Throws (letting
+// unpaid/exhausted account can no longer spend the shared OpenRouter key at all. Throws (letting
 // the outer catch produce a generic 500) on a genuine DB error, so that's never confused with a
 // real "insufficient balance" rejection.
 async function reserveBalance(userId: string, costUsd: number): Promise<boolean> {
@@ -106,18 +115,54 @@ function mapToSupportedRatio(ratio: string, supported: string[]): string {
   return best;
 }
 
-function normalizeOutput(output: unknown): string[] {
-  const toUrl = (item: unknown): string => {
-    if (typeof item === 'string') return item;
-    if (item && typeof item === 'object') {
-      const anyItem = item as { url?: unknown };
-      if (typeof anyItem.url === 'function') return String((anyItem.url as () => unknown)());
-      if (typeof anyItem.url === 'string') return anyItem.url;
+async function submitOpenRouterVideoJob(input: Record<string, unknown>): Promise<{ id: string }> {
+  const res = await fetch(OPENROUTER_VIDEOS_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`OpenRouter video submit error ${res.status}: ${await res.text()}`);
+  return await res.json();
+}
+
+// See the matching comment in generate-video/index.ts — same async submit/poll/download shape,
+// duplicated here since Edge Functions in this project are deployed as self-contained files.
+const POLL_INTERVAL_MS = 5000;
+const POLL_BUDGET_MS = 8 * 60 * 1000;
+
+async function pollOpenRouterVideoJob(jobId: string): Promise<{ id: string }> {
+  const deadline = Date.now() + POLL_BUDGET_MS;
+  while (Date.now() < deadline) {
+    const res = await fetch(`${OPENROUTER_VIDEOS_URL}/${jobId}`, {
+      headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}` },
+    });
+    if (!res.ok) throw new Error(`OpenRouter video poll error ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    if (data.status === 'completed') return data;
+    if (data.status === 'failed' || data.status === 'cancelled' || data.status === 'expired') {
+      throw new Error(`Video generation ${data.status}: ${data.error ?? 'unknown error'}`);
     }
-    return String(item);
-  };
-  if (Array.isArray(output)) return output.map(toUrl);
-  return [toUrl(output)];
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+  }
+  throw new Error('Video generation timed out.');
+}
+
+async function downloadAndStoreVideo(jobId: string): Promise<string> {
+  const res = await fetch(`${OPENROUTER_VIDEOS_URL}/${jobId}/content?index=0`, {
+    headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}` },
+  });
+  if (!res.ok) throw new Error(`OpenRouter video download error ${res.status}: ${await res.text()}`);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  const objectPath = `${crypto.randomUUID()}.mp4`;
+  const { error } = await supabaseAdmin.storage
+    .from(VIDEO_BUCKET)
+    .upload(objectPath, bytes, { contentType: 'video/mp4', upsert: false });
+  if (error) throw error;
+  const { data: pub } = supabaseAdmin.storage.from(VIDEO_BUCKET).getPublicUrl(objectPath);
+  return pub.publicUrl;
 }
 
 Deno.serve(async (req) => {
@@ -146,6 +191,7 @@ Deno.serve(async (req) => {
     }
 
     const input: Record<string, unknown> = {
+      model: VIDEO_MODEL,
       prompt,
       aspect_ratio: mapToSupportedRatio(aspectRatio, ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9']),
       duration: Math.round(duration),
@@ -154,18 +200,20 @@ Deno.serve(async (req) => {
     if (images?.length) input.images = images;
     if (videos?.length) input.videos = videos;
     if (audios?.length) input.audios = audios;
-    const replicate = new Replicate({ auth: REPLICATE_API_KEY });
-    let output: unknown;
+
+    let url: string;
     try {
-      output = await replicate.run('bytedance/seedance-2.5', { input });
+      const job = await submitOpenRouterVideoJob(input);
+      const completed = await pollOpenRouterVideoJob(job.id);
+      url = await downloadAndStoreVideo(completed.id ?? job.id);
     } catch (err) {
       await refundBalance(callerId, costUsd);
       throw err;
     }
 
-    void logGeneration(callerId, caller.email, 'bytedance/seedance-2.5', 'video', costUsd);
+    void logGeneration(callerId, caller.email, VIDEO_MODEL, 'video', costUsd);
 
-    return new Response(JSON.stringify(normalizeOutput(output)), {
+    return new Response(JSON.stringify([url]), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {

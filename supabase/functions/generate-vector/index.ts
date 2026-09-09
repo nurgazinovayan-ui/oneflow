@@ -2,21 +2,24 @@
 // "generate-vector" → paste this file → Deploy.
 //
 // Leave "Verify JWT" ON (the default) — that's what stops anonymous callers from using your
-// Replicate credits; only requests carrying a valid logged-in user's Supabase session token
+// paid API credits; only requests carrying a valid logged-in user's Supabase session token
 // reach this code.
 //
 // After deploying, set one secret (Edge Functions → generate-vector → Secrets):
-//   REPLICATE_API_KEY — your Replicate token (replicate.com/account/api-tokens)
+//   OPENROUTER_API_KEY — your OpenRouter token (openrouter.ai/settings/keys)
 // SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY are normally already set automatically.
 //
 // Requires the user_credits table and the reserve_credit_balance()/refund_credit_balance()
 // functions — see the SQL comment in lemonsqueezy-webhook/index.ts — and the generation_log
 // table — see the SQL comment in admin-list-generations/index.ts.
 
-import Replicate from 'npm:replicate';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY') ?? '';
+const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY') ?? '';
+const OPENROUTER_IMAGES_URL = 'https://openrouter.ai/api/v1/images';
+// Our internal model id 'recraft-ai/recraft-v4-svg' predates this migration; OpenRouter fronts
+// the same model under its own slug, remapped only here.
+const OPENROUTER_VECTOR_MODEL = 'recraft/recraft-v4-vector';
 
 const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -47,9 +50,9 @@ async function logGeneration(
   if (error) console.error('Failed to log generation', error);
 }
 
-// Hard stop: reserves costUsd from the caller's balance atomically, BEFORE the paid Replicate
+// Hard stop: reserves costUsd from the caller's balance atomically, BEFORE the paid OpenRouter
 // call — returns false (caller must reject with 402) if the balance can't cover it, so an
-// unpaid/exhausted account can no longer spend the shared Replicate key at all. Throws (letting
+// unpaid/exhausted account can no longer spend the shared OpenRouter key at all. Throws (letting
 // the outer catch produce a generic 500) on a genuine DB error, so that's never confused with a
 // real "insufficient balance" rejection.
 async function reserveBalance(userId: string, costUsd: number): Promise<boolean> {
@@ -106,23 +109,27 @@ function mapToSupportedRatio(ratio: string, supported: string[]): string {
 // onto the same aspect-ratio set already used elsewhere in the app.
 function buildVectorInput(prompt: string, aspectRatio: string): Record<string, unknown> {
   return {
+    model: OPENROUTER_VECTOR_MODEL,
     prompt,
     aspect_ratio: mapToSupportedRatio(aspectRatio, ['1:1', '4:3', '3:2', '16:9', '9:16']),
   };
 }
 
-function normalizeOutput(output: unknown): string[] {
-  const toUrl = (item: unknown): string => {
-    if (typeof item === 'string') return item;
-    if (item && typeof item === 'object') {
-      const anyItem = item as { url?: unknown };
-      if (typeof anyItem.url === 'function') return String((anyItem.url as () => unknown)());
-      if (typeof anyItem.url === 'string') return anyItem.url;
-    }
-    return String(item);
-  };
-  if (Array.isArray(output)) return output.map(toUrl);
-  return [toUrl(output)];
+async function callOpenRouterImage(input: Record<string, unknown>): Promise<string[]> {
+  const res = await fetch(OPENROUTER_IMAGES_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`OpenRouter images error ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  const items: { b64_json?: string; media_type?: string; url?: string }[] = data.data ?? [];
+  return items.map((item) =>
+    item.url ? item.url : `data:${item.media_type ?? 'image/svg+xml'};base64,${item.b64_json ?? ''}`
+  );
 }
 
 Deno.serve(async (req) => {
@@ -149,10 +156,9 @@ Deno.serve(async (req) => {
     }
 
     const input = buildVectorInput(prompt, aspectRatio);
-    const replicate = new Replicate({ auth: REPLICATE_API_KEY });
-    let output: unknown;
+    let urls: string[];
     try {
-      output = await replicate.run('recraft-ai/recraft-v4-svg', { input });
+      urls = await callOpenRouterImage(input);
     } catch (err) {
       await refundBalance(callerId, RECRAFT_V4_SVG_PRICE_USD);
       throw err;
@@ -160,7 +166,7 @@ Deno.serve(async (req) => {
 
     void logGeneration(callerId, caller.email, 'recraft-ai/recraft-v4-svg', 'vector', RECRAFT_V4_SVG_PRICE_USD);
 
-    return new Response(JSON.stringify(normalizeOutput(output)), {
+    return new Response(JSON.stringify(urls), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {

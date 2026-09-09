@@ -1,13 +1,15 @@
 // Deploy in Supabase Studio → Edge Functions → Create a new function → name it
 // "generate-chat" → paste this file → Deploy. Keep "Verify JWT" ON (default).
-// Secret needed: REPLICATE_API_KEY (Edge Functions → generate-chat → Secrets).
+// Secret needed: OPENROUTER_API_KEY (Edge Functions → generate-chat → Secrets;
+// openrouter.ai/settings/keys).
 // SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY — usually already set automatically for every Edge
 // Function in this project; only add them by hand if they're missing.
 
-import Replicate from 'npm:replicate';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY') ?? '';
+const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY') ?? '';
+const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const CHAT_MODEL = 'openai/gpt-5.6-terra';
 
 const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -18,7 +20,7 @@ const supabaseAdmin = createClient(
 // code (see the matching getCaller in generate-image/index.ts) rather than relying solely on
 // the Supabase dashboard's "Verify JWT" toggle for the function — this one was missing that
 // check entirely, which would let an unauthenticated caller who finds the function URL burn the
-// shared REPLICATE_API_KEY with no login and no rate limit. Matches the pattern everywhere else.
+// shared OPENROUTER_API_KEY with no login and no rate limit. Matches the pattern everywhere else.
 async function getCaller(req: Request): Promise<{ id: string; email: string } | null> {
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
   if (!token) return null;
@@ -52,7 +54,7 @@ const SUGGESTIONS_INSTRUCTIONS =
 
 const NODE_ASSISTANT_SYSTEM_PROMPT =
   'Ты — дружелюбный ИИ-ассистент внутри веб-приложения ONEFLOW — нод-редактора для ' +
-  'генерации фото и видео через различные нейросети (Replicate). Отвечай кратко, по делу, ' +
+  'генерации фото и видео через различные нейросети (OpenRouter). Отвечай кратко, по делу, ' +
   'на языке пользователя (по умолчанию на русском).\n\n' +
   'У тебя есть возможность самому создавать цепочки нод на холсте пользователя. Делай это ' +
   'ТОЛЬКО когда пользователь явно просит построить/создать/собрать ноды или цепочку ' +
@@ -112,10 +114,44 @@ const TEXT_CHAT_SYSTEM_PROMPT =
   DOCUMENT_INSTRUCTIONS +
   SUGGESTIONS_INSTRUCTIONS;
 
-function normalizeChatOutput(output: unknown): string {
-  if (typeof output === 'string') return output;
-  if (Array.isArray(output)) return output.map(String).join('');
-  return String(output);
+type ChatContentPart = { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } };
+
+// OpenRouter's chat completions endpoint is standard OpenAI-compatible messages[] — real
+// multi-turn chat, unlike the flattened single "prompt" string the old Replicate wrapper needed.
+// Reference images attach as image_url content parts on the last user turn (vision input).
+function buildOpenRouterMessages(
+  systemPrompt: string,
+  history: { role: 'user' | 'assistant'; content: string }[],
+  images: string[] | undefined
+): { role: string; content: string | ChatContentPart[] }[] {
+  const messages: { role: string; content: string | ChatContentPart[] }[] = [
+    { role: 'system', content: systemPrompt },
+  ];
+  const lastUserIndex = [...history].map((m) => m.role).lastIndexOf('user');
+  history.forEach((m, i) => {
+    if (images?.length && i === lastUserIndex) {
+      const parts: ChatContentPart[] = [{ type: 'text', text: m.content }];
+      for (const url of images) parts.push({ type: 'image_url', image_url: { url } });
+      messages.push({ role: m.role, content: parts });
+    } else {
+      messages.push({ role: m.role, content: m.content });
+    }
+  });
+  return messages;
+}
+
+async function callOpenRouterChat(messages: { role: string; content: unknown }[]): Promise<string> {
+  const res = await fetch(OPENROUTER_CHAT_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ model: CHAT_MODEL, messages }),
+  });
+  if (!res.ok) throw new Error(`OpenRouter chat error ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content ?? '';
 }
 
 Deno.serve(async (req) => {
@@ -136,21 +172,10 @@ Deno.serve(async (req) => {
       mode?: 'assistant' | 'text';
     } = await req.json();
     const { messages, images, mode } = body;
-    const transcript =
-      messages
-        .map((m) => `${m.role === 'user' ? 'Пользователь' : 'Ассистент'}: ${m.content}`)
-        .join('\n\n') + '\n\nАссистент:';
-    const input: Record<string, unknown> = {
-      prompt: transcript,
-      system_prompt: mode === 'text' ? TEXT_CHAT_SYSTEM_PROMPT : NODE_ASSISTANT_SYSTEM_PROMPT,
-    };
-    // Field name for vision input on this model isn't published in an exact
-    // machine-readable schema by Replicate; "image_input" matches the pattern used by the
-    // other multi-image Replicate models already wired in this app.
-    if (images?.length) input.image_input = images;
-    const replicate = new Replicate({ auth: REPLICATE_API_KEY });
-    const output = await replicate.run('openai/gpt-5.6-terra', { input });
-    return new Response(JSON.stringify(normalizeChatOutput(output)), {
+    const systemPrompt = mode === 'text' ? TEXT_CHAT_SYSTEM_PROMPT : NODE_ASSISTANT_SYSTEM_PROMPT;
+    const orMessages = buildOpenRouterMessages(systemPrompt, messages, images);
+    const reply = await callOpenRouterChat(orMessages);
+    return new Response(JSON.stringify(reply), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {

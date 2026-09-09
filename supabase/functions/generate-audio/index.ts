@@ -1,32 +1,39 @@
 // Deploy in Supabase Studio → Edge Functions → Create a new function → name it
 // "generate-audio" → paste this file → Deploy. Keep "Verify JWT" ON (default).
-// Secret needed: REPLICATE_API_KEY (Edge Functions → generate-audio → Secrets).
+// Secret needed: OPENROUTER_API_KEY (Edge Functions → generate-audio → Secrets;
+// openrouter.ai/settings/keys).
 // SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY are normally already set automatically.
 //
 // Backs the "Музыка и аудио" panel's two modes (see src/components/MusicAudioPanel.tsx):
-// music (minimax/music-2.5 — style prompt + lyrics) and speech (google/gemini-3.1-flash-tts —
-// phrase + delivery-style prompt + voice + language). Exact input field names for both models
-// aren't published in an exact machine-readable schema here — if Replicate rejects a field as
-// unexpected, its error message names the actual expected key; update buildAudioInput below to
-// match (and mirror the same change in electron/main.ts's copy for the desktop build).
+// speech uses OpenRouter's dedicated TTS endpoint (POST /api/v1/audio/speech, OpenAI-Audio-
+// compatible — returns raw MP3 bytes, not JSON). Music generation has no dedicated endpoint on
+// OpenRouter — it goes through google/lyria-3-pro-preview via the chat completions endpoint
+// with modalities:["text","audio"], returning base64 audio in choices[0].message.audio.data.
+// That response shape (and whether Lyria expects prompt+lyrics folded into one text message, as
+// done below) is not confirmed against a live call — if OpenRouter rejects the request or
+// returns something buildAudioInput/extractMusicAudio below doesn't expect, its error message
+// or the raw response shape names the fix needed (mirror any change in electron/main.ts's copy
+// for the desktop build).
 //
 // Requires the user_credits table and the reserve_credit_balance()/refund_credit_balance()
 // functions — see the SQL comment in lemonsqueezy-webhook/index.ts — and the generation_log
 // table — see the SQL comment in admin-list-generations/index.ts.
 
-import Replicate from 'npm:replicate';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY') ?? '';
+const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY') ?? '';
+const OPENROUTER_SPEECH_URL = 'https://openrouter.ai/api/v1/audio/speech';
+const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
-// Neither model publishes a fixed per-call USD rate — rough flat estimates, kept in sync by
-// hand with AUDIO_PRICE_USD in src/types.ts.
-const AUDIO_PRICE_USD: Record<'music' | 'speech', number> = { music: 0.2, speech: 0.02 };
+// google/lyria-3-pro-preview publishes a flat $0.08/song rate on OpenRouter, used directly for
+// music. Speech bills per token, not per call — kept in sync by hand with AUDIO_PRICE_USD in
+// src/types.ts.
+const AUDIO_PRICE_USD: Record<'music' | 'speech', number> = { music: 0.08, speech: 0.02 };
 
 async function getCaller(req: Request): Promise<{ id: string; email: string } | null> {
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
@@ -49,9 +56,9 @@ async function logGeneration(
   if (error) console.error('Failed to log generation', error);
 }
 
-// Hard stop: reserves costUsd from the caller's balance atomically, BEFORE the paid Replicate
+// Hard stop: reserves costUsd from the caller's balance atomically, BEFORE the paid OpenRouter
 // call — returns false (caller must reject with 402) if the balance can't cover it, so an
-// unpaid/exhausted account can no longer spend the shared Replicate key at all. Throws (letting
+// unpaid/exhausted account can no longer spend the shared OpenRouter key at all. Throws (letting
 // the outer catch produce a generic 500) on a genuine DB error, so that's never confused with a
 // real "insufficient balance" rejection.
 async function reserveBalance(userId: string, costUsd: number): Promise<boolean> {
@@ -80,8 +87,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const MUSIC_MODEL = 'minimax/music-2.5';
-const SPEECH_MODEL = 'google/gemini-3.1-flash-tts';
+const MUSIC_MODEL = 'google/lyria-3-pro-preview';
+const SPEECH_MODEL = 'google/gemini-3.1-flash-tts-preview';
 
 interface AudioBody {
   mode?: 'music' | 'speech';
@@ -93,43 +100,62 @@ interface AudioBody {
   language?: string;
 }
 
-function buildAudioInput(body: AudioBody): { model: string; input: Record<string, unknown> } {
-  if (body.mode === 'speech') {
-    // Gemini's native TTS takes a delivery-style instruction alongside the phrase itself
-    // (e.g. "say cheerfully: ..."); folding the style prompt into the text field is the most
-    // schema-agnostic way to pass both, regardless of whether this Replicate wrapper also
-    // exposes a separate style field.
-    const text = body.prompt ? `${body.prompt}: ${body.text ?? ''}` : (body.text ?? '');
-    return {
-      model: SPEECH_MODEL,
-      input: {
-        text,
-        voice: body.voice,
-        language: body.language,
-      },
-    };
+// Base64-encodes raw bytes without blowing the call stack on a large buffer (String.fromCharCode
+// with a giant spread arg fails on multi-MB audio) — chunked conversion.
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
   }
-  // No output-format field exists on this model at all (Replicate rejects `output_format` as
-  // an unexpected/extra field — confirmed by the "Prediction input failed validation" error
-  // this used to throw on every music generation) — its container format is fixed server-side,
-  // not caller-selectable. body.format is still accepted from the client (used client-side to
-  // name the downloaded file) but intentionally not forwarded here.
-  const input: Record<string, unknown> = {
-    prompt: body.prompt ?? '',
-    lyrics: body.lyrics ?? '',
-  };
-  return { model: MUSIC_MODEL, input };
+  return btoa(binary);
 }
 
-function normalizeAudioOutput(output: unknown): string {
-  if (typeof output === 'string') return output;
-  if (Array.isArray(output) && output.length > 0) return normalizeAudioOutput(output[0]);
-  if (output && typeof output === 'object') {
-    const anyOutput = output as { url?: unknown };
-    if (typeof anyOutput.url === 'function') return String((anyOutput.url as () => unknown)());
-    if (typeof anyOutput.url === 'string') return anyOutput.url;
-  }
-  return String(output);
+async function generateSpeech(body: AudioBody): Promise<string> {
+  // Gemini's native TTS takes a delivery-style instruction alongside the phrase itself
+  // (e.g. "say cheerfully: ..."); folding the style prompt into the text field is the most
+  // schema-agnostic way to pass both, regardless of whether this endpoint also exposes a
+  // separate style field.
+  const text = body.prompt ? `${body.prompt}: ${body.text ?? ''}` : (body.text ?? '');
+  const res = await fetch(OPENROUTER_SPEECH_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: SPEECH_MODEL,
+      input: text,
+      voice: body.voice,
+      language: body.language,
+      response_format: 'mp3',
+    }),
+  });
+  if (!res.ok) throw new Error(`OpenRouter speech error ${res.status}: ${await res.text()}`);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  return `data:audio/mpeg;base64,${bytesToBase64(bytes)}`;
+}
+
+async function generateMusic(body: AudioBody): Promise<string> {
+  const prompt = [body.prompt, body.lyrics ? `Lyrics:\n${body.lyrics}` : null].filter(Boolean).join('\n\n');
+  const res = await fetch(OPENROUTER_CHAT_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: MUSIC_MODEL,
+      modalities: ['text', 'audio'],
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  if (!res.ok) throw new Error(`OpenRouter music error ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  const audio = data.choices?.[0]?.message?.audio;
+  if (!audio?.data) throw new Error('OpenRouter music response had no audio data.');
+  const mediaType = typeof audio.format === 'string' ? `audio/${audio.format}` : 'audio/wav';
+  return `data:${mediaType};base64,${audio.data}`;
 }
 
 Deno.serve(async (req) => {
@@ -155,11 +181,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { model, input } = buildAudioInput(body);
-    const replicate = new Replicate({ auth: REPLICATE_API_KEY });
-    let output: unknown;
+    const isSpeech = body.mode === 'speech';
+    const model = isSpeech ? SPEECH_MODEL : MUSIC_MODEL;
+    let url: string;
     try {
-      output = await replicate.run(model, { input });
+      url = isSpeech ? await generateSpeech(body) : await generateMusic(body);
     } catch (err) {
       await refundBalance(callerId, costUsd);
       throw err;
@@ -167,7 +193,7 @@ Deno.serve(async (req) => {
 
     void logGeneration(callerId, caller.email, model, 'audio', costUsd);
 
-    return new Response(JSON.stringify({ url: normalizeAudioOutput(output) }), {
+    return new Response(JSON.stringify({ url }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {

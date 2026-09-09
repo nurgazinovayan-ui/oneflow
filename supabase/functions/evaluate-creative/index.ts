@@ -1,6 +1,7 @@
 // Deploy in Supabase Studio → Edge Functions → Create a new function → name it
 // "evaluate-creative" → paste this file → Deploy. Keep "Verify JWT" ON (default).
-// Secret needed: REPLICATE_API_KEY (Edge Functions → evaluate-creative → Secrets).
+// Secret needed: OPENROUTER_API_KEY (Edge Functions → evaluate-creative → Secrets;
+// openrouter.ai/settings/keys).
 // SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY are normally already set automatically.
 //
 // This is a heuristic design-quality read on an ad creative, not a statistical CTR
@@ -14,10 +15,11 @@
 // functions — see the SQL comment in lemonsqueezy-webhook/index.ts — and the generation_log
 // table — see the SQL comment in admin-list-generations/index.ts.
 
-import Replicate from 'npm:replicate';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY') ?? '';
+const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY') ?? '';
+const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const EVAL_MODEL = 'openai/gpt-5.6-terra';
 
 const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -50,9 +52,9 @@ async function logGeneration(
   if (error) console.error('Failed to log generation', error);
 }
 
-// Hard stop: reserves costUsd from the caller's balance atomically, BEFORE the paid Replicate
+// Hard stop: reserves costUsd from the caller's balance atomically, BEFORE the paid OpenRouter
 // call — returns false (caller must reject with 402) if the balance can't cover it, so an
-// unpaid/exhausted account can no longer spend the shared Replicate key at all. Throws (letting
+// unpaid/exhausted account can no longer spend the shared OpenRouter key at all. Throws (letting
 // the outer catch produce a generic 500) on a genuine DB error, so that's never confused with a
 // real "insufficient balance" rejection.
 async function reserveBalance(userId: string, costUsd: number): Promise<boolean> {
@@ -158,24 +160,38 @@ Deno.serve(async (req) => {
       `Количество вариантов: ${images.length}.`,
     ];
 
-    const replicate = new Replicate({ auth: REPLICATE_API_KEY });
-    let output: unknown;
+    const userContent: (
+      | { type: 'text'; text: string }
+      | { type: 'image_url'; image_url: { url: string } }
+    )[] = [{ type: 'text', text: promptLines.join(' ') }];
+    for (const url of images) userContent.push({ type: 'image_url', image_url: { url } });
+
+    let text: string;
     try {
-      output = await replicate.run('openai/gpt-5.6-terra', {
-        input: {
-          prompt: promptLines.join(' '),
-          system_prompt: SYSTEM_PROMPT,
-          image_input: images,
+      const res = await fetch(OPENROUTER_CHAT_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          model: EVAL_MODEL,
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: userContent },
+          ],
+        }),
       });
+      if (!res.ok) throw new Error(`OpenRouter chat error ${res.status}: ${await res.text()}`);
+      const data = await res.json();
+      text = data.choices?.[0]?.message?.content ?? '';
     } catch (err) {
       await refundBalance(callerId, costUsd);
       throw err;
     }
 
-    void logGeneration(callerId, caller.email, 'openai/gpt-5.6-terra', 'evaluate', costUsd);
+    void logGeneration(callerId, caller.email, EVAL_MODEL, 'evaluate', costUsd);
 
-    const text = Array.isArray(output) ? output.map(String).join('') : String(output);
     const parsed = extractJson(text) as {
       variants?: { score?: number; strengths?: string[]; weaknesses?: string[] }[];
       verdict?: string;

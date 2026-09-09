@@ -225,23 +225,33 @@ export interface GenerationLogEntry {
   costUsd: number;
 }
 
-// Replicate has no API that returns a prediction's real dollar cost — these are the
-// per-model rates Replicate publishes on each model's own pricing page, captured by hand.
-// Nano Banana Pro/2 and GPT Image 2 bill per output image at a rate that depends on
+// Neither Replicate nor OpenRouter has an API that returns a prediction's real dollar cost —
+// these are the per-model rates each provider publishes on its own pricing page, captured by
+// hand. Nano Banana Pro/2/Lite and GPT Image 2 bill per output image at a rate that depends on
 // resolution/quality; the video models bill per second of output at a rate that depends on
-// resolution. If Replicate changes a model's price, update the matching entry here (and the
-// duplicate copy in electron/main.ts, kept in sync by hand across compile roots).
+// resolution. gpt-image-2's auto/low/medium/high keys stay as-is (see the matching comment on
+// IMAGE_MODEL_META — shared with the Electron build) but now hold OpenRouter's 1K/2K/4K prices,
+// since the web build's generate-image Edge Function maps low/medium/high to those tiers; nano-
+// banana-pro's 2K/4K and nano-banana-2-lite's 2K/4K are derived from OpenRouter's per-model
+// Image Output token rate rather than independently confirmed. If a provider changes a model's
+// price, update the matching entry here (and the duplicate copy in electron/main.ts, kept in
+// sync by hand across compile roots — electron/main.ts still targets Replicate directly, not
+// migrated to OpenRouter, so its own copy of this table keeps the old Replicate rates).
 export const IMAGE_PRICE_USD: Record<string, Record<string, number> | number> = {
-  'google/nano-banana-pro': { '1K': 0.134, '2K': 0.134, '4K': 0.24 },
+  'google/nano-banana-pro': { '1K': 0.134, '2K': 0.202, '4K': 0.302 },
   'google/nano-banana-2': { '1K': 0.067, '2K': 0.101, '4K': 0.151 },
-  'openai/gpt-image-2': { auto: 0.08, low: 0.006, medium: 0.053, high: 0.211 },
+  'google/nano-banana-2-lite': { '1K': 0.034, '2K': 0.051, '4K': 0.076 },
+  'openai/gpt-image-2': { auto: 0.03, low: 0.03, medium: 0.05, high: 0.08 },
   'recraft-ai/recraft-v4-svg': 0.08,
 };
 
+// Seedance 2.0's 720p rate and Veo 3.1 Fast's 1080p rate are interpolated, not directly
+// confirmed on OpenRouter's own pricing page at the time this was written.
 export const VIDEO_PRICE_PER_SECOND_USD: Record<string, Record<string, number>> = {
-  'bytedance/seedance-2.0': { '480p': 0.15, '720p': 0.3 },
-  'bytedance/seedance-2.5': { '480p': 0.11, '720p': 0.24, '1080p': 0.4 },
+  'bytedance/seedance-2.0': { '480p': 0.067, '720p': 0.2 },
+  'bytedance/seedance-2.5': { '480p': 0.103, '720p': 0.231, '1080p': 0.4 },
   'kwaivgi/kling-v3-video': { '720p': 0.126, '1080p': 0.168 },
+  'google/veo-3.1-fast': { '720p': 0.1, '1080p': 0.15, '4K': 0.3 },
 };
 
 export function estimateImageCost(
@@ -263,12 +273,13 @@ export function estimateVideoCost(model: string, resolution: string, duration: n
   return perSecond * Math.max(1, duration);
 }
 
-// Neither minimax/music-2.5 nor google/gemini-3.1-flash-tts nor openai/gpt-5.6-terra (used by
-// evaluate-creative) publish a fixed per-call USD rate the way the image/video models above do —
-// these are rough flat estimates, not scraped from a pricing page. Adjust if Replicate's actual
-// billed amount for these calls turns out to differ meaningfully.
+// google/lyria-3-pro-preview publishes a flat $0.08/song rate on OpenRouter, used directly.
+// google/gemini-3.1-flash-tts-preview (speech) and openai/gpt-5.6-terra (used by evaluate-
+// creative) bill per token, not per call — speech stays a rough flat estimate, not scraped from
+// a pricing page. Adjust if OpenRouter's actual billed amount for these calls turns out to
+// differ meaningfully.
 export const AUDIO_PRICE_USD: Record<'music' | 'speech', number> = {
-  music: 0.2,
+  music: 0.08,
   speech: 0.02,
 };
 
@@ -431,6 +442,7 @@ export const DSP_URL = 'https://buy.kz.omniboard360.io/#/login';
 export const IMAGE_MODELS = [
   { label: 'Nano Banana Pro (Google, Gemini 3)', value: 'google/nano-banana-pro' },
   { label: 'Nano Banana 2 (Google, editing)', value: 'google/nano-banana-2' },
+  { label: 'Nano Banana 2 Lite (Google, fast)', value: 'google/nano-banana-2-lite' },
   { label: 'GPT Image 2 (OpenAI)', value: 'openai/gpt-image-2' },
 ] as const;
 
@@ -438,6 +450,7 @@ export const VIDEO_MODELS = [
   { label: 'Seedance 2.0 (ByteDance)', value: 'bytedance/seedance-2.0' },
   { label: 'Seedance 2.5 (ByteDance)', value: 'bytedance/seedance-2.5' },
   { label: 'Kling 3.0 (Kuaishou)', value: 'kwaivgi/kling-v3-video' },
+  { label: 'Veo 3.1 Fast (Google)', value: 'google/veo-3.1-fast' },
 ] as const;
 
 // Model-select dropdowns show just the name — the "(vendor, ...)" suffix on the labels above
@@ -452,10 +465,14 @@ export interface ImageModelMeta {
   resolutions: { label: string; value: string }[];
 }
 
-// Nano Banana Pro/2 take a "resolution" tier (1K/2K/4K); GPT Image 2 has no raw resolution
+// Nano Banana Pro/2/Lite take a "resolution" tier (1K/2K/4K); GPT Image 2 has no raw resolution
 // knob and instead controls output detail via "quality" — modeled here as the same UI
 // concept so the selector reads consistently across models. "Авто" preserves the previous
 // (pre-selector) behavior of leaving quality unset for GPT Image 2.
+// These auto/low/medium/high values are shared with the Electron build (electron/main.ts sends
+// them straight through as Replicate's own "quality" field) — the web build's generate-image
+// Edge Function translates them to OpenRouter's 1K/2K/4K resolution tiers at the call site
+// instead, so this stays unchanged rather than forking the shared dropdown per platform.
 export const IMAGE_MODEL_META: Record<string, ImageModelMeta> = {
   'google/nano-banana-pro': {
     resolutions: [
@@ -465,6 +482,13 @@ export const IMAGE_MODEL_META: Record<string, ImageModelMeta> = {
     ],
   },
   'google/nano-banana-2': {
+    resolutions: [
+      { label: '1K', value: '1K' },
+      { label: '2K', value: '2K' },
+      { label: '4K', value: '4K' },
+    ],
+  },
+  'google/nano-banana-2-lite': {
     resolutions: [
       { label: '1K', value: '1K' },
       { label: '2K', value: '2K' },
@@ -537,4 +561,6 @@ export const VIDEO_MODEL_META: Record<string, VideoModelMeta> = {
     resolutions: ['480p', '720p', '1080p'],
   },
   'kwaivgi/kling-v3-video': { maxDuration: 15, minDuration: 3, resolutions: ['720p', '1080p'] },
+  // Veo 3.1 Fast generates 4/6/8-second clips with native synchronized audio.
+  'google/veo-3.1-fast': { maxDuration: 8, minDuration: 4, resolutions: ['720p', '1080p', '4K'] },
 };
