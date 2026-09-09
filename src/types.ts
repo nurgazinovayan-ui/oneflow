@@ -597,13 +597,15 @@ export interface VideoModelMeta {
 }
 
 // Model used exclusively by the "Адаптация" node for AI-driven format adaptation.
-// GPT Image 2 only outputs 1:1 / 3:2 / 2:3 (no arbitrary width/height) — buildAdaptPrompt
-// tells it the exact target dimensions/shape so it recomposes hierarchy and elements with
-// that in mind, then a final local pass (coverResizeExact) crops to the exact requested
-// pixel size. For very extreme ratios (e.g. thin banners) some crop is unavoidable since the
-// model cannot natively draw that shape — black-forest-labs/flux-kontext-pro is the
-// alternative that accepts width/height directly if that becomes a problem again.
-export const ADAPT_MODEL = 'openai/gpt-image-2';
+// Unlike GPT Image 2 (fixed 1:1 / 3:2 / 2:3 tiers only), GPT Image 2.5 Sunburst accepts an
+// arbitrary width/height "size" directly (see generate-image/index.ts's clampGptImage25Size —
+// 16px-aligned edges, max 3840px, aspect ratio between 1:3 and 3:1, 655,360–8,294,400 total
+// pixels) and its "editing precision" upgrade holds the rest of the frame steadier across
+// re-layouts, so buildAdaptPrompt's target dimensions land much closer to exact than the old
+// aspect-ratio-bucket approach. A final local pass (coverResizeExact) still cleans up the
+// remainder — mainly extreme ratios past 3:1 that get clamped before the request, or the odd
+// few pixels off a 16px-rounded edge.
+export const ADAPT_MODEL = 'openai/gpt-image-2.5-sunburst';
 
 // Ad-platform preset keys map to electron/presets/<key>.txt (kept in sync by hand).
 export const ADAPT_PRESETS = [

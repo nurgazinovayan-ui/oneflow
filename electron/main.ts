@@ -1151,8 +1151,18 @@ ipcMain.handle(
     }
   ) => {
     const replicate = getReplicate();
-    const { model, prompt, aspectRatio, resolution, image, width, height, images, projectId, category } =
+    const { model: requestedModel, prompt, aspectRatio, resolution, image, width, height, images, projectId, category } =
       params;
+    // The "Адаптация" node's ADAPT_MODEL (src/types.ts) is shared between the web and desktop
+    // builds; the web build migrated it to openai/gpt-image-2.5-sunburst (OpenRouter, arbitrary
+    // width/height), which doesn't exist on Replicate. This build still targets Replicate
+    // directly and hasn't been migrated to OpenRouter, so fall back to the equivalent
+    // openai/gpt-image-2 here — same fixed aspect-ratio tiers as before this desktop build ever
+    // saw the newer model id.
+    const model =
+      requestedModel === 'openai/gpt-image-2.5-sunburst' || requestedModel === 'openai/gpt-image-2.5-flare'
+        ? 'openai/gpt-image-2'
+        : requestedModel;
     const input = buildImageInput(model, prompt, aspectRatio, image, width, height, images, resolution);
     const output = await runReplicateWithRetry(replicate, model as `${string}/${string}`, input);
     const outputs = normalizeOutput(output);

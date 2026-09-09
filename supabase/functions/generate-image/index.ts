@@ -205,6 +205,39 @@ function buildImageInput(
   return input;
 }
 
+// GPT Image 2.5 Sunburst/Flare accept an arbitrary "size" as WIDTHxHEIGHT instead of a fixed
+// aspect_ratio tier, but only within: both edges multiples of 16px, each edge at most 3840px,
+// aspect ratio between 1:3 and 3:1, and total pixels between 655,360 and 8,294,400. Clamped here
+// so the "Адаптация" node's arbitrary user-entered format sizes (see ADAPT_MODEL in
+// src/types.ts) never get rejected outright — extreme ratios past 3:1 (thin banners) still get
+// clamped to 3:1 and cleaned up by the client's local coverResizeExact crop afterward, same as
+// the old aspect-ratio-bucket approach already relied on for those cases. The pixel-count target
+// is nudged slightly inside the real 655,360–8,294,400 bounds, and the ratio is re-clamped after
+// 16px rounding, because rounding width/height independently can otherwise push either bound
+// back outside the API's limits by a few thousand pixels or a hundredth of the ratio.
+function clampGptImage25Size(width: number, height: number): { width: number; height: number } {
+  let w = width;
+  let h = height;
+  const ratio = w / h;
+  if (ratio > 3) w = h * 3;
+  else if (ratio < 1 / 3) h = w * 3;
+  const totalPixels = w * h;
+  if (totalPixels < 700000) {
+    const scale = Math.sqrt(700000 / totalPixels);
+    w *= scale;
+    h *= scale;
+  } else if (totalPixels > 8200000) {
+    const scale = Math.sqrt(8200000 / totalPixels);
+    w *= scale;
+    h *= scale;
+  }
+  let rw = Math.min(3840, Math.max(16, Math.round(w / 16) * 16));
+  let rh = Math.min(3840, Math.max(16, Math.round(h / 16) * 16));
+  if (rw / rh > 3) rw = Math.max(16, Math.round((rh * 3) / 16) * 16);
+  else if (rw / rh < 1 / 3) rh = Math.max(16, Math.round((rw * 3) / 16) * 16);
+  return { width: rw, height: rh };
+}
+
 // OpenRouter's Unified Image API (POST /api/v1/images) is the same request/response shape
 // across every image model it fronts — only the model slug and which optional fields a given
 // model honors differ (discoverable via GET /api/v1/images/models). Reference images for
@@ -216,7 +249,9 @@ function buildOpenRouterImageInput(
   aspectRatio: string,
   image?: string,
   images?: string[],
-  resolution?: string
+  resolution?: string,
+  width?: number,
+  height?: number
 ): Record<string, unknown> {
   const refImages = images && images.length > 0 ? images : image ? [image] : undefined;
   const supportedRatios: Record<string, string[]> = {
@@ -234,8 +269,13 @@ function buildOpenRouterImageInput(
   const input: Record<string, unknown> = {
     model: OPENROUTER_IMAGE_MODEL_SLUGS[model] ?? model,
     prompt,
-    aspect_ratio: mapToSupportedRatio(aspectRatio, supportedRatios[model] ?? ['1:1', '16:9', '9:16']),
   };
+  if (width && height && (model === 'openai/gpt-image-2.5-sunburst' || model === 'openai/gpt-image-2.5-flare')) {
+    const clamped = clampGptImage25Size(width, height);
+    input.size = `${clamped.width}x${clamped.height}`;
+  } else {
+    input.aspect_ratio = mapToSupportedRatio(aspectRatio, supportedRatios[model] ?? ['1:1', '16:9', '9:16']);
+  }
   if (refImages) input.input_references = refImages;
   if (resolution && resolution !== 'auto') {
     // GPT Image 2's client-facing values are still the old Replicate quality tiers
@@ -338,7 +378,7 @@ Deno.serve(async (req) => {
         const output = await runReplicateWithRetry(replicate, model, input);
         urls = normalizeOutput(output);
       } else {
-        const input = buildOpenRouterImageInput(model, prompt, aspectRatio, image, images, resolution);
+        const input = buildOpenRouterImageInput(model, prompt, aspectRatio, image, images, resolution, width, height);
         urls = await callOpenRouterImage(input);
       }
     } catch (err) {

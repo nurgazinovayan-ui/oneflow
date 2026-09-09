@@ -124,9 +124,11 @@ function AdaptNode({ id, data, selected }: NodeProps) {
       category: 'adapt',
     });
     incrementGenerations();
-    // Flux Kontext rounds width/height to the nearest multiple of 32, so the raw
-    // output can be off by up to ~16px per side — a final exact-size pass cleans
-    // that up without meaningfully cropping any composition.
+    // ADAPT_MODEL rounds width/height to the nearest multiple of 16 (and clamps extreme
+    // ratios/pixel counts — see clampGptImage25Size in generate-image/index.ts), so the raw
+    // output can be off by a handful of px per side or a slightly different ratio for very thin
+    // banners — a final exact-size pass cleans that up without meaningfully cropping the
+    // composition in the common case.
     const rawDataUrl = await window.api.fetchImageAsDataUrl(outputs[0]);
     return coverResizeExact(rawDataUrl, format.width, format.height);
   };
