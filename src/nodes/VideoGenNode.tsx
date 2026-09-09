@@ -77,12 +77,15 @@ function VideoGenNode({ id, data, selected }: NodeProps) {
     }
     updateNodeData(id, { status: 'loading', error: undefined });
     try {
+      // Older saved projects can carry a node from before the duration slider existed — its
+      // value would be undefined here, which the server can't forward to OpenRouter as-is.
+      const duration = Number.isFinite(nodeData.duration) ? nodeData.duration : (modelMeta.minDuration ?? 5);
       const outputs = await window.api.generateVideo({
         model: nodeData.model,
         prompt: effectivePrompt,
         image: connectedImage || undefined,
         aspectRatio: nodeData.aspectRatio,
-        duration: nodeData.duration,
+        duration,
         resolution: nodeData.resolution,
         projectId,
       });

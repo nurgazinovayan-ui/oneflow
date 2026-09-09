@@ -200,7 +200,11 @@ Deno.serve(async (req) => {
     const callerId = caller.id;
 
     const params = await req.json();
-    const { model, prompt, image, aspectRatio, duration, resolution } = params;
+    const { model, prompt, image, aspectRatio, resolution } = params;
+    // A stale client (old saved project predating this field, or a bad request) can send a
+    // missing/non-numeric duration — Math.round(undefined) is NaN, which JSON.stringify turns
+    // into null on the way to OpenRouter, and its schema rejects null outright with a 400.
+    const duration = Number.isFinite(params.duration) && params.duration > 0 ? params.duration : 5;
 
     const costUsd = estimateVideoCost(model, resolution, duration);
 
