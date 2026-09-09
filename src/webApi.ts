@@ -92,7 +92,6 @@ async function callFunction<T>(name: string, body: unknown): Promise<T> {
   });
   const data = await res.json();
   if (!res.ok) {
-    if (data?.code === 'insufficient_balance') throw new Error(t().errors.insufficientBalance);
     throw new Error(data?.error || t().errors.generationError);
   }
   return data as T;
@@ -241,24 +240,6 @@ export async function checkSubscriptionActive(session: {
     return isActiveStatus && notExpired;
   } catch {
     return false;
-  }
-}
-
-async function fetchCreditBalance(session: {
-  userId: string;
-  accessToken: string;
-}): Promise<number> {
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_credits?user_id=eq.${session.userId}&select=balance_usd`,
-      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${session.accessToken}` } }
-    );
-    if (!res.ok) return 0;
-    const rows: { balance_usd: number }[] = await res.json();
-    // No row yet means the account has never had a tariff payment credited — $0, not an error.
-    return rows[0]?.balance_usd ?? 0;
-  } catch {
-    return 0;
   }
 }
 
@@ -571,11 +552,9 @@ export function installWebApi(): void {
     openCheckout: (url) => {
       window.open(url, '_blank', 'noopener,noreferrer');
     },
-    getCreditBalance: async () => {
-      const session = await getValidSession();
-      if (!session) return 0;
-      return fetchCreditBalance(session);
-    },
+    // No more per-user balance to report — every generation is funded by the single shared
+    // OPENROUTER_API_KEY Edge Function secret, topped up directly at openrouter.ai.
+    getCreditBalance: async () => 0,
     getCheckoutUrl: async () => {
       if (!LEMONSQUEEZY_CHECKOUT_URL) return '';
       const session = await getValidSession();

@@ -4,9 +4,9 @@
 // openrouter.ai/settings/keys). SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are normally already
 // set automatically for Edge Functions.
 //
-// Requires the user_credits table and the reserve_credit_balance()/refund_credit_balance()
-// functions — see the SQL comment in lemonsqueezy-webhook/index.ts — the generation_log
-// table — see the SQL comment in admin-list-generations/index.ts — AND the
+// No per-user billing here — every generation is funded by the single shared
+// OPENROUTER_API_KEY, topped up directly at openrouter.ai. Requires the generation_log
+// table — see the SQL comment in admin-list-generations/index.ts (usage history only) — AND the
 // "ai-generated-videos" Storage bucket from supabase/migrations/202609090002_ai_video_bucket.sql
 // (OpenRouter's video content endpoint requires the shared API key on every request, so the
 // finished video is downloaded here and re-hosted as a plain public URL for the client).
@@ -62,32 +62,6 @@ async function logGeneration(
     .from('generation_log')
     .insert({ user_id: userId, email, model, category, cost_usd: costUsd });
   if (error) console.error('Failed to log generation', error);
-}
-
-// Hard stop: reserves costUsd from the caller's balance atomically, BEFORE the paid OpenRouter
-// call — returns false (caller must reject with 402) if the balance can't cover it, so an
-// unpaid/exhausted account can no longer spend the shared OpenRouter key at all. Throws (letting
-// the outer catch produce a generic 500) on a genuine DB error, so that's never confused with a
-// real "insufficient balance" rejection.
-async function reserveBalance(userId: string, costUsd: number): Promise<boolean> {
-  if (costUsd <= 0) return true;
-  const { data, error } = await supabaseAdmin.rpc('reserve_credit_balance', {
-    p_user_id: userId,
-    p_amount_usd: costUsd,
-  });
-  if (error) throw error;
-  return data !== null;
-}
-
-// Pairs with reserveBalance — called if the generation itself fails after a successful
-// reservation, so the user isn't left charged for nothing.
-async function refundBalance(userId: string, costUsd: number): Promise<void> {
-  if (costUsd <= 0) return;
-  const { error } = await supabaseAdmin.rpc('refund_credit_balance', {
-    p_user_id: userId,
-    p_amount_usd: costUsd,
-  });
-  if (error) console.error('Failed to refund credit balance', error);
 }
 
 // The web build is served from a different origin than *.supabase.co, so every browser call
@@ -230,23 +204,10 @@ Deno.serve(async (req) => {
 
     const costUsd = estimateVideoCost(model, resolution, duration);
 
-    if (!(await reserveBalance(callerId, costUsd))) {
-      return new Response(JSON.stringify({ error: 'Insufficient balance.', code: 'insufficient_balance' }), {
-        status: 402,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const input = buildVideoInput(model, prompt, image, aspectRatio, duration, resolution);
-    let url: string;
-    try {
-      const job = await submitOpenRouterVideoJob(input);
-      const completed = await pollOpenRouterVideoJob(job.id);
-      url = await downloadAndStoreVideo(completed.id ?? job.id);
-    } catch (err) {
-      await refundBalance(callerId, costUsd);
-      throw err;
-    }
+    const job = await submitOpenRouterVideoJob(input);
+    const completed = await pollOpenRouterVideoJob(job.id);
+    const url = await downloadAndStoreVideo(completed.id ?? job.id);
 
     void logGeneration(callerId, caller.email, model, 'video', costUsd);
 

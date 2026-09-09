@@ -12,134 +12,31 @@
 // users directly, since LemonSqueezy includes the buyer's email inline on the subscription
 // object already.)
 //
-// Also requires the user_credits/credit_events tables and the credit_user_once() function —
-// see the SQL block at the bottom of this comment. Run it once in Supabase Studio's SQL editor.
-//
 // Then in LemonSqueezy: Settings → Webhooks → Add webhook, URL = this function's URL (shown
 // in Supabase Studio after deploy, looks like
 // https://<project-ref>.functions.supabase.co/lemonsqueezy-webhook), and subscribe to at
 // least: subscription_created, subscription_updated, subscription_cancelled,
-// subscription_resumed, subscription_expired, subscription_paused, subscription_unpaused,
-// order_created, subscription_payment_success.
+// subscription_resumed, subscription_expired, subscription_paused, subscription_unpaused.
 //
-// order_created fires for a one-time purchase; subscription_payment_success fires each time a
-// recurring subscription charge succeeds. Both credit the buyer's user_credits.balance_usd at
-// 85% of the real amount charged (attributes.total, in cents) — a one-time top-up that
-// accumulates and never resets/expires, kept separate from the subscriptions status table
-// above (which only tracks active/cancelled/etc., not money). The 15% held back is the app's
-// margin: real Replicate usage is billed to the one shared owner API key regardless of who
-// generates, so this is what actually funds that account per paying user.
+// This function only tracks subscription *status* (the `subscriptions` table below) — used by
+// the toolbar's "Оформить подписку" upsell pill/avatar-menu item and by the desktop build's own
+// separate paywall check (see electron/main.ts). It no longer credits any internal per-user
+// balance: generation itself is funded entirely by the single shared OPENROUTER_API_KEY secret
+// on each generate-*/evaluate-creative function, topped up directly at openrouter.ai — there is
+// no more user_credits ledger to feed, so order_created/subscription_payment_success events are
+// intentionally left unhandled below (acknowledged with 200 so LemonSqueezy doesn't retry).
 //
-// SQL (run once):
+// If an older deploy of this project already created the now-unused user_credits/credit_events
+// tables and credit_user_once/reserve_credit_balance/refund_credit_balance/deduct_credit_balance
+// functions, they're harmless leftovers — nothing calls them anymore. Optional one-time cleanup
+// in Supabase Studio's SQL editor, if you want them gone:
 //
-//   create table if not exists user_credits (
-//     user_id uuid primary key references auth.users(id) on delete cascade,
-//     balance_usd numeric not null default 0,
-//     updated_at timestamptz default now()
-//   );
-//   alter table user_credits enable row level security;
-//   create policy "select own balance" on user_credits
-//     for select using (auth.uid() = user_id);
-//   -- No insert/update/delete policy — only Edge Functions (service-role client, which
-//   -- bypasses RLS) ever write to this table.
-//
-//   create table if not exists credit_events (
-//     event_id text primary key,
-//     user_id uuid not null references auth.users(id) on delete cascade,
-//     amount_usd numeric not null,
-//     created_at timestamptz default now()
-//   );
-//   alter table credit_events enable row level security;
-//   -- No policies — service-role only, same as user_credits. This table exists purely so a
-//   -- retried webhook delivery (same LemonSqueezy event id) can't double-credit a balance.
-//
-//   create or replace function credit_user_once(p_event_id text, p_user_id uuid, p_amount_usd numeric)
-//   returns boolean
-//   language plpgsql
-//   as $$
-//   begin
-//     insert into credit_events (event_id, user_id, amount_usd)
-//     values (p_event_id, p_user_id, p_amount_usd);
-//
-//     insert into user_credits (user_id, balance_usd)
-//     values (p_user_id, p_amount_usd)
-//     on conflict (user_id) do update
-//       set balance_usd = user_credits.balance_usd + p_amount_usd,
-//           updated_at = now();
-//
-//     return true;
-//   exception
-//     when unique_violation then
-//       return false;
-//   end;
-//   $$;
-//
-//   -- Superseded by reserve_credit_balance/refund_credit_balance below (the generate-*/
-//   -- evaluate-creative functions no longer call this one) — kept only so an already-deployed
-//   -- copy in the database doesn't need dropping.
-//   create or replace function deduct_credit_balance(p_user_id uuid, p_amount_usd numeric)
-//   returns numeric
-//   language plpgsql
-//   as $$
-//   declare
-//     new_balance numeric;
-//   begin
-//     update user_credits
-//       set balance_usd = greatest(balance_usd - p_amount_usd, 0),
-//           updated_at = now()
-//     where user_id = p_user_id
-//     returning balance_usd into new_balance;
-//     return coalesce(new_balance, 0);
-//   end;
-//   $$;
-//
-//   -- Atomic check-and-deduct: the security-review hard stop for point 2 ("лимиты на
-//   -- запросы") — called BEFORE the paid Replicate/OpenAI call in every generate-*/
-//   -- evaluate-creative function, instead of the old deduct_credit_balance's after-the-fact,
-//   -- always-succeeds (floors at 0) debit. The `and balance_usd >= p_amount_usd` clause makes
-//   -- this a single atomic statement: either it finds a row with enough balance and reserves
-//   -- it right there, or it matches no row (insufficient balance, OR the user has never been
-//   -- credited at all so no user_credits row exists yet) and returns null — the Edge Function
-//   -- reads null as "reject with 402" and never calls the paid API. Doing the check and the
-//   -- debit as one UPDATE (not a separate SELECT-then-UPDATE) is what avoids a race between two
-//   -- concurrent requests both reading a balance that only one of them can actually afford.
-//   create or replace function reserve_credit_balance(p_user_id uuid, p_amount_usd numeric)
-//   returns numeric
-//   language plpgsql
-//   as $$
-//   declare
-//     new_balance numeric;
-//   begin
-//     update user_credits
-//       set balance_usd = balance_usd - p_amount_usd,
-//           updated_at = now()
-//     where user_id = p_user_id
-//       and balance_usd >= p_amount_usd
-//     returning balance_usd into new_balance;
-//     return new_balance; -- null means insufficient balance (or no row at all) — caller must reject
-//   end;
-//   $$;
-//
-//   -- Pairs with reserve_credit_balance: called if the paid API call fails AFTER a successful
-//   -- reservation, so a failed generation doesn't leave the user permanently charged for
-//   -- nothing. Not the reverse of the >= guard above on purpose — a refund should always land,
-//   -- even if some other concurrent reservation has since dropped the balance below the
-//   -- refunded amount.
-//   create or replace function refund_credit_balance(p_user_id uuid, p_amount_usd numeric)
-//   returns numeric
-//   language plpgsql
-//   as $$
-//   declare
-//     new_balance numeric;
-//   begin
-//     update user_credits
-//       set balance_usd = balance_usd + p_amount_usd,
-//           updated_at = now()
-//     where user_id = p_user_id
-//     returning balance_usd into new_balance;
-//     return coalesce(new_balance, 0);
-//   end;
-//   $$;
+//   drop function if exists credit_user_once(text, uuid, numeric);
+//   drop function if exists deduct_credit_balance(uuid, numeric);
+//   drop function if exists reserve_credit_balance(uuid, numeric);
+//   drop function if exists refund_credit_balance(uuid, numeric);
+//   drop table if exists credit_events;
+//   drop table if exists user_credits;
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -215,32 +112,6 @@ Deno.serve(async (req) => {
       eventName,
       email: attributes.user_email,
     });
-    return new Response('ok', { status: 200 });
-  }
-
-  // order_created (one-time purchase) and subscription_payment_success (a recurring charge
-  // succeeding) are the only events that represent real money changing hands — credit 85% of
-  // the actual charged amount as a permanent balance top-up. Everything else below is
-  // subscription *status* bookkeeping, unrelated to the balance.
-  if (eventName === 'order_created' || eventName === 'subscription_payment_success') {
-    // 'paid' is the only status that means the charge actually succeeded — order_created can
-    // also fire for e.g. a $0 test order, and invoices can be created before payment clears.
-    if (attributes.status !== 'paid' || typeof attributes.total !== 'number') {
-      return new Response('ok', { status: 200 });
-    }
-    const totalUsd = attributes.total / 100;
-    const creditUsd = Math.round(totalUsd * 0.85 * 100) / 100;
-    const eventId = `${eventName}:${payload.data?.id ?? crypto.randomUUID()}`;
-
-    const { error } = await supabaseAdmin.rpc('credit_user_once', {
-      p_event_id: eventId,
-      p_user_id: userId,
-      p_amount_usd: creditUsd,
-    });
-    if (error) {
-      console.error('Failed to credit balance', error);
-      return new Response('error', { status: 500 });
-    }
     return new Response('ok', { status: 200 });
   }
 

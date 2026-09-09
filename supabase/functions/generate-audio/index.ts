@@ -15,9 +15,9 @@
 // or the raw response shape names the fix needed (mirror any change in electron/main.ts's copy
 // for the desktop build).
 //
-// Requires the user_credits table and the reserve_credit_balance()/refund_credit_balance()
-// functions — see the SQL comment in lemonsqueezy-webhook/index.ts — and the generation_log
-// table — see the SQL comment in admin-list-generations/index.ts.
+// No per-user billing here — every generation is funded by the single shared
+// OPENROUTER_API_KEY, topped up directly at openrouter.ai. Requires the generation_log table
+// — see the SQL comment in admin-list-generations/index.ts — for admin usage history only.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -54,32 +54,6 @@ async function logGeneration(
     .from('generation_log')
     .insert({ user_id: userId, email, model, category, cost_usd: costUsd });
   if (error) console.error('Failed to log generation', error);
-}
-
-// Hard stop: reserves costUsd from the caller's balance atomically, BEFORE the paid OpenRouter
-// call — returns false (caller must reject with 402) if the balance can't cover it, so an
-// unpaid/exhausted account can no longer spend the shared OpenRouter key at all. Throws (letting
-// the outer catch produce a generic 500) on a genuine DB error, so that's never confused with a
-// real "insufficient balance" rejection.
-async function reserveBalance(userId: string, costUsd: number): Promise<boolean> {
-  if (costUsd <= 0) return true;
-  const { data, error } = await supabaseAdmin.rpc('reserve_credit_balance', {
-    p_user_id: userId,
-    p_amount_usd: costUsd,
-  });
-  if (error) throw error;
-  return data !== null;
-}
-
-// Pairs with reserveBalance — called if the generation itself fails after a successful
-// reservation, so the user isn't left charged for nothing.
-async function refundBalance(userId: string, costUsd: number): Promise<void> {
-  if (costUsd <= 0) return;
-  const { error } = await supabaseAdmin.rpc('refund_credit_balance', {
-    p_user_id: userId,
-    p_amount_usd: costUsd,
-  });
-  if (error) console.error('Failed to refund credit balance', error);
 }
 
 const corsHeaders = {
@@ -174,22 +148,9 @@ Deno.serve(async (req) => {
     const body: AudioBody = await req.json();
     const costUsd = AUDIO_PRICE_USD[body.mode === 'speech' ? 'speech' : 'music'];
 
-    if (!(await reserveBalance(callerId, costUsd))) {
-      return new Response(JSON.stringify({ error: 'Insufficient balance.', code: 'insufficient_balance' }), {
-        status: 402,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const isSpeech = body.mode === 'speech';
     const model = isSpeech ? SPEECH_MODEL : MUSIC_MODEL;
-    let url: string;
-    try {
-      url = isSpeech ? await generateSpeech(body) : await generateMusic(body);
-    } catch (err) {
-      await refundBalance(callerId, costUsd);
-      throw err;
-    }
+    const url = isSpeech ? await generateSpeech(body) : await generateMusic(body);
 
     void logGeneration(callerId, caller.email, model, 'audio', costUsd);
 

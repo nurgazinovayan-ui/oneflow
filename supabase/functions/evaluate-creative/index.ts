@@ -11,9 +11,9 @@
 // variants against each other (relative judgment) is the more reliable use of this than
 // trusting any single absolute score.
 //
-// Requires the user_credits table and the reserve_credit_balance()/refund_credit_balance()
-// functions — see the SQL comment in lemonsqueezy-webhook/index.ts — and the generation_log
-// table — see the SQL comment in admin-list-generations/index.ts.
+// No per-user billing here — every generation is funded by the single shared
+// OPENROUTER_API_KEY, topped up directly at openrouter.ai. Requires the generation_log table
+// — see the SQL comment in admin-list-generations/index.ts — for admin usage history only.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -52,31 +52,6 @@ async function logGeneration(
   if (error) console.error('Failed to log generation', error);
 }
 
-// Hard stop: reserves costUsd from the caller's balance atomically, BEFORE the paid OpenRouter
-// call — returns false (caller must reject with 402) if the balance can't cover it, so an
-// unpaid/exhausted account can no longer spend the shared OpenRouter key at all. Throws (letting
-// the outer catch produce a generic 500) on a genuine DB error, so that's never confused with a
-// real "insufficient balance" rejection.
-async function reserveBalance(userId: string, costUsd: number): Promise<boolean> {
-  if (costUsd <= 0) return true;
-  const { data, error } = await supabaseAdmin.rpc('reserve_credit_balance', {
-    p_user_id: userId,
-    p_amount_usd: costUsd,
-  });
-  if (error) throw error;
-  return data !== null;
-}
-
-// Pairs with reserveBalance — called if the generation itself fails after a successful
-// reservation, so the user isn't left charged for nothing.
-async function refundBalance(userId: string, costUsd: number): Promise<void> {
-  if (costUsd <= 0) return;
-  const { error } = await supabaseAdmin.rpc('refund_credit_balance', {
-    p_user_id: userId,
-    p_amount_usd: costUsd,
-  });
-  if (error) console.error('Failed to refund credit balance', error);
-}
 
 // The web build is served from a different origin than *.supabase.co, so every browser call
 // here is cross-origin and triggers a CORS preflight (OPTIONS) first — without these headers
@@ -146,13 +121,6 @@ Deno.serve(async (req) => {
 
     const costUsd = PRICE_PER_IMAGE_USD * images.length;
 
-    if (!(await reserveBalance(callerId, costUsd))) {
-      return new Response(JSON.stringify({ error: 'Insufficient balance.', code: 'insufficient_balance' }), {
-        status: 402,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const promptLines = [
       body.platform
         ? `Площадка размещения: ${body.platform}.`
@@ -166,29 +134,23 @@ Deno.serve(async (req) => {
     )[] = [{ type: 'text', text: promptLines.join(' ') }];
     for (const url of images) userContent.push({ type: 'image_url', image_url: { url } });
 
-    let text: string;
-    try {
-      const res = await fetch(OPENROUTER_CHAT_URL, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: EVAL_MODEL,
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content: userContent },
-          ],
-        }),
-      });
-      if (!res.ok) throw new Error(`OpenRouter chat error ${res.status}: ${await res.text()}`);
-      const data = await res.json();
-      text = data.choices?.[0]?.message?.content ?? '';
-    } catch (err) {
-      await refundBalance(callerId, costUsd);
-      throw err;
-    }
+    const res = await fetch(OPENROUTER_CHAT_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: EVAL_MODEL,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userContent },
+        ],
+      }),
+    });
+    if (!res.ok) throw new Error(`OpenRouter chat error ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    const text: string = data.choices?.[0]?.message?.content ?? '';
 
     void logGeneration(callerId, caller.email, EVAL_MODEL, 'evaluate', costUsd);
 
