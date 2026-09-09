@@ -216,7 +216,9 @@ function clampGptImage25Size(width: number, height: number): { width: number; he
 // across every image model it fronts — only the model slug and which optional fields a given
 // model honors differ (discoverable via GET /api/v1/images/models). Reference images for
 // editing/variation go under input_references regardless of what Replicate called that field
-// for the same model ("image_input" / "input_images").
+// for the same model ("image_input" / "input_images"). Each entry must be an
+// { type: "image_url", image_url: { url } } object — a bare URL/data-URL string is rejected
+// with a Zod "expected object, received string" 400.
 function buildOpenRouterImageInput(
   model: string,
   prompt: string,
@@ -250,7 +252,9 @@ function buildOpenRouterImageInput(
   } else {
     input.aspect_ratio = mapToSupportedRatio(aspectRatio, supportedRatios[model] ?? ['1:1', '16:9', '9:16']);
   }
-  if (refImages) input.input_references = refImages;
+  if (refImages) {
+    input.input_references = refImages.map((url) => ({ type: 'image_url', image_url: { url } }));
+  }
   if (resolution && resolution !== 'auto') {
     // GPT Image 2's client-facing values are still the old Replicate quality tiers
     // (auto/low/medium/high — see the matching comment on IMAGE_MODEL_META in src/types.ts,
