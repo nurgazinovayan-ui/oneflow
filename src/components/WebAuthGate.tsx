@@ -3,6 +3,7 @@ import { setWebSession, type WebSession } from '../webAuthSession';
 import { installMockApiIfNeeded } from '../mockApi';
 import { useT } from '../i18n';
 import DomeGallery from './DomeGallery';
+import AuthAdvantageCards from './AuthAdvantageCards';
 import LegalModal from './LegalModal';
 import type { LegalDoc } from '../legalContent';
 import { IconEye, IconEyeOff } from './Icons';
@@ -391,7 +392,7 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
         </section>
 
         <section className="web-auth-media-side">
-          <video className="web-auth-bg-video" src="/login-bg.webm" autoPlay loop muted playsInline />
+          <AuthAdvantageCards />
         </section>
       </div>
       <div className="web-auth-footer">

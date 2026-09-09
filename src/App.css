@@ -2530,11 +2530,109 @@
   padding: 16px;
 }
 
-.web-auth-bg-video {
+/* Auto-advancing product-advantage carousel filling the media panel — matches
+   .web-auth-form-side's height for free since both are flex:1 siblings in the same
+   fixed-height .web-auth-card row (see AuthAdvantageCards.tsx). */
+.web-auth-advantages {
   width: 100%;
   height: 100%;
   border-radius: 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-panel-2);
+  border: 1px solid var(--c-divider);
+}
+
+.web-auth-advantage-image-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.web-auth-advantage-image {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  display: block;
+  animation: web-auth-advantage-fade 0.4s var(--ease);
+}
+
+@keyframes web-auth-advantage-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.web-auth-advantage-body {
+  padding: 20px 24px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.web-auth-advantage-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--c-text);
+  animation: web-auth-advantage-fade 0.4s var(--ease);
+}
+
+.web-auth-advantage-description {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--c-text-muted);
+  animation: web-auth-advantage-fade 0.4s var(--ease);
+}
+
+.web-auth-advantage-benefit {
+  margin: 4px 0 0;
+  align-self: flex-start;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--c-pink) 16%, transparent);
+  color: var(--c-pink);
+  font-size: 12px;
+  font-weight: 600;
+  animation: web-auth-advantage-fade 0.4s var(--ease);
+}
+
+.web-auth-advantage-dots {
+  display: flex;
+  gap: 6px;
+  padding: 14px 24px 18px;
+}
+
+.web-auth-advantage-dot {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--c-divider);
+  transition:
+    width 0.2s var(--ease),
+    background 0.2s var(--ease);
+}
+
+.web-auth-advantage-dot.active {
+  width: 18px;
+  background: var(--c-pink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .web-auth-advantage-image,
+  .web-auth-advantage-title,
+  .web-auth-advantage-description,
+  .web-auth-advantage-benefit {
+    animation: none;
+  }
 }
 
 @media (min-width: 768px) {

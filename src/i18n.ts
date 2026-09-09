@@ -696,6 +696,7 @@ export interface Translations {
     resetPasswordNeedsEmailError: string;
     switchToRegisterText: string;
     switchToLoginText: string;
+    advantages: { title: string; description: string; benefit: string; image: string; imageAlt: string }[];
   };
   paymentModal: {
     topBarBtn: string;
@@ -1642,6 +1643,64 @@ export const ru: Translations = {
     resetPasswordNeedsEmailError: 'Сначала введите email.',
     switchToRegisterText: 'Новый пользователь ONEFLOW?',
     switchToLoginText: 'Уже есть аккаунт?',
+    advantages: [
+      {
+        title: 'Генерация дешевле до 25%',
+        description: 'Вы не переплачиваете посредникам — больше бюджета остаётся на генерации.',
+        benefit: 'Больше возможностей за тот же бюджет.',
+        image: 'step-07.png',
+        imageAlt: 'До 25% экономии на генерации через ONEFLOW',
+      },
+      {
+        title: 'Всё для контента — здесь',
+        description: 'Изображения, видео, тексты и аудио в одном рабочем пространстве.',
+        benefit: 'Меньше переключений между сервисами.',
+        image: 'step-01.png',
+        imageAlt: 'Единое пространство для фото, видео, текста и аудио',
+      },
+      {
+        title: 'Соедините шаги в процесс',
+        description: 'Собирайте генерацию и обработку в цепочки из связанных блоков.',
+        benefit: 'Удобно повторять знакомые задачи.',
+        image: 'step-02.png',
+        imageAlt: 'Цепочка нод: исходник, генерация и результат',
+      },
+      {
+        title: 'Один визуал. Нужные форматы.',
+        description: 'Адаптируйте изображение для постов, сторис и рекламных баннеров.',
+        benefit: 'Меньше ручной подготовки макетов.',
+        image: 'step-03.png',
+        imageAlt: 'Один товар в квадратном, вертикальном и горизонтальном форматах',
+      },
+      {
+        title: 'От идеи к понятному плану',
+        description: 'Находите идеи в TRENDS, пишите тексты и собирайте стратегию.',
+        benefit: 'Понятнее, что создавать и зачем.',
+        image: 'step-04.png',
+        imageAlt: 'План кампании: аудитория, сообщение и каналы',
+      },
+      {
+        title: 'Сравните перед запуском',
+        description: 'Creative Predictor поможет сравнить визуалы и найти слабые места.',
+        benefit: 'Больше оснований для выбора креатива.',
+        image: 'step-05.png',
+        imageAlt: 'Сравнение двух креативов по читаемости и композиции',
+      },
+      {
+        title: 'Начните с фото товара',
+        description: 'Загрузите фото в One Launch и создайте карточки и рекламные креативы.',
+        benefit: 'Один исходник для разных материалов.',
+        image: 'step-06.png',
+        imageAlt: 'Фото товара превращается в карточку и рекламный баннер',
+      },
+      {
+        title: 'Ваш бюджет не сгорает',
+        description: 'Неиспользованный бюджет переносится на следующий месяц и остаётся доступным для генераций.',
+        benefit: 'Создавайте в своём темпе.',
+        image: 'step-08.png',
+        imageAlt: 'Остаток бюджета переходит на следующий месяц',
+      },
+    ],
   },
   paymentModal: {
     topBarBtn: 'Тариф',
@@ -2593,6 +2652,64 @@ export const en: Translations = {
     resetPasswordNeedsEmailError: 'Enter your email first.',
     switchToRegisterText: 'New to ONEFLOW?',
     switchToLoginText: 'Already have an account?',
+    advantages: [
+      {
+        title: 'Up to 25% cheaper generation',
+        description: "You're not overpaying middlemen — more of your budget goes to actual generations.",
+        benefit: 'More output for the same budget.',
+        image: 'step-07.png',
+        imageAlt: 'Up to 25% savings on generation with ONEFLOW',
+      },
+      {
+        title: 'Everything for content, in one place',
+        description: 'Images, video, text and audio in a single workspace.',
+        benefit: 'Fewer tabs, fewer tools to juggle.',
+        image: 'step-01.png',
+        imageAlt: 'One workspace for photo, video, text and audio',
+      },
+      {
+        title: 'Chain steps into a process',
+        description: 'Combine generation and processing into chains of connected blocks.',
+        benefit: 'Easy to repeat familiar tasks.',
+        image: 'step-02.png',
+        imageAlt: 'Node chain: source, generation and result',
+      },
+      {
+        title: 'One visual. Any format.',
+        description: 'Adapt one image for posts, stories and ad banners.',
+        benefit: 'Less manual layout prep.',
+        image: 'step-03.png',
+        imageAlt: 'One product in square, vertical and horizontal formats',
+      },
+      {
+        title: 'From idea to a clear plan',
+        description: 'Find ideas in TRENDS, write copy and build out a strategy.',
+        benefit: "Clearer what to create and why.",
+        image: 'step-04.png',
+        imageAlt: 'Campaign plan: audience, message and channels',
+      },
+      {
+        title: 'Compare before you launch',
+        description: 'Creative Predictor helps compare visuals and spot weak points.',
+        benefit: 'More grounds for picking a creative.',
+        image: 'step-05.png',
+        imageAlt: 'Two creatives compared on readability and composition',
+      },
+      {
+        title: 'Start from one product photo',
+        description: 'Upload a photo to One Launch and get product cards and ad creatives.',
+        benefit: 'One source photo, many materials.',
+        image: 'step-06.png',
+        imageAlt: 'A product photo becomes a card and an ad banner',
+      },
+      {
+        title: 'Your budget never expires',
+        description: 'Unused budget rolls over to next month and stays available for generations.',
+        benefit: 'Create at your own pace.',
+        image: 'step-08.png',
+        imageAlt: 'Leftover budget carries over to the next month',
+      },
+    ],
   },
   paymentModal: {
     topBarBtn: 'Plan',
