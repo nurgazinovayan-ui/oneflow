@@ -958,11 +958,11 @@
   background: #ffffff;
 }
 
-/* Copywrite engine / Generation only (see BLACK_TOPBAR_VIEWS in App.tsx) — their panels go black
-   in dark theme (by request), unlike .topbar-flat's other three modes which keep the light
-   canvas-bg "paper" look in both themes, so this needs to win over .topbar-flat's white above
-   rather than replace it (higher specificity via the compound selector, applied only in dark
-   theme so light theme's shared .topbar-flat white is untouched). */
+/* Same WHITE_TOPBAR_VIEWS set as .topbar-flat above (see App.tsx) — every one of those panels
+   goes black in dark theme instead of staying the light canvas-bg "paper" look (by request), so
+   this needs to win over .topbar-flat's white rather than replace it (higher specificity via the
+   compound selector, applied only in dark theme so light theme's shared .topbar-flat white is
+   untouched). */
 :root:not([data-theme='light']) .topbar.topbar-black {
   background: #000000;
 }
@@ -4809,6 +4809,13 @@
   overflow-y: auto;
 }
 
+/* Dark theme, by request: black instead of the shared light --c-canvas-bg "paper" — scoped to
+   this panel alone, same pattern as .canvas-area/.quick-gen-panel's own dark-theme overrides.
+   .evaluation-variant-card etc. already use theme-following colors that read fine against black. */
+:root:not([data-theme='light']) .evaluation-panel {
+  background: #000000;
+}
+
 .evaluation-hidden {
   display: none;
 }
@@ -5183,6 +5190,14 @@
   overflow-y: auto;
 }
 
+/* Dark theme, by request: black instead of the shared light --c-canvas-bg "paper" — scoped to
+   this panel alone, same pattern as .canvas-area/.quick-gen-panel/.evaluation-panel's own
+   dark-theme overrides. .onelaunch-hero-title/-subtitle above already read var(--c-text)/
+   var(--c-text-muted), so they stay legible against this without any further change. */
+:root:not([data-theme='light']) .onelaunch-panel {
+  background: #000000;
+}
+
 .onelaunch-hidden {
   display: none;
 }
@@ -5200,10 +5215,6 @@
 .onelaunch-hero {
   text-align: center;
   margin-bottom: 6px;
-  /* Sits directly on --c-canvas-bg (paper-light in both themes, see the comment below) — pin
-     --c-pink to its light-theme dark-gray value so .onelaunch-beta-tag's white text stays
-     readable on it instead of going white-on-near-white in dark mode. */
-  --c-pink: #52525b;
 }
 
 .onelaunch-beta-tag {
@@ -5212,28 +5223,27 @@
   padding: 3px 10px;
   border-radius: 999px;
   background: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
-/* Canvas-bg stays paper-light in both themes (see the --c-canvas-bg comment elsewhere in this
-   file), so text sitting directly on it — not inside a step card — needs a fixed dark color
-   rather than the theme-following var(--c-text), which would turn near-white and disappear in
-   dark mode. */
+/* .onelaunch-panel now follows the real theme (black in dark, light canvas-bg "paper" in light —
+   see its own dark-theme override), so text sitting directly on it — not inside a step card —
+   just reads var(--c-text)/var(--c-text-muted) normally instead of a fixed dark color. */
 .onelaunch-hero-title {
   font-size: 34px;
   font-weight: 900;
   letter-spacing: 0.01em;
-  color: #17171b;
+  color: var(--c-text);
 }
 
 .onelaunch-hero-subtitle {
   margin: 8px 0 0;
   font-size: 12.5px;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--c-text-muted);
 }
 
 /* Each step is its own frosted-glass plaque — same fixed dark "glow kit" material as
@@ -5245,8 +5255,10 @@
      app background), 0.62 alpha black only got partway to dark (~rgb(76,76,79)), too pale for
      the fixed light text/controls inside to read reliably against. */
   background: rgba(15, 15, 18, 0.88);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
+  /* Half of --radius-lg (20px), and a real thin gray border instead of the old barely-there
+     0.07-alpha box-shadow ring, both by request. */
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   padding: 22px 24px;
@@ -5851,6 +5863,14 @@
   flex-direction: column;
   background: var(--c-canvas-bg);
   overflow-y: auto;
+}
+
+/* Dark theme, by request: black instead of the shared light --c-canvas-bg "paper" — scoped to
+   this panel alone, same pattern as .canvas-area/.quick-gen-panel/.evaluation-panel/
+   .onelaunch-panel's own dark-theme overrides. .musicaudio-side/.musicaudio-mode-toolbar etc.
+   already use theme-following or fixed-dark colors that read fine against black. */
+:root:not([data-theme='light']) .musicaudio-panel {
+  background: #000000;
 }
 
 .musicaudio-hidden {

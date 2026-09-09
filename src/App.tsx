@@ -90,16 +90,14 @@ import { saveProjectToYandexDisk } from './webApi';
 import { formatGenerationError } from './errorMessages';
 import './App.css';
 
-// Modes whose panel is a flat white surface (see .topbar-flat in App.css) — the topbar row
-// above them gets the same flat white so there's no seam. Canvas/Strategy/Assets keep the
-// gray canvas-continuation look instead, so the topbar there stays transparent over the real
-// dot-grid canvas (or its gray flat-color siblings).
+// Modes whose panel is a flat surface (see .topbar-flat/.topbar-black in App.css) — the topbar
+// row above them matches so there's no seam. Canvas/Strategy/Assets keep the gray canvas-
+// continuation look instead, so the topbar there stays transparent over the real dot-grid
+// canvas (or its gray flat-color siblings). White in light theme; in dark theme every one of
+// these panels (.cw-panel, .quick-gen-panel, .evaluation-panel, .onelaunch-panel,
+// .musicaudio-panel, .trends-panel) goes black instead, by request, so .topbar-black applies to
+// the same set rather than a separate list.
 const WHITE_TOPBAR_VIEWS = new Set(['text', 'generate', 'onelaunch', 'musicaudio', 'evaluate', 'trends']);
-// Of those, Copywrite engine and Generation go black instead of white in dark theme (by
-// request — see .topbar-black in App.css), since their own panels (.cw-panel, .quick-gen-panel)
-// go black in dark theme too, unlike the other four WHITE_TOPBAR_VIEWS modes which keep the
-// light canvas-bg "paper" look in both themes.
-const BLACK_TOPBAR_VIEWS = new Set(['text', 'generate']);
 
 // LemonSqueezy subscription statuses that count as "has a subscription" for the avatar's ring
 // (see ProfileModal.tsx, which uses the same set for its own badge).
@@ -996,7 +994,7 @@ function Canvas() {
               transparent in canvas/strategy/assets modes so the real gray canvas continues
               behind it uninterrupted; gets a flat white fill (.topbar-flat) in the modes whose
               own panel is already flat white, so there's no seam between the two. */}
-          <div className={`topbar${WHITE_TOPBAR_VIEWS.has(mainView) ? ' topbar-flat' : ''}${BLACK_TOPBAR_VIEWS.has(mainView) ? ' topbar-black' : ''}`}>
+          <div className={`topbar${WHITE_TOPBAR_VIEWS.has(mainView) ? ' topbar-flat topbar-black' : ''}`}>
           {mainView === 'canvas' && (
           <div className="project-tabs">
             {projects.map((p) => (
