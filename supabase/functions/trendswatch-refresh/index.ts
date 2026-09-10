@@ -291,7 +291,18 @@ async function addAdvice(items: TrendItem[]): Promise<TrendItem[]> {
 // the last successful run, cron or manual.
 const MANUAL_REFRESH_COOLDOWN_MINUTES = 10;
 
-Deno.serve(async (_req) => {
+// The admin "Обновить"/"Refresh" button calls this function directly from the browser (not
+// server-to-server like cron/curl), so it needs CORS headers — without them the browser's
+// preflight OPTIONS request gets no Access-Control-Allow-* headers back and blocks the real
+// POST before it's ever sent, which looks like the button just hanging forever.
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
   try {
     const { data: lastRun } = await supabaseAdmin
       .from('trend_watch_items')
@@ -301,7 +312,7 @@ Deno.serve(async (_req) => {
       .maybeSingle();
     if (lastRun && Date.now() - new Date(lastRun.fetched_at).getTime() < MANUAL_REFRESH_COOLDOWN_MINUTES * 60_000) {
       return new Response(JSON.stringify({ inserted: 0, errors: [], skipped: 'cooldown' }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
       });
     }
 
@@ -358,13 +369,13 @@ Deno.serve(async (_req) => {
     if (errors.length > 0) console.error('trendswatch-refresh partial failures', errors);
 
     return new Response(JSON.stringify({ inserted: withAdvice.length, errors }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
     });
   } catch (err) {
     console.error('trendswatch-refresh failed', err);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
     });
   }
 });
