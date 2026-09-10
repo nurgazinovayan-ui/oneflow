@@ -4,6 +4,7 @@ import { ASPECT_RATIOS, modelShortName } from '../types';
 import { IconImage, IconVideo, IconClose, IconCopy, IconFlow, IconSparkles } from './Icons';
 import { getCatalog, PAGE_SIZE, makeLaunch, resolveModel, supportedModels, safeMediaUrl, safeSourceUrl,
   type TrendPrompt, type TrendLaunch, type CatalogPage } from '../trends/catalog';
+import TrendsWatchPanel from './TrendsWatchPanel';
 
 type Props = { active: boolean; demo: boolean; storageScope: string;
   onUse: (request: TrendLaunch) => void; onNodes: (request: TrendLaunch) => void };
@@ -72,6 +73,7 @@ function Details({ item, onClose, onUse, onNodes }: { item: TrendPrompt; onClose
 
 export default function TrendsPanel({ active, demo, storageScope, onUse, onNodes }: Props) {
   const t = useT().trends;
+  const [view, setView] = useState<'watch' | 'catalog'>('watch');
   const storageKey = `oneflow-trends-saved:${storageScope}`;
   const [saved, setSaved] = useState<string[]>(() => {
     try { const value = JSON.parse(localStorage.getItem(storageKey) ?? '[]'); return Array.isArray(value) ? value.filter(v => typeof v === 'string') : []; }
@@ -96,7 +98,7 @@ export default function TrendsPanel({ active, demo, storageScope, onUse, onNodes
   useEffect(() => { const timer = window.setTimeout(() => { setSearch(query.trim()); setOffset(0); }, 250); return () => clearTimeout(timer); }, [query]);
   const idsKey = onlySaved ? JSON.stringify(saved) : 'null';
   useEffect(() => {
-    if (!active) return;
+    if (!active || view !== 'catalog') return;
     const key = JSON.stringify([demo, search, kind, model, category, collection, sort, offset, idsKey, retry]);
     if (cacheKey.current === key) return;
     const controller = new AbortController();
@@ -109,7 +111,7 @@ export default function TrendsPanel({ active, demo, storageScope, onUse, onNodes
       .catch(() => { if (!controller.signal.aborted) setError(true); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [active, demo, search, kind, model, category, collection, sort, offset, idsKey, retry]);
+  }, [active, view, demo, search, kind, model, category, collection, sort, offset, idsKey, retry]);
   const favorite = (id: string) => {
     const next = saved.includes(id) ? saved.filter(v => v !== id) : [...saved, id];
     setSaved(next); setFavoriteError(false);
@@ -121,41 +123,48 @@ export default function TrendsPanel({ active, demo, storageScope, onUse, onNodes
   return <section className="trends-panel" hidden={!active} aria-label={t.heading}>
     <header className="trends-toolbar">
       <h1>{t.heading}</h1>
-      <input type="search" aria-label={t.search} placeholder={t.search} value={query} onChange={e => setQuery(e.target.value)} />
-      <button aria-pressed={onlySaved} onClick={() => { setOnlySaved(v => !v); setOffset(0); }}>☆ {t.saved} ({saved.length})</button>
-    </header>
-    <section className="trends-filters" aria-label={t.categories}>
-      <nav className="trends-kind" aria-label={t.all}>
-        {[['', t.all], ['image', t.image], ['video', t.video]].map(([value, label]) =>
-          <button key={value} aria-pressed={kind === value} onClick={() => select(setKind, value)}>{label}</button>)}
+      <nav className="trends-view-tabs" aria-label={t.heading}>
+        <button aria-pressed={view === 'watch'} onClick={() => setView('watch')}>{t.watchTab}</button>
+        <button aria-pressed={view === 'catalog'} onClick={() => setView('catalog')}>{t.catalogTab}</button>
       </nav>
-      <select aria-label={t.models} value={model} onChange={e => select(setModel, e.target.value)}><option value="">{t.models}</option>{page?.facets.models.map(v => <option key={v}>{v}</option>)}</select>
-      <select aria-label={t.categories} value={category} onChange={e => select(setCategory, e.target.value)}><option value="">{t.categories}</option>{page?.facets.categories.map(v => <option key={v}>{v}</option>)}</select>
-      <select aria-label={t.collections} value={collection} onChange={e => select(setCollection, e.target.value)}><option value="">{t.collections}</option>{page?.facets.collections.map(v => <option key={v}>{v}</option>)}</select>
-      <select aria-label={t.newest} value={sort} onChange={e => select(setSort, e.target.value)}><option value="newest">{t.newest}</option><option value="popular">{t.popular}</option></select>
-    </section>
-    <section className="trends-scroll" aria-busy={loading}>
-      {demo && <p className="trends-notice">{t.demo}</p>}
-      {favoriteError && <p role="status">{t.favoriteError}</p>}
-      {loading ? <p role="status" className="trends-state">{t.loading}</p> : error ? <section className="trends-state" role="alert"><p>{t.error}</p><button onClick={() => setRetry(v => v + 1)}>{t.retry}</button></section> : page && <>
-        <p className="trends-meta" role="status">{t.results(page.total)}</p>
-        {!page.items.length && <section className="trends-state"><p>{t.empty}</p><button onClick={reset}>{t.reset}</button></section>}
-        <section className="trends-grid">
-          {page.items.map(item => <article className="trends-card" key={item.id}>
-            <button className="trends-card-open" onClick={() => setSelected(item)} aria-label={`${t.details}: ${item.title}`}>
-              <figure><Preview item={item} active={active} /></figure>
-              <h2>{item.title}</h2><p className="trends-meta">{item.kind === 'video' ? <IconVideo /> : <IconImage />}{item.model}</p>
-            </button>
-            <footer><p className="trends-meta">{item.categories.slice(0, 2).join(' / ')}</p><button className="trends-save" aria-pressed={saved.includes(item.id)} aria-label={saved.includes(item.id) ? t.unsave : t.save} onClick={() => favorite(item.id)}>{saved.includes(item.id) ? '★' : '☆'}</button></footer>
-          </article>)}
-        </section>
-        {page.total > PAGE_SIZE && <nav className="trends-pagination" aria-label={t.next}>
-          <button disabled={offset === 0} onClick={() => setOffset(v => Math.max(0, v - PAGE_SIZE))}>{t.previous}</button>
-          <p>{t.page(Math.floor(offset / PAGE_SIZE) + 1, Math.ceil(page.total / PAGE_SIZE))}</p>
-          <button disabled={offset + PAGE_SIZE >= page.total} onClick={() => setOffset(v => v + PAGE_SIZE)}>{t.next}</button>
-        </nav>}
-      </>}
-    </section>
-    {active && selected && <Details key={selected.id} item={selected} onClose={() => setSelected(null)} onUse={onUse} onNodes={onNodes} />}
+      {view === 'catalog' && <input type="search" aria-label={t.search} placeholder={t.search} value={query} onChange={e => setQuery(e.target.value)} />}
+      {view === 'catalog' && <button aria-pressed={onlySaved} onClick={() => { setOnlySaved(v => !v); setOffset(0); }}>☆ {t.saved} ({saved.length})</button>}
+    </header>
+    <TrendsWatchPanel active={active && view === 'watch'} />
+    {view === 'catalog' && <>
+      <section className="trends-filters" aria-label={t.categories}>
+        <nav className="trends-kind" aria-label={t.all}>
+          {[['', t.all], ['image', t.image], ['video', t.video]].map(([value, label]) =>
+            <button key={value} aria-pressed={kind === value} onClick={() => select(setKind, value)}>{label}</button>)}
+        </nav>
+        <select aria-label={t.models} value={model} onChange={e => select(setModel, e.target.value)}><option value="">{t.models}</option>{page?.facets.models.map(v => <option key={v}>{v}</option>)}</select>
+        <select aria-label={t.categories} value={category} onChange={e => select(setCategory, e.target.value)}><option value="">{t.categories}</option>{page?.facets.categories.map(v => <option key={v}>{v}</option>)}</select>
+        <select aria-label={t.collections} value={collection} onChange={e => select(setCollection, e.target.value)}><option value="">{t.collections}</option>{page?.facets.collections.map(v => <option key={v}>{v}</option>)}</select>
+        <select aria-label={t.newest} value={sort} onChange={e => select(setSort, e.target.value)}><option value="newest">{t.newest}</option><option value="popular">{t.popular}</option></select>
+      </section>
+      <section className="trends-scroll" aria-busy={loading}>
+        {demo && <p className="trends-notice">{t.demo}</p>}
+        {favoriteError && <p role="status">{t.favoriteError}</p>}
+        {loading ? <p role="status" className="trends-state">{t.loading}</p> : error ? <section className="trends-state" role="alert"><p>{t.error}</p><button onClick={() => setRetry(v => v + 1)}>{t.retry}</button></section> : page && <>
+          <p className="trends-meta" role="status">{t.results(page.total)}</p>
+          {!page.items.length && <section className="trends-state"><p>{t.empty}</p><button onClick={reset}>{t.reset}</button></section>}
+          <section className="trends-grid">
+            {page.items.map(item => <article className="trends-card" key={item.id}>
+              <button className="trends-card-open" onClick={() => setSelected(item)} aria-label={`${t.details}: ${item.title}`}>
+                <figure><Preview item={item} active={active} /></figure>
+                <h2>{item.title}</h2><p className="trends-meta">{item.kind === 'video' ? <IconVideo /> : <IconImage />}{item.model}</p>
+              </button>
+              <footer><p className="trends-meta">{item.categories.slice(0, 2).join(' / ')}</p><button className="trends-save" aria-pressed={saved.includes(item.id)} aria-label={saved.includes(item.id) ? t.unsave : t.save} onClick={() => favorite(item.id)}>{saved.includes(item.id) ? '★' : '☆'}</button></footer>
+            </article>)}
+          </section>
+          {page.total > PAGE_SIZE && <nav className="trends-pagination" aria-label={t.next}>
+            <button disabled={offset === 0} onClick={() => setOffset(v => Math.max(0, v - PAGE_SIZE))}>{t.previous}</button>
+            <p>{t.page(Math.floor(offset / PAGE_SIZE) + 1, Math.ceil(page.total / PAGE_SIZE))}</p>
+            <button disabled={offset + PAGE_SIZE >= page.total} onClick={() => setOffset(v => v + PAGE_SIZE)}>{t.next}</button>
+          </nav>}
+        </>}
+      </section>
+      {active && selected && <Details key={selected.id} item={selected} onClose={() => setSelected(null)} onUse={onUse} onNodes={onNodes} />}
+    </>}
   </section>;
 }

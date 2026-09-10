@@ -1,5 +1,5 @@
 export const trendsRu = {
-  heading: 'TRENDS', search: 'Поиск идей и промптов', all: 'Все', image: 'Изображения', video: 'Видео',
+  heading: 'TRENDSWATCHING', search: 'Поиск идей и промптов', all: 'Все', image: 'Изображения', video: 'Видео',
   models: 'Все модели', categories: 'Все категории', collections: 'Все подборки', newest: 'Новые', popular: 'Популярные',
   saved: 'Избранное', save: 'Сохранить', unsave: 'Убрать из избранного', loading: 'Загружаем промпты…',
   empty: 'По этим фильтрам промптов пока нет.', reset: 'Сбросить фильтры', error: 'Не удалось загрузить каталог.', retry: 'Повторить',
@@ -12,9 +12,14 @@ export const trendsRu = {
   ratio: 'Формат', ratioFallback: 'Этот формат отсутствует в списке ONEFLOW. Будет выбран стандартный формат; его можно изменить перед запуском.',
   favoriteError: 'Не удалось сохранить избранное на этом устройстве.',
   results: (total: number) => `${total} промптов`, page: (page: number, pages: number) => `${page} / ${pages}`,
+  watchTab: 'Соцсети', catalogTab: 'Шаблоны промптов',
+  watchAllPlatforms: 'Все площадки', watchLoading: 'Собираем тренды…', watchError: 'Не удалось загрузить тренды.',
+  watchEmpty: 'Трендов пока нет — первый сбор ещё не запускался или идёт прямо сейчас.',
+  watchUpdated: (date: string) => `Обновлено: ${date}`, watchAdviceLabel: 'Совет ИИ:', watchOpenSource: 'Открыть источник',
+  watchNoVideoBadge: 'Без видео',
 };
 export const trendsEn: typeof trendsRu = {
-  heading: 'TRENDS', search: 'Search ideas and prompts', all: 'All', image: 'Images', video: 'Video',
+  heading: 'TRENDSWATCHING', search: 'Search ideas and prompts', all: 'All', image: 'Images', video: 'Video',
   models: 'All models', categories: 'All categories', collections: 'All collections', newest: 'Newest', popular: 'Popular',
   saved: 'Saved', save: 'Save', unsave: 'Remove from saved', loading: 'Loading prompts…',
   empty: 'No prompts match these filters.', reset: 'Reset filters', error: 'Could not load the catalog.', retry: 'Retry',
@@ -27,4 +32,9 @@ export const trendsEn: typeof trendsRu = {
   ratio: 'Aspect ratio', ratioFallback: 'This ratio is not in the ONEFLOW list. A default will be used; you can change it before generating.',
   favoriteError: 'Could not save favorites on this device.',
   results: (total: number) => `${total} prompts`, page: (page: number, pages: number) => `${page} / ${pages}`,
+  watchTab: 'Social', catalogTab: 'Prompt templates',
+  watchAllPlatforms: 'All platforms', watchLoading: 'Gathering trends…', watchError: 'Could not load trends.',
+  watchEmpty: 'No trends yet — the first collection run hasn’t happened, or is running right now.',
+  watchUpdated: (date: string) => `Updated: ${date}`, watchAdviceLabel: 'AI tip:', watchOpenSource: 'Open source',
+  watchNoVideoBadge: 'No video',
 };
