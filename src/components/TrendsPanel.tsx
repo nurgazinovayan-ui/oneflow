@@ -24,6 +24,7 @@ interface TrendWatchItem {
   stats: { views?: number; likes?: number; shares?: number; comments?: number } | null;
   ai_advice: string | null;
   popularity_score: number;
+  region_rank: number;
   fetch_date: string;
   fetched_at: string;
 }
@@ -169,7 +170,8 @@ export default function TrendsPanel({ active, authEmail }: { active: boolean; au
     setError(false);
     const params = new URLSearchParams({
       select: '*',
-      order: 'popularity_score.desc,fetched_at.desc',
+      // CIS first, then Europe, then America (region_rank), most popular first inside each.
+      order: 'region_rank.asc,popularity_score.desc',
       limit: '500',
       fetch_date: `gte.${cutoffDate(RANGE_DAYS[range])}`,
     });

@@ -43,6 +43,8 @@
 //     stats jsonb not null default '{}'::jsonb,
 //     ai_advice text,
 //     popularity_score numeric not null default 0,
+//     region text not null default 'unknown',
+//     region_rank smallint not null default 4,
 //     fetch_date date not null default current_date,
 //     fetched_at timestamptz not null default now()
 //   );
@@ -54,10 +56,12 @@
 //   -- so an open select is fine; only this function (service role) ever writes here.
 //   create index if not exists trend_watch_items_fetch_date_idx on public.trend_watch_items (fetch_date desc);
 //   create index if not exists trend_watch_items_platform_idx on public.trend_watch_items (platform);
-//   create index if not exists trend_watch_items_popularity_idx on public.trend_watch_items (fetch_date desc, popularity_score desc);
+//   create index if not exists trend_watch_items_rank_idx on public.trend_watch_items (fetch_date desc, region_rank, popularity_score desc);
 //
-// Upgrading an already-deployed table (adds the column the two lines above depend on):
+// Upgrading an already-deployed table (adds the columns the index above depends on):
 //   alter table public.trend_watch_items add column if not exists popularity_score numeric not null default 0;
+//   alter table public.trend_watch_items add column if not exists region text not null default 'unknown';
+//   alter table public.trend_watch_items add column if not exists region_rank smallint not null default 4;
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -76,6 +80,7 @@ const supabaseAdmin = createClient(
 );
 
 type Platform = 'tiktok' | 'instagram' | 'threads';
+type Region = 'cis' | 'europe' | 'america' | 'unknown';
 
 interface TrendItem {
   platform: Platform;
@@ -87,20 +92,45 @@ interface TrendItem {
   author?: string | null;
   stats?: Record<string, number>;
   ai_advice?: string;
+  region: Region;
 }
 
-const MAX_ITEMS_PER_PLATFORM = 18;
+// Region priority for the feed: CIS first, then Europe, then America. Stored as region_rank so
+// the panel can order by it before popularity (order=region_rank.asc,popularity_score.desc)
+// rather than mixing region into the score itself, which would make the score unreadable.
+const REGION_RANK: Record<Region, number> = { cis: 1, europe: 2, america: 3, unknown: 4 };
+
+// What actually counts as a "trend" — engagement, NOT which hashtag it happened to appear under.
+// Anything under MIN_LIKES is an ordinary post, not a trend, and never gets stored.
+const MIN_LIKES = 80_000;
+// Second gate: a post can clear 80k likes purely off a huge follower count while barely engaging
+// anyone. Only applied when the source actually reports view counts (Threads never does, and some
+// Instagram posts don't) — no views means this check is skipped rather than failing the item.
+const MIN_ENGAGEMENT_RATE = 0.05;
+
 // The panel's own period filter shows "up to 50/day, most popular first" as its retention
-// promise — enforced here (not just by keeping MAX_ITEMS_PER_PLATFORM * 3 low) so it holds even
-// if this function ends up invoked more than once for the same day.
+// promise — enforced below so it holds even if this function is invoked more than once a day.
 const MAX_ITEMS_PER_DAY = 50;
 
 // likes + reposts (weighted higher — the stronger virality signal) + comments; the same formula
-// used to rank cards in the panel (order=popularity_score.desc) and to decide which items survive
-// the MAX_ITEMS_PER_DAY trim below.
+// used to rank cards within a region in the panel and to decide which items survive the
+// MAX_ITEMS_PER_DAY trim below.
 function popularityScore(stats: Record<string, number> | undefined): number {
   if (!stats) return 0;
   return (stats.likes ?? 0) + (stats.shares ?? 0) * 3 + (stats.comments ?? 0) * 2;
+}
+
+// The real trend gate. Deliberately applied to scraped platforms only (TikTok/Instagram) — see
+// fetchThreadsTrends, which has no engagement numbers to gate on at all.
+function isTrend(stats: Record<string, number> | undefined): boolean {
+  const likes = stats?.likes ?? 0;
+  if (likes < MIN_LIKES) return false;
+  const views = stats?.views ?? 0;
+  if (views > 0) {
+    const engaged = likes + (stats?.comments ?? 0) + (stats?.shares ?? 0);
+    if (engaged / views < MIN_ENGAGEMENT_RATE) return false;
+  }
+  return true;
 }
 
 async function runApifyActor(actorId: string, input: Record<string, unknown>): Promise<unknown[]> {
@@ -117,62 +147,122 @@ async function runApifyActor(actorId: string, input: Record<string, unknown>): P
   return Array.isArray(data) ? data : [];
 }
 
-async function fetchTikTokTrends(): Promise<TrendItem[]> {
+// One call per region — this actor reads TikTok's own Trend Discovery, which is inherently
+// per-country, so there's no way to ask it for "CIS + Europe + US" in a single run. The CIS call
+// gets the largest quota because that's the feed's first-priority region.
+//
+// The `region` field name (and the country codes it accepts) is this integration's best guess at
+// the actor's current input shape, NOT confirmed against a live run — same caveat as the rest of
+// this file. If a run errors or comes back empty, open apify.com/clockworks/tiktok-trends-scraper
+// → Input to see the field's real name/allowed values and fix it here.
+const TIKTOK_REGIONS: { code: string; region: Region; limit: number }[] = [
+  { code: 'KZ', region: 'cis', limit: 12 },
+  { code: 'DE', region: 'europe', limit: 8 },
+  { code: 'US', region: 'america', limit: 6 },
+];
+
+async function fetchTikTokRegion(code: string, region: Region, limit: number): Promise<TrendItem[]> {
   const items = await runApifyActor('clockworks~tiktok-trends-scraper', {
-    resultsPerPage: MAX_ITEMS_PER_PLATFORM,
+    region: code,
+    resultsPerPage: limit,
   });
-  return items.slice(0, MAX_ITEMS_PER_PLATFORM).map((raw): TrendItem => {
-    const item = raw as Record<string, unknown>;
-    const author = item.authorMeta as Record<string, unknown> | undefined;
-    const video = item.videoMeta as Record<string, unknown> | undefined;
-    return {
-      platform: 'tiktok',
-      title: String(item.text ?? item.desc ?? 'TikTok trend').slice(0, 200),
-      video_url: (video?.downloadAddr as string) ?? (item.videoUrl as string) ?? null,
-      thumbnail_url:
-        (video?.coverUrl as string) ?? ((item.covers as Record<string, string> | undefined)?.default ?? null),
-      source_url: (item.webVideoUrl as string) ?? null,
-      author: (author?.name as string) ?? (author?.nickName as string) ?? null,
-      stats: {
-        views: Number(item.playCount ?? 0),
-        likes: Number(item.diggCount ?? 0),
-        shares: Number(item.shareCount ?? 0),
-        comments: Number(item.commentCount ?? 0),
-      },
-    };
+  return items
+    .map((raw): TrendItem => {
+      const item = raw as Record<string, unknown>;
+      const author = item.authorMeta as Record<string, unknown> | undefined;
+      const video = item.videoMeta as Record<string, unknown> | undefined;
+      return {
+        platform: 'tiktok',
+        region,
+        title: String(item.text ?? item.desc ?? 'TikTok trend').slice(0, 200),
+        video_url: (video?.downloadAddr as string) ?? (item.videoUrl as string) ?? null,
+        thumbnail_url:
+          (video?.coverUrl as string) ?? ((item.covers as Record<string, string> | undefined)?.default ?? null),
+        source_url: (item.webVideoUrl as string) ?? null,
+        author: (author?.name as string) ?? (author?.nickName as string) ?? null,
+        stats: {
+          views: Number(item.playCount ?? 0),
+          likes: Number(item.diggCount ?? 0),
+          shares: Number(item.shareCount ?? 0),
+          comments: Number(item.commentCount ?? 0),
+        },
+      };
+    })
+    .filter((item) => isTrend(item.stats))
+    .slice(0, limit);
+}
+
+async function fetchTikTokTrends(): Promise<TrendItem[]> {
+  const runs = await Promise.allSettled(
+    TIKTOK_REGIONS.map(({ code, region, limit }) => fetchTikTokRegion(code, region, limit))
+  );
+  const failures = runs.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+  // One dead region shouldn't lose the other two — only a total wipeout is worth failing on.
+  if (failures.length === runs.length) throw new Error(String(failures[0].reason));
+  if (failures.length > 0) console.error('tiktok: some regions failed', failures.map((f) => String(f.reason)));
+  return runs.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+}
+
+// Instagram has no per-country "trending" endpoint this actor can read, so region is approximated
+// by which language's hashtags surfaced the post — Russian-language tags for CIS, English ones for
+// Europe/America. The hashtag is only the *discovery* route, never the bar for inclusion: every
+// post still has to clear MIN_LIKES + MIN_ENGAGEMENT_RATE below, which is what makes it a trend.
+//
+// scrape is deliberately much larger than keep: a hashtag feed is mostly ordinary posts, so most
+// of what comes back gets thrown away by isTrend and we need volume to find the real hits.
+const INSTAGRAM_SOURCES: { region: Region; tags: string[]; scrape: number; keep: number }[] = [
+  { region: 'cis', tags: ['рекомендации', 'тренды', 'рек'], scrape: 120, keep: 12 },
+  { region: 'europe', tags: ['viral', 'trending'], scrape: 80, keep: 8 },
+  { region: 'america', tags: ['fyp', 'explorepage'], scrape: 60, keep: 6 },
+];
+
+async function fetchInstagramSource(
+  region: Region,
+  tags: string[],
+  scrape: number,
+  keep: number
+): Promise<TrendItem[]> {
+  // apify/instagram-scraper (the official actor) takes explore-page URLs rather than a keyword
+  // search — an earlier version of this function called a third-party actor
+  // (apidojo~instagram-scraper-api) with a `search`/`searchType` pair it doesn't actually support,
+  // which made every run fail with "run-failed". directUrls is this actor's documented, stable way
+  // to pull posts under a hashtag.
+  const items = await runApifyActor('apify~instagram-scraper', {
+    directUrls: tags.map((tag) => `https://www.instagram.com/explore/tags/${encodeURIComponent(tag)}/`),
+    resultsType: 'posts',
+    resultsLimit: scrape,
   });
+  return items
+    .map((raw): TrendItem => {
+      const item = raw as Record<string, unknown>;
+      return {
+        platform: 'instagram',
+        region,
+        title: String(item.caption ?? item.title ?? 'Instagram Reel').slice(0, 200),
+        video_url: (item.videoUrl as string) ?? null,
+        thumbnail_url: (item.displayUrl as string) ?? (item.thumbnailUrl as string) ?? null,
+        source_url: (item.url as string) ?? null,
+        author: (item.ownerUsername as string) ?? null,
+        stats: {
+          views: Number(item.videoPlayCount ?? item.videoViewCount ?? 0),
+          likes: Number(item.likesCount ?? 0),
+          comments: Number(item.commentsCount ?? 0),
+        },
+      };
+    })
+    .filter((item) => isTrend(item.stats))
+    .sort((a, b) => popularityScore(b.stats) - popularityScore(a.stats))
+    .slice(0, keep);
 }
 
 async function fetchInstagramTrends(): Promise<TrendItem[]> {
-  // apify/instagram-scraper (the official actor) takes explore-page URLs rather than a
-  // keyword search — an earlier version of this function called a third-party actor
-  // (apidojo~instagram-scraper-api) with a `search`/`searchType` pair it doesn't actually
-  // support, which made every run fail with "run-failed". directUrls is this actor's
-  // documented, stable way to pull recent posts under a hashtag.
-  const items = await runApifyActor('apify~instagram-scraper', {
-    directUrls: [
-      'https://www.instagram.com/explore/tags/reels/',
-      'https://www.instagram.com/explore/tags/trending/',
-    ],
-    resultsType: 'posts',
-    resultsLimit: MAX_ITEMS_PER_PLATFORM,
-  });
-  return items.slice(0, MAX_ITEMS_PER_PLATFORM).map((raw): TrendItem => {
-    const item = raw as Record<string, unknown>;
-    return {
-      platform: 'instagram',
-      title: String(item.caption ?? item.title ?? 'Instagram Reel').slice(0, 200),
-      video_url: (item.videoUrl as string) ?? null,
-      thumbnail_url: (item.displayUrl as string) ?? (item.thumbnailUrl as string) ?? null,
-      source_url: (item.url as string) ?? null,
-      author: (item.ownerUsername as string) ?? null,
-      stats: {
-        views: Number(item.videoPlayCount ?? item.videoViewCount ?? 0),
-        likes: Number(item.likesCount ?? 0),
-        comments: Number(item.commentsCount ?? 0),
-      },
-    };
-  });
+  const runs = await Promise.allSettled(
+    INSTAGRAM_SOURCES.map(({ region, tags, scrape, keep }) => fetchInstagramSource(region, tags, scrape, keep))
+  );
+  const failures = runs.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+  if (failures.length === runs.length) throw new Error(String(failures[0].reason));
+  if (failures.length > 0) console.error('instagram: some regions failed', failures.map((f) => String(f.reason)));
+  return runs.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
 }
 
 function extractJsonArray(text: string): Record<string, unknown>[] {
@@ -194,6 +284,12 @@ function extractJsonArray(text: string): Record<string, unknown>[] {
 // anything specific to Threads, and sometimes even cites twitter.com/x.com as the source — the
 // prompt below is explicit about rejecting that, and threadsSourceUrl() below is a hard filter
 // on top of it (never trust the model's own judgment as the only gate).
+const THREADS_MAX_ITEMS = 8;
+
+function toRegion(value: unknown): Region {
+  return value === 'cis' || value === 'europe' || value === 'america' ? (value as Region) : 'unknown';
+}
+
 function threadsSourceUrl(url: unknown): string | null {
   if (typeof url !== 'string') return null;
   try {
@@ -214,15 +310,20 @@ async function fetchThreadsTrends(): Promise<TrendItem[]> {
         {
           role: 'system',
           content:
-            'Ты — аналитик соцсети Threads (Meta, threads.net). Через веб-поиск найди до 5 постов или ' +
+            'Ты — аналитик соцсети Threads (Meta, threads.net). Через веб-поиск найди до 8 постов или ' +
             'обсуждений, которые РЕАЛЬНО ОПУБЛИКОВАНЫ и обсуждаются именно в Threads за последние ' +
             'несколько дней. ЗАПРЕЩЕНО: посты и ссылки из Twitter/X, общие новостные темы дня, любые ' +
             'источники не с threads.net — если находишь такое, не включай в ответ вообще, лучше верни ' +
-            'меньше 5 пунктов или пустой массив, чем подмени их Twitter-трендами или новостями. ' +
+            'меньше пунктов или пустой массив, чем подмени их Twitter-трендами или новостями. ' +
+            'БЕРИ ТОЛЬКО ВИРАЛЬНОЕ: пост должен иметь заметную вовлечённость (тысячи лайков и ответов, ' +
+            'массовое обсуждение), обычные посты с единичными лайками не нужны. ' +
+            'ПРИОРИТЕТ РЕГИОНОВ: сначала СНГ (Казахстан, Россия, русскоязычные авторы), затем Европа, ' +
+            'затем США. Не заполняй ответ контентом из Индии и Юго-Восточной Азии. ' +
             'Ответь СТРОГО валидным JSON-массивом без markdown-разметки и без пояснений, схема каждого ' +
             'элемента: {"title": "...", "description": "...", "source_url": "https://threads.net/...", ' +
-            '"author": "..."}. source_url обязателен, должен вести именно на threads.net и быть реальной ' +
-            'ссылкой из результатов поиска, а не выдуманной.',
+            '"author": "...", "region": "cis" | "europe" | "america"}. source_url обязателен, должен ' +
+            'вести именно на threads.net и быть реальной ссылкой из результатов поиска, а не выдуманной. ' +
+            'region — регион автора поста.',
         },
       ],
     }),
@@ -233,9 +334,13 @@ async function fetchThreadsTrends(): Promise<TrendItem[]> {
   return extractJsonArray(text)
     .map((item) => ({ ...item, source_url: threadsSourceUrl(item.source_url) }))
     .filter((item) => item.source_url !== null)
-    .slice(0, MAX_ITEMS_PER_PLATFORM)
+    .slice(0, THREADS_MAX_ITEMS)
     .map((item): TrendItem => ({
       platform: 'threads',
+      // Threads reports no engagement numbers at all here, so isTrend() can't gate these the way
+      // it gates TikTok/Instagram — the "must be viral" rule lives in the prompt instead, and the
+      // region below is the model's own answer rather than something measured.
+      region: toRegion(item.region),
       title: String(item.title ?? 'Threads trend').slice(0, 200),
       description: item.description ? String(item.description) : null,
       source_url: item.source_url,
@@ -341,19 +446,24 @@ Deno.serve(async (req) => {
           stats: item.stats ?? {},
           ai_advice: item.ai_advice ?? null,
           popularity_score: popularityScore(item.stats),
+          region: item.region,
+          region_rank: REGION_RANK[item.region],
         }))
       );
       if (error) throw error;
     }
 
-    // Enforce the "50 trends/day, most popular kept" retention promise — a no-op on a normal
-    // single-run day (MAX_ITEMS_PER_PLATFORM * 3 platforms is already under 50), but a real
-    // safety net if this function is ever invoked more than once for the same fetch_date.
+    // Enforce the "50 trends/day, most popular kept" retention promise — usually a no-op now that
+    // the MIN_LIKES gate throws most scraped posts away, but a real safety net if this function is
+    // ever invoked more than once for the same fetch_date.
     const today = new Date().toISOString().slice(0, 10);
     const { data: todaysItems, error: trimSelectError } = await supabaseAdmin
       .from('trend_watch_items')
       .select('id')
       .eq('fetch_date', today)
+      // Same ordering the panel reads with, so the 50 that survive are the 50 actually shown
+      // first — CIS ahead of Europe ahead of America, most popular first inside each region.
+      .order('region_rank', { ascending: true })
       .order('popularity_score', { ascending: false });
     if (trimSelectError) {
       console.error('trendswatch-refresh: could not check today\'s item count', trimSelectError);
