@@ -85,7 +85,12 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-async function generateSpeech(body: AudioBody): Promise<string> {
+// The speech endpoint returns raw audio bytes, not JSON — OpenRouter has no cost field to read
+// off a binary response here (getting the real number would need a follow-up call to
+// /api/v1/generation using the X-Generation-Id response header), so this keeps using
+// AUDIO_PRICE_USD.speech's flat estimate. realCostUsd is still returned (always null) so the
+// caller has one shape to deal with for both modes.
+async function generateSpeech(body: AudioBody): Promise<{ url: string; realCostUsd: number | null }> {
   // Gemini's native TTS takes a delivery-style instruction alongside the phrase itself
   // (e.g. "say cheerfully: ..."); folding the style prompt into the text field is the most
   // schema-agnostic way to pass both, regardless of whether this endpoint also exposes a
@@ -107,10 +112,10 @@ async function generateSpeech(body: AudioBody): Promise<string> {
   });
   if (!res.ok) throw new Error(`OpenRouter speech error ${res.status}: ${await res.text()}`);
   const bytes = new Uint8Array(await res.arrayBuffer());
-  return `data:audio/mpeg;base64,${bytesToBase64(bytes)}`;
+  return { url: `data:audio/mpeg;base64,${bytesToBase64(bytes)}`, realCostUsd: null };
 }
 
-async function generateMusic(body: AudioBody): Promise<string> {
+async function generateMusic(body: AudioBody): Promise<{ url: string; realCostUsd: number | null }> {
   const prompt = [body.prompt, body.lyrics ? `Lyrics:\n${body.lyrics}` : null].filter(Boolean).join('\n\n');
   const res = await fetch(OPENROUTER_CHAT_URL, {
     method: 'POST',
@@ -122,6 +127,9 @@ async function generateMusic(body: AudioBody): Promise<string> {
       model: MUSIC_MODEL,
       modalities: ['text', 'audio'],
       messages: [{ role: 'user', content: prompt }],
+      // Opts into OpenRouter reporting the ACTUAL dollar cost of this call in data.usage.cost,
+      // preferred over AUDIO_PRICE_USD.music's flat estimate.
+      usage: { include: true },
     }),
   });
   if (!res.ok) throw new Error(`OpenRouter music error ${res.status}: ${await res.text()}`);
@@ -129,7 +137,8 @@ async function generateMusic(body: AudioBody): Promise<string> {
   const audio = data.choices?.[0]?.message?.audio;
   if (!audio?.data) throw new Error('OpenRouter music response had no audio data.');
   const mediaType = typeof audio.format === 'string' ? `audio/${audio.format}` : 'audio/wav';
-  return `data:${mediaType};base64,${audio.data}`;
+  const realCostUsd = typeof data.usage?.cost === 'number' ? data.usage.cost : null;
+  return { url: `data:${mediaType};base64,${audio.data}`, realCostUsd };
 }
 
 Deno.serve(async (req) => {
@@ -150,9 +159,9 @@ Deno.serve(async (req) => {
 
     const isSpeech = body.mode === 'speech';
     const model = isSpeech ? SPEECH_MODEL : MUSIC_MODEL;
-    const url = isSpeech ? await generateSpeech(body) : await generateMusic(body);
+    const { url, realCostUsd } = isSpeech ? await generateSpeech(body) : await generateMusic(body);
 
-    void logGeneration(callerId, caller.email, model, 'audio', costUsd);
+    void logGeneration(callerId, caller.email, model, 'audio', realCostUsd ?? costUsd);
 
     return new Response(JSON.stringify({ url }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

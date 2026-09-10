@@ -146,13 +146,17 @@ Deno.serve(async (req) => {
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userContent },
         ],
+        // Opts into OpenRouter reporting the ACTUAL dollar cost of this call in
+        // data.usage.cost, preferred below over PRICE_PER_IMAGE_USD's flat estimate.
+        usage: { include: true },
       }),
     });
     if (!res.ok) throw new Error(`OpenRouter chat error ${res.status}: ${await res.text()}`);
     const data = await res.json();
     const text: string = data.choices?.[0]?.message?.content ?? '';
+    const realCostUsd = typeof data.usage?.cost === 'number' ? data.usage.cost : null;
 
-    void logGeneration(callerId, caller.email, EVAL_MODEL, 'evaluate', costUsd);
+    void logGeneration(callerId, caller.email, EVAL_MODEL, 'evaluate', realCostUsd ?? costUsd);
 
     const parsed = extractJson(text) as {
       variants?: { score?: number; strengths?: string[]; weaknesses?: string[] }[];

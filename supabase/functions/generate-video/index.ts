@@ -154,7 +154,14 @@ async function submitOpenRouterVideoJob(input: Record<string, unknown>): Promise
 const POLL_INTERVAL_MS = 5000;
 const POLL_BUDGET_MS = 8 * 60 * 1000;
 
-async function pollOpenRouterVideoJob(jobId: string): Promise<{ id: string }> {
+// The completed job object includes usage.cost when OpenRouter reports it — the ACTUAL dollar
+// amount charged for this generation, preferred over VIDEO_PRICE_PER_SECOND_USD's estimate.
+interface CompletedVideoJob {
+  id: string;
+  usage?: { cost?: number };
+}
+
+async function pollOpenRouterVideoJob(jobId: string): Promise<CompletedVideoJob> {
   const deadline = Date.now() + POLL_BUDGET_MS;
   while (Date.now() < deadline) {
     const res = await fetch(`${OPENROUTER_VIDEOS_URL}/${jobId}`, {
@@ -212,8 +219,9 @@ Deno.serve(async (req) => {
     const job = await submitOpenRouterVideoJob(input);
     const completed = await pollOpenRouterVideoJob(job.id);
     const url = await downloadAndStoreVideo(completed.id ?? job.id);
+    const realCostUsd = typeof completed.usage?.cost === 'number' ? completed.usage.cost : null;
 
-    void logGeneration(callerId, caller.email, model, 'video', costUsd);
+    void logGeneration(callerId, caller.email, model, 'video', realCostUsd ?? costUsd);
 
     return new Response(JSON.stringify([url]), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

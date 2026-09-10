@@ -267,21 +267,29 @@ function buildOpenRouterImageInput(
   return input;
 }
 
-async function callOpenRouterImage(input: Record<string, unknown>): Promise<string[]> {
+// Returns both the generated URLs and, when OpenRouter reports it, the ACTUAL dollar amount
+// charged for this specific call (data.usage.cost) — the real per-provider price, not our
+// hand-maintained IMAGE_PRICE_USD estimate. logGeneration below prefers this over the estimate
+// whenever it's present, since the estimate table can drift from OpenRouter's real rates.
+async function callOpenRouterImage(
+  input: Record<string, unknown>
+): Promise<{ urls: string[]; realCostUsd: number | null }> {
   const res = await fetch(OPENROUTER_IMAGES_URL, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(input),
+    body: JSON.stringify({ ...input, usage: { include: true } }),
   });
   if (!res.ok) throw new Error(`OpenRouter images error ${res.status}: ${await res.text()}`);
   const data = await res.json();
   const items: { b64_json?: string; media_type?: string; url?: string }[] = data.data ?? [];
-  return items.map((item) =>
+  const urls = items.map((item) =>
     item.url ? item.url : `data:${item.media_type ?? 'image/png'};base64,${item.b64_json ?? ''}`
   );
+  const realCostUsd = typeof data.usage?.cost === 'number' ? data.usage.cost : null;
+  return { urls, realCostUsd };
 }
 
 // Popular models (Nano Banana Pro/2 especially) frequently return a transient
@@ -342,6 +350,7 @@ Deno.serve(async (req) => {
     const costUsd = estimateImageCost(model, resolution);
 
     let urls: string[];
+    let realCostUsd: number | null = null;
     if (REPLICATE_ONLY_IMAGE_MODELS.has(model)) {
       const input = buildImageInput(model, prompt, aspectRatio, image, width, height);
       const replicate = new Replicate({ auth: REPLICATE_API_KEY });
@@ -349,10 +358,12 @@ Deno.serve(async (req) => {
       urls = normalizeOutput(output);
     } else {
       const input = buildOpenRouterImageInput(model, prompt, aspectRatio, image, images, resolution, width, height);
-      urls = await callOpenRouterImage(input);
+      const result = await callOpenRouterImage(input);
+      urls = result.urls;
+      realCostUsd = result.realCostUsd;
     }
 
-    void logGeneration(callerId, caller.email, model, 'image', costUsd);
+    void logGeneration(callerId, caller.email, model, 'image', realCostUsd ?? costUsd);
 
     return new Response(JSON.stringify(urls), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

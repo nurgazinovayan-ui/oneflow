@@ -89,21 +89,28 @@ function buildVectorInput(prompt: string, aspectRatio: string): Record<string, u
   };
 }
 
-async function callOpenRouterImage(input: Record<string, unknown>): Promise<string[]> {
+// Returns both the generated URLs and, when OpenRouter reports it, the ACTUAL dollar amount
+// charged for this call (data.usage.cost) — preferred over RECRAFT_V4_SVG_PRICE_USD's estimate
+// whenever present, since the estimate can drift from OpenRouter's real rate.
+async function callOpenRouterImage(
+  input: Record<string, unknown>
+): Promise<{ urls: string[]; realCostUsd: number | null }> {
   const res = await fetch(OPENROUTER_IMAGES_URL, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(input),
+    body: JSON.stringify({ ...input, usage: { include: true } }),
   });
   if (!res.ok) throw new Error(`OpenRouter images error ${res.status}: ${await res.text()}`);
   const data = await res.json();
   const items: { b64_json?: string; media_type?: string; url?: string }[] = data.data ?? [];
-  return items.map((item) =>
+  const urls = items.map((item) =>
     item.url ? item.url : `data:${item.media_type ?? 'image/svg+xml'};base64,${item.b64_json ?? ''}`
   );
+  const realCostUsd = typeof data.usage?.cost === 'number' ? data.usage.cost : null;
+  return { urls, realCostUsd };
 }
 
 Deno.serve(async (req) => {
@@ -123,9 +130,15 @@ Deno.serve(async (req) => {
     const { prompt, aspectRatio } = params;
 
     const input = buildVectorInput(prompt, aspectRatio);
-    const urls = await callOpenRouterImage(input);
+    const { urls, realCostUsd } = await callOpenRouterImage(input);
 
-    void logGeneration(callerId, caller.email, 'recraft-ai/recraft-v4-svg', 'vector', RECRAFT_V4_SVG_PRICE_USD);
+    void logGeneration(
+      callerId,
+      caller.email,
+      'recraft-ai/recraft-v4-svg',
+      'vector',
+      realCostUsd ?? RECRAFT_V4_SVG_PRICE_USD
+    );
 
     return new Response(JSON.stringify(urls), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
