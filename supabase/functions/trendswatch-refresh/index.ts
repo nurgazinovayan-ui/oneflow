@@ -181,6 +181,22 @@ function extractJsonArray(text: string): Record<string, unknown>[] {
 
 // Threads has no usable public read API/scraper here — asked for as free-text web-search
 // findings instead. No real preview media for these — text + source link only.
+//
+// The model's web search tends to default to generic "trending in the news today" topics
+// (sports scores, product launches, politics) that read like Twitter/X trends rather than
+// anything specific to Threads, and sometimes even cites twitter.com/x.com as the source — the
+// prompt below is explicit about rejecting that, and threadsSourceUrl() below is a hard filter
+// on top of it (never trust the model's own judgment as the only gate).
+function threadsSourceUrl(url: unknown): string | null {
+  if (typeof url !== 'string') return null;
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    return host === 'threads.net' || host === 'threads.com' ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchThreadsTrends(): Promise<TrendItem[]> {
   const res = await fetch(OPENROUTER_CHAT_URL, {
     method: 'POST',
@@ -191,10 +207,15 @@ async function fetchThreadsTrends(): Promise<TrendItem[]> {
         {
           role: 'system',
           content:
-            'Ты — аналитик соцсетей. Найди через веб-поиск 5 реально обсуждаемых СЕГОДНЯ трендов в Threads (Meta). ' +
-            'Ответь СТРОГО валидным JSON-массивом без markdown-разметки и без пояснений, схема каждого элемента: ' +
-            '{"title": "...", "description": "...", "source_url": "https://...", "author": "..."}. ' +
-            'source_url обязателен и должен быть реальной ссылкой из результатов поиска, а не выдуманной.',
+            'Ты — аналитик соцсети Threads (Meta, threads.net). Через веб-поиск найди до 5 постов или ' +
+            'обсуждений, которые РЕАЛЬНО ОПУБЛИКОВАНЫ и обсуждаются именно в Threads за последние ' +
+            'несколько дней. ЗАПРЕЩЕНО: посты и ссылки из Twitter/X, общие новостные темы дня, любые ' +
+            'источники не с threads.net — если находишь такое, не включай в ответ вообще, лучше верни ' +
+            'меньше 5 пунктов или пустой массив, чем подмени их Twitter-трендами или новостями. ' +
+            'Ответь СТРОГО валидным JSON-массивом без markdown-разметки и без пояснений, схема каждого ' +
+            'элемента: {"title": "...", "description": "...", "source_url": "https://threads.net/...", ' +
+            '"author": "..."}. source_url обязателен, должен вести именно на threads.net и быть реальной ' +
+            'ссылкой из результатов поиска, а не выдуманной.',
         },
       ],
     }),
@@ -203,12 +224,14 @@ async function fetchThreadsTrends(): Promise<TrendItem[]> {
   const data = await res.json();
   const text: string = data.choices?.[0]?.message?.content ?? '[]';
   return extractJsonArray(text)
+    .map((item) => ({ ...item, source_url: threadsSourceUrl(item.source_url) }))
+    .filter((item) => item.source_url !== null)
     .slice(0, MAX_ITEMS_PER_PLATFORM)
     .map((item): TrendItem => ({
       platform: 'threads',
       title: String(item.title ?? 'Threads trend').slice(0, 200),
       description: item.description ? String(item.description) : null,
-      source_url: item.source_url ? String(item.source_url) : null,
+      source_url: item.source_url,
       author: item.author ? String(item.author) : null,
       video_url: null,
       thumbnail_url: null,

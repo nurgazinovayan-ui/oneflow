@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useT, useLanguageStore } from '../i18n';
-import { IconVideo, IconClose, IconCalendar, IconRepost, IconHeart, IconTikTok, IconInstagram, IconThreads } from './Icons';
+import { IconClose, IconCalendar, IconRepost, IconHeart, IconTikTok, IconInstagram, IconThreads } from './Icons';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 type Platform = 'tiktok' | 'instagram' | 'threads';
-type RangeKey = 'today' | '3d' | '10d';
+type RangeKey = '3d' | '10d';
 
-const RANGE_DAYS: Record<RangeKey, number> = { today: 0, '3d': 3, '10d': 10 };
+const RANGE_DAYS: Record<RangeKey, number> = { '3d': 3, '10d': 10 };
+// A trend needs at least a day to prove itself — hides same-hour noise regardless of which
+// range tab is selected (a separate floor from RANGE_DAYS, which is only the ceiling).
+const MIN_AGE_DAYS = 1;
 const PLATFORM_LABELS: Record<Platform, string> = { tiktok: 'TikTok', instagram: 'Instagram', threads: 'Threads' };
 
 interface TrendWatchItem {
@@ -33,6 +36,10 @@ function cutoffDate(days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+function minAgeCutoffIso(days: number): string {
+  return new Date(Date.now() - days * 24 * 3_600_000).toISOString();
+}
+
 function relativeTime(iso: string, locale: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const diffHours = Math.round(diffMs / 3_600_000);
@@ -54,20 +61,21 @@ function PlatformIcon({ platform, size }: { platform: Platform; size: number }) 
   return <IconThreads size={size} />;
 }
 
-function Preview({ item, locale, t }: { item: TrendWatchItem; locale: string; t: ReturnType<typeof useT>['trends'] }) {
-  const [failed, setFailed] = useState(false);
-  const hasVideo = Boolean(item.video_url) && !failed;
+function Preview({ item }: { item: TrendWatchItem }) {
+  const [videoFailed, setVideoFailed] = useState(false);
+  const [imgFailed, setImgFailed] = useState(false);
+  const showVideo = Boolean(item.video_url) && !videoFailed;
+  const showImg = !showVideo && Boolean(item.thumbnail_url) && !imgFailed;
   return (
     <figure>
-      {hasVideo ? (
-        <video controls preload="metadata" poster={item.thumbnail_url ?? undefined} src={item.video_url!} onError={() => setFailed(true)} />
-      ) : item.thumbnail_url ? (
-        <img src={item.thumbnail_url} alt={item.title} loading="lazy" />
+      {showVideo ? (
+        <video controls preload="metadata" poster={item.thumbnail_url ?? undefined} src={item.video_url!} onError={() => setVideoFailed(true)} />
+      ) : showImg ? (
+        <img src={item.thumbnail_url!} alt={item.title} loading="lazy" onError={() => setImgFailed(true)} />
       ) : (
-        <p className="trends-placeholder">
-          <IconVideo size={26} />
-          {failed ? t.previewError : t.noVideoBadge}
-        </p>
+        // No usable video/image (always the case for Threads, occasionally for a TikTok/Instagram
+        // item whose media link didn't resolve) — show the post's own text instead of a blank tile.
+        <div className="trends-preview-text"><p>{item.description || item.title}</p></div>
       )}
       <span className="trends-card-badge" aria-hidden="true">
         <PlatformIcon platform={item.platform} size={17} />
@@ -82,7 +90,7 @@ function TrendCard({ item, locale, onOpen }: { item: TrendWatchItem; locale: str
   return (
     <article className="trends-card">
       <button className="trends-card-open" onClick={onOpen} aria-label={item.title}>
-        <Preview item={item} locale={locale} t={t} />
+        <Preview item={item} />
         <h2>{item.title}</h2>
         <div className="trends-card-stats">
           <span className="trends-card-stat"><IconCalendar size={12} />{relativeTime(item.fetched_at, locale)}</span>
@@ -121,7 +129,7 @@ function TrendDetail({ item, locale, onClose }: { item: TrendWatchItem; locale: 
         <button autoFocus onClick={onClose} aria-label={t.close}><IconClose /></button>
       </header>
       <section className="trends-detail-layout">
-        <Preview item={item} locale={locale} t={t} />
+        <Preview item={item} />
         <section className="trends-detail-copy">
           {item.description && <p>{item.description}</p>}
           <div className="trends-detail-stats">
@@ -166,6 +174,7 @@ export default function TrendsPanel({ active }: { active: boolean }) {
       order: 'popularity_score.desc,fetched_at.desc',
       limit: '500',
       fetch_date: `gte.${cutoffDate(RANGE_DAYS[range])}`,
+      fetched_at: `lte.${minAgeCutoffIso(MIN_AGE_DAYS)}`,
     });
     if (platform) params.set('platform', `eq.${platform}`);
     // trend_watch_items has an open "select" RLS policy (see trendswatch-refresh's SQL
@@ -210,9 +219,9 @@ export default function TrendsPanel({ active }: { active: boolean }) {
         </nav>
       </header>
       <nav className="trends-range-filters" aria-label={t.heading}>
-        {(['today', '3d', '10d'] as const).map((key) => (
+        {(['3d', '10d'] as const).map((key) => (
           <button key={key} aria-pressed={range === key} onClick={() => setRange(key)}>
-            {key === 'today' ? t.rangeToday : key === '3d' ? t.range3d : t.range10d}
+            {key === '3d' ? t.range3d : t.range10d}
           </button>
         ))}
       </nav>
