@@ -2588,35 +2588,52 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  /* Headline and description read as one unit, so they sit tight; the benefit chip is a
+     separate beat and doubles this via its own margin below (proximity — spacing, not rules
+     or color, is what groups them). */
   gap: 10px;
 }
 
 .web-auth-advantage-title {
   margin: 0;
-  font-size: 24px;
+  /* Scales with the card, which is 94vw until it caps at 1200px, so the headline can't
+     outgrow the panel on narrower laptops. */
+  font-size: clamp(26px, 2.8vw, 34px);
   font-weight: 700;
-  line-height: 1.25;
+  /* Display type needs proportionally tighter leading and tracking than body copy — 1.5 at
+     this size reads as loose and unfocused. */
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
   color: var(--c-text);
   animation: web-auth-advantage-fade 0.4s var(--ease);
 }
 
 .web-auth-advantage-description {
   margin: 0;
-  font-size: 15.5px;
-  line-height: 1.5;
-  color: var(--c-text-muted);
+  /* 16px/1.55 at this column width lands around 60 characters per line — inside the 45-75
+     range that reads comfortably. */
+  font-size: 16px;
+  line-height: 1.55;
+  /* Sales copy, not UI helper text: lifted off the muted token so it stays easy to read while
+     still ranking below the headline. */
+  color: color-mix(in srgb, var(--c-text) 72%, var(--c-text-muted));
+  text-wrap: pretty;
   animation: web-auth-advantage-fade 0.4s var(--ease);
 }
 
 .web-auth-advantage-benefit {
-  margin: 4px 0 0;
+  /* Plus the 10px flex gap above = 20px, double the title-to-description step. */
+  margin: 10px 0 0;
   align-self: flex-start;
-  padding: 7px 16px;
+  padding: 8px 16px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--c-pink) 16%, transparent);
   color: var(--c-pink);
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
   animation: web-auth-advantage-fade 0.4s var(--ease);
 }
 
