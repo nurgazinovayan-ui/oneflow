@@ -208,22 +208,25 @@ export default function ProfileModal({ onClose, onOpenLegal, onOpenAdminPanel }:
                   onChange={(e) => setApiKey(e.target.value)}
                 />
                 <p className="modal-hint">{t.settingsModal.apiTokenHint}</p>
+
+                {/* Web's budget bar now reads the real OpenRouter account wallet (see
+                    window.api.getUsage()'s web implementation) — nothing left here to set a
+                    local limit for. Desktop still tracks its own local usage, so this stays. */}
+                <label className="field-label">{t.settingsModal.budgetLimit}</label>
+                <input
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  className="node-select"
+                  value={generationLimit}
+                  onChange={(e) => setGenerationLimit(e.target.value)}
+                />
+                <p className="modal-hint">{t.settingsModal.budgetHint}</p>
+                <button className="secondary-btn" onClick={handleAccountSave}>
+                  <IconSave /> {accountSaved ? t.settingsModal.saved : t.settingsModal.save}
+                </button>
               </>
             )}
-
-            <label className="field-label">{t.settingsModal.budgetLimit}</label>
-            <input
-              type="number"
-              min={0.01}
-              step={0.01}
-              className="node-select"
-              value={generationLimit}
-              onChange={(e) => setGenerationLimit(e.target.value)}
-            />
-            <p className="modal-hint">{t.settingsModal.budgetHint}</p>
-            <button className="secondary-btn" onClick={handleAccountSave}>
-              <IconSave /> {accountSaved ? t.settingsModal.saved : t.settingsModal.save}
-            </button>
 
             <label className="field-label">{t.profileModal.periodLabel}</label>
             <div className="profile-date-range">

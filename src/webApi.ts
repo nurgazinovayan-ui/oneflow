@@ -180,30 +180,8 @@ function parseAdaptPresetText(raw: string): AdaptPresetFormat[] {
   return formats;
 }
 
-// Real spend for the BudgetBar — sums cost_usd from generation_log (the actual amount each
-// generate-*/evaluate-creative Edge Function recorded server-side at generation time), rather
-// than a per-browser running total estimated client-side from the same price tables the server
-// uses. Requires a "select own rows" RLS policy on generation_log — see the SQL comment in
-// supabase/functions/admin-list-generations/index.ts.
-async function fetchMonthlySpend(session: { userId: string; accessToken: string }): Promise<number> {
-  try {
-    const monthStart = new Date();
-    monthStart.setUTCDate(1);
-    monthStart.setUTCHours(0, 0, 0, 0);
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/generation_log?user_id=eq.${session.userId}&created_at=gte.${monthStart.toISOString()}&select=cost_usd`,
-      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${session.accessToken}` } }
-    );
-    if (!res.ok) return 0;
-    const rows: { cost_usd: number }[] = await res.json();
-    return rows.reduce((sum, r) => sum + (r.cost_usd ?? 0), 0);
-  } catch {
-    return 0;
-  }
-}
-
 // Per-generation history behind the profile popup's "count by model, exportable by date"
-// view — per-browser only, same simplified-web-version scope as bumpWebUsage above.
+// view — per-browser only (localStorage), not backed by a server-side table.
 const WEB_GENERATION_LOG_MAX_ENTRIES = 2000;
 
 function logWebGeneration(entry: GenerationLogEntry): void {
@@ -457,12 +435,22 @@ export function installWebApi(): void {
       }
     },
 
+    // Pulls the actual OpenRouter account wallet (total credits ever topped up, total spent
+    // to date) via the get-openrouter-balance Edge Function, rather than any per-user total
+    // this app itself tracks — there's one shared OpenRouter key funding every generation, so
+    // "budget" means that shared wallet, not a per-account figure. "month" is unused here (this
+    // is an all-time balance, not a monthly one) but kept for BudgetUsage's shape.
     getUsage: async () => {
       const month = new Date().toISOString().slice(0, 7);
-      const limit = Number(localStorage.getItem('web-usage-limit') ?? '50');
-      const session = await getValidSession();
-      const costUsd = session ? await fetchMonthlySpend(session) : 0;
-      return { costUsd, limit, month };
+      try {
+        const balance = await callFunction<{ totalCredits: number; totalUsage: number }>(
+          'get-openrouter-balance',
+          {}
+        );
+        return { costUsd: balance.totalUsage, limit: balance.totalCredits, month };
+      } catch {
+        return { costUsd: 0, limit: 0, month };
+      }
     },
     setGenerationLimit: async (limit) => {
       localStorage.setItem('web-usage-limit', String(limit));
