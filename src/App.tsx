@@ -1157,7 +1157,7 @@ function Canvas() {
           {import.meta.env.VITE_WEB_MODE === '1' && (
             <StrategyPanel active={mainView === 'strategy'} onCreateWorkflow={handleCreateFromStrategy} />
           )}
-          {import.meta.env.VITE_WEB_MODE === '1' && <TrendsPanel active={mainView === 'trends'} />}
+          {import.meta.env.VITE_WEB_MODE === '1' && <TrendsPanel active={mainView === 'trends'} authEmail={authEmail} />}
           {import.meta.env.VITE_WEB_MODE === '1' && <AssetsPanel active={mainView === 'assets'} />}
         </div>
       </div>

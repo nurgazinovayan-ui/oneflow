@@ -14,6 +14,9 @@ export const trendsRu = {
   author: 'Автор',
   openSource: 'Открыть источник',
   close: 'Закрыть',
+  refreshBtn: 'Обновить',
+  refreshingBtn: 'Обновляем…',
+  refreshError: 'Не удалось обновить — попробуйте ещё раз чуть позже.',
 };
 export const trendsEn: typeof trendsRu = {
   heading: 'TRENDSWATCHING',
@@ -31,4 +34,7 @@ export const trendsEn: typeof trendsRu = {
   author: 'Author',
   openSource: 'Open source',
   close: 'Close',
+  refreshBtn: 'Refresh',
+  refreshingBtn: 'Refreshing…',
+  refreshError: 'Could not refresh — try again shortly.',
 };

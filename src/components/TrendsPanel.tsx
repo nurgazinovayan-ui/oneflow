@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useT, useLanguageStore } from '../i18n';
-import { IconClose, IconCalendar, IconRepost, IconHeart, IconTikTok, IconInstagram, IconThreads } from './Icons';
+import { ADMIN_EMAIL } from '../types';
+import { IconClose, IconCalendar, IconRepost, IconHeart, IconRefresh, IconTikTok, IconInstagram, IconThreads } from './Icons';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -153,16 +154,20 @@ function TrendDetail({ item, locale, onClose }: { item: TrendWatchItem; locale: 
   );
 }
 
-export default function TrendsPanel({ active }: { active: boolean }) {
+export default function TrendsPanel({ active, authEmail }: { active: boolean; authEmail: string | null }) {
   const t = useT().trends;
   const language = useLanguageStore((s) => s.language);
   const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+  const isAdmin = authEmail?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
   const [items, setItems] = useState<TrendWatchItem[]>([]);
   const [platform, setPlatform] = useState<'' | Platform>('');
   const [range, setRange] = useState<RangeKey>('3d');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [selected, setSelected] = useState<TrendWatchItem | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState(false);
 
   useEffect(() => {
     if (!active) return;
@@ -199,7 +204,25 @@ export default function TrendsPanel({ active }: { active: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [active, platform, range]);
+  }, [active, platform, range, reloadKey]);
+
+  // Admin-only manual trigger — trendswatch-refresh itself has a cooldown (see its own code)
+  // so this can't be spammed into racking up Apify/OpenRouter cost, even by someone who reads
+  // the anon key out of the bundle and calls the function URL directly.
+  const triggerRefresh = () => {
+    setRefreshing(true);
+    setRefreshError(false);
+    fetch(`${SUPABASE_URL}/functions/v1/trendswatch-refresh`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(String(res.status));
+        setReloadKey((v) => v + 1);
+      })
+      .catch(() => setRefreshError(true))
+      .finally(() => setRefreshing(false));
+  };
 
   const latestDate = useMemo(() => items[0]?.fetch_date, [items]);
 
@@ -209,14 +232,22 @@ export default function TrendsPanel({ active }: { active: boolean }) {
         <div>
           <h1>{t.heading}</h1>
           {latestDate && <p className="trends-updated">{t.updated(latestDate)}</p>}
+          {refreshError && <p className="trends-updated" role="alert">{t.refreshError}</p>}
         </div>
-        <nav className="trends-platform-filters" aria-label={t.allPlatforms}>
-          {(['', 'tiktok', 'instagram', 'threads'] as const).map((value) => (
-            <button key={value || 'all'} aria-pressed={platform === value} onClick={() => setPlatform(value)}>
-              {value ? PLATFORM_LABELS[value] : t.allPlatforms}
+        <div className="trends-toolbar-controls">
+          {isAdmin && (
+            <button type="button" onClick={triggerRefresh} disabled={refreshing} aria-busy={refreshing}>
+              <IconRefresh size={14} /> {refreshing ? t.refreshingBtn : t.refreshBtn}
             </button>
-          ))}
-        </nav>
+          )}
+          <nav className="trends-platform-filters" aria-label={t.allPlatforms}>
+            {(['', 'tiktok', 'instagram', 'threads'] as const).map((value) => (
+              <button key={value || 'all'} aria-pressed={platform === value} onClick={() => setPlatform(value)}>
+                {value ? PLATFORM_LABELS[value] : t.allPlatforms}
+              </button>
+            ))}
+          </nav>
+        </div>
       </header>
       <nav className="trends-range-filters" aria-label={t.heading}>
         {(['3d', '10d'] as const).map((key) => (

@@ -284,8 +284,27 @@ async function addAdvice(items: TrendItem[]): Promise<TrendItem[]> {
   }
 }
 
+// The panel has an admin-only "Обновить"/"Refresh" button that calls this function's public URL
+// directly with the anon key — which is public in the client bundle by design, so anyone who
+// reads it out could script repeated calls. This cooldown is the real guard (the button's own
+// admin-only gating is UI-level only): refuse to spend on Apify/OpenRouter again this soon after
+// the last successful run, cron or manual.
+const MANUAL_REFRESH_COOLDOWN_MINUTES = 10;
+
 Deno.serve(async (_req) => {
   try {
+    const { data: lastRun } = await supabaseAdmin
+      .from('trend_watch_items')
+      .select('fetched_at')
+      .order('fetched_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (lastRun && Date.now() - new Date(lastRun.fetched_at).getTime() < MANUAL_REFRESH_COOLDOWN_MINUTES * 60_000) {
+      return new Response(JSON.stringify({ inserted: 0, errors: [], skipped: 'cooldown' }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const [tiktok, instagram, threads] = await Promise.allSettled([
       fetchTikTokTrends(),
       fetchInstagramTrends(),
