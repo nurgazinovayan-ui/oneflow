@@ -144,11 +144,18 @@ async function fetchTikTokTrends(): Promise<TrendItem[]> {
 }
 
 async function fetchInstagramTrends(): Promise<TrendItem[]> {
-  const items = await runApifyActor('apidojo~instagram-scraper-api', {
+  // apify/instagram-scraper (the official actor) takes explore-page URLs rather than a
+  // keyword search — an earlier version of this function called a third-party actor
+  // (apidojo~instagram-scraper-api) with a `search`/`searchType` pair it doesn't actually
+  // support, which made every run fail with "run-failed". directUrls is this actor's
+  // documented, stable way to pull recent posts under a hashtag.
+  const items = await runApifyActor('apify~instagram-scraper', {
+    directUrls: [
+      'https://www.instagram.com/explore/tags/reels/',
+      'https://www.instagram.com/explore/tags/trending/',
+    ],
     resultsType: 'posts',
     resultsLimit: MAX_ITEMS_PER_PLATFORM,
-    search: 'trending reels',
-    searchType: 'hashtag',
   });
   return items.slice(0, MAX_ITEMS_PER_PLATFORM).map((raw): TrendItem => {
     const item = raw as Record<string, unknown>;
