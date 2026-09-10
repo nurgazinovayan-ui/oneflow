@@ -7,12 +7,9 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 type Platform = 'tiktok' | 'instagram' | 'threads';
-type RangeKey = '3d' | '10d';
+type RangeKey = 'today' | '3d' | '10d';
 
-const RANGE_DAYS: Record<RangeKey, number> = { '3d': 3, '10d': 10 };
-// A trend needs at least a day to prove itself — hides same-hour noise regardless of which
-// range tab is selected (a separate floor from RANGE_DAYS, which is only the ceiling).
-const MIN_AGE_DAYS = 1;
+const RANGE_DAYS: Record<RangeKey, number> = { today: 0, '3d': 3, '10d': 10 };
 const PLATFORM_LABELS: Record<Platform, string> = { tiktok: 'TikTok', instagram: 'Instagram', threads: 'Threads' };
 
 interface TrendWatchItem {
@@ -35,10 +32,6 @@ function cutoffDate(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() - days);
   return d.toISOString().slice(0, 10);
-}
-
-function minAgeCutoffIso(days: number): string {
-  return new Date(Date.now() - days * 24 * 3_600_000).toISOString();
 }
 
 function relativeTime(iso: string, locale: string): string {
@@ -161,7 +154,7 @@ export default function TrendsPanel({ active, authEmail }: { active: boolean; au
   const isAdmin = authEmail?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
   const [items, setItems] = useState<TrendWatchItem[]>([]);
   const [platform, setPlatform] = useState<'' | Platform>('');
-  const [range, setRange] = useState<RangeKey>('3d');
+  const [range, setRange] = useState<RangeKey>('today');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [selected, setSelected] = useState<TrendWatchItem | null>(null);
@@ -179,7 +172,6 @@ export default function TrendsPanel({ active, authEmail }: { active: boolean; au
       order: 'popularity_score.desc,fetched_at.desc',
       limit: '500',
       fetch_date: `gte.${cutoffDate(RANGE_DAYS[range])}`,
-      fetched_at: `lte.${minAgeCutoffIso(MIN_AGE_DAYS)}`,
     });
     if (platform) params.set('platform', `eq.${platform}`);
     // trend_watch_items has an open "select" RLS policy (see trendswatch-refresh's SQL
@@ -250,9 +242,9 @@ export default function TrendsPanel({ active, authEmail }: { active: boolean; au
         </div>
       </header>
       <nav className="trends-range-filters" aria-label={t.heading}>
-        {(['3d', '10d'] as const).map((key) => (
+        {(['today', '3d', '10d'] as const).map((key) => (
           <button key={key} aria-pressed={range === key} onClick={() => setRange(key)}>
-            {key === '3d' ? t.range3d : t.range10d}
+            {key === 'today' ? t.rangeToday : key === '3d' ? t.range3d : t.range10d}
           </button>
         ))}
       </nav>
