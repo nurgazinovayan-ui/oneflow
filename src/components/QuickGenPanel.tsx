@@ -1,5 +1,4 @@
-import type { TrendLaunch } from '../trends/catalog';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   IconPlus,
   IconChevronRight,
@@ -53,7 +52,6 @@ const readFileAsDataUrl = (file: File): Promise<string> =>
   });
 
 interface QuickGenPanelProps {
-  launchRequest?: TrendLaunch | null;
   active: boolean;
   projectId: string;
   subscriptionActive: boolean;
@@ -82,7 +80,6 @@ export default function QuickGenPanel({
   projectId,
   subscriptionActive,
   onRequestPayment,
-  launchRequest,
 }: QuickGenPanelProps) {
   const t = useT();
   const incrementGenerations = useGenerationCounter((s) => s.increment);
@@ -111,17 +108,6 @@ export default function QuickGenPanel({
     setReferenceImages([]);
     setVideoRef(null);
   };
-
-  useEffect(() => {
-    if (!launchRequest) return;
-    setKind(launchRequest.kind);
-    setModel(launchRequest.model);
-    setResolution(launchRequest.resolution);
-    setAspectRatio(launchRequest.aspectRatio);
-    setPrompt(launchRequest.prompt);
-    resetAttachments();
-    setOpenEntry(null);
-  }, [launchRequest]);
 
   const handleKindChange = (nextKind: GenKind) => {
     if (nextKind === kind) return;

@@ -1,170 +1,237 @@
-import { useEffect, useRef, useState } from 'react';
-import { useT } from '../i18n';
-import { ASPECT_RATIOS, modelShortName } from '../types';
-import { IconImage, IconVideo, IconClose, IconCopy, IconFlow, IconSparkles } from './Icons';
-import { getCatalog, PAGE_SIZE, makeLaunch, resolveModel, supportedModels, safeMediaUrl, safeSourceUrl,
-  type TrendPrompt, type TrendLaunch, type CatalogPage } from '../trends/catalog';
-import TrendsWatchPanel from './TrendsWatchPanel';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useT, useLanguageStore } from '../i18n';
+import { IconVideo, IconClose, IconCalendar, IconRepost, IconHeart, IconTikTok, IconInstagram, IconThreads } from './Icons';
 
-type Props = { active: boolean; demo: boolean; storageScope: string;
-  onUse: (request: TrendLaunch) => void; onNodes: (request: TrendLaunch) => void };
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-function Preview({ item, large = false, active = true }: { item: TrendPrompt; large?: boolean; active?: boolean }) {
-  const t = useT().trends;
-  const [failed, setFailed] = useState(false);
-  const poster = safeMediaUrl(item.thumbnail_url);
-  const video = safeMediaUrl(item.video_url);
-  if (!failed && large && video && active) return <video controls preload="metadata" poster={poster} src={video} onError={() => setFailed(true)} />;
-  if (!failed && poster) return <img src={poster} alt={item.title} loading="lazy" onError={() => setFailed(true)} />;
-  return <p className="trends-placeholder">{item.kind === 'video' ? <IconVideo size={28} /> : <IconImage size={28} />}{failed ? t.previewError : t.noPreview}</p>;
+type Platform = 'tiktok' | 'instagram' | 'threads';
+type RangeKey = 'today' | '3d' | '10d';
+
+const RANGE_DAYS: Record<RangeKey, number> = { today: 0, '3d': 3, '10d': 10 };
+const PLATFORM_LABELS: Record<Platform, string> = { tiktok: 'TikTok', instagram: 'Instagram', threads: 'Threads' };
+
+interface TrendWatchItem {
+  id: string;
+  platform: Platform;
+  title: string;
+  description: string | null;
+  video_url: string | null;
+  thumbnail_url: string | null;
+  source_url: string | null;
+  author: string | null;
+  stats: { views?: number; likes?: number; shares?: number; comments?: number } | null;
+  ai_advice: string | null;
+  popularity_score: number;
+  fetch_date: string;
+  fetched_at: string;
 }
 
-function Details({ item, onClose, onUse, onNodes }: { item: TrendPrompt; onClose: () => void;
-  onUse: Props['onUse']; onNodes: Props['onNodes'] }) {
+function cutoffDate(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
+function relativeTime(iso: string, locale: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const diffHours = Math.round(diffMs / 3_600_000);
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+  if (diffHours < 1) return rtf.format(0, 'hour');
+  if (diffHours < 24) return rtf.format(-diffHours, 'hour');
+  return rtf.format(-Math.round(diffHours / 24), 'day');
+}
+
+function formatStat(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(Math.round(n));
+}
+
+function PlatformIcon({ platform, size }: { platform: Platform; size: number }) {
+  if (platform === 'tiktok') return <IconTikTok size={size} />;
+  if (platform === 'instagram') return <IconInstagram size={size} />;
+  return <IconThreads size={size} />;
+}
+
+function Preview({ item, locale, t }: { item: TrendWatchItem; locale: string; t: ReturnType<typeof useT>['trends'] }) {
+  const [failed, setFailed] = useState(false);
+  const hasVideo = Boolean(item.video_url) && !failed;
+  return (
+    <figure>
+      {hasVideo ? (
+        <video controls preload="metadata" poster={item.thumbnail_url ?? undefined} src={item.video_url!} onError={() => setFailed(true)} />
+      ) : item.thumbnail_url ? (
+        <img src={item.thumbnail_url} alt={item.title} loading="lazy" />
+      ) : (
+        <p className="trends-placeholder">
+          <IconVideo size={26} />
+          {failed ? t.previewError : t.noVideoBadge}
+        </p>
+      )}
+      <span className="trends-card-badge" aria-hidden="true">
+        <PlatformIcon platform={item.platform} size={17} />
+      </span>
+    </figure>
+  );
+}
+
+function TrendCard({ item, locale, onOpen }: { item: TrendWatchItem; locale: string; onOpen: () => void }) {
+  const t = useT().trends;
+  const stats = item.stats ?? {};
+  return (
+    <article className="trends-card">
+      <button className="trends-card-open" onClick={onOpen} aria-label={item.title}>
+        <Preview item={item} locale={locale} t={t} />
+        <h2>{item.title}</h2>
+        <div className="trends-card-stats">
+          <span className="trends-card-stat"><IconCalendar size={12} />{relativeTime(item.fetched_at, locale)}</span>
+          {stats.shares !== undefined && <span className="trends-card-stat"><IconRepost size={12} />{formatStat(stats.shares)}</span>}
+          {stats.likes !== undefined && <span className="trends-card-stat"><IconHeart size={12} />{formatStat(stats.likes)}</span>}
+        </div>
+      </button>
+    </article>
+  );
+}
+
+function TrendDetail({ item, locale, onClose }: { item: TrendWatchItem; locale: string; onClose: () => void }) {
   const t = useT().trends;
   const dialog = useRef<HTMLDialogElement>(null);
-  const [prompt, setPrompt] = useState(item.prompt);
-  const [model, setModel] = useState(resolveModel(item) ?? '');
-  const [copyStatus, setCopyStatus] = useState('');
+  const stats = item.stats ?? {};
   useEffect(() => {
     const el = dialog.current!;
     el.showModal();
     return () => el.close();
   }, []);
-  const copy = async () => {
-    try { await navigator.clipboard.writeText(prompt); setCopyStatus(t.copied); }
-    catch { setCopyStatus(t.copyError); }
-  };
-  const launch = (target: Props['onUse']) => { target(makeLaunch(item, prompt, model)); onClose(); };
-  const source = safeSourceUrl(item.source_url);
-  return <dialog ref={dialog} className="trends-dialog" aria-labelledby="trend-detail-title" onCancel={onClose}
-    onClick={e => { if (e.target === e.currentTarget) { const r = e.currentTarget.getBoundingClientRect();
-      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) onClose(); } }}>
-    <header className="trends-detail-header"><h2 id="trend-detail-title">{item.title}</h2><button autoFocus onClick={onClose} aria-label={t.close}><IconClose /></button></header>
-    <section className="trends-detail-layout">
-      <figure className="trends-detail-preview"><Preview item={item} large /></figure>
-      <section className="trends-detail-copy">
-        {item.description && <p>{item.description}</p>}
-        <p className="trends-meta">{item.model} · {item.categories.join(' / ')}</p>
-        {item.author && <p className="trends-meta">{t.author}: {item.author}</p>}
-        {source && <a href={source} target="_blank" rel="noopener noreferrer">{t.source} ↗</a>}
-        {item.license && <p className="trends-meta">{t.license}: {safeSourceUrl(item.license_url)
-          ? <a href={safeSourceUrl(item.license_url)} target="_blank" rel="noopener noreferrer">{item.license}</a> : item.license}</p>}
-        {item.popularity !== null && <p className="trends-meta">{t.popularity}: {item.popularity.toLocaleString()}</p>}
-        <label className="trends-field">{t.prompt}<textarea value={prompt} onChange={e => { setPrompt(e.target.value); setCopyStatus(''); }} rows={12} /></label>
-        <label className="trends-field">{t.model}<select value={model} onChange={e => setModel(e.target.value)}>
-          <option value="" disabled>{t.chooseModel}</option>
-          {supportedModels(item.kind).map(m => <option key={m.value} value={m.value}>{modelShortName(m.label)}</option>)}
-        </select></label>
-        {!resolveModel(item) && <p className="trends-meta">{t.unsupported}</p>}
-        {item.aspect_ratio && <p className="trends-meta">{t.ratio}: {item.aspect_ratio}
-          {!ASPECT_RATIOS.some(r => r === item.aspect_ratio) && ` — ${t.ratioFallback}`}</p>}
-        <p className="trends-meta">{t.references}</p>
-        <footer className="trends-actions">
-          <button onClick={() => void copy()} disabled={!prompt.trim()}><IconCopy />{t.copy}</button>
-          <button onClick={() => launch(onNodes)} disabled={!model || !prompt.trim()}><IconFlow />{t.nodes}</button>
-          <button className="trends-primary" onClick={() => launch(onUse)} disabled={!model || !prompt.trim()}><IconSparkles />{t.generate}</button>
-        </footer>
-        <p role="status" className="trends-meta">{copyStatus}</p>
+  return (
+    <dialog
+      ref={dialog}
+      className="trends-dialog"
+      aria-labelledby="trend-detail-title"
+      onCancel={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          const r = e.currentTarget.getBoundingClientRect();
+          if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) onClose();
+        }
+      }}
+    >
+      <header className="trends-detail-header">
+        <h2 id="trend-detail-title">{item.title}</h2>
+        <button autoFocus onClick={onClose} aria-label={t.close}><IconClose /></button>
+      </header>
+      <section className="trends-detail-layout">
+        <Preview item={item} locale={locale} t={t} />
+        <section className="trends-detail-copy">
+          {item.description && <p>{item.description}</p>}
+          <div className="trends-detail-stats">
+            <div className="trends-detail-stat"><span>{t.appearedLabel}</span><span>{relativeTime(item.fetched_at, locale)}</span></div>
+            <div className="trends-detail-stat"><span>{t.repostsLabel}</span><span>{stats.shares !== undefined ? formatStat(stats.shares) : '—'}</span></div>
+            <div className="trends-detail-stat"><span>{t.likesLabel}</span><span>{stats.likes !== undefined ? formatStat(stats.likes) : '—'}</span></div>
+          </div>
+          {item.ai_advice && (
+            <div className="trends-detail-advice">
+              <p className="trends-detail-advice-label">{t.adviceLabel}</p>
+              <p>{item.ai_advice}</p>
+            </div>
+          )}
+          <div className="trends-detail-footer">
+            {item.author && <span>{t.author}: {item.author}</span>}
+            {item.source_url && <a href={item.source_url} target="_blank" rel="noopener noreferrer">{t.openSource} ↗</a>}
+          </div>
+        </section>
       </section>
-    </section>
-  </dialog>;
+    </dialog>
+  );
 }
 
-export default function TrendsPanel({ active, demo, storageScope, onUse, onNodes }: Props) {
+export default function TrendsPanel({ active }: { active: boolean }) {
   const t = useT().trends;
-  const [view, setView] = useState<'watch' | 'catalog'>('watch');
-  const storageKey = `oneflow-trends-saved:${storageScope}`;
-  const [saved, setSaved] = useState<string[]>(() => {
-    try { const value = JSON.parse(localStorage.getItem(storageKey) ?? '[]'); return Array.isArray(value) ? value.filter(v => typeof v === 'string') : []; }
-    catch { return []; }
-  });
-  const [favoriteError, setFavoriteError] = useState(false);
-  const [query, setQuery] = useState('');
-  const [search, setSearch] = useState('');
-  const [kind, setKind] = useState('');
-  const [model, setModel] = useState('');
-  const [category, setCategory] = useState('');
-  const [collection, setCollection] = useState('');
-  const [sort, setSort] = useState('newest');
-  const [onlySaved, setOnlySaved] = useState(false);
-  const [offset, setOffset] = useState(0);
-  const [page, setPage] = useState<CatalogPage | null>(null);
-  const [loading, setLoading] = useState(false);
+  const language = useLanguageStore((s) => s.language);
+  const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+  const [items, setItems] = useState<TrendWatchItem[]>([]);
+  const [platform, setPlatform] = useState<'' | Platform>('');
+  const [range, setRange] = useState<RangeKey>('3d');
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [retry, setRetry] = useState(0);
-  const [selected, setSelected] = useState<TrendPrompt | null>(null);
-  const cacheKey = useRef('');
-  useEffect(() => { const timer = window.setTimeout(() => { setSearch(query.trim()); setOffset(0); }, 250); return () => clearTimeout(timer); }, [query]);
-  const idsKey = onlySaved ? JSON.stringify(saved) : 'null';
+  const [selected, setSelected] = useState<TrendWatchItem | null>(null);
+
   useEffect(() => {
-    if (!active || view !== 'catalog') return;
-    const key = JSON.stringify([demo, search, kind, model, category, collection, sort, offset, idsKey, retry]);
-    if (cacheKey.current === key) return;
-    const controller = new AbortController();
-    setLoading(true); setError(false);
-    getCatalog({ query: search, kind, model, category, collection, sort, offset, ids: JSON.parse(idsKey) }, demo, controller.signal)
-      .then(result => { if (!controller.signal.aborted) {
-        if (offset > 0 && offset >= result.total) { setOffset(0); return; }
-        setPage(result); cacheKey.current = key;
-      } })
-      .catch(() => { if (!controller.signal.aborted) setError(true); })
-      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
-    return () => controller.abort();
-  }, [active, view, demo, search, kind, model, category, collection, sort, offset, idsKey, retry]);
-  const favorite = (id: string) => {
-    const next = saved.includes(id) ? saved.filter(v => v !== id) : [...saved, id];
-    setSaved(next); setFavoriteError(false);
-    try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { setFavoriteError(true); }
-  };
-  const reset = () => { setQuery(''); setSearch(''); setKind(''); setModel(''); setCategory(''); setCollection(''); setOnlySaved(false); setOffset(0); setSort('newest'); };
-  const select = (setter: (value: string) => void, value: string) => { setter(value); setOffset(0); };
-  // Uses the existing ONEFLOW frame/tokens per HANDOFF.md. No global UI reset or new library.
-  return <section className="trends-panel" hidden={!active} aria-label={t.heading}>
-    <header className="trends-toolbar">
-      <h1>{t.heading}</h1>
-      <nav className="trends-view-tabs" aria-label={t.heading}>
-        <button aria-pressed={view === 'watch'} onClick={() => setView('watch')}>{t.watchTab}</button>
-        <button aria-pressed={view === 'catalog'} onClick={() => setView('catalog')}>{t.catalogTab}</button>
-      </nav>
-      {view === 'catalog' && <input type="search" aria-label={t.search} placeholder={t.search} value={query} onChange={e => setQuery(e.target.value)} />}
-      {view === 'catalog' && <button aria-pressed={onlySaved} onClick={() => { setOnlySaved(v => !v); setOffset(0); }}>☆ {t.saved} ({saved.length})</button>}
-    </header>
-    <TrendsWatchPanel active={active && view === 'watch'} />
-    {view === 'catalog' && <>
-      <section className="trends-filters" aria-label={t.categories}>
-        <nav className="trends-kind" aria-label={t.all}>
-          {[['', t.all], ['image', t.image], ['video', t.video]].map(([value, label]) =>
-            <button key={value} aria-pressed={kind === value} onClick={() => select(setKind, value)}>{label}</button>)}
+    if (!active) return;
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
+    const params = new URLSearchParams({
+      select: '*',
+      order: 'popularity_score.desc,fetched_at.desc',
+      limit: '500',
+      fetch_date: `gte.${cutoffDate(RANGE_DAYS[range])}`,
+    });
+    if (platform) params.set('platform', `eq.${platform}`);
+    // trend_watch_items has an open "select" RLS policy (see trendswatch-refresh's SQL
+    // comment) — this is shared, non-sensitive content, same for every signed-in user, so
+    // the anon key alone is enough here without a per-user Authorization header.
+    fetch(`${SUPABASE_URL}/rest/v1/trend_watch_items?${params.toString()}`, {
+      headers: { apikey: SUPABASE_ANON_KEY },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(String(res.status));
+        return res.json() as Promise<TrendWatchItem[]>;
+      })
+      .then((data) => {
+        if (!cancelled) setItems(data);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [active, platform, range]);
+
+  const latestDate = useMemo(() => items[0]?.fetch_date, [items]);
+
+  return (
+    <section className="trends-panel" hidden={!active} aria-label={t.heading}>
+      <header className="trends-toolbar">
+        <div>
+          <h1>{t.heading}</h1>
+          {latestDate && <p className="trends-updated">{t.updated(latestDate)}</p>}
+        </div>
+        <nav className="trends-platform-filters" aria-label={t.allPlatforms}>
+          {(['', 'tiktok', 'instagram', 'threads'] as const).map((value) => (
+            <button key={value || 'all'} aria-pressed={platform === value} onClick={() => setPlatform(value)}>
+              {value ? PLATFORM_LABELS[value] : t.allPlatforms}
+            </button>
+          ))}
         </nav>
-        <select aria-label={t.models} value={model} onChange={e => select(setModel, e.target.value)}><option value="">{t.models}</option>{page?.facets.models.map(v => <option key={v}>{v}</option>)}</select>
-        <select aria-label={t.categories} value={category} onChange={e => select(setCategory, e.target.value)}><option value="">{t.categories}</option>{page?.facets.categories.map(v => <option key={v}>{v}</option>)}</select>
-        <select aria-label={t.collections} value={collection} onChange={e => select(setCollection, e.target.value)}><option value="">{t.collections}</option>{page?.facets.collections.map(v => <option key={v}>{v}</option>)}</select>
-        <select aria-label={t.newest} value={sort} onChange={e => select(setSort, e.target.value)}><option value="newest">{t.newest}</option><option value="popular">{t.popular}</option></select>
-      </section>
+      </header>
+      <nav className="trends-range-filters" aria-label={t.heading}>
+        {(['today', '3d', '10d'] as const).map((key) => (
+          <button key={key} aria-pressed={range === key} onClick={() => setRange(key)}>
+            {key === 'today' ? t.rangeToday : key === '3d' ? t.range3d : t.range10d}
+          </button>
+        ))}
+      </nav>
       <section className="trends-scroll" aria-busy={loading}>
-        {demo && <p className="trends-notice">{t.demo}</p>}
-        {favoriteError && <p role="status">{t.favoriteError}</p>}
-        {loading ? <p role="status" className="trends-state">{t.loading}</p> : error ? <section className="trends-state" role="alert"><p>{t.error}</p><button onClick={() => setRetry(v => v + 1)}>{t.retry}</button></section> : page && <>
-          <p className="trends-meta" role="status">{t.results(page.total)}</p>
-          {!page.items.length && <section className="trends-state"><p>{t.empty}</p><button onClick={reset}>{t.reset}</button></section>}
-          <section className="trends-grid">
-            {page.items.map(item => <article className="trends-card" key={item.id}>
-              <button className="trends-card-open" onClick={() => setSelected(item)} aria-label={`${t.details}: ${item.title}`}>
-                <figure><Preview item={item} active={active} /></figure>
-                <h2>{item.title}</h2><p className="trends-meta">{item.kind === 'video' ? <IconVideo /> : <IconImage />}{item.model}</p>
-              </button>
-              <footer><p className="trends-meta">{item.categories.slice(0, 2).join(' / ')}</p><button className="trends-save" aria-pressed={saved.includes(item.id)} aria-label={saved.includes(item.id) ? t.unsave : t.save} onClick={() => favorite(item.id)}>{saved.includes(item.id) ? '★' : '☆'}</button></footer>
-            </article>)}
-          </section>
-          {page.total > PAGE_SIZE && <nav className="trends-pagination" aria-label={t.next}>
-            <button disabled={offset === 0} onClick={() => setOffset(v => Math.max(0, v - PAGE_SIZE))}>{t.previous}</button>
-            <p>{t.page(Math.floor(offset / PAGE_SIZE) + 1, Math.ceil(page.total / PAGE_SIZE))}</p>
-            <button disabled={offset + PAGE_SIZE >= page.total} onClick={() => setOffset(v => v + PAGE_SIZE)}>{t.next}</button>
-          </nav>}
-        </>}
+        {loading ? (
+          <p role="status" className="trends-state">{t.loading}</p>
+        ) : error ? (
+          <section className="trends-state" role="alert"><p>{t.error}</p></section>
+        ) : items.length === 0 ? (
+          <section className="trends-state"><p>{t.empty}</p></section>
+        ) : (
+          <div className="trends-grid">
+            {items.map((item) => (
+              <TrendCard key={item.id} item={item} locale={locale} onOpen={() => setSelected(item)} />
+            ))}
+          </div>
+        )}
       </section>
-      {active && selected && <Details key={selected.id} item={selected} onClose={() => setSelected(null)} onUse={onUse} onNodes={onNodes} />}
-    </>}
-  </section>;
+      {active && selected && <TrendDetail key={selected.id} item={selected} locale={locale} onClose={() => setSelected(null)} />}
+    </section>
+  );
 }

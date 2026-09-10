@@ -500,3 +500,67 @@ export function IconNewChat({ size = 15 }: IconProps) {
     </svg>
   );
 }
+
+export function IconCalendar({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
+      <rect x="3" y="5" width="18" height="16" rx="3" />
+      <path d="M3 9.5h18M8 3v4M16 3v4" />
+    </svg>
+  );
+}
+
+export function IconRepost({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base}>
+      <path d="M17 3l3 3-3 3" />
+      <path d="M7 21l-3-3 3-3" />
+      <path d="M20 6H9a5 5 0 0 0-5 5" />
+      <path d="M4 18h11a5 5 0 0 0 5-5" />
+    </svg>
+  );
+}
+
+export function IconHeart({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base} strokeLinejoin="round">
+      <path d="M12 20.5s-7.5-4.6-9.5-9.1C1 8 2.6 4.7 6 4c2-.4 3.8.4 5 2 1.2-1.6 3-2.4 5-2 3.4.7 5 4 3.5 7.4-2 4.5-9.5 9.1-9.5 9.1Z" />
+    </svg>
+  );
+}
+
+// Platform logos — deliberately not using the shared `base` (stroke/fill mix per mark);
+// callers set color via CSS (rendered plain white over trend preview thumbnails).
+export function IconTikTok({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M16.5 3c.4 2.2 2 3.9 4.2 4.2v3.1c-1.6.1-3-.4-4.2-1.3v6.8c0 3.5-2.9 6.2-6.3 5.9-3-.2-5.4-2.7-5.4-5.7 0-3.2 2.6-5.8 5.8-5.8.3 0 .6 0 .9.1v3.2a2.7 2.7 0 1 0 1.9 2.6V3h3.1z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+export function IconInstagram({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" strokeWidth="1.7" />
+      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.7" />
+      <circle cx="17.2" cy="6.8" r="1.2" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function IconThreads({ size = 15 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 3c4.5 0 7 2.6 7 7.4 0 3.6-1.7 6-4 6.9-1 .4-2.1.5-2.9.1-.9-.4-1.2-1.3-.8-2.1.4-.8 1.4-1 2.4-.7 1.2.3 2.2-.5 2.4-2 .2-1.7-.8-3-2.6-3.2-2-.2-3.6.9-4 2.7-.3 1.5.2 2.9 1.3 3.8"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

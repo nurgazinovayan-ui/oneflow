@@ -1,6 +1,5 @@
 import TrendsPanel from './components/TrendsPanel';
 import MessengerWidget from './components/MessengerWidget';
-import type { TrendLaunch } from './trends/catalog';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ReactFlow,
@@ -390,7 +389,6 @@ function Canvas() {
   const [mainView, setMainView] = useState<
     'canvas' | 'text' | 'generate' | 'evaluate' | 'onelaunch' | 'musicaudio' | 'strategy' | 'assets' | 'trends'
   >('canvas');
-  const [trendLaunch, setTrendLaunch] = useState<TrendLaunch | null>(null);
   const [copywriteAuthReady, setCopywriteAuthReady] = useState(false);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -771,25 +769,6 @@ function Canvas() {
   // business presets, just fed a prompt built from the strategy's audience/positioning/offer
   // instead of a fixed vertical, and switches the user onto the canvas so the generated card
   // is one click away instead of leaving them with only a text recommendation.
-  const handleTrendNodes = (request: TrendLaunch) => {
-    const promptId = nextId('prompt');
-    const genId = nextId(request.kind);
-    const type = request.kind === 'image' ? 'imageGen' : 'videoGen';
-    const x = nodes.length ? Math.max(...nodes.map(n => n.position.x + (n.measured?.width ?? 340))) + 100 : 60;
-    const additions: Node[] = [
-      { id: promptId, type: 'prompt', position: { x, y: 100 }, data: { value: request.prompt } },
-      { id: genId, type, position: { x: x + 420, y: 100 }, data: {
-        ...buildDefaultNodeData(type), model: request.model, aspectRatio: request.aspectRatio,
-        resolution: request.resolution,
-      } },
-    ];
-    setNodes(current => [...current.map(n => ({ ...n, selected: false })), ...additions]);
-    setEdges(current => [...current, { id: `e-${promptId}-${genId}`, source: promptId, target: genId, targetHandle: 'prompt' }]);
-    setShowStartScreen(false);
-    setMainView('canvas');
-    window.setTimeout(() => void fitView({ nodes: additions.map(n => ({ id: n.id })), padding: 0.2, duration: 400 }), 100);
-  };
-
   const handleCreateFromStrategy = (prompt: string) => {
     const { nodes: presetNodes, edges: presetEdges } = buildBusinessPresetNodesEdges(prompt);
     setNodes(presetNodes);
@@ -1161,7 +1140,6 @@ function Canvas() {
             />
           )}
           <QuickGenPanel
-            launchRequest={trendLaunch}
             active={mainView === 'generate'}
             projectId={activeProjectId}
             subscriptionActive={subscriptionActive}
@@ -1179,11 +1157,7 @@ function Canvas() {
           {import.meta.env.VITE_WEB_MODE === '1' && (
             <StrategyPanel active={mainView === 'strategy'} onCreateWorkflow={handleCreateFromStrategy} />
           )}
-          {import.meta.env.VITE_WEB_MODE === '1' && <TrendsPanel
-            key={authEmail ?? 'demo'} active={mainView === 'trends'} demo={isDemoMode}
-            storageScope={authEmail?.toLowerCase() ?? 'demo'}
-            onUse={request => { setTrendLaunch(request); setMainView('generate'); }}
-            onNodes={handleTrendNodes} /> }
+          {import.meta.env.VITE_WEB_MODE === '1' && <TrendsPanel active={mainView === 'trends'} />}
           {import.meta.env.VITE_WEB_MODE === '1' && <AssetsPanel active={mainView === 'assets'} />}
         </div>
       </div>

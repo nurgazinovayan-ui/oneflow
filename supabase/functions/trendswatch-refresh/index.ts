@@ -17,8 +17,8 @@
 // to compile today's Threads trends as text (Threads has no scraper wired here — its own API
 // barely exposes read access to anything, so there's no real video preview for it, only a
 // source link), then asks the same model for a short "what to do with this" tip per item, and
-// stores everything in trend_watch_items for the Trendswatching panel's "Соцсети"/"Social" tab
-// to read (open "select" RLS — see the SQL below).
+// stores everything in trend_watch_items for the Trendswatching panel to read (open "select"
+// RLS — see the SQL below).
 //
 // The Apify actor ids/input fields below are this integration's best-known shape at the time
 // this was written, NOT independently confirmed against a live call — Apify actors change their
@@ -42,6 +42,7 @@
 //     author text,
 //     stats jsonb not null default '{}'::jsonb,
 //     ai_advice text,
+//     popularity_score numeric not null default 0,
 //     fetch_date date not null default current_date,
 //     fetched_at timestamptz not null default now()
 //   );
@@ -53,6 +54,10 @@
 //   -- so an open select is fine; only this function (service role) ever writes here.
 //   create index if not exists trend_watch_items_fetch_date_idx on public.trend_watch_items (fetch_date desc);
 //   create index if not exists trend_watch_items_platform_idx on public.trend_watch_items (platform);
+//   create index if not exists trend_watch_items_popularity_idx on public.trend_watch_items (fetch_date desc, popularity_score desc);
+//
+// Upgrading an already-deployed table (adds the column the two lines above depend on):
+//   alter table public.trend_watch_items add column if not exists popularity_score numeric not null default 0;
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -84,7 +89,19 @@ interface TrendItem {
   ai_advice?: string;
 }
 
-const MAX_ITEMS_PER_PLATFORM = 8;
+const MAX_ITEMS_PER_PLATFORM = 18;
+// The panel's own period filter shows "up to 50/day, most popular first" as its retention
+// promise — enforced here (not just by keeping MAX_ITEMS_PER_PLATFORM * 3 low) so it holds even
+// if this function ends up invoked more than once for the same day.
+const MAX_ITEMS_PER_DAY = 50;
+
+// likes + reposts (weighted higher — the stronger virality signal) + comments; the same formula
+// used to rank cards in the panel (order=popularity_score.desc) and to decide which items survive
+// the MAX_ITEMS_PER_DAY trim below.
+function popularityScore(stats: Record<string, number> | undefined): number {
+  if (!stats) return 0;
+  return (stats.likes ?? 0) + (stats.shares ?? 0) * 3 + (stats.comments ?? 0) * 2;
+}
 
 async function runApifyActor(actorId: string, input: Record<string, unknown>): Promise<unknown[]> {
   const res = await fetch(
@@ -119,6 +136,7 @@ async function fetchTikTokTrends(): Promise<TrendItem[]> {
       stats: {
         views: Number(item.playCount ?? 0),
         likes: Number(item.diggCount ?? 0),
+        shares: Number(item.shareCount ?? 0),
         comments: Number(item.commentCount ?? 0),
       },
     };
@@ -262,9 +280,27 @@ Deno.serve(async (_req) => {
           author: item.author ?? null,
           stats: item.stats ?? {},
           ai_advice: item.ai_advice ?? null,
+          popularity_score: popularityScore(item.stats),
         }))
       );
       if (error) throw error;
+    }
+
+    // Enforce the "50 trends/day, most popular kept" retention promise — a no-op on a normal
+    // single-run day (MAX_ITEMS_PER_PLATFORM * 3 platforms is already under 50), but a real
+    // safety net if this function is ever invoked more than once for the same fetch_date.
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: todaysItems, error: trimSelectError } = await supabaseAdmin
+      .from('trend_watch_items')
+      .select('id')
+      .eq('fetch_date', today)
+      .order('popularity_score', { ascending: false });
+    if (trimSelectError) {
+      console.error('trendswatch-refresh: could not check today\'s item count', trimSelectError);
+    } else if (todaysItems.length > MAX_ITEMS_PER_DAY) {
+      const excessIds = todaysItems.slice(MAX_ITEMS_PER_DAY).map((row) => row.id as string);
+      const { error: trimDeleteError } = await supabaseAdmin.from('trend_watch_items').delete().in('id', excessIds);
+      if (trimDeleteError) console.error('trendswatch-refresh: failed to trim to MAX_ITEMS_PER_DAY', trimDeleteError);
     }
 
     const errors = [tiktok, instagram, threads]
