@@ -23,10 +23,16 @@
 //     created_at timestamptz not null default now()
 //   );
 //   alter table generation_log enable row level security;
-//   -- No policies — only Edge Functions (service-role client, which bypasses RLS) touch this
-//   -- table: each generate-*/evaluate-creative function writes to it, this one reads from it.
+//   -- Only Edge Functions (service-role, which bypasses RLS) ever write to this table. The one
+//   -- select policy below lets a signed-in user read their own rows directly (via their own JWT,
+//   -- not service-role) — used by the web BudgetBar (src/webApi.ts's fetchMonthlySpend) to show
+//   -- real spend instead of a client-estimated running total. This function itself still reads
+//   -- via service-role regardless, so it isn't affected either way.
+//   create policy "select own generation log" on generation_log
+//     for select using (auth.uid() = user_id);
 //   create index if not exists generation_log_email_idx on generation_log (email);
 //   create index if not exists generation_log_created_at_idx on generation_log (created_at desc);
+//   create index if not exists generation_log_user_id_idx on generation_log (user_id);
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 

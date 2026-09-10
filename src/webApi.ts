@@ -180,17 +180,26 @@ function parseAdaptPresetText(raw: string): AdaptPresetFormat[] {
   return formats;
 }
 
-// Per-browser, not per-account — the web build has no server-side usage table (kept simple
-// by design; see the "simplified web version" scope decision). Cost is estimated locally
-// from Replicate's published per-model rates (see IMAGE_PRICE_USD/VIDEO_PRICE_PER_SECOND_USD
-// in types.ts) since Replicate's API doesn't return a prediction's real dollar cost.
-async function bumpWebUsage(costUsd: number): Promise<void> {
-  const month = new Date().toISOString().slice(0, 7);
-  const storedMonth = localStorage.getItem('web-usage-month');
-  const total =
-    (storedMonth === month ? Number(localStorage.getItem('web-usage-cost') ?? '0') : 0) + costUsd;
-  localStorage.setItem('web-usage-month', month);
-  localStorage.setItem('web-usage-cost', String(total));
+// Real spend for the BudgetBar — sums cost_usd from generation_log (the actual amount each
+// generate-*/evaluate-creative Edge Function recorded server-side at generation time), rather
+// than a per-browser running total estimated client-side from the same price tables the server
+// uses. Requires a "select own rows" RLS policy on generation_log — see the SQL comment in
+// supabase/functions/admin-list-generations/index.ts.
+async function fetchMonthlySpend(session: { userId: string; accessToken: string }): Promise<number> {
+  try {
+    const monthStart = new Date();
+    monthStart.setUTCDate(1);
+    monthStart.setUTCHours(0, 0, 0, 0);
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/generation_log?user_id=eq.${session.userId}&created_at=gte.${monthStart.toISOString()}&select=cost_usd`,
+      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${session.accessToken}` } }
+    );
+    if (!res.ok) return 0;
+    const rows: { cost_usd: number }[] = await res.json();
+    return rows.reduce((sum, r) => sum + (r.cost_usd ?? 0), 0);
+  } catch {
+    return 0;
+  }
 }
 
 // Per-generation history behind the profile popup's "count by model, exportable by date"
@@ -359,7 +368,6 @@ export function installWebApi(): void {
     generateImage: async (params) => {
       const outputs = await callFunction<string[]>('generate-image', params);
       const costUsd = estimateImageCost(params.model, params.resolution, outputs.length);
-      void bumpWebUsage(costUsd);
       logWebGeneration({
         timestamp: Date.now(),
         model: params.model,
@@ -372,7 +380,6 @@ export function installWebApi(): void {
     generateVideo: async (params) => {
       const outputs = await callFunction<string[]>('generate-video', params);
       const costUsd = estimateVideoCost(params.model, params.resolution, params.duration);
-      void bumpWebUsage(costUsd);
       logWebGeneration({ timestamp: Date.now(), model: params.model, category: 'video', costUsd });
       backupToYandexDisk(outputs, 'video');
       return outputs;
@@ -380,7 +387,6 @@ export function installWebApi(): void {
     generateVideoPro: async (params) => {
       const outputs = await callFunction<string[]>('generate-video-pro', params);
       const costUsd = estimateVideoCost('bytedance/seedance-2.5', params.resolution, params.duration);
-      void bumpWebUsage(costUsd);
       logWebGeneration({
         timestamp: Date.now(),
         model: 'bytedance/seedance-2.5',
@@ -393,7 +399,6 @@ export function installWebApi(): void {
     generateVector: async (params) => {
       const outputs = await callFunction<string[]>('generate-vector', params);
       const costUsd = estimateImageCost('recraft-ai/recraft-v4-svg', undefined, outputs.length);
-      void bumpWebUsage(costUsd);
       logWebGeneration({
         timestamp: Date.now(),
         model: 'recraft-ai/recraft-v4-svg',
@@ -454,10 +459,9 @@ export function installWebApi(): void {
 
     getUsage: async () => {
       const month = new Date().toISOString().slice(0, 7);
-      const storedMonth = localStorage.getItem('web-usage-month');
-      const costUsd =
-        storedMonth === month ? Number(localStorage.getItem('web-usage-cost') ?? '0') : 0;
       const limit = Number(localStorage.getItem('web-usage-limit') ?? '50');
+      const session = await getValidSession();
+      const costUsd = session ? await fetchMonthlySpend(session) : 0;
       return { costUsd, limit, month };
     },
     setGenerationLimit: async (limit) => {
