@@ -4576,6 +4576,33 @@
   flex-shrink: 0;
 }
 
+/* Attaching used to be drag-and-drop only, which nothing on screen advertised. */
+.chat-attach-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 40px;
+  border: 1px solid var(--c-divider);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--c-text-muted);
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+
+.chat-attach-btn:hover:not(:disabled) {
+  background: var(--c-panel-3);
+  color: var(--c-text);
+}
+
+.chat-attach-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .chat-attachments {
   display: flex;
   flex-wrap: wrap;

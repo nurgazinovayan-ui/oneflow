@@ -182,8 +182,10 @@ export interface Translations {
     dropHint: string;
     addedNodes: (count: number) => string;
     failedNodes: string;
+    attachTooltip: string;
+    attachError: string;
     documentLabel: (name: string) => string;
-    imageAttachedLabel: (name: string) => string;
+    imageAttachedLabel: (name: string, index: number) => string;
     transcriptUser: string;
     transcriptAssistant: string;
   };
@@ -1085,15 +1087,18 @@ export const ru: Translations = {
     copyAllTooltip: 'Скопировать всю переписку',
     copiedLabel: 'Скопировано',
     closeTooltip: 'Закрыть',
-    emptyHint: 'Задайте вопрос — например, помощь с промптом или идеей. Можно перетащить сюда фото или документ.',
+    emptyHint:
+      'Задайте вопрос — например, помощь с промптом или идеей. Прикрепите фото скрепкой, и я смогу поставить его нодой на холст.',
     copyTooltip: 'Скопировать',
     removeTooltip: 'Удалить',
     inputPlaceholder: 'Сообщение...',
     dropHint: 'Отпустите, чтобы прикрепить файл',
     addedNodes: (count) => `\n\n✅ Добавил на холст ${count} нод.`,
     failedNodes: '\n\n⚠️ Не удалось построить ноды из этого ответа.',
+    attachTooltip: 'Прикрепить фото или документ',
+    attachError: 'До 4 файлов, каждый до 4 МБ.',
     documentLabel: (name) => `[Документ: ${name}]`,
-    imageAttachedLabel: (name) => `[Прикреплено фото: ${name}]`,
+    imageAttachedLabel: (name, index) => `[Фото ${index}: ${name}]`,
     transcriptUser: 'Вы',
     transcriptAssistant: 'Ассистент',
   },
@@ -2112,15 +2117,18 @@ export const en: Translations = {
     copyAllTooltip: 'Copy the whole conversation',
     copiedLabel: 'Copied',
     closeTooltip: 'Close',
-    emptyHint: 'Ask a question — e.g. help with a prompt or an idea. You can drag a photo or a document here.',
+    emptyHint:
+      'Ask a question — e.g. help with a prompt or an idea. Attach a photo with the paperclip and I can drop it onto the canvas as a node.',
     copyTooltip: 'Copy',
     removeTooltip: 'Remove',
     inputPlaceholder: 'Message...',
     dropHint: 'Drop to attach the file',
     addedNodes: (count) => `\n\n✅ Added ${count} node(s) to the canvas.`,
     failedNodes: "\n\n⚠️ Couldn't build nodes from this reply.",
+    attachTooltip: 'Attach a photo or a document',
+    attachError: 'Up to 4 files, 4 MB each.',
     documentLabel: (name) => `[Document: ${name}]`,
-    imageAttachedLabel: (name) => `[Photo attached: ${name}]`,
+    imageAttachedLabel: (name, index) => `[Photo ${index}: ${name}]`,
     transcriptUser: 'You',
     transcriptAssistant: 'Assistant',
   },

@@ -73,7 +73,13 @@ const FIELD_SPECS: Record<AssistantNodeType, FieldSpec[]> = {
     { key: 'resolution', validate: isNonEmptyString },
   ],
   adapt: [{ key: 'note', validate: isNonEmptyString }],
-  imageInput: [{ key: 'manualUrl', validate: isNonEmptyString }],
+  imageInput: [
+    { key: 'manualUrl', validate: isNonEmptyString },
+    // 1-based index into the photos the user attached in this conversation. The model can't
+    // hand back image bytes for a photo it only saw as vision input, so it points at one
+    // instead and resolveAttachedImages() below swaps in the real data URL client-side.
+    { key: 'attachment', validate: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 1 },
+  ],
 };
 
 export function sanitizeNodeData(
@@ -100,6 +106,30 @@ function isConnectAction(value: unknown): value is AssistantConnectAction {
     typeof v.to === 'string' &&
     (v.targetHandle === undefined || typeof v.targetHandle === 'string')
   );
+}
+
+// ImageInputNode renders from `outputs` and treats `manualUrl` as the text field feeding it —
+// so a node given only a manualUrl shows the URL but stays empty, with nothing to pass
+// downstream. Every path that sets an image here has to fill outputs too, exactly as the node's
+// own file picker and URL field do.
+function withImageOutputs(data: Record<string, unknown>): Record<string, unknown> {
+  const url = typeof data.manualUrl === 'string' ? data.manualUrl.trim() : '';
+  return url ? { ...data, outputs: [url] } : data;
+}
+
+// Turns {"attachment": 2} into the second photo the user actually attached. The data URL comes
+// from the user's own file, never from the model — which is why this runs after
+// sanitizeNodeData has already thrown away everything the model isn't allowed to set.
+export function resolveAttachedImages(actions: AssistantAction[], images: string[]): AssistantAction[] {
+  return actions.map((action) => {
+    if (action.type !== 'addNode' || action.nodeType !== 'imageInput') return action;
+    const { attachment, ...rest } = action.data ?? {};
+    const dataUrl = typeof attachment === 'number' ? images[attachment - 1] : undefined;
+    // An out-of-range index leaves a normal empty Image node rather than a broken one — the
+    // user can still pick a file in it, and the mistake is visible instead of silent.
+    if (!dataUrl) return { ...action, data: withImageOutputs(rest) };
+    return { ...action, data: { manualUrl: '', outputs: [dataUrl] } };
+  });
 }
 
 export interface ParsedAssistantReply {

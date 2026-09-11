@@ -592,7 +592,14 @@ const NODE_ASSISTANT_SYSTEM_PROMPT =
   'Допустимые nodeType и их data: "prompt" (data.value — текст промпта), ' +
   '"imageGen" (data.model, data.manualPrompt, data.aspectRatio), ' +
   '"videoGen" (data.model, data.manualPrompt, data.aspectRatio, data.duration, data.resolution), ' +
-  '"adapt" (data.note), "imageInput" (data.manualUrl — URL картинки, если есть, иначе не указывай). ' +
+  '"adapt" (data.note), "imageInput" (data.manualUrl — URL картинки, если есть, иначе не указывай; ' +
+  'либо data.attachment — номер фото, которое пользователь приложил в этот чат). ' +
+  'Приложенные фото приходят в сообщении пометками вида «[Фото 1: name.jpg]» и нумеруются ' +
+  'подряд по всей переписке. Если пользователь просит поставить своё фото на холст (например: ' +
+  '«добавь это фото в схему», «сделай видео из моей картинки»), добавь ноду imageInput с ' +
+  '{"attachment": N}, где N — номер нужного фото, и подключи её к нужной ноде. Не пытайся ' +
+  'вставить само изображение, base64 или data:-ссылку — подставит приложение. Если фото в ' +
+  'переписке не было, ноду imageInput добавляй без attachment — пользователь выберет файл сам. ' +
   'refId — твой временный локальный id узла внутри этого JSON, нужен только для connect, ' +
   'в самом приложении узлам присваиваются другие настоящие id. ' +
   'Допустимые targetHandle для connect: у imageGen — "prompt" (источник: prompt) или ' +

@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
-import { IconChat, IconSend, IconCopy, IconClose } from './Icons';
+import { IconAttach, IconChat, IconSend, IconCopy, IconClose } from './Icons';
 import type { ChatMessage } from '../types';
-import { parseAssistantReply, type AssistantAction } from '../aiActions';
+import { parseAssistantReply, resolveAttachedImages, type AssistantAction } from '../aiActions';
 import { parseSuggestions } from '../chatSuggestions';
 import { formatGenerationError } from '../errorMessages';
 import { useT } from '../i18n';
@@ -30,6 +30,9 @@ const readFileAsText = (file: File): Promise<string> =>
     reader.readAsText(file);
   });
 
+const MAX_ATTACHMENTS = 4;
+const MAX_ATTACHMENT_BYTES = 4 * 1024 * 1024;
+
 interface AiAssistantPanelProps {
   messages: ChatMessage[];
   draft: string;
@@ -55,9 +58,15 @@ export default function AiAssistantPanel({
   const [dockCorner, setDockCorner] = useState<Corner>('bottom-left');
   const [dragging, setDragging] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  // Every photo sent in this conversation, in order — the model refers to one by its number
+  // ("attachment": 2), including a photo from an earlier turn, so the list has to outlive the
+  // composer's own attachments, which are cleared on each send.
+  const [sentImages, setSentImages] = useState<string[]>([]);
   const [fileDropActive, setFileDropActive] = useState(false);
+  const [attachError, setAttachError] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
@@ -70,16 +79,21 @@ export default function AiAssistantPanel({
     const documentBlocks = attachments
       .filter((a) => a.kind === 'document')
       .map((a) => `${t.aiAssistant.documentLabel(a.name)}\n${a.content}`);
+    const imageDataUrls = attachments.filter((a) => a.kind === 'image').map((a) => a.content);
+    // Numbering continues across the conversation, so "фото 1" still means the same photo
+    // three turns later — that number is what the model puts in an addNode action.
     const imageNotes = attachments
       .filter((a) => a.kind === 'image')
-      .map((a) => t.aiAssistant.imageAttachedLabel(a.name));
+      .map((a, i) => t.aiAssistant.imageAttachedLabel(a.name, sentImages.length + i + 1));
     const fullText = [...documentBlocks, ...imageNotes, text].filter(Boolean).join('\n\n');
-    const imageDataUrls = attachments.filter((a) => a.kind === 'image').map((a) => a.content);
+    const allImages = [...sentImages, ...imageDataUrls];
 
     const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: fullText }];
     onMessagesChange(nextMessages);
     onDraftChange('');
     setAttachments([]);
+    setSentImages(allImages);
+    setAttachError('');
     setSuggestions(null);
     setStatus('loading');
     setError(undefined);
@@ -93,7 +107,7 @@ export default function AiAssistantPanel({
       const { cleanedText, suggestions: parsedSuggestions } = parseSuggestions(afterActions || reply);
       let displayText = cleanedText;
       if (actions) {
-        const createdCount = onExecuteActions(actions);
+        const createdCount = onExecuteActions(resolveAttachedImages(actions, allImages));
         displayText += createdCount > 0 ? t.aiAssistant.addedNodes(createdCount) : t.aiAssistant.failedNodes;
       }
       onMessagesChange([...nextMessages, { role: 'assistant', content: displayText }]);
@@ -115,23 +129,46 @@ export default function AiAssistantPanel({
     setFileDropActive(false);
   };
 
+  // Drag-and-drop, the paperclip and Ctrl+V all land here, so the limits and error copy can't
+  // drift apart between them.
+  const addFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+    let rejected = false;
+    for (const file of files) {
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        rejected = true;
+        continue;
+      }
+      const attachment: Attachment = file.type.startsWith('image/')
+        ? { name: file.name, kind: 'image', content: await readFileAsDataUrl(file) }
+        : { name: file.name, kind: 'document', content: await readFileAsText(file) };
+      let added = false;
+      setAttachments((prev) => {
+        if (prev.length >= MAX_ATTACHMENTS) return prev;
+        added = true;
+        return [...prev, attachment];
+      });
+      if (!added) rejected = true;
+    }
+    setAttachError(rejected ? t.aiAssistant.attachError : '');
+  };
+
   const handleFileDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setFileDropActive(false);
-    const files = Array.from(e.dataTransfer.files);
-    for (const file of files) {
-      if (file.type.startsWith('image/')) {
-        const dataUrl = await readFileAsDataUrl(file);
-        setAttachments((prev) => [...prev, { name: file.name, kind: 'image', content: dataUrl }]);
-      } else {
-        const text = await readFileAsText(file);
-        setAttachments((prev) => [...prev, { name: file.name, kind: 'document', content: text }]);
-      }
-    }
+    await addFiles(Array.from(e.dataTransfer.files));
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const files = Array.from(e.clipboardData.files);
+    if (files.length === 0) return;
+    e.preventDefault();
+    void addFiles(files);
   };
 
   const removeAttachment = (index: number) => {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
+    setAttachError('');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -231,6 +268,8 @@ export default function AiAssistantPanel({
 
         {status === 'error' && <div className="error-text">{error}</div>}
 
+        {attachError && <div className="error-text">{attachError}</div>}
+
         {attachments.length > 0 && (
           <div className="chat-attachments">
             {attachments.map((a, i) => (
@@ -254,12 +293,32 @@ export default function AiAssistantPanel({
         )}
 
         <div className="chat-input-row">
+          <button
+            className="chat-attach-btn"
+            title={t.aiAssistant.attachTooltip}
+            disabled={status === 'loading' || attachments.length >= MAX_ATTACHMENTS}
+            onClick={() => fileRef.current?.click()}
+          >
+            <IconAttach size={14} />
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            hidden
+            multiple
+            accept="image/png,image/jpeg,image/webp,.txt,.md,.csv,.json"
+            onChange={(e) => {
+              if (e.target.files) void addFiles(Array.from(e.target.files));
+              e.target.value = '';
+            }}
+          />
           <textarea
             className="node-textarea chat-input"
             placeholder={t.aiAssistant.inputPlaceholder}
             value={draft}
             onChange={(e) => onDraftChange(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
           />
           <button
             className="generate-btn chat-send-btn"
