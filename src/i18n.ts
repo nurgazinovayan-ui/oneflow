@@ -880,6 +880,13 @@ export interface Translations {
       aspectDeterminedByImage: string;
       duration: (dur: number, min: number, max: number) => string;
       needPromptOrImageError: string;
+      runPipeline: string;
+      pipelineHint: string;
+      pipelineImageStage: string;
+      pipelineVideoStage: string;
+      pipelineOneImageError: string;
+      pipelineImagePromptError: string;
+      pipelineImageFailed: string;
     };
     videoGenPro: {
       header: string;
@@ -1907,6 +1914,14 @@ export const ru: Translations = {
       aspectDeterminedByImage: 'Определяется входным изображением',
       duration: (dur, min, max) => `Длительность: ${dur} сек (${min}–${max})`,
       needPromptOrImageError: 'Нужен промпт или входное изображение',
+      runPipeline: 'Запустить пайплайн',
+      pipelineHint: 'Сгенерировать фото и сразу сделать из него видео',
+      pipelineImageStage: 'Шаг 1 из 2: генерирую фото...',
+      pipelineVideoStage: 'Шаг 2 из 2: генерирую видео...',
+      pipelineOneImageError:
+        'В ноде «Генерация фото» должно быть только одно фото — поставьте количество вариантов 1 и запустите снова.',
+      pipelineImagePromptError: 'У ноды «Генерация фото» пустой промпт — заполните его перед запуском пайплайна.',
+      pipelineImageFailed: 'Фото не сгенерировалось — пайплайн остановлен, видео не запускалось.',
     },
     videoGenPro: {
       header: 'Генерация видео PRO',
@@ -2932,6 +2947,14 @@ export const en: Translations = {
       aspectDeterminedByImage: 'Determined by the input image',
       duration: (dur, min, max) => `Duration: ${dur} sec (${min}–${max})`,
       needPromptOrImageError: 'A prompt or an input image is required',
+      runPipeline: 'Run pipeline',
+      pipelineHint: 'Generate the photo and turn it into a video in one go',
+      pipelineImageStage: 'Step 1 of 2: generating the photo...',
+      pipelineVideoStage: 'Step 2 of 2: generating the video...',
+      pipelineOneImageError:
+        'The Image generation node must produce exactly one photo — set the variant count to 1 and run again.',
+      pipelineImagePromptError: 'The Image generation node has an empty prompt — fill it in before running the pipeline.',
+      pipelineImageFailed: 'The photo failed to generate — the pipeline stopped and no video was started.',
     },
     videoGenPro: {
       header: 'Video generation PRO',

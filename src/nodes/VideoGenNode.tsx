@@ -16,7 +16,8 @@ import { useGenerationCounter } from '../store/generationCounter';
 import { useProjectId } from '../store/projectContext';
 import { useSubscription } from '../store/subscriptionContext';
 import { formatGenerationError } from '../errorMessages';
-import { IconSparkles, IconDownload, IconVideo } from '../components/Icons';
+import { IconSparkles, IconDownload, IconVideo, IconPlay } from '../components/Icons';
+import { imageGenVariantCount, resolveImageGenRequest } from '../pipeline';
 import GenerationLoader from '../components/GenerationLoader';
 import { useT } from '../i18n';
 
@@ -33,9 +34,14 @@ export interface VideoGenNodeData extends Record<string, unknown> {
 
 function VideoGenNode({ id, data, selected }: NodeProps) {
   const t = useT();
-  const { updateNodeData, getNode } = useReactFlow();
+  const { updateNodeData, getNode, getEdges } = useReactFlow();
   const nodeData = data as VideoGenNodeData;
   const [saving, setSaving] = useState(false);
+  // Pipeline problems are about how the chain is wired, not about a generation that failed, so
+  // they live here rather than in the node's own status — flagging one must not wipe the video
+  // already sitting in the preview.
+  const [pipelineStage, setPipelineStage] = useState<'idle' | 'image' | 'video'>('idle');
+  const [pipelineError, setPipelineError] = useState('');
   const incrementGenerations = useGenerationCounter((s) => s.increment);
   const projectId = useProjectId();
   const subscription = useSubscription();
@@ -51,6 +57,9 @@ function VideoGenNode({ id, data, selected }: NodeProps) {
 
   const imageConnections = useNodeConnections({ handleType: 'target', handleId: 'image' });
   const imageSourceId = imageConnections[0]?.source;
+  // Only a generated photo has a step to run first — a user's own photo in an imageInput node
+  // is already there, so the plain Generate button is the whole chain.
+  const canRunPipeline = Boolean(imageSourceId) && getNode(imageSourceId ?? '')?.type === 'imageGen';
   const imageSourceData = useNodesData(imageSourceId ?? '');
   const connectedImage = imageSourceId
     ? ((imageSourceData?.data as ImageGenNodeData)?.outputs?.[0] ?? '')
@@ -66,14 +75,13 @@ function VideoGenNode({ id, data, selected }: NodeProps) {
     updateNodeData(id, { model, duration, resolution });
   };
 
-  const handleGenerate = async () => {
-    if (!subscription.active) {
-      subscription.requestPayment();
-      return;
-    }
-    if (!effectivePrompt.trim() && !connectedImage) {
+  // imageOverride is what the pipeline passes: it has just written the photo into the image
+  // node, but connectedImage comes from a hook and is still a render behind.
+  const runVideo = async (imageOverride?: string): Promise<boolean> => {
+    const image = imageOverride || connectedImage;
+    if (!effectivePrompt.trim() && !image) {
       updateNodeData(id, { status: 'error', error: t.nodes.videoGen.needPromptOrImageError });
-      return;
+      return false;
     }
     updateNodeData(id, { status: 'loading', error: undefined });
     try {
@@ -83,7 +91,7 @@ function VideoGenNode({ id, data, selected }: NodeProps) {
       const outputs = await window.api.generateVideo({
         model: nodeData.model,
         prompt: effectivePrompt,
-        image: connectedImage || undefined,
+        image: image || undefined,
         aspectRatio: nodeData.aspectRatio,
         duration,
         resolution: nodeData.resolution,
@@ -91,9 +99,69 @@ function VideoGenNode({ id, data, selected }: NodeProps) {
       });
       updateNodeData(id, { status: 'done', outputs });
       incrementGenerations();
+      return true;
     } catch (err) {
       updateNodeData(id, { status: 'error', error: formatGenerationError(err) });
+      return false;
     }
+  };
+
+  const handleGenerate = async () => {
+    if (!subscription.active) {
+      subscription.requestPayment();
+      return;
+    }
+    setPipelineError('');
+    await runVideo();
+  };
+
+  // Generate the photo in the node in front, then the video from that photo, in one click.
+  const handleRunPipeline = async () => {
+    if (!subscription.active) {
+      subscription.requestPayment();
+      return;
+    }
+    const imageNode = imageSourceId ? getNode(imageSourceId) : undefined;
+    if (!imageNode) return;
+
+    // Checked before anything is generated: the video step consumes exactly one photo, so a
+    // node set to several variants would have all but one silently dropped.
+    if (imageGenVariantCount(imageNode) > 1) {
+      setPipelineError(t.nodes.videoGen.pipelineOneImageError);
+      return;
+    }
+    const request = resolveImageGenRequest(imageNode, getEdges(), getNode);
+    if (!request.prompt.trim()) {
+      setPipelineError(t.nodes.videoGen.pipelineImagePromptError);
+      return;
+    }
+
+    setPipelineError('');
+    setPipelineStage('image');
+    updateNodeData(imageSourceId!, { status: 'loading', error: undefined });
+    let images: string[];
+    try {
+      images = await window.api.generateImage({ ...request, projectId, category: 'image' });
+      updateNodeData(imageSourceId!, { status: 'done', outputs: images });
+      incrementGenerations();
+    } catch (err) {
+      updateNodeData(imageSourceId!, { status: 'error', error: formatGenerationError(err) });
+      setPipelineError(t.nodes.videoGen.pipelineImageFailed);
+      setPipelineStage('idle');
+      return;
+    }
+
+    // A single request can still come back with several images; stopping here beats picking one
+    // at random after the user has already seen all of them appear.
+    if (images.length !== 1) {
+      setPipelineError(t.nodes.videoGen.pipelineOneImageError);
+      setPipelineStage('idle');
+      return;
+    }
+
+    setPipelineStage('video');
+    await runVideo(images[0]);
+    setPipelineStage('idle');
   };
 
   const handleSave = async (url: string) => {
@@ -213,10 +281,28 @@ function VideoGenNode({ id, data, selected }: NodeProps) {
         <button
           className="generate-btn"
           onClick={handleGenerate}
-          disabled={nodeData.status === 'loading'}
+          disabled={nodeData.status === 'loading' || pipelineStage !== 'idle'}
         >
           <IconSparkles /> {nodeData.status === 'loading' ? t.nodes.common.generating : t.nodes.common.generate}
         </button>
+
+        {canRunPipeline && (
+          <button
+            className="secondary-btn pipeline-btn"
+            onClick={handleRunPipeline}
+            title={t.nodes.videoGen.pipelineHint}
+            disabled={nodeData.status === 'loading' || pipelineStage !== 'idle'}
+          >
+            <IconPlay size={13} />
+            {pipelineStage === 'image'
+              ? t.nodes.videoGen.pipelineImageStage
+              : pipelineStage === 'video'
+                ? t.nodes.videoGen.pipelineVideoStage
+                : t.nodes.videoGen.runPipeline}
+          </button>
+        )}
+
+        {pipelineError && <div className="error-text">{pipelineError}</div>}
 
         {nodeData.status === 'error' && <div className="error-text">{nodeData.error}</div>}
 

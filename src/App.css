@@ -2084,6 +2084,13 @@
   box-shadow: none;
 }
 
+/* Sits right under the node's own Generate button and has to read as the secondary of the two,
+   so it borrows .secondary-btn and only adds the spacing. */
+.pipeline-btn {
+  width: 100%;
+  margin-top: 6px;
+}
+
 /* "Ghost" pill from the reference kit — outline instead of the previous solid-gray fill. */
 .secondary-btn {
   display: flex;
