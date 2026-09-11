@@ -19,11 +19,12 @@ import {
   IconThumb,
 } from './Icons';
 import DropdownMenu, { type DropdownMenuItem } from './DropdownMenu';
-import MarkdownText from './MarkdownText';
+import MarkdownText, { MarkdownBlocks } from './MarkdownText';
 import {
-  buildDocxDataUrl,
+  buildDeliverableExport,
   buildExport,
-  buildPptxDataUrl,
+  DEFAULT_FORMAT,
+  deliverableBlocks,
   exportFileName,
   suggestedFileName,
   type ExportFormat,
@@ -91,6 +92,9 @@ export default function TextWorkPanel({
   const [copied, setCopied] = useState<string>();
   const [downloading, setDownloading] = useState<string>();
   const [exportMenu, setExportMenu] = useState<string | null>(null);
+  // The document a message carries is shown expanded straight away — collapsing is the opt-in.
+  const [collapsedDocs, setCollapsedDocs] = useState<Record<string, true>>({});
+  const [docMenu, setDocMenu] = useState<string | null>(null);
   const [attaching, setAttaching] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -224,18 +228,27 @@ export default function TextWorkPanel({
     }
   };
 
-  const handleDownload = async (deliverable: ParsedDeliverable, messageId: string) => {
+  // The document card's own download. Same renderers as exportMessage above — the format is just
+  // free here, so the same deliverable can come out as .docx, .xlsx or .pptx on request.
+  const handleDownload = async (
+    deliverable: ParsedDeliverable,
+    messageId: string,
+    format: ExportFormat = DEFAULT_FORMAT[deliverable.kind]
+  ) => {
+    setDocMenu(null);
     setDownloading(messageId);
     try {
-      const data =
-        deliverable.kind === 'document' ? await buildDocxDataUrl(deliverable) : await buildPptxDataUrl(deliverable);
-      await window.api.saveFile(data, suggestedFileName(deliverable));
+      const data = await buildDeliverableExport(deliverable, format);
+      await window.api.saveFile(data, suggestedFileName(deliverable, format));
     } catch (err) {
       toast(err instanceof Error ? err.message : String(err));
     } finally {
       setDownloading(undefined);
     }
   };
+
+  const deliverableKindLabel = (kind: ParsedDeliverable['kind']) =>
+    kind === 'document' ? l.docCardDocument : kind === 'presentation' ? l.docCardPresentation : l.docCardSpreadsheet;
 
   const attachFiles = async (files: FileList | File[]) => {
     if (attaching || loading) return;
@@ -552,16 +565,62 @@ export default function TextWorkPanel({
                       </div>
                     )}
                     {m.deliverable && (
-                      <button
-                        className="chat-deliverable-btn"
-                        disabled={downloading === m.id}
-                        onClick={() => void handleDownload(m.deliverable!, m.id)}
-                      >
-                        <IconDownload size={13} />
-                        {downloading === m.id
-                          ? l.preparingFile
-                          : `${l.downloadDoc.split(' ')[0]} · ${m.deliverable.kind === 'document' ? 'DOCX' : 'PPTX'}`}
-                      </button>
+                      <div className="chat-doc-card">
+                        <div className="chat-doc-head">
+                          <span className="chat-doc-ext">{DEFAULT_FORMAT[m.deliverable.kind].toUpperCase()}</span>
+                          <div className="chat-doc-info">
+                            <div className="chat-doc-title">{m.deliverable.title}</div>
+                            <div className="chat-doc-meta">{deliverableKindLabel(m.deliverable.kind)}</div>
+                          </div>
+                          <button
+                            className="chat-doc-btn"
+                            onClick={() =>
+                              setCollapsedDocs((prev) => {
+                                const next = { ...prev };
+                                if (next[m.id]) delete next[m.id];
+                                else next[m.id] = true;
+                                return next;
+                              })
+                            }
+                          >
+                            {collapsedDocs[m.id] ? l.docCardShow : l.docCardHide}
+                          </button>
+                          <div className="cw-action-menu-wrap">
+                            <button
+                              className="chat-doc-btn"
+                              title={l.docCardOtherFormat}
+                              onClick={() => setDocMenu(docMenu === m.id ? null : m.id)}
+                            >
+                              <IconMore size={13} />
+                            </button>
+                            {docMenu === m.id && (
+                              <DropdownMenu
+                                align="right"
+                                onClose={() => setDocMenu(null)}
+                                items={[
+                                  { type: 'header', label: l.docCardOtherFormat },
+                                  { label: l.exportWord, onClick: () => void handleDownload(m.deliverable!, m.id, 'docx') },
+                                  { label: l.exportExcel, onClick: () => void handleDownload(m.deliverable!, m.id, 'xlsx') },
+                                  { label: l.exportPpt, onClick: () => void handleDownload(m.deliverable!, m.id, 'pptx') },
+                                ]}
+                              />
+                            )}
+                          </div>
+                          <button
+                            className="chat-doc-btn primary"
+                            disabled={downloading === m.id}
+                            onClick={() => void handleDownload(m.deliverable!, m.id)}
+                          >
+                            <IconDownload size={13} />
+                            {downloading === m.id ? l.preparingFile : l.docCardDownload}
+                          </button>
+                        </div>
+                        {!collapsedDocs[m.id] && (
+                          <div className="chat-doc-preview">
+                            <MarkdownBlocks blocks={deliverableBlocks(m.deliverable)} />
+                          </div>
+                        )}
+                      </div>
                     )}
                     <div className="cw-message-actions">
                       <button

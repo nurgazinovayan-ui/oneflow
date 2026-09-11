@@ -4391,29 +4391,109 @@
   opacity: 1;
 }
 
-.chat-deliverable-btn {
-  align-self: flex-start;
+/* The document the assistant hands straight to the chat: a card that shows the real thing
+   (same blocks the exporter walks) with the file itself one click away, rather than the bare
+   download pill this used to be. */
+.chat-doc-card {
+  align-self: stretch;
+  margin-top: 6px;
+  border: 1px solid var(--c-divider);
+  border-radius: var(--radius-md);
+  background: var(--c-panel-2);
+  overflow: hidden;
+}
+
+.chat-doc-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.chat-doc-ext {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  background: var(--c-pink);
+  color: var(--c-pink-text);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.chat-doc-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-doc-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-doc-meta {
+  margin-top: 1px;
+  font-size: 11px;
+  color: var(--c-text-dim);
+}
+
+.chat-doc-btn {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 2px;
-  padding: 7px 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--c-divider);
   border-radius: var(--radius-sm);
-  background: var(--c-pink);
-  border: none;
-  color: var(--c-pink-text);
+  background: transparent;
+  color: var(--c-text);
   font-size: 11.5px;
   font-weight: 600;
-  transition: background 0.15s var(--ease);
+  transition:
+    background 0.15s var(--ease),
+    border-color 0.15s var(--ease);
 }
 
-.chat-deliverable-btn:hover:not(:disabled) {
+.chat-doc-btn:hover:not(:disabled) {
+  background: var(--c-panel-3);
+}
+
+.chat-doc-btn.primary {
+  border-color: transparent;
+  background: var(--c-pink);
+  color: var(--c-pink-text);
+}
+
+.chat-doc-btn.primary:hover:not(:disabled) {
   background: var(--c-pink-hover);
 }
 
-.chat-deliverable-btn:disabled {
+.chat-doc-btn:disabled {
   opacity: 0.7;
   cursor: default;
+}
+
+/* The rendered document body. Scrolls rather than pushing the rest of the thread off screen —
+   it's a preview of a file, not the answer itself. */
+.chat-doc-preview {
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 4px 16px 14px;
+  border-top: 1px solid var(--c-divider);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--c-text);
+}
+
+.chat-doc-preview .md-heading {
+  font-size: 14px;
 }
 
 .chat-input-row {
@@ -9372,7 +9452,7 @@
    .cw-panel actually goes black in dark theme too (see its own dark-theme override above), so
    var(--c-text) etc. resolve correctly against whichever background is really there without any
    local override (and were already redundant in light theme, where the real theme's own values
-   matched the pin exactly). .cw-send/.chat-deliverable-btn below read var(--c-pink-text)
+   matched the pin exactly). .cw-send/.chat-doc-btn.primary below read var(--c-pink-text)
    instead of a hardcoded white for the same reason — that flips correctly with --c-pink now
    that nothing pins it dark-in-both-themes any more. */
 .cw-stage {

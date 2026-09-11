@@ -77,6 +77,12 @@ function renderBlock(block: Block, key: number) {
   }
 }
 
+// Same renderer, fed an already-parsed document instead of raw text — used by the chat's
+// document card, so the preview on screen is literally the blocks that get exported.
+export function MarkdownBlocks({ blocks }: { blocks: Block[] }) {
+  return <>{blocks.map(renderBlock)}</>;
+}
+
 export default function MarkdownText({ text }: { text: string }) {
   const blocks = useMemo(() => parseMarkdown(text), [text]);
   return <>{blocks.map(renderBlock)}</>;

@@ -639,6 +639,13 @@ export interface Translations {
     downloadDoc: string;
     downloadPres: string;
     preparingFile: string;
+    docCardDocument: string;
+    docCardPresentation: string;
+    docCardSpreadsheet: string;
+    docCardShow: string;
+    docCardHide: string;
+    docCardDownload: string;
+    docCardOtherFormat: string;
     fileError: string;
     promptLimit: string;
     writeQuick: string;
@@ -1559,6 +1566,13 @@ export const ru: Translations = {
     downloadDoc: 'Скачать документ (.docx)',
     downloadPres: 'Скачать презентацию (.pptx)',
     preparingFile: 'Готовим файл...',
+    docCardDocument: 'Документ Word',
+    docCardPresentation: 'Презентация PowerPoint',
+    docCardSpreadsheet: 'Таблица Excel',
+    docCardShow: 'Показать',
+    docCardHide: 'Свернуть',
+    docCardDownload: 'Скачать',
+    docCardOtherFormat: 'Другой формат',
     fileError:
       'До 4 файлов: PNG, JPG, WebP, TXT, MD, CSV, JSON; до 4 МБ каждый, текст — до 30 000 символов.',
     promptLimit: 'Запрос слишком длинный: максимум 30 000 символов.',
@@ -2576,6 +2590,13 @@ export const en: Translations = {
     downloadDoc: 'Download document (.docx)',
     downloadPres: 'Download presentation (.pptx)',
     preparingFile: 'Preparing file...',
+    docCardDocument: 'Word document',
+    docCardPresentation: 'PowerPoint deck',
+    docCardSpreadsheet: 'Excel spreadsheet',
+    docCardShow: 'Show',
+    docCardHide: 'Collapse',
+    docCardDownload: 'Download',
+    docCardOtherFormat: 'Other format',
     fileError: 'Up to 4 files: PNG, JPG, WebP, TXT, MD, CSV, JSON; 4 MB each, text up to 30,000 characters.',
     promptLimit: 'Your message is too long: maximum 30,000 characters.',
     writeQuick: 'Write a Text',
