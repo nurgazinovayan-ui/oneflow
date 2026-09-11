@@ -3090,7 +3090,7 @@
     from var(--start-screen-shine),
     rgba(255, 255, 255, 0.08) 0deg,
     rgba(255, 255, 255, 0.08) 200deg,
-    rgba(255, 255, 255, 0.55) 280deg,
+    rgba(255, 255, 255, 0.8) 280deg,
     rgba(255, 255, 255, 0.08) 340deg
   );
   /* Punches the content box out of the border box, leaving only the 1px ring painted. */
@@ -3103,7 +3103,7 @@
     linear-gradient(#000 0 0);
   mask-composite: exclude;
   pointer-events: none;
-  animation: start-screen-shine 6s linear infinite;
+  animation: start-screen-shine 5s linear infinite;
 }
 
 @keyframes start-screen-shine {
