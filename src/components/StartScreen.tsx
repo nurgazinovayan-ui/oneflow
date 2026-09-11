@@ -110,14 +110,12 @@ export default function StartScreen({
           <h1 className="start-screen-title">{t.startScreen.greeting}</h1>
           <div className="start-screen-layout">
             <div className="start-screen-sidebar">
-              {recentProjects.length > 0 && (
-                <button
-                  className={`start-screen-nav-item ${tab === 'recent' ? 'active' : ''}`}
-                  onClick={() => selectTab('recent')}
-                >
-                  {t.startScreen.recentNav}
-                </button>
-              )}
+              <button
+                className={`start-screen-nav-item ${tab === 'recent' ? 'active' : ''}`}
+                onClick={() => selectTab('recent')}
+              >
+                {t.startScreen.recentNav}
+              </button>
               <button
                 className={`start-screen-nav-item ${tab === 'quickStart' ? 'active' : ''}`}
                 onClick={() => selectTab('quickStart')}
@@ -133,39 +131,54 @@ export default function StartScreen({
             </div>
             <div className="start-screen-content">
               {tab === 'recent' && (
-                <div className="start-screen-recents">
-                  {recentProjects.map((project) => (
-                    <div key={project.id} className="start-screen-recent">
-                      <button className="start-screen-recent-open" onClick={() => onOpenRecent(project.id)}>
-                        <span className="start-screen-recent-name">{project.name}</span>
-                        <span className="start-screen-recent-meta">
-                          {t.startScreen.recentNodes(project.nodes.length)} · {formatAgo(project.updatedAt, t)}
-                        </span>
-                      </button>
-                      {confirmDelete === project.id ? (
+                <>
+                  <div className="start-screen-recents">
+                    {/* Always first, whether or not anything has been saved yet. */}
+                    <button
+                      className="start-screen-recent-tile start-screen-recent-new"
+                      onClick={() => onChoose('empty')}
+                    >
+                      <span className="start-screen-recent-name">{t.startScreen.recentNew}</span>
+                    </button>
+                    {recentProjects.map((project) => (
+                      <div key={project.id} className="start-screen-recent">
                         <button
-                          className="start-screen-recent-delete confirming"
-                          onClick={() => {
-                            onDeleteRecent(project.id);
-                            setConfirmDelete(null);
-                          }}
-                          onMouseLeave={() => setConfirmDelete(null)}
+                          className="start-screen-recent-tile"
+                          title={project.name}
+                          onClick={() => onOpenRecent(project.id)}
                         >
-                          {t.startScreen.recentDeleteConfirm}
+                          <span className="start-screen-recent-name">{project.name}</span>
+                          <span className="start-screen-recent-meta">
+                            {t.startScreen.recentNodes(project.nodes.length)}
+                            <br />
+                            {formatAgo(project.updatedAt, t)}
+                          </span>
                         </button>
-                      ) : (
-                        <button
-                          className="start-screen-recent-delete"
-                          title={t.startScreen.recentDelete}
-                          onClick={() => setConfirmDelete(project.id)}
-                        >
-                          <IconClose size={12} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                        {confirmDelete === project.id ? (
+                          <button
+                            className="start-screen-recent-delete confirming"
+                            onClick={() => {
+                              onDeleteRecent(project.id);
+                              setConfirmDelete(null);
+                            }}
+                            onMouseLeave={() => setConfirmDelete(null)}
+                          >
+                            {t.startScreen.recentDeleteConfirm}
+                          </button>
+                        ) : (
+                          <button
+                            className="start-screen-recent-delete"
+                            title={t.startScreen.recentDelete}
+                            onClick={() => setConfirmDelete(project.id)}
+                          >
+                            <IconClose size={11} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                   <p className="start-screen-recent-hint">{t.startScreen.recentHint}</p>
-                </div>
+                </>
               )}
               {tab === 'quickStart' && (
                 <>

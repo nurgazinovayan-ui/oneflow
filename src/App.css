@@ -3180,87 +3180,115 @@
   gap: 16px;
 }
 
-/* Recent projects. Same tile surface as the quick-start tiles beside them, but a list rather
-   than a grid: names are the thing being scanned, and they vary in length. */
+/* Recent projects — square tiles on the same dark glass as the quick-start tiles, with the
+   "Новый проект" tile always sitting first. Colours are literal here, not theme variables:
+   this window stays a dark surface in both app themes (see .start-screen-tile-label), so a
+   var(--c-text) name turned near-black on black in light theme. */
 .start-screen-recents {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 260px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
+  max-height: 250px;
   overflow-y: auto;
 }
 
 .start-screen-recent {
-  display: flex;
-  align-items: stretch;
-  gap: 6px;
+  position: relative;
+  min-width: 0;
 }
 
-.start-screen-recent-open {
-  flex: 1;
-  min-width: 0;
+.start-screen-recent-tile {
+  width: 100%;
+  aspect-ratio: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
-  padding: 9px 12px;
-  border: none;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.06);
   text-align: left;
-  transition: background 0.15s var(--ease);
+  transition:
+    background 0.15s var(--ease),
+    border-color 0.15s var(--ease),
+    transform 0.15s var(--ease);
 }
 
-.start-screen-recent-open:hover {
-  background: rgba(255, 255, 255, 0.12);
+.start-screen-recent-tile:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.start-screen-recent-new {
+  border-style: dashed;
 }
 
 .start-screen-recent-name {
-  max-width: 100%;
+  width: 100%;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  /* A project name is free text and the tile is square, so it wraps to at most two lines and
+     then clips rather than pushing the timestamp out of the tile. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--c-text);
+  overflow-wrap: anywhere;
 }
 
 .start-screen-recent-meta {
-  font-size: 11px;
-  color: var(--c-text-muted);
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: rgba(242, 242, 244, 0.55);
 }
 
+/* In the tile's corner, so the square stays a square. */
 .start-screen-recent-delete {
-  flex: none;
+  position: absolute;
+  top: 5px;
+  right: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 10px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
   border: none;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--c-text-muted);
-  font-size: 11px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.45);
+  color: rgba(242, 242, 244, 0.7);
+  font-size: 10px;
   font-weight: 600;
+  opacity: 0;
   transition:
+    opacity 0.15s var(--ease),
     background 0.15s var(--ease),
     color 0.15s var(--ease);
 }
 
+.start-screen-recent:hover .start-screen-recent-delete,
+.start-screen-recent-delete:focus-visible,
+.start-screen-recent-delete.confirming {
+  opacity: 1;
+}
+
 .start-screen-recent-delete:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--c-text);
+  color: #ffffff;
 }
 
 .start-screen-recent-delete.confirming {
-  background: var(--c-error-bg);
-  color: var(--c-error);
+  background: var(--c-error);
+  color: #ffffff;
 }
 
 .start-screen-recent-hint {
-  margin: 2px 0 0;
-  font-size: 11px;
-  color: var(--c-text-muted);
+  margin: 0;
+  font-size: 10.5px;
+  color: rgba(242, 242, 244, 0.55);
 }
 
 .start-screen-tiles {

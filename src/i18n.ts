@@ -796,6 +796,7 @@ export interface Translations {
     autoCreateLabel: string;
     autoCreatePlaceholder: string;
     autoCreateError: string;
+    recentNew: string;
     recentNav: string;
     recentHint: string;
     recentNodes: (count: number) => string;
@@ -1832,6 +1833,7 @@ export const ru: Translations = {
     autoCreatePlaceholder:
       'Опишите, что нужно сделать — ИИ ассистент сам создаст и соединит подходящие ноды на холсте',
     autoCreateError: 'Не удалось создать ноды. Попробуйте ещё раз.',
+    recentNew: 'Новый проект',
     recentNav: 'Недавние',
     recentHint: 'Проекты сохраняются сами — открывайте и продолжайте с того же места.',
     recentNodes: (count) => `${count} ${count % 10 === 1 && count % 100 !== 11 ? 'нода' : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20) ? 'ноды' : 'нод'}`,
@@ -2876,6 +2878,7 @@ export const en: Translations = {
     autoCreatePlaceholder:
       'Describe what you need — the AI assistant will create and connect the right nodes on the canvas',
     autoCreateError: "Couldn't create the nodes. Please try again.",
+    recentNew: 'New project',
     recentNav: 'Recent',
     recentHint: 'Projects save themselves — open one and pick up where you left off.',
     recentNodes: (count) => `${count} ${count === 1 ? 'node' : 'nodes'}`,
