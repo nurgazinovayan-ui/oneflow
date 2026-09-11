@@ -233,10 +233,15 @@ const INSTAGRAM_TAG_REGIONS: { tag: string; region: Region }[] = [
   { tag: 'explorepage', region: 'america' },
 ];
 
-// Per hashtag page. All seven pages go through a single actor run (see the memory note on
-// runApifyActor), so the run returns roughly this many times seven — deliberately far more than
-// we keep, since a hashtag feed is mostly ordinary posts and isTrend throws most of them away.
-const INSTAGRAM_RESULTS_PER_TAG = 40;
+// Per hashtag page, and Apify bills per result, so this is the main cost dial — all seven pages
+// go through one run (see the memory note on runApifyActor), making the bill roughly seven times
+// this number per refresh.
+//
+// Kept just above Instagram's own "top posts" block, which is the first thing a hashtag page
+// serves and the only part where posts clearing MIN_LIKES realistically live. Reading deeper into
+// the "recent" tail mostly buys ordinary posts that isTrend discards anyway — paying for results
+// we throw away.
+const INSTAGRAM_RESULTS_PER_TAG = 15;
 const INSTAGRAM_KEEP = 24;
 
 function instagramRegion(item: Record<string, unknown>): Region {
