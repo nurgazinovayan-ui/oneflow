@@ -3058,6 +3058,67 @@
   overflow: hidden;
 }
 
+/* The travelling highlight's position around the ring. Registering it is what makes an angle
+   animatable at all — a plain custom property would jump from 0 to 360 instead of sweeping. */
+@property --start-screen-shine {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* Dark theme only, as asked: the light theme's start screen sits on a pale surface where a
+   white shimmer reads as nothing. The steady part of the ring is an inset shadow rather than a
+   border so it costs no layout, and it stays put if @property isn't supported — in that case
+   the gradient below is dropped whole (an unregistered angle makes the declaration invalid)
+   and the panel keeps a plain grey outline instead of losing its edge entirely. */
+:root:not([data-theme='light']) .start-screen-inner {
+  box-shadow:
+    var(--shadow-lg),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+:root:not([data-theme='light']) .start-screen-inner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* Above the video panel and the content column, both of which are positioned and would
+     otherwise paint over the ring along the card's edges. */
+  z-index: 3;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--start-screen-shine),
+    rgba(255, 255, 255, 0.08) 0deg,
+    rgba(255, 255, 255, 0.08) 200deg,
+    rgba(255, 255, 255, 0.55) 280deg,
+    rgba(255, 255, 255, 0.08) 340deg
+  );
+  /* Punches the content box out of the border box, leaving only the 1px ring painted. */
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: start-screen-shine 6s linear infinite;
+}
+
+@keyframes start-screen-shine {
+  to {
+    --start-screen-shine: 360deg;
+  }
+}
+
+/* A highlight circling the card forever is decoration; the ring itself carries the shape. */
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-theme='light']) .start-screen-inner::before {
+    animation: none;
+  }
+}
+
 /* Fills the whole card, behind the video panel and main content — both of those get their own
    position: relative below so normal DOM-order stacking (this div renders first) keeps them
    painting on top rather than the rays layer covering them (an absolutely-positioned sibling
