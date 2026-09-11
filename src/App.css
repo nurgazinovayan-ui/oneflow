@@ -2148,8 +2148,8 @@
 }
 
 /* Shown in place of the (previously empty) node body while a generation is in flight — same
-   flat dark tile background as .quick-gen-tile.loading, filled by the same looping Lottie
-   animation instead of nothing/a bare spinner. */
+   flat dark tile background as .quick-gen-tile.loading, with the generation loader centred in
+   it instead of nothing/a bare spinner. */
 .preview-loading {
   width: 100%;
   height: 160px;
@@ -2255,6 +2255,65 @@
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Generation loader (see GenerationLoader.tsx): two rounded squares stepping around the four
+   corners of a box, offset half a cycle so one is always opposite the other. Each step insets
+   the square from two sides at once — --gen-loader-gap is how far, so the whole thing scales
+   from the one --gen-loader-size. */
+.gen-loader {
+  display: grid;
+  place-items: center;
+}
+
+.gen-loader-shape {
+  --gen-loader-size: 65px;
+  --gen-loader-gap: calc(var(--gen-loader-size) * 0.54);
+  position: relative;
+  width: var(--gen-loader-size);
+  max-width: 100%;
+  aspect-ratio: 1;
+}
+
+.gen-loader-shape span {
+  position: absolute;
+  border-radius: 50px;
+  box-shadow: inset 0 0 0 3px var(--c-text);
+  animation: gen-loader 2.5s infinite;
+}
+
+.gen-loader-shape span:nth-child(2) {
+  animation-delay: -1.25s;
+}
+
+@keyframes gen-loader {
+  0% {
+    inset: 0 var(--gen-loader-gap) var(--gen-loader-gap) 0;
+  }
+  12.5% {
+    inset: 0 var(--gen-loader-gap) 0 0;
+  }
+  25% {
+    inset: var(--gen-loader-gap) var(--gen-loader-gap) 0 0;
+  }
+  37.5% {
+    inset: var(--gen-loader-gap) 0 0 0;
+  }
+  50% {
+    inset: var(--gen-loader-gap) 0 0 var(--gen-loader-gap);
+  }
+  62.5% {
+    inset: 0 0 0 var(--gen-loader-gap);
+  }
+  75% {
+    inset: 0 0 var(--gen-loader-gap) var(--gen-loader-gap);
+  }
+  87.5% {
+    inset: 0 0 var(--gen-loader-gap) 0;
+  }
+  100% {
+    inset: 0 var(--gen-loader-gap) var(--gen-loader-gap) 0;
   }
 }
 
@@ -3311,10 +3370,11 @@
   animation: spin 0.9s linear infinite;
 }
 
-/* Fills the whole tile while a generation is in flight, replacing the old bare corner
-   spinner — .quick-gen-tile.loading's flat --c-panel-2 background still shows around/behind
-   the animation's own transparent edges. */
-.quick-gen-tile-lottie {
+/* Covers the whole tile while a generation is in flight, replacing the old bare corner
+   spinner — .quick-gen-tile.loading's flat --c-panel-2 background shows around the loader.
+   A tile can be as short as 90px (a 16:9 thumb at the fixed 160px width), so the loader runs
+   smaller here than in a node's preview box. */
+.quick-gen-tile-loader {
   position: absolute;
   inset: 0;
   width: 100%;

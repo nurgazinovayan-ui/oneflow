@@ -21,7 +21,7 @@ import { useProjectId } from '../store/projectContext';
 import { useSubscription } from '../store/subscriptionContext';
 import { formatGenerationError } from '../errorMessages';
 import { IconSparkles, IconDownload, IconVideo, IconPlus } from '../components/Icons';
-import LottieLoader from '../components/LottieLoader';
+import GenerationLoader from '../components/GenerationLoader';
 import { useT, type Translations } from '../i18n';
 
 export interface VideoGenProNodeData extends Record<string, unknown> {
@@ -267,7 +267,7 @@ function VideoGenProNode({ id, data, selected }: NodeProps) {
 
         {nodeData.status === 'loading' && (
           <div className="preview-area">
-            <LottieLoader path="/lottie/generating.json" className="preview-loading" />
+            <GenerationLoader className="preview-loading" />
           </div>
         )}
 

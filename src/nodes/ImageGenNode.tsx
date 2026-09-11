@@ -25,7 +25,7 @@ import { useProjectId } from '../store/projectContext';
 import { useSubscription } from '../store/subscriptionContext';
 import { formatGenerationError } from '../errorMessages';
 import { IconSparkles, IconDownload } from '../components/Icons';
-import LottieLoader from '../components/LottieLoader';
+import GenerationLoader from '../components/GenerationLoader';
 import { useT } from '../i18n';
 
 type OutputsHolder = Record<string, unknown> & { outputs?: string[] };
@@ -271,7 +271,7 @@ function ImageGenNode({ id, data, selected }: NodeProps) {
 
         {nodeData.status === 'loading' && (
           <div className="preview-area">
-            <LottieLoader path="/lottie/generating.json" className="preview-loading" />
+            <GenerationLoader className="preview-loading" />
           </div>
         )}
 

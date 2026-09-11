@@ -15,7 +15,7 @@ import { useProjectId } from '../store/projectContext';
 import { useSubscription } from '../store/subscriptionContext';
 import { formatGenerationError } from '../errorMessages';
 import { IconVector, IconDownload } from '../components/Icons';
-import LottieLoader from '../components/LottieLoader';
+import GenerationLoader from '../components/GenerationLoader';
 import { useT } from '../i18n';
 
 export interface VectorGenNodeData extends Record<string, unknown> {
@@ -131,7 +131,7 @@ function VectorGenNode({ id, data, selected }: NodeProps) {
 
         {nodeData.status === 'loading' && (
           <div className="preview-area">
-            <LottieLoader path="/lottie/generating.json" className="preview-loading" />
+            <GenerationLoader className="preview-loading" />
           </div>
         )}
 

@@ -12,7 +12,7 @@ import {
   IconCheck,
 } from './Icons';
 import DropdownMenu from './DropdownMenu';
-import LottieLoader from './LottieLoader';
+import GenerationLoader from './GenerationLoader';
 import {
   ASPECT_RATIOS,
   IMAGE_MODELS,
@@ -376,7 +376,7 @@ export default function QuickGenPanel({
             title={entry.prompt}
           >
             {entry.status === 'loading' && (
-              <LottieLoader path="/lottie/generating.json" className="quick-gen-tile-lottie" />
+              <GenerationLoader className="quick-gen-tile-loader" size={44} />
             )}
             {entry.status === 'done' && (
               <>

@@ -29,7 +29,6 @@
     "electron-store": "^8.2.0",
     "framer-motion": "^13.2.0",
     "jszip": "^3.10.1",
-    "lottie-web": "^5.13.0",
     "ogl": "^1.0.11",
     "pptxgenjs": "^4.0.1",
     "react": "^18.3.1",
