@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { IconClose, IconSend } from './Icons';
 import SideRays from './SideRays';
 import { useT } from '../i18n';
 import { BUSINESS_PRESET_ORDER, BUSINESS_PRESET_PROMPTS, type BusinessPresetKey } from '../businessPresets';
+import type { StoredProject } from '../projectStore';
 
 export type StartScreenChoice = 'empty' | 'photoGen' | 'photoAdapt' | 'videoGen';
 
@@ -11,18 +12,51 @@ interface StartScreenProps {
   onChooseBusiness: (prompt: string) => void;
   onAutoCreate: (prompt: string) => Promise<void>;
   onClose: () => void;
+  recentProjects: StoredProject[];
+  onOpenRecent: (id: string) => void;
+  onDeleteRecent: (id: string) => void;
 }
 
-type NavTab = 'quickStart' | 'business';
+type NavTab = 'recent' | 'quickStart' | 'business';
+
+// Saved a moment ago vs. last week is the whole reason this list is ordered — an absolute
+// timestamp would make the reader do that comparison themselves.
+function formatAgo(timestamp: number, t: ReturnType<typeof useT>): string {
+  const minutes = Math.floor((Date.now() - timestamp) / 60000);
+  if (minutes < 1) return t.startScreen.recentJustNow;
+  if (minutes < 60) return t.startScreen.recentMinutes(minutes);
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return t.startScreen.recentHours(hours);
+  return t.startScreen.recentDays(Math.floor(hours / 24));
+}
 
 export default function StartScreen({
   onChoose,
   onChooseBusiness,
   onAutoCreate,
   onClose,
+  recentProjects,
+  onOpenRecent,
+  onDeleteRecent,
 }: StartScreenProps) {
   const t = useT();
   const [tab, setTab] = useState<NavTab>('quickStart');
+  // Someone who already has work opens the app to continue it, not to start over — so the
+  // recents tab leads once there is anything to continue. It can't be the initial state: the
+  // saved projects are read from IndexedDB and land a tick or two after this first renders.
+  // Once the reader has picked a tab themselves, nothing moves it under them.
+  const tabChosen = useRef(false);
+  useEffect(() => {
+    if (!tabChosen.current && recentProjects.length > 0) setTab('recent');
+  }, [recentProjects.length]);
+
+  const selectTab = (next: NavTab) => {
+    tabChosen.current = true;
+    setTab(next);
+  };
+  // Autosave keeps the only copy of a project, so removing one is irreversible — it takes a
+  // second, deliberate click rather than a single misclick on a small × .
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -76,20 +110,63 @@ export default function StartScreen({
           <h1 className="start-screen-title">{t.startScreen.greeting}</h1>
           <div className="start-screen-layout">
             <div className="start-screen-sidebar">
+              {recentProjects.length > 0 && (
+                <button
+                  className={`start-screen-nav-item ${tab === 'recent' ? 'active' : ''}`}
+                  onClick={() => selectTab('recent')}
+                >
+                  {t.startScreen.recentNav}
+                </button>
+              )}
               <button
                 className={`start-screen-nav-item ${tab === 'quickStart' ? 'active' : ''}`}
-                onClick={() => setTab('quickStart')}
+                onClick={() => selectTab('quickStart')}
               >
                 {t.startScreen.quickStartNav}
               </button>
               <button
                 className={`start-screen-nav-item ${tab === 'business' ? 'active' : ''}`}
-                onClick={() => setTab('business')}
+                onClick={() => selectTab('business')}
               >
                 {t.startScreen.businessNav}
               </button>
             </div>
             <div className="start-screen-content">
+              {tab === 'recent' && (
+                <div className="start-screen-recents">
+                  {recentProjects.map((project) => (
+                    <div key={project.id} className="start-screen-recent">
+                      <button className="start-screen-recent-open" onClick={() => onOpenRecent(project.id)}>
+                        <span className="start-screen-recent-name">{project.name}</span>
+                        <span className="start-screen-recent-meta">
+                          {t.startScreen.recentNodes(project.nodes.length)} · {formatAgo(project.updatedAt, t)}
+                        </span>
+                      </button>
+                      {confirmDelete === project.id ? (
+                        <button
+                          className="start-screen-recent-delete confirming"
+                          onClick={() => {
+                            onDeleteRecent(project.id);
+                            setConfirmDelete(null);
+                          }}
+                          onMouseLeave={() => setConfirmDelete(null)}
+                        >
+                          {t.startScreen.recentDeleteConfirm}
+                        </button>
+                      ) : (
+                        <button
+                          className="start-screen-recent-delete"
+                          title={t.startScreen.recentDelete}
+                          onClick={() => setConfirmDelete(project.id)}
+                        >
+                          <IconClose size={12} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <p className="start-screen-recent-hint">{t.startScreen.recentHint}</p>
+                </div>
+              )}
               {tab === 'quickStart' && (
                 <>
                   <div className="start-screen-tiles">

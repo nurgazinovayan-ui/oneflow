@@ -42,7 +42,13 @@ import BackgroundRemoverModal from './components/BackgroundRemoverModal';
 import UpscalerModal from './components/UpscalerModal';
 import PhotoEditorModal from './components/PhotoEditorModal';
 import StartScreen, { type StartScreenChoice } from './components/StartScreen';
-import ReloadGuard from './components/ReloadGuard';
+import {
+  deleteProject as deleteStoredProject,
+  loadProject,
+  loadRecentProjects,
+  saveProjects,
+  type StoredProject,
+} from './projectStore';
 import LegalModal from './components/LegalModal';
 import ToolbarMenu from './components/ToolbarMenu';
 import FloatingDockGroup from './components/FloatingDockGroup';
@@ -402,6 +408,7 @@ function Canvas() {
   const [upscalerOpen, setUpscalerOpen] = useState(false);
   const [photoEditorOpen, setPhotoEditorOpen] = useState(false);
   const [showStartScreen, setShowStartScreen] = useState(true);
+  const [recentProjects, setRecentProjects] = useState<StoredProject[]>([]);
   const [subscriptionActive, setSubscriptionActive] = useState(true);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null);
@@ -422,6 +429,64 @@ function Canvas() {
     setProjects((prev) => prev.map((p) => (p.id === activeProjectId ? { ...p, nodes, edges } : p)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, edges, activeProjectId]);
+
+  useEffect(() => {
+    void loadRecentProjects().then(setRecentProjects);
+  }, []);
+
+  const projectsRef = useRef(projects);
+  projectsRef.current = projects;
+
+  // The autosave below is debounced, so an edit made in the last moment before the tab is
+  // closed or reloaded wouldn't have been written yet. This is the one chance to catch it —
+  // best-effort, since the browser is free to tear the page down mid-write.
+  useEffect(() => {
+    const flush = () => {
+      void saveProjects(
+        projectsRef.current.map(({ id, name, nodes: n, edges: e, assistantMessages, assistantDraft }) => ({
+          id,
+          name,
+          nodes: n,
+          edges: e,
+          assistantMessages,
+          assistantDraft,
+        }))
+      );
+    };
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onHide);
+    };
+  }, []);
+
+  // Autosave. The effect above rewrites `projects` on every node drag, so this is debounced —
+  // otherwise a single drag would queue dozens of writes of the whole project.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void saveProjects(
+        projects.map(({ id, name, nodes: n, edges: e, assistantMessages, assistantDraft }) => ({
+          id,
+          name,
+          nodes: n,
+          edges: e,
+          assistantMessages,
+          assistantDraft,
+        }))
+      ).then((result) => {
+        if (result.quotaExceeded) {
+          setSaveToast({ ok: false, message: t.startScreen.autosaveQuotaError });
+          window.setTimeout(() => setSaveToast(null), 6000);
+        }
+      });
+    }, 800);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projects]);
 
   useEffect(() => {
     window.api
@@ -498,9 +563,10 @@ function Canvas() {
     setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, name } : p)));
   };
 
-  // Web mode saves to the user's own Yandex Disk (see ReloadGuard, which uses the same call) —
-  // a plain local-file download is unreliable in a hosted/embedded browser tab and gives no
-  // in-app confirmation either way, which is why this used to look like it "did nothing".
+  // Web mode saves to the user's own Yandex Disk — an explicit copy the user controls, next to
+  // the automatic local one; a plain local-file download is unreliable in a hosted/embedded
+  // browser tab and gives no in-app confirmation either way, which is why this used to look
+  // like it "did nothing".
   // Electron keeps saving to a local file via window.api, unchanged.
   const handleSaveProject = async () => {
     if (import.meta.env.VITE_WEB_MODE === '1') {
@@ -742,6 +808,37 @@ function Canvas() {
   // Start screen tile choices — the app boots into a blank project already, so "Пустой
   // документ" just dismisses the overlay; the other three drop a ready-wired node pair into
   // that same starting project.
+  // Opening a recent project replaces the untouched blank tab the app boots with, rather than
+  // adding a second tab beside it.
+  const handleOpenRecent = async (id: string) => {
+    const stored = await loadProject(id);
+    if (!stored) {
+      setRecentProjects((prev) => prev.filter((p) => p.id !== id));
+      return;
+    }
+    const project: Project = {
+      id: stored.id,
+      name: stored.name,
+      nodes: stored.nodes,
+      edges: stored.edges,
+      assistantMessages: stored.assistantMessages ?? [],
+      assistantDraft: stored.assistantDraft ?? '',
+    };
+    setProjects((prev) => {
+      const withoutBlank = prev.filter((p) => p.nodes.length > 0 && p.id !== project.id);
+      return [...withoutBlank, project];
+    });
+    setActiveProjectId(project.id);
+    setNodes(project.nodes);
+    setEdges(project.edges);
+    setShowStartScreen(false);
+  };
+
+  const handleDeleteRecent = async (id: string) => {
+    await deleteStoredProject(id);
+    setRecentProjects((prev) => prev.filter((p) => p.id !== id));
+  };
+
   const handleStartScreenChoice = (choice: StartScreenChoice) => {
     if (choice !== 'empty') {
       const { nodes: presetNodes, edges: presetEdges } =
@@ -1205,12 +1302,12 @@ function Canvas() {
           onChooseBusiness={handleStartScreenBusinessChoice}
           onAutoCreate={handleStartScreenAutoCreate}
           onClose={() => handleStartScreenChoice('empty')}
+          recentProjects={recentProjects}
+          onOpenRecent={handleOpenRecent}
+          onDeleteRecent={handleDeleteRecent}
         />
       )}
       {legalDoc && <LegalModal doc={legalDoc} onClose={() => setLegalDoc(null)} />}
-      {import.meta.env.VITE_WEB_MODE === '1' && (
-        <ReloadGuard projectName={activeProject.name} nodes={nodes} edges={edges} />
-      )}
       {saveToast && (
         <div className={`save-toast ${saveToast.ok ? 'ok' : 'error'}`}>{saveToast.message}</div>
       )}

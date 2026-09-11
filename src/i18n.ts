@@ -796,6 +796,16 @@ export interface Translations {
     autoCreateLabel: string;
     autoCreatePlaceholder: string;
     autoCreateError: string;
+    recentNav: string;
+    recentHint: string;
+    recentNodes: (count: number) => string;
+    recentJustNow: string;
+    recentMinutes: (n: number) => string;
+    recentHours: (n: number) => string;
+    recentDays: (n: number) => string;
+    recentDelete: string;
+    recentDeleteConfirm: string;
+    autosaveQuotaError: string;
     quickStartNav: string;
     businessNav: string;
     businessHoreca: string;
@@ -1822,6 +1832,16 @@ export const ru: Translations = {
     autoCreatePlaceholder:
       'Опишите, что нужно сделать — ИИ ассистент сам создаст и соединит подходящие ноды на холсте',
     autoCreateError: 'Не удалось создать ноды. Попробуйте ещё раз.',
+    recentNav: 'Недавние',
+    recentHint: 'Проекты сохраняются сами — открывайте и продолжайте с того же места.',
+    recentNodes: (count) => `${count} ${count % 10 === 1 && count % 100 !== 11 ? 'нода' : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20) ? 'ноды' : 'нод'}`,
+    recentJustNow: 'только что',
+    recentMinutes: (n) => `${n} мин назад`,
+    recentHours: (n) => `${n} ч назад`,
+    recentDays: (n) => (n <= 1 ? 'вчера' : `${n} дн назад`),
+    recentDelete: 'Удалить проект',
+    recentDeleteConfirm: 'Удалить?',
+    autosaveQuotaError: 'Не хватает места для автосохранения — удалите ненужные проекты в «Недавних».',
     quickStartNav: 'Быстрый старт',
     businessNav: 'Для бизнеса',
     businessHoreca: 'HoReCa',
@@ -2856,6 +2876,16 @@ export const en: Translations = {
     autoCreatePlaceholder:
       'Describe what you need — the AI assistant will create and connect the right nodes on the canvas',
     autoCreateError: "Couldn't create the nodes. Please try again.",
+    recentNav: 'Recent',
+    recentHint: 'Projects save themselves — open one and pick up where you left off.',
+    recentNodes: (count) => `${count} ${count === 1 ? 'node' : 'nodes'}`,
+    recentJustNow: 'just now',
+    recentMinutes: (n) => `${n} min ago`,
+    recentHours: (n) => `${n} h ago`,
+    recentDays: (n) => (n <= 1 ? 'yesterday' : `${n} days ago`),
+    recentDelete: 'Delete project',
+    recentDeleteConfirm: 'Delete?',
+    autosaveQuotaError: 'Not enough space for autosave — remove projects you no longer need under Recent.',
     quickStartNav: 'Quick start',
     businessNav: 'For business',
     businessHoreca: 'HoReCa',

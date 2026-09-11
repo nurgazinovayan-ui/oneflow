@@ -314,7 +314,7 @@ function backupToYandexDisk(urls: string[], prefix: string): void {
   });
 }
 
-// Used by ReloadGuard's "Save" button — unlike backupToYandexDisk (fire-and-forget for
+// Used by the toolbar's "Save project" — unlike backupToYandexDisk (fire-and-forget for
 // generated media), the caller here needs to know whether the save actually succeeded before
 // deciding to go ahead with the reload, so this lets callFunction's rejection propagate instead
 // of swallowing it.

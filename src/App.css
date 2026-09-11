@@ -3180,6 +3180,89 @@
   gap: 16px;
 }
 
+/* Recent projects. Same tile surface as the quick-start tiles beside them, but a list rather
+   than a grid: names are the thing being scanned, and they vary in length. */
+.start-screen-recents {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.start-screen-recent {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.start-screen-recent-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 9px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+  transition: background 0.15s var(--ease);
+}
+
+.start-screen-recent-open:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.start-screen-recent-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.start-screen-recent-meta {
+  font-size: 11px;
+  color: var(--c-text-muted);
+}
+
+.start-screen-recent-delete {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--c-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+
+.start-screen-recent-delete:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--c-text);
+}
+
+.start-screen-recent-delete.confirming {
+  background: var(--c-error-bg);
+  color: var(--c-error);
+}
+
+.start-screen-recent-hint {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--c-text-muted);
+}
+
 .start-screen-tiles {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
