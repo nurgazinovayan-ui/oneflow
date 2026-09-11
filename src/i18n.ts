@@ -1645,13 +1645,6 @@ export const ru: Translations = {
     switchToLoginText: 'Уже есть аккаунт?',
     advantages: [
       {
-        title: 'Генерация дешевле до 25%',
-        description: 'Вы не переплачиваете посредникам — больше бюджета остаётся на генерации.',
-        benefit: 'Больше возможностей за тот же бюджет.',
-        image: 'step-07.png',
-        imageAlt: 'До 25% экономии на генерации через ONEFLOW',
-      },
-      {
         title: 'Всё для контента — здесь',
         description: 'Изображения, видео, тексты и аудио в одном рабочем пространстве.',
         benefit: 'Меньше переключений между сервисами.',
@@ -1699,6 +1692,13 @@ export const ru: Translations = {
         benefit: 'Создавайте в своём темпе.',
         image: 'step-08.png',
         imageAlt: 'Остаток бюджета переходит на следующий месяц',
+      },
+      {
+        title: 'Генерация дешевле до 25%',
+        description: 'Вы не переплачиваете посредникам — больше бюджета остаётся на генерации.',
+        benefit: 'Больше возможностей за тот же бюджет.',
+        image: 'step-07.png',
+        imageAlt: 'До 25% экономии на генерации через ONEFLOW',
       },
     ],
   },
@@ -2654,13 +2654,6 @@ export const en: Translations = {
     switchToLoginText: 'Already have an account?',
     advantages: [
       {
-        title: 'Up to 25% cheaper generation',
-        description: "You're not overpaying middlemen — more of your budget goes to actual generations.",
-        benefit: 'More output for the same budget.',
-        image: 'step-07.png',
-        imageAlt: 'Up to 25% savings on generation with ONEFLOW',
-      },
-      {
         title: 'Everything for content, in one place',
         description: 'Images, video, text and audio in a single workspace.',
         benefit: 'Fewer tabs, fewer tools to juggle.',
@@ -2708,6 +2701,13 @@ export const en: Translations = {
         benefit: 'Create at your own pace.',
         image: 'step-08.png',
         imageAlt: 'Leftover budget carries over to the next month',
+      },
+      {
+        title: 'Up to 25% cheaper generation',
+        description: "You're not overpaying middlemen — more of your budget goes to actual generations.",
+        benefit: 'More output for the same budget.',
+        image: 'step-07.png',
+        imageAlt: 'Up to 25% savings on generation with ONEFLOW',
       },
     ],
   },
