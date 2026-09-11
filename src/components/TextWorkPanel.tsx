@@ -19,12 +19,17 @@ import {
   IconThumb,
 } from './Icons';
 import DropdownMenu, { type DropdownMenuItem } from './DropdownMenu';
+import MarkdownText from './MarkdownText';
 import {
   buildDocxDataUrl,
+  buildExport,
   buildPptxDataUrl,
+  exportFileName,
   suggestedFileName,
+  type ExportFormat,
   type ParsedDeliverable,
 } from '../deliverables';
+import { guessTitle, parseMarkdown } from '../markdown';
 import { useT } from '../i18n';
 import { useWorkspace } from '../copywrite/useWorkspace';
 import {
@@ -85,6 +90,7 @@ export default function TextWorkPanel({
   const [notice, setNotice] = useState('');
   const [copied, setCopied] = useState<string>();
   const [downloading, setDownloading] = useState<string>();
+  const [exportMenu, setExportMenu] = useState<string | null>(null);
   const [attaching, setAttaching] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -198,6 +204,23 @@ export default function TextWorkPanel({
       await window.api.saveFile(url, name);
     } catch (err) {
       toast(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  // Turns whatever the assistant answered into a real Office file client-side. Independent of
+  // the oneflow-document block below, which only appears when the model chooses to emit it —
+  // this path works on every answer.
+  const exportMessage = async (content: string, messageId: string, format: ExportFormat) => {
+    setExportMenu(null);
+    setDownloading(messageId);
+    try {
+      const title = guessTitle(parseMarkdown(content), thread.title || 'ONEFLOW');
+      const data = await buildExport(content, title, format);
+      await window.api.saveFile(data, exportFileName(title, format));
+    } catch (err) {
+      toast(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDownloading(undefined);
     }
   };
 
@@ -524,7 +547,9 @@ export default function TextWorkPanel({
                     {m.role === 'user' ? (
                       <div className="cw-user-bubble">{m.content}</div>
                     ) : (
-                      <div className="cw-assistant-text">{m.content}</div>
+                      <div className="cw-assistant-text">
+                        <MarkdownText text={m.content} />
+                      </div>
                     )}
                     {m.deliverable && (
                       <button
@@ -582,13 +607,35 @@ export default function TextWorkPanel({
                           >
                             <IconThumb size={13} down />
                           </button>
-                          <button
-                            className="cw-action-btn"
-                            title={l.exportAnswerMd}
-                            onClick={() => void saveText(m.content, 'oneflow-answer.md', 'text/markdown;charset=utf-8')}
-                          >
-                            <IconDownload size={13} />
-                          </button>
+                          <div className="cw-action-menu-wrap">
+                            <button
+                              className="cw-action-btn"
+                              title={l.exportAs}
+                              disabled={downloading === m.id}
+                              onClick={() => setExportMenu(exportMenu === m.id ? null : m.id)}
+                            >
+                              <IconDownload size={13} />
+                            </button>
+                            {exportMenu === m.id && (
+                              <DropdownMenu
+                                align="right"
+                                onClose={() => setExportMenu(null)}
+                                items={[
+                                  { type: 'header', label: l.exportAs },
+                                  { label: l.exportWord, onClick: () => void exportMessage(m.content, m.id, 'docx') },
+                                  { label: l.exportExcel, onClick: () => void exportMessage(m.content, m.id, 'xlsx') },
+                                  { label: l.exportPpt, onClick: () => void exportMessage(m.content, m.id, 'pptx') },
+                                  {
+                                    label: l.exportAnswerMd,
+                                    onClick: () => {
+                                      setExportMenu(null);
+                                      void saveText(m.content, 'oneflow-answer.md', 'text/markdown;charset=utf-8');
+                                    },
+                                  },
+                                ]}
+                              />
+                            )}
+                          </div>
                         </>
                       )}
                     </div>

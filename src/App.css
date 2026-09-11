@@ -5014,11 +5014,15 @@
   padding: 20px 22px;
 }
 
+/* Centred hero, matching One Launch's own header (.onelaunch-hero) so the two sections read as
+   the same product rather than two different apps. */
 .evaluation-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 18px;
+  text-align: center;
+  gap: 10px;
+  margin-bottom: 22px;
 }
 
 .evaluation-header-icon {
@@ -5034,15 +5038,18 @@
 }
 
 .evaluation-title {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
   color: var(--c-text);
 }
 
 .evaluation-subtitle {
-  margin: 2px 0 0;
-  font-size: 11.5px;
-  line-height: 1.4;
+  margin: 0;
+  max-width: 46ch;
+  font-size: 12.5px;
+  line-height: 1.5;
   color: var(--c-text-dim);
 }
 
@@ -9507,11 +9514,111 @@
 
 .cw-assistant-text {
   width: 100%;
-  white-space: pre-wrap;
+  /* Was pre-wrap back when the answer was one raw string; MarkdownText now emits real block
+     elements, and pre-wrap would turn every source newline into an extra blank line on top of
+     the margins those blocks already carry. */
   overflow-wrap: anywhere;
   font-size: 13.5px;
   line-height: 1.65;
   color: var(--c-text);
+}
+
+/* Rendered markdown inside a chat answer (MarkdownText.tsx). */
+.md-paragraph {
+  margin: 0 0 10px;
+}
+
+.md-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.md-heading {
+  margin: 16px 0 8px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--c-text);
+}
+
+.md-heading:first-child {
+  margin-top: 0;
+}
+
+h3.md-heading {
+  font-size: 17px;
+}
+
+h4.md-heading {
+  font-size: 15px;
+}
+
+h5.md-heading {
+  font-size: 13.5px;
+}
+
+.md-list {
+  margin: 0 0 10px;
+  padding-left: 22px;
+}
+
+.md-list li {
+  margin-bottom: 4px;
+}
+
+.cw-assistant-text strong {
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.cw-assistant-text code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--c-panel-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92em;
+}
+
+.md-code {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--c-panel-2);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.md-code code {
+  padding: 0;
+  background: none;
+}
+
+/* Tables can exceed the message column, so this one element scrolls rather than the page. */
+.md-table-wrap {
+  margin: 0 0 10px;
+  overflow-x: auto;
+}
+
+.md-table {
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.md-table th,
+.md-table td {
+  padding: 6px 10px;
+  border: 1px solid var(--c-divider);
+  text-align: left;
+  vertical-align: top;
+}
+
+.md-table th {
+  background: var(--c-panel-2);
+  font-weight: 600;
+}
+
+/* Anchor for the per-message export dropdown. */
+.cw-action-menu-wrap {
+  position: relative;
+  display: inline-flex;
 }
 
 .cw-message-actions {

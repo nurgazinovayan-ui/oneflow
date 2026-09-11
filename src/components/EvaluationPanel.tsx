@@ -73,12 +73,10 @@ export default function EvaluationPanel({ active }: EvaluationPanelProps) {
         <div className="evaluation-composer">
           <div className="evaluation-header">
             <div className="evaluation-header-icon">
-              <IconGauge size={18} />
+              <IconGauge size={20} />
             </div>
-            <div>
-              <div className="evaluation-title">{t.evaluation.title}</div>
-              <p className="evaluation-subtitle">{t.evaluation.subtitle}</p>
-            </div>
+            <div className="evaluation-title">{t.evaluation.title}</div>
+            <p className="evaluation-subtitle">{t.evaluation.subtitle}</p>
           </div>
 
           <div className="evaluation-section">

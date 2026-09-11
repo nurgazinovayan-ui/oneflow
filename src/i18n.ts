@@ -607,6 +607,10 @@ export interface Translations {
     exportMd: string;
     exportJson: string;
     exportAnswerMd: string;
+    exportAs: string;
+    exportWord: string;
+    exportExcel: string;
+    exportPpt: string;
     moreTooltip: string;
     renameLabel: string;
     removeLabel: string;
@@ -1523,6 +1527,10 @@ export const ru: Translations = {
     exportMd: 'Скачать переписку (.md)',
     exportJson: 'Скачать резервную копию (.json)',
     exportAnswerMd: 'Скачать ответ (.md)',
+    exportAs: 'Скачать как',
+    exportWord: 'Word (.docx)',
+    exportExcel: 'Excel (.xlsx)',
+    exportPpt: 'PowerPoint (.pptx)',
     moreTooltip: 'Действия с чатом',
     renameLabel: 'Переименовать',
     removeLabel: 'Удалить',
@@ -2536,6 +2544,10 @@ export const en: Translations = {
     exportMd: 'Download conversation (.md)',
     exportJson: 'Download backup (.json)',
     exportAnswerMd: 'Download answer (.md)',
+    exportAs: 'Download as',
+    exportWord: 'Word (.docx)',
+    exportExcel: 'Excel (.xlsx)',
+    exportPpt: 'PowerPoint (.pptx)',
     moreTooltip: 'Chat actions',
     renameLabel: 'Rename',
     removeLabel: 'Delete',
