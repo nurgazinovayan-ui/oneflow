@@ -647,6 +647,8 @@ export interface Translations {
     docCardDownload: string;
     docCardOtherFormat: string;
     fileError: string;
+    legacyOfficeError: string;
+    officeReadError: string;
     promptLimit: string;
     writeQuick: string;
     imagesQuick: string;
@@ -1574,7 +1576,9 @@ export const ru: Translations = {
     docCardDownload: 'Скачать',
     docCardOtherFormat: 'Другой формат',
     fileError:
-      'До 4 файлов: PNG, JPG, WebP, TXT, MD, CSV, JSON; до 4 МБ каждый, текст — до 30 000 символов.',
+      'До 4 файлов: PNG, JPG, WebP, TXT, MD, CSV, JSON, DOCX, XLSX, PPTX; до 4 МБ каждый, текст — до 30 000 символов.',
+    legacyOfficeError: 'Старый формат Office. Пересохраните файл как .docx, .xlsx или .pptx.',
+    officeReadError: 'Не удалось прочитать файл — возможно, он повреждён или защищён паролем.',
     promptLimit: 'Запрос слишком длинный: максимум 30 000 символов.',
     writeQuick: 'Написать текст',
     imagesQuick: 'Создать изображение',
@@ -2597,7 +2601,10 @@ export const en: Translations = {
     docCardHide: 'Collapse',
     docCardDownload: 'Download',
     docCardOtherFormat: 'Other format',
-    fileError: 'Up to 4 files: PNG, JPG, WebP, TXT, MD, CSV, JSON; 4 MB each, text up to 30,000 characters.',
+    fileError:
+      'Up to 4 files: PNG, JPG, WebP, TXT, MD, CSV, JSON, DOCX, XLSX, PPTX; 4 MB each, text up to 30,000 characters.',
+    legacyOfficeError: 'Legacy Office format. Re-save the file as .docx, .xlsx or .pptx.',
+    officeReadError: 'Could not read the file — it may be damaged or password-protected.',
     promptLimit: 'Your message is too long: maximum 30,000 characters.',
     writeQuick: 'Write a Text',
     imagesQuick: 'Create Images',

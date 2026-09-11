@@ -1,5 +1,6 @@
 import type { ChatMessage } from '../types';
 import type { ParsedDeliverable } from '../deliverables';
+import { officeExtension, officeFileToMarkdown } from '../officeImport';
 
 // Data model for the Copywrite engine redesign (see CLAUDE_COPYWRITE.md for the full spec this
 // ports). Deliberately plain objects + localStorage instead of the IndexedDB workspace the
@@ -16,7 +17,11 @@ export interface Attachment {
   id: string;
   name: string;
   kind: 'image' | 'document';
-  data: string; // data URL for an image, raw (possibly truncated) text for a document
+  // Data URL for an image; text for a document — verbatim for .txt/.md/.csv/.json, and the
+  // markdown reading of the file for .docx/.xlsx/.pptx (see officeImport.ts). Possibly truncated.
+  data: string;
+  // Set on an Office upload so the UI can label it and the request can say what it came from.
+  office?: '.docx' | '.xlsx' | '.pptx';
 }
 
 export interface CwMessage extends ChatMessage {
@@ -113,16 +118,22 @@ function isAllowedTextFile(name: string): boolean {
 }
 
 export function isAttachable(file: File): boolean {
-  return ALLOWED_IMAGE_TYPES.includes(file.type) || isAllowedTextFile(file.name);
+  return ALLOWED_IMAGE_TYPES.includes(file.type) || isAllowedTextFile(file.name) || officeExtension(file.name) !== null;
 }
 
 // Throws on an unsupported type or an oversized file — callers show the caller-facing
-// fileError copy on catch, matching every other attachment surface in this app.
+// fileError copy on catch, matching every other attachment surface in this app. 'unreadable'
+// (from officeImport) is thrown separately because it needs its own advice, not "wrong format".
 export async function readAttachment(file: File): Promise<Attachment> {
   if (file.size > MAX_ATTACHMENT_BYTES) throw new Error('too-large');
   if (ALLOWED_IMAGE_TYPES.includes(file.type)) {
     const data = await readFileAsDataUrl(file);
     return { id: id(), name: file.name, kind: 'image', data };
+  }
+  const office = officeExtension(file.name);
+  if (office) {
+    const markdown = await officeFileToMarkdown(file);
+    return { id: id(), name: file.name, kind: 'document', data: markdown.slice(0, MAX_TEXT_LENGTH), office };
   }
   if (isAllowedTextFile(file.name)) {
     const text = await readFileAsText(file);

@@ -9874,6 +9874,19 @@ h5.md-heading {
   color: var(--c-text-muted);
 }
 
+/* Marks an upload that was read out of an Office file rather than taken verbatim, so it's
+   clear which chip the model is reading as a document. */
+.cw-attachment-badge {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--c-panel-3);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--c-text-muted);
+}
+
 .cw-attachment-remove {
   display: flex;
   align-items: center;

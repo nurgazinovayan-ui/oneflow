@@ -38,6 +38,19 @@ function loadWorkspace(scope: string, defaultTitle: string): { workspace: Worksp
 // namespaces storage per signed-in account (or 'desktop-local'), and changing it is expected to
 // remount the whole panel (see TextWorkPanel's `key={storageScope}`), so this hook always starts
 // fresh for a new scope rather than migrating state between scopes.
+// Images ride along as a separate vision payload, but a document attachment is just text and
+// used to be dropped entirely — the model never saw an uploaded .csv, let alone the markdown
+// reading of a .docx (officeImport.ts). Inlining it into the turn is what makes "поправь этот
+// документ" possible at all. Fenced so the model can tell the file apart from the request.
+function withDocuments(m: CwMessage): string {
+  const docs = (m.attachments ?? []).filter((a) => a.kind === 'document');
+  if (docs.length === 0) return m.content;
+  const files = docs.map(
+    (a) => `--- Прикреплённый файл: ${a.name} ---\n${a.data}\n--- конец файла: ${a.name} ---`
+  );
+  return [m.content, ...files].filter(Boolean).join('\n\n');
+}
+
 export function useWorkspace(scope: string, defaultTitle: string) {
   const [workspace, setWorkspace] = useState<Workspace>(() => loadWorkspace(scope, defaultTitle).workspace);
   const [storageError, setStorageError] = useState<'load' | 'save' | null>(
@@ -75,7 +88,7 @@ export function useWorkspace(scope: string, defaultTitle: string) {
         .map((a) => a.data)
         .slice(0, 4);
       try {
-        const plain = messages.map((m) => ({ role: m.role, content: m.content }));
+        const plain = messages.map((m) => ({ role: m.role, content: withDocuments(m) }));
         const reply = await window.api.generateChat(plain, lastUserImages.length > 0 ? lastUserImages : undefined, 'text');
         if (cancelledRef.current.has(threadId)) return;
         const { cleanedText: afterSuggestions, suggestions } = parseSuggestions(reply);

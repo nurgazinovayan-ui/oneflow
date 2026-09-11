@@ -31,6 +31,7 @@ import {
   type ParsedDeliverable,
 } from '../deliverables';
 import { guessTitle, parseMarkdown } from '../markdown';
+import { isLegacyOfficeFile } from '../officeImport';
 import { useT } from '../i18n';
 import { useWorkspace } from '../copywrite/useWorkspace';
 import {
@@ -255,7 +256,10 @@ export default function TextWorkPanel({
     const targetId = thread.id;
     const selected = [...files].filter(isAttachable);
     if (selected.length === 0) {
-      if (files.length > 0) toast(l.fileError);
+      // A .doc/.xls/.ppt is filtered out here, before readAttachment ever sees it, so the
+      // "re-save it as .docx" advice has to be given at this point or it never appears.
+      if ([...files].some((f) => isLegacyOfficeFile(f.name))) toast(l.legacyOfficeError);
+      else if (files.length > 0) toast(l.fileError);
       return;
     }
     if (thread.attachments.length + selected.length > MAX_ATTACHMENTS) {
@@ -271,8 +275,11 @@ export default function TextWorkPanel({
           th.id === targetId ? { ...th, attachments: [...th.attachments, ...added].slice(0, MAX_ATTACHMENTS) } : th
         ),
       }));
-    } catch {
-      toast(l.fileError);
+    } catch (err) {
+      // "Wrong format" is unhelpful for a real .doc or a .docx we couldn't open — each of those
+      // needs its own next step, so readAttachment throws them separately.
+      const reason = err instanceof Error ? err.message : '';
+      toast(reason === 'unreadable' ? l.officeReadError : l.fileError);
     } finally {
       setAttaching(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -767,6 +774,7 @@ export default function TextWorkPanel({
                       <div key={a.id} className="cw-attachment">
                         {a.kind === 'image' ? <img src={a.data} alt="" className="cw-thumb" /> : <IconNews size={14} />}
                         <span className="cw-attachment-name">{a.name}</span>
+                        {a.office && <span className="cw-attachment-badge">{a.office.slice(1).toUpperCase()}</span>}
                         <button
                           className="cw-attachment-remove"
                           title={`${l.removeLabel}: ${a.name}`}
@@ -813,7 +821,7 @@ export default function TextWorkPanel({
                       type="file"
                       hidden
                       multiple
-                      accept="image/png,image/jpeg,image/webp,.txt,.md,.csv,.json"
+                      accept="image/png,image/jpeg,image/webp,.txt,.md,.csv,.json,.docx,.xlsx,.pptx"
                       onChange={(e) => {
                         if (e.target.files) void attachFiles(e.target.files);
                       }}
