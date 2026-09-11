@@ -133,9 +133,19 @@ function isTrend(stats: Record<string, number> | undefined): boolean {
   return true;
 }
 
-async function runApifyActor(actorId: string, input: Record<string, unknown>): Promise<unknown[]> {
+// Every run reserves memory out of one account-wide pool (16GB on Apify's lower tiers) and these
+// actors default to 4096MB each, so fanning out several at once used to blow the cap and come
+// back "402 actor-memory-limit-exceeded" on whichever runs started last. Pinning each run's memory
+// (must be a power of two) keeps the whole fan-out inside the pool: 3 TikTok + 1 Instagram here
+// peaks at ~5GB instead of 24GB.
+async function runApifyActor(
+  actorId: string,
+  input: Record<string, unknown>,
+  memoryMb: number
+): Promise<unknown[]> {
   const res = await fetch(
-    `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${APIFY_API_TOKEN}&timeout=90`,
+    `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items` +
+      `?token=${APIFY_API_TOKEN}&timeout=90&memory=${memoryMb}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -162,10 +172,12 @@ const TIKTOK_REGIONS: { code: string; region: Region; limit: number }[] = [
 ];
 
 async function fetchTikTokRegion(code: string, region: Region, limit: number): Promise<TrendItem[]> {
+  // 1GB is plenty for this one — it reads TikTok's trend-discovery API rather than driving a
+  // browser, and three of these run side by side.
   const items = await runApifyActor('clockworks~tiktok-trends-scraper', {
     region: code,
     resultsPerPage: limit,
-  });
+  }, 1024);
   return items
     .map((raw): TrendItem => {
       const item = raw as Record<string, unknown>;
@@ -204,40 +216,61 @@ async function fetchTikTokTrends(): Promise<TrendItem[]> {
 }
 
 // Instagram has no per-country "trending" endpoint this actor can read, so region is approximated
-// by which language's hashtags surfaced the post — Russian-language tags for CIS, English ones for
-// Europe/America. The hashtag is only the *discovery* route, never the bar for inclusion: every
-// post still has to clear MIN_LIKES + MIN_ENGAGEMENT_RATE below, which is what makes it a trend.
+// by which language's hashtags the post carries — Russian-language tags for CIS, English ones for
+// Europe/America. The hashtag is only the *discovery* route and a region hint, never the bar for
+// inclusion: every post still has to clear MIN_LIKES + MIN_ENGAGEMENT_RATE, which is what actually
+// makes it a trend.
 //
-// scrape is deliberately much larger than keep: a hashtag feed is mostly ordinary posts, so most
-// of what comes back gets thrown away by isTrend and we need volume to find the real hits.
-const INSTAGRAM_SOURCES: { region: Region; tags: string[]; scrape: number; keep: number }[] = [
-  { region: 'cis', tags: ['рекомендации', 'тренды', 'рек'], scrape: 120, keep: 12 },
-  { region: 'europe', tags: ['viral', 'trending'], scrape: 80, keep: 8 },
-  { region: 'america', tags: ['fyp', 'explorepage'], scrape: 60, keep: 6 },
+// Ordered by region priority, because instagramRegion() below takes the first tag a post matches
+// and a post tagged both #рекомендации and #viral should count as CIS.
+const INSTAGRAM_TAG_REGIONS: { tag: string; region: Region }[] = [
+  { tag: 'рекомендации', region: 'cis' },
+  { tag: 'тренды', region: 'cis' },
+  { tag: 'рек', region: 'cis' },
+  { tag: 'viral', region: 'europe' },
+  { tag: 'trending', region: 'europe' },
+  { tag: 'fyp', region: 'america' },
+  { tag: 'explorepage', region: 'america' },
 ];
 
-async function fetchInstagramSource(
-  region: Region,
-  tags: string[],
-  scrape: number,
-  keep: number
-): Promise<TrendItem[]> {
+// Per hashtag page. All seven pages go through a single actor run (see the memory note on
+// runApifyActor), so the run returns roughly this many times seven — deliberately far more than
+// we keep, since a hashtag feed is mostly ordinary posts and isTrend throws most of them away.
+const INSTAGRAM_RESULTS_PER_TAG = 40;
+const INSTAGRAM_KEEP = 24;
+
+function instagramRegion(item: Record<string, unknown>): Region {
+  const hashtags = Array.isArray(item.hashtags) ? item.hashtags.map((h) => String(h).toLowerCase()) : [];
+  const caption = String(item.caption ?? '').toLowerCase();
+  for (const { tag, region } of INSTAGRAM_TAG_REGIONS) {
+    if (hashtags.includes(tag) || caption.includes(`#${tag}`)) return region;
+  }
+  return 'unknown';
+}
+
+async function fetchInstagramTrends(): Promise<TrendItem[]> {
   // apify/instagram-scraper (the official actor) takes explore-page URLs rather than a keyword
   // search — an earlier version of this function called a third-party actor
   // (apidojo~instagram-scraper-api) with a `search`/`searchType` pair it doesn't actually support,
   // which made every run fail with "run-failed". directUrls is this actor's documented, stable way
-  // to pull posts under a hashtag.
-  const items = await runApifyActor('apify~instagram-scraper', {
-    directUrls: tags.map((tag) => `https://www.instagram.com/explore/tags/${encodeURIComponent(tag)}/`),
-    resultsType: 'posts',
-    resultsLimit: scrape,
-  });
+  // to pull posts under a hashtag, and it takes every tag in one run.
+  const items = await runApifyActor(
+    'apify~instagram-scraper',
+    {
+      directUrls: INSTAGRAM_TAG_REGIONS.map(
+        ({ tag }) => `https://www.instagram.com/explore/tags/${encodeURIComponent(tag)}/`
+      ),
+      resultsType: 'posts',
+      resultsLimit: INSTAGRAM_RESULTS_PER_TAG,
+    },
+    2048
+  );
   return items
     .map((raw): TrendItem => {
       const item = raw as Record<string, unknown>;
       return {
         platform: 'instagram',
-        region,
+        region: instagramRegion(item),
         title: String(item.caption ?? item.title ?? 'Instagram Reel').slice(0, 200),
         video_url: (item.videoUrl as string) ?? null,
         thumbnail_url: (item.displayUrl as string) ?? (item.thumbnailUrl as string) ?? null,
@@ -251,18 +284,10 @@ async function fetchInstagramSource(
       };
     })
     .filter((item) => isTrend(item.stats))
+    // Region ordering is applied by the panel via region_rank; here we only decide which 24
+    // survive, and that's purely on engagement.
     .sort((a, b) => popularityScore(b.stats) - popularityScore(a.stats))
-    .slice(0, keep);
-}
-
-async function fetchInstagramTrends(): Promise<TrendItem[]> {
-  const runs = await Promise.allSettled(
-    INSTAGRAM_SOURCES.map(({ region, tags, scrape, keep }) => fetchInstagramSource(region, tags, scrape, keep))
-  );
-  const failures = runs.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
-  if (failures.length === runs.length) throw new Error(String(failures[0].reason));
-  if (failures.length > 0) console.error('instagram: some regions failed', failures.map((f) => String(f.reason)));
-  return runs.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+    .slice(0, INSTAGRAM_KEEP);
 }
 
 function extractJsonArray(text: string): Record<string, unknown>[] {
