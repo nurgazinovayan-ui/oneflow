@@ -1,0 +1,6 @@
+# Netlify SPA fallback. The app has no router, so every path must serve index.html with a 200 —
+# without this, a refresh on anything but "/" returns the host's own 404.
+#
+# The real files above it still win: /favicon.ico, /og-image.png, /robots.txt, /sitemap.xml and
+# /404.html are served directly because a rewrite only applies when no file matches.
+/*  /index.html  200
