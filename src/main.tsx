@@ -5,6 +5,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import WebAuthGate from './components/WebAuthGate';
 import { installMockApiIfNeeded } from './mockApi';
 import { installWebApi } from './webApi';
+import ConsentBanner from './components/ConsentBanner';
+import { initAnalytics } from './analytics';
 // Self-hosted (not Google Fonts CDN) so the desktop build works fully offline — includes the
 // cyrillic subset since the app's primary audience is Russian-speaking.
 import '@fontsource-variable/inter/wght.css';
@@ -14,14 +16,19 @@ const isWebMode = import.meta.env.VITE_WEB_MODE === '1';
 
 if (isWebMode) {
   installWebApi();
+  // Starts in memory-only mode unless consent was already given — see analytics.ts.
+  initAnalytics();
 } else {
   installMockApiIfNeeded();
 }
 
 const content = isWebMode ? (
-  <WebAuthGate>
-    <App />
-  </WebAuthGate>
+  <>
+    <WebAuthGate>
+      <App />
+    </WebAuthGate>
+    <ConsentBanner />
+  </>
 ) : (
   <App />
 );

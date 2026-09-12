@@ -18,6 +18,7 @@ import { useSubscription } from '../store/subscriptionContext';
 import { formatGenerationError } from '../errorMessages';
 import { IconSparkles, IconDownload, IconVideo, IconPlay } from '../components/Icons';
 import { imageGenVariantCount, resolveImageGenRequest } from '../pipeline';
+import { capture } from '../analytics';
 import GenerationLoader from '../components/GenerationLoader';
 import { useT } from '../i18n';
 
@@ -127,6 +128,7 @@ function VideoGenNode({ id, data, selected }: NodeProps) {
     // Checked before anything is generated: the video step consumes exactly one photo, so a
     // node set to several variants would have all but one silently dropped.
     if (imageGenVariantCount(imageNode) > 1) {
+      capture('pipeline_run', { outcome: 'blocked_multiple_images' });
       setPipelineError(t.nodes.videoGen.pipelineOneImageError);
       return;
     }
@@ -146,6 +148,7 @@ function VideoGenNode({ id, data, selected }: NodeProps) {
       incrementGenerations();
     } catch (err) {
       updateNodeData(imageSourceId!, { status: 'error', error: formatGenerationError(err) });
+      capture('pipeline_run', { outcome: 'image_failed' });
       setPipelineError(t.nodes.videoGen.pipelineImageFailed);
       setPipelineStage('idle');
       return;
@@ -160,7 +163,8 @@ function VideoGenNode({ id, data, selected }: NodeProps) {
     }
 
     setPipelineStage('video');
-    await runVideo(images[0]);
+    const ok = await runVideo(images[0]);
+    capture('pipeline_run', { outcome: ok ? 'completed' : 'video_failed' });
     setPipelineStage('idle');
   };
 

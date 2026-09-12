@@ -748,6 +748,13 @@ export interface Translations {
     benefitEvaluationAccess: string;
     benefitPrioritySupport: string;
   };
+  consent: {
+    title: string;
+    text: string;
+    policyLink: string;
+    accept: string;
+    decline: string;
+  };
   legal: {
     privacyLink: string;
     termsLink: string;
@@ -1785,6 +1792,13 @@ export const ru: Translations = {
     benefitOneLaunchAccess: 'Доступ к One Launch',
     benefitEvaluationAccess: 'Доступ к инструменту оценка',
     benefitPrioritySupport: 'Приоритетная поддержка',
+  },
+  consent: {
+    title: 'Аналитика',
+    text: 'Мы используем аналитику, чтобы понимать, какими функциями пользуются и что ломается. До вашего согласия на устройстве ничего не сохраняется.',
+    policyLink: 'Политика конфиденциальности',
+    accept: 'Принять',
+    decline: 'Отклонить',
   },
   legal: {
     privacyLink: 'Политика конфиденциальности',
@@ -2830,6 +2844,13 @@ export const en: Translations = {
     benefitOneLaunchAccess: 'Access to One Launch',
     benefitEvaluationAccess: 'Access to the evaluation tool',
     benefitPrioritySupport: 'Priority support',
+  },
+  consent: {
+    title: 'Analytics',
+    text: 'We use analytics to see which features get used and what breaks. Nothing is stored on your device until you agree.',
+    policyLink: 'Privacy policy',
+    accept: 'Accept',
+    decline: 'Decline',
   },
   legal: {
     privacyLink: 'Privacy Policy',

@@ -32,6 +32,7 @@ import {
 } from '../deliverables';
 import { guessTitle, parseMarkdown } from '../markdown';
 import { isLegacyOfficeFile } from '../officeImport';
+import { capture } from '../analytics';
 import { useT } from '../i18n';
 import { useWorkspace } from '../copywrite/useWorkspace';
 import {
@@ -222,6 +223,7 @@ export default function TextWorkPanel({
       const title = guessTitle(parseMarkdown(content), thread.title || 'ONEFLOW');
       const data = await buildExport(content, title, format);
       await window.api.saveFile(data, exportFileName(title, format));
+      capture('document_exported', { format, source: 'answer' });
     } catch (err) {
       toast(err instanceof Error ? err.message : String(err));
     } finally {
@@ -241,6 +243,7 @@ export default function TextWorkPanel({
     try {
       const data = await buildDeliverableExport(deliverable, format);
       await window.api.saveFile(data, suggestedFileName(deliverable, format));
+      capture('document_exported', { format, source: 'card', kind: deliverable.kind });
     } catch (err) {
       toast(err instanceof Error ? err.message : String(err));
     } finally {
@@ -269,6 +272,7 @@ export default function TextWorkPanel({
     setAttaching(true);
     try {
       const added = await Promise.all(selected.map(readAttachment));
+      for (const a of added.filter((x) => x.office)) capture('office_file_uploaded', { format: a.office });
       update((s) => ({
         ...s,
         threads: s.threads.map((th) =>

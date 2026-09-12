@@ -49,6 +49,7 @@ import {
   saveProjects,
   type StoredProject,
 } from './projectStore';
+import { capture } from './analytics';
 import LegalModal from './components/LegalModal';
 import ToolbarMenu from './components/ToolbarMenu';
 import FloatingDockGroup from './components/FloatingDockGroup';
@@ -522,7 +523,10 @@ function Canvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const requestPayment = useCallback(() => setPaymentModalOpen(true), []);
+  const requestPayment = useCallback(() => {
+    capture('paywall_shown');
+    setPaymentModalOpen(true);
+  }, []);
 
   const onConnect = useCallback(
     (connection: Connection) => setEdges((eds) => addEdge(connection, eds)),
@@ -757,6 +761,7 @@ function Canvas() {
       position,
     };
     setNodes((nds) => nds.concat(node));
+    capture('node_added', { node_type: type });
   };
 
   const executeAssistantActions = useCallback(
@@ -800,6 +805,7 @@ function Canvas() {
       positionRef.current = cursor;
       setNodes((nds) => nds.concat(newNodes));
       setEdges((eds) => connections.reduce((acc, conn) => addEdge(conn, acc), eds));
+      capture('assistant_actions_applied', { nodes: newNodes.length, edges: connections.length });
       return newNodes.length;
     },
     [setNodes, setEdges]

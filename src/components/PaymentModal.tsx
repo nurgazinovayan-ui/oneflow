@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { IconCheck, IconClose } from './Icons';
 import { useT } from '../i18n';
 import type { LegalDoc } from '../legalContent';
+import { capture } from '../analytics';
 
 interface PaymentModalProps {
   onClose: () => void;
@@ -38,6 +39,10 @@ export default function PaymentModal({ onClose, onRecheck, onOpenLegal }: Paymen
   const [toastVisible, setToastVisible] = useState(false);
 
   const handlePay = () => {
+    // Deliberately not "checkout_opened": in the web build this still shows the
+    // "in development" toast rather than opening LemonSqueezy, and an event named for
+    // something that didn't happen is worse than no event.
+    capture('plan_selected', { period });
     setToastVisible(true);
     setTimeout(() => setToastVisible(false), 3000);
   };

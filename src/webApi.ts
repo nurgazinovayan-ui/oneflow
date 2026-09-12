@@ -17,6 +17,7 @@ import type {
 import { estimateImageCost, estimateVideoCost, DSP_URL } from './types';
 import { getWebSession, setWebSession, type WebSession } from './webAuthSession';
 import { useLanguageStore, ru, en } from './i18n';
+import { capture } from './analytics';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -78,23 +79,57 @@ export async function getValidSession(): Promise<WebSession | null> {
   return refreshed;
 }
 
+// Every model call in the app goes through callFunction, which makes it the one place that
+// can't miss one — instrumenting the six node components separately would drift the first time
+// a seventh is added. Functions not listed here (uploads, subscription checks) aren't tracked.
+const TRACKED_FUNCTIONS: Record<string, string> = {
+  'generate-image': 'generation',
+  'generate-video': 'generation',
+  'generate-video-pro': 'generation',
+  'generate-vector': 'generation',
+  'generate-audio': 'generation',
+  'generate-chat': 'chat',
+  'evaluate-creative': 'evaluation',
+};
+
 async function callFunction<T>(name: string, body: unknown): Promise<T> {
   const session = await getValidSession();
   if (!session) throw new Error(t().errors.notLoggedIn);
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${session.accessToken}`,
-    },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data?.error || t().errors.generationError);
+  const kind = TRACKED_FUNCTIONS[name];
+  const model = typeof (body as { model?: unknown } | null)?.model === 'string'
+    ? (body as { model: string }).model
+    : undefined;
+  const startedAt = Date.now();
+  if (kind) capture(`${kind}_started`, { fn: name, model });
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${session.accessToken}`,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data?.error || t().errors.generationError);
+    }
+    if (kind) capture(`${kind}_succeeded`, { fn: name, model, ms: Date.now() - startedAt });
+    return data as T;
+  } catch (err) {
+    // The reason is what makes this worth recording: a spike of one failure text is how a
+    // broken model or an exhausted provider quota shows up before anyone writes in.
+    if (kind) {
+      capture(`${kind}_failed`, {
+        fn: name,
+        model,
+        ms: Date.now() - startedAt,
+        reason: (err instanceof Error ? err.message : String(err)).slice(0, 200),
+      });
+    }
+    throw err;
   }
-  return data as T;
 }
 
 async function urlToDataUrl(url: string): Promise<string> {

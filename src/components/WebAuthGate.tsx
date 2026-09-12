@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { setWebSession, type WebSession } from '../webAuthSession';
+import { capture, identifyUser } from '../analytics';
 import { installMockApiIfNeeded } from '../mockApi';
 import { useT } from '../i18n';
 import DomeGallery from './DomeGallery';
@@ -123,6 +124,8 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
         expiresAt: Date.now() + (data.expires_in ?? 3600) * 1000,
       };
       setWebSession(session);
+      identifyUser(session.userId, session.email);
+      capture('login');
       setStage('unlocked');
     } catch {
       setError(t.webAuth.connectionError);
@@ -160,6 +163,7 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
         return;
       }
       const needsConfirmation = !data?.access_token;
+      capture('sign_up', { needs_confirmation: needsConfirmation });
       setRegisterEmail('');
       setRegisterPassword('');
       setRegisterPasswordConfirm('');
