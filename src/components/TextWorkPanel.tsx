@@ -55,6 +55,10 @@ interface TextWorkPanelProps {
   subscriptionLabel?: string;
   onProfile: () => void;
   onSubscription: () => void;
+  // Text handed over from another section (currently "Создать сценарий" in Тренды). It lands in
+  // the composer rather than being sent: a generation costs money, so the person who didn't type
+  // it gets to read and edit it first. The counter makes a repeat of the same text still arrive.
+  seed?: { text: string; n: number };
 }
 
 type Modal =
@@ -71,6 +75,7 @@ export default function TextWorkPanel({
   subscriptionLabel,
   onProfile,
   onSubscription,
+  seed,
 }: TextWorkPanelProps) {
   const t = useT();
   const l = t.textWork;
@@ -153,6 +158,18 @@ export default function TextWorkPanel({
   const patchThread = (threadId: string, patch: Partial<Thread>) => {
     update((s) => ({ ...s, threads: s.threads.map((th) => (th.id === threadId ? { ...th, ...patch } : th)) }));
   };
+
+  // Seeded text drops into the composer of whichever thread is open, and focuses it.
+  useEffect(() => {
+    if (!seed?.text) return;
+    update((st) => ({
+      ...st,
+      threads: st.threads.map((th) => (th.id === st.activeId ? { ...th, draft: seed.text } : th)),
+    }));
+    inputRef.current?.focus();
+    // Keyed on the counter, not the text: sending the same trend twice must still arrive.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed?.n]);
 
   const toast = (text: string) => {
     setNotice(text);

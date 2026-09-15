@@ -50,6 +50,7 @@ import {
   type StoredProject,
 } from './projectStore';
 import { capture } from './analytics';
+import type { TrendWatchItem } from './trends/types';
 import LegalModal from './components/LegalModal';
 import ToolbarMenu from './components/ToolbarMenu';
 import FloatingDockGroup from './components/FloatingDockGroup';
@@ -410,6 +411,7 @@ function Canvas() {
   const [photoEditorOpen, setPhotoEditorOpen] = useState(false);
   const [showStartScreen, setShowStartScreen] = useState(true);
   const [recentProjects, setRecentProjects] = useState<StoredProject[]>([]);
+  const [textSeed, setTextSeed] = useState<{ text: string; n: number }>();
   const [subscriptionActive, setSubscriptionActive] = useState(true);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null);
@@ -814,6 +816,40 @@ function Canvas() {
   // Start screen tile choices — the app boots into a blank project already, so "Пустой
   // документ" just dismisses the overlay; the other three drop a ready-wired node pair into
   // that same starting project.
+  // "Создать сценарий" hands the trend to the text chat as a ready request; "В ноды" drops it
+  // on the canvas as a prompt wired into an image generator. Both reuse machinery that already
+  // exists rather than adding a second way to build nodes or start a chat.
+  const trendBrief = (item: TrendWatchItem) =>
+    [
+      `Тренд с ${item.platform}: «${item.title}».`,
+      item.description ? `Суть: ${item.description}` : '',
+      item.ai_advice ? `Как применить: ${item.ai_advice}` : '',
+      'Напиши сценарий ролика для моего бренда на основе этого тренда: раскадровка по секундам, текст на экране и закадровый текст.',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+  const handleTrendScenario = (item: TrendWatchItem) => {
+    capture('trend_to_scenario', { platform: item.platform });
+    setTextSeed({ text: trendBrief(item), n: Date.now() });
+    setMainView('text');
+  };
+
+  const handleTrendToNodes = (item: TrendWatchItem) => {
+    capture('trend_to_nodes', { platform: item.platform });
+    const created = executeAssistantActions([
+      {
+        type: 'addNode',
+        refId: 'trend-prompt',
+        nodeType: 'prompt',
+        data: { value: item.ai_advice || item.description || item.title },
+      },
+      { type: 'addNode', refId: 'trend-image', nodeType: 'imageGen', data: {} },
+      { type: 'connect', from: 'trend-prompt', to: 'trend-image', targetHandle: 'prompt' },
+    ]);
+    if (created > 0) setMainView('canvas');
+  };
+
   // Opening a recent project replaces the untouched blank tab the app boots with, rather than
   // adding a second tab beside it.
   const handleOpenRecent = async (id: string) => {
@@ -1240,6 +1276,7 @@ function Canvas() {
               subscriptionLabel={hasActiveSubscription ? 'Pro' : 'Free'}
               onProfile={() => setProfileOpen(true)}
               onSubscription={requestPayment}
+              seed={textSeed}
             />
           )}
           <QuickGenPanel
@@ -1260,7 +1297,14 @@ function Canvas() {
           {import.meta.env.VITE_WEB_MODE === '1' && (
             <StrategyPanel active={mainView === 'strategy'} onCreateWorkflow={handleCreateFromStrategy} />
           )}
-          {import.meta.env.VITE_WEB_MODE === '1' && <TrendsPanel active={mainView === 'trends'} authEmail={authEmail} />}
+          {import.meta.env.VITE_WEB_MODE === '1' && (
+            <TrendsPanel
+              active={mainView === 'trends'}
+              authEmail={authEmail}
+              onCreateScenario={handleTrendScenario}
+              onSendToNodes={handleTrendToNodes}
+            />
+          )}
           {import.meta.env.VITE_WEB_MODE === '1' && <AssetsPanel active={mainView === 'assets'} />}
         </div>
       </div>

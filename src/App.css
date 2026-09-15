@@ -10434,72 +10434,559 @@ h5.md-heading {
   }
 }
 
-/* TRENDS: extend ONEFLOW's existing token system, as specified in HANDOFF.md.
-   Grid contracts to one column; detail dialog stacks below 48rem. */
-.trends-panel { position: absolute; inset: var(--topbar-height) 0 0; z-index: 20; display: flex; flex-direction: column; background: var(--c-bg); color: var(--c-text); }
-.trends-panel[hidden] { display: none; }
-.trends-panel *, .trends-dialog * { box-sizing: border-box; }
-.trends-panel button, .trends-dialog button, .trends-panel select, .trends-dialog select, .trends-panel input, .trends-dialog textarea { font: inherit; font-size: .875rem; color: var(--c-text); background: var(--c-panel); border: 1px solid var(--c-divider); border-radius: var(--radius-sm); padding: .65rem .85rem; }
-.trends-panel button, .trends-dialog button { display: inline-flex; justify-content: center; align-items: center; gap: .45rem; cursor: pointer; }
-.trends-panel button:hover, .trends-dialog button:hover { background: var(--c-panel-3); }
-.trends-panel button:disabled, .trends-dialog button:disabled { opacity: .45; cursor: default; }
-.trends-panel :focus-visible, .trends-dialog :focus-visible { outline: 2px solid var(--c-pink); outline-offset: 3px; }
-.trends-panel button[aria-pressed='true'] { color: var(--c-pink); border-color: var(--c-pink); }
-/* Trendswatching — daily social-trend feed (TikTok/Instagram real video via Apify, Threads as
-   AI web-search text). Sole content of the "TRENDS" section (no prompt catalog/tabs — cards +
-   period/platform filters + a detail popup). Reuses .trends-panel's own base button/focus rules. */
-.trends-toolbar { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.5rem 2rem 1rem; }
-.trends-toolbar h1 { font-size: 1.25rem; letter-spacing: .08em; margin: 0 0 .35rem; }
-.trends-updated { margin: 0; font-size: .875rem; color: var(--c-text-muted); }
-.trends-toolbar-controls { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
-.trends-platform-filters { display: flex; gap: .5rem; flex-wrap: wrap; }
-.trends-toolbar-controls > button[aria-busy='true'] svg { animation: trends-spin 0.8s linear infinite; }
-@keyframes trends-spin { to { transform: rotate(360deg); } }
-.trends-range-filters { display: flex; align-items: center; gap: .15rem; padding: 0 1.75rem 1rem; }
-.trends-range-filters button { padding: .45rem .75rem; border: none; border-radius: var(--radius-sm); background: transparent; color: var(--c-text-muted); font-size: .8125rem; font-weight: 500; }
-.trends-range-filters button:hover { background: var(--c-panel-3); color: var(--c-text); }
-.trends-range-filters button[aria-pressed='true'] { background: var(--c-panel-2); color: var(--c-text); border-color: transparent; }
-.trends-scroll { overflow: auto; flex: 1; min-height: 0; padding: 1rem 2rem 2rem; }
-.trends-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .875rem; }
-.trends-card { min-width: 0; background: var(--c-card); border: 1px solid var(--c-divider); border-radius: 12px; overflow: hidden; transition: border-color .18s var(--ease); }
-.trends-card:hover { border-color: var(--c-pink); }
-.trends-panel .trends-card-open { display: flex; flex-direction: column; text-align: left; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; }
-.trends-card figure { position: relative; margin: 0; aspect-ratio: 1 / 1; background: var(--c-panel-2); overflow: hidden; }
-.trends-card figure img, .trends-card figure video { display: block; width: 100%; height: 100%; object-fit: cover; }
-.trends-card-badge { position: absolute; top: .55rem; left: .55rem; display: flex; color: #fff; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .6)); }
-.trends-card h2 { margin: .7rem .7rem .55rem; font-size: .8rem; font-weight: 400; line-height: 1.35; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.trends-card-stats { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin: 0 .7rem .7rem; margin-top: auto; }
-.trends-card-stat { display: flex; align-items: center; gap: .25rem; font-size: .8125rem; font-weight: 700; color: var(--c-text); }
-.trends-card-stat svg { flex-shrink: 0; }
-.trends-preview-text { height: 100%; min-height: 8rem; display: flex; align-items: center; padding: .85rem; overflow: hidden; }
-.trends-preview-text p { margin: 0; font-size: .8125rem; line-height: 1.45; color: var(--c-text); display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical; overflow: hidden; }
-.trends-state { padding: 4rem 1rem; text-align: center; color: var(--c-text-muted); }
-.trends-dialog { width: min(56rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); padding: 0; border: 1px solid var(--c-divider); border-radius: var(--radius-lg); background: var(--c-panel); color: var(--c-text); box-shadow: var(--shadow-lg); overflow: auto; }
-.trends-dialog::backdrop { background: var(--c-bg); opacity: .8; }
-.trends-detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--c-divider); }
-.trends-detail-header h2 { margin: 0; font-size: 1.15rem; line-height: 1.35; overflow-wrap: anywhere; }
-.trends-detail-layout { display: grid; grid-template-columns: minmax(0, 18rem) minmax(0, 1fr); }
-.trends-detail-layout figure { position: relative; margin: 0; min-height: 14rem; background: var(--c-panel-2); }
-.trends-detail-layout figure img, .trends-detail-layout figure video { display: block; width: 100%; height: 100%; object-fit: cover; }
-.trends-detail-layout .trends-card-badge { top: .85rem; left: .85rem; }
-.trends-detail-copy { padding: 1.5rem; font-size: .9375rem; line-height: 1.55; display: flex; flex-direction: column; gap: 1.1rem; }
-.trends-detail-copy > p { margin: 0; color: var(--c-text-muted); }
-.trends-detail-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; padding: .9rem 0; border-top: 1px solid var(--c-divider); border-bottom: 1px solid var(--c-divider); }
-.trends-detail-stat { display: flex; flex-direction: column; gap: .25rem; }
-.trends-detail-stat span:first-child { font-size: .6875rem; color: var(--c-text-muted); text-transform: uppercase; letter-spacing: .04em; }
-.trends-detail-stat span:last-child { font-size: .95rem; font-weight: 600; }
-.trends-detail-advice { display: flex; flex-direction: column; gap: .4rem; padding: .9rem 1rem; border-radius: var(--radius-sm); background: var(--c-panel-2); font-size: .875rem; line-height: 1.55; }
-.trends-detail-advice-label { margin: 0; font-size: .75rem; font-weight: 600; color: var(--c-text); text-transform: uppercase; letter-spacing: .04em; }
-.trends-detail-footer { display: flex; justify-content: space-between; align-items: center; gap: .75rem; font-size: .8125rem; color: var(--c-text-muted); }
-.trends-detail-footer a { color: var(--c-pink); flex-shrink: 0; }
-@media (max-width: 64rem) { .trends-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 40rem) {
-  .trends-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .trends-toolbar { padding: 1rem; }
-  .trends-range-filters { padding: 0 1rem 1rem; }
-  .trends-scroll { padding: 1rem; }
-  .trends-detail-layout { grid-template-columns: 1fr; }
+/* TRENDSWATCHING — master/detail: a scrollable list of finds on the left, the selected one
+   expanded on the right. Scoped under .tw-panel so it can set its own control styling without
+   the app-wide button rules fighting it. */
+.tw-panel {
+  position: absolute;
+  inset: var(--topbar-height) 0 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 20px 34px 0;
+  background: var(--c-bg);
+  color: var(--c-text);
 }
+
+.tw-panel[hidden] { display: none; }
+.tw-panel * { box-sizing: border-box; }
+.tw-panel :focus-visible { outline: 2px solid var(--c-pink); outline-offset: 2px; }
+
+.tw-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-shrink: 0;
+}
+
+.tw-head-title { display: flex; align-items: center; gap: 12px; }
+
+.tw-head-title h1 {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+/* The badge is load-bearing, not decoration: the demo set carries invented reach numbers, and
+   this is what stops them reading as real ones. */
+.tw-demo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.12);
+  color: #5eead4;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tw-demo-dot { width: 7px; height: 7px; border-radius: 50%; background: #2dd4bf; }
+
+.tw-subtitle {
+  margin: 8px 0 0;
+  font-size: 15px;
+  color: var(--c-text-muted);
+}
+
+.tw-head-side { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+
+.tw-date { font-size: 13px; color: var(--c-text-muted); white-space: nowrap; }
+
+.tw-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 1px solid var(--c-divider);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--c-text);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.tw-refresh:hover:not(:disabled) { background: var(--c-panel-2); }
+.tw-refresh:disabled { opacity: 0.5; cursor: default; }
+.tw-refresh[aria-busy='true'] svg { animation: trends-spin 0.8s linear infinite; }
+@keyframes trends-spin { to { transform: rotate(360deg); } }
+
+.tw-alert {
+  margin: 14px 0 0;
+  font-size: 12.5px;
+  color: var(--c-error);
+}
+
+.tw-alert-demo { color: var(--c-text-muted); }
+
+/* --- filters --- */
+.tw-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  flex-shrink: 0;
+}
+
+.tw-search {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--c-divider);
+  border-radius: 12px;
+  background: var(--c-panel);
+  color: var(--c-text-muted);
+}
+
+.tw-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  color: var(--c-text);
+  font: inherit;
+  font-size: 13.5px;
+}
+
+.tw-search input::placeholder { color: var(--c-text-dim); }
+.tw-search input:focus { outline: none; }
+.tw-search input::-webkit-search-cancel-button { filter: invert(0.6); }
+
+.tw-select { position: relative; flex-shrink: 0; }
+
+.tw-select select {
+  height: 44px;
+  padding: 0 38px 0 16px;
+  border: 1px solid var(--c-divider);
+  border-radius: 12px;
+  background: var(--c-panel);
+  color: var(--c-text);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  appearance: none;
+  cursor: pointer;
+}
+
+.tw-select select:hover { background: var(--c-panel-2); }
+
+.tw-select > svg {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--c-text-muted);
+}
+
+/* Search settings. A popover rather than more controls in the row: region and the saved filter
+   are set once and then left alone, unlike the four controls beside them. */
+.tw-settings-wrap { position: relative; flex-shrink: 0; }
+
+.tw-settings-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--c-divider);
+  border-radius: 12px;
+  background: var(--c-panel);
+  color: var(--c-text);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tw-settings-btn:hover { background: var(--c-panel-2); }
+.tw-settings-btn.active { border-color: rgba(45, 212, 191, 0.5); }
+.tw-settings-dot { width: 6px; height: 6px; border-radius: 50%; background: #2dd4bf; }
+
+/* Click-away layer. Sits under the popover but over everything else, so any outside click
+   closes the panel without each control needing its own blur handling. */
+.tw-settings-scrim { position: fixed; inset: 0; z-index: 40; }
+
+.tw-settings-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 41;
+  width: 320px;
+  padding: 16px;
+  border: 1px solid var(--c-divider);
+  border-radius: 14px;
+  background: var(--c-panel);
+  box-shadow: var(--shadow-lg);
+}
+
+.tw-settings-group + .tw-settings-group { margin-top: 16px; }
+
+.tw-settings-label {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-text-muted);
+}
+
+.tw-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.tw-chip {
+  padding: 7px 12px;
+  border: 1px solid var(--c-divider);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--c-text-muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.tw-chip:hover { background: var(--c-panel-2); color: var(--c-text); }
+
+.tw-chip.active {
+  border-color: transparent;
+  background: rgba(45, 212, 191, 0.16);
+  color: #5eead4;
+}
+
+/* Says out loud that the region is exact for TikTok and inferred elsewhere, so nobody reads
+   an Instagram post's region as a confirmed country. */
+.tw-settings-note {
+  margin: 9px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--c-text-dim);
+}
+
+.tw-settings-reset {
+  width: 100%;
+  margin-top: 16px;
+  padding: 9px;
+  border: none;
+  border-radius: 9px;
+  background: var(--c-panel-2);
+  color: var(--c-text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tw-settings-reset:hover:not(:disabled) { background: var(--c-panel-3); }
+.tw-settings-reset:disabled { opacity: 0.4; cursor: default; }
+
+/* --- body: list + detail --- */
+.tw-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
+  gap: 30px;
+  margin-top: 18px;
+  padding-bottom: 22px;
+}
+
+.tw-list {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.tw-row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--c-divider);
+  border-radius: 14px;
+  transition: background 0.15s var(--ease);
+}
+
+.tw-row:hover { background: var(--c-panel); }
+
+/* The selected row is the anchor for the whole right-hand pane, so it gets a full tinted
+   surface rather than a left edge marker that's easy to miss in a long list. */
+.tw-row.selected {
+  background: rgba(45, 212, 191, 0.07);
+  border-bottom-color: transparent;
+  box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.42);
+}
+
+.tw-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 8px 14px 14px;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+}
+
+.tw-row-thumb {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--c-panel-2);
+}
+
+.tw-thumb-text {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  overflow: hidden;
+}
+
+.tw-thumb-text span {
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--c-text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tw-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+
+.tw-row-platform {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--c-text-muted);
+}
+
+.tw-row-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tw-row-author {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--c-text-muted);
+}
+
+.tw-avatar {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--c-panel-3);
+  color: var(--c-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.tw-row-metric {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 132px;
+}
+
+.tw-metric-label { font-size: 12px; color: var(--c-text-muted); }
+
+.tw-metric-value {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #34d399;
+}
+
+.tw-metric-sub { font-size: 11.5px; color: var(--c-text-dim); }
+
+.tw-bookmark,
+.tw-detail-bookmark {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  border: none;
+  background: none;
+  color: var(--c-text-dim);
+  cursor: pointer;
+  transition: color 0.15s var(--ease);
+}
+
+.tw-bookmark:hover,
+.tw-detail-bookmark:hover { color: var(--c-text); }
+.tw-bookmark.active,
+.tw-detail-bookmark.active { color: #34d399; }
+
+/* --- detail --- */
+.tw-detail {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.tw-detail-media { position: relative; }
+
+.tw-detail-img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 34vh;
+  border-radius: 16px;
+  object-fit: cover;
+  background: var(--c-panel-2);
+  display: block;
+}
+
+.tw-detail-media-actions {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tw-detail-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: rgba(10, 10, 12, 0.66);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tw-detail-open:hover { background: rgba(10, 10, 12, 0.85); }
+
+.tw-detail-bookmark {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(10, 10, 12, 0.66);
+  backdrop-filter: blur(8px);
+  color: #fff;
+}
+
+.tw-detail-title {
+  margin: 16px 0 0;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.tw-detail-byline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--c-divider);
+  font-size: 12.5px;
+  color: var(--c-text-muted);
+}
+
+.tw-dot { color: var(--c-text-dim); }
+
+.tw-detail-section { margin-top: 14px; }
+
+.tw-detail-section h3 {
+  margin: 0 0 7px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.tw-detail-section p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--c-text-muted);
+}
+
+.tw-detail-actions { display: flex; gap: 12px; margin: 20px 0 8px; }
+
+.tw-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  height: 46px;
+  padding: 0 26px;
+  border: none;
+  border-radius: 999px;
+  background: #fff;
+  color: #0a0a0c;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s var(--ease);
+}
+
+.tw-cta:hover { background: #e6e6e9; }
+
+.tw-cta.secondary {
+  background: var(--c-panel-2);
+  color: var(--c-text);
+  box-shadow: inset 0 0 0 1px var(--c-divider);
+}
+
+.tw-cta.secondary:hover { background: var(--c-panel-3); }
+
+.tw-state {
+  padding: 56px 16px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--c-text-muted);
+}
+
+/* Below this the two panes stop fitting side by side; the detail moves under the list. */
+@media (max-width: 1100px) {
+  .tw-body { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
+  .tw-list, .tw-detail { overflow: visible; }
+}
+
+@media (max-width: 767px) {
+  .tw-panel { padding: 18px 16px 0; }
+  .tw-head-title h1 { font-size: 28px; }
+  .tw-filters { flex-wrap: wrap; }
+  .tw-search { flex-basis: 100%; }
+  .tw-row-main { flex-wrap: wrap; }
+  .tw-row-metric { min-width: 0; flex-direction: row; align-items: baseline; gap: 8px; }
+  .tw-detail-actions { flex-wrap: wrap; }
+}
+
 
 /* Messenger — floating widget for @mechta.kz accounts only (gated in App.tsx), unrelated to
    mainView so it stays visible across every section. Positioned opposite Floko (bottom-left,
