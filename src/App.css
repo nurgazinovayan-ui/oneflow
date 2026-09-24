@@ -415,7 +415,7 @@
 }
 
 :root:not([data-theme='light']) .toolbar-menu-wrapper .toolbar-label-btn {
-  color: var(--c-text-muted);
+  color: #c8c8cf;
 }
 
 :root:not([data-theme='light']) .toolbar-menu-wrapper .toolbar-label-btn:hover {
@@ -1318,12 +1318,13 @@
 }
 
 :root:not([data-theme='light']) .toolbar-dock-icon-btn {
-  background: #242424;
+  background: #2c2c31;
   color: #f2f2f4;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 :root:not([data-theme='light']) .toolbar-dock-icon-btn:hover {
-  background: #2f2f2f;
+  background: #38383e;
 }
 
 :root:not([data-theme='light']) .canvas-toolbar .toolbar-label-btn {
@@ -4445,22 +4446,26 @@
    .toolbar-rich-menu-item-icon's color flips them along with everything else; .desc already
    reads var(--c-text-muted), which resolves correctly once the backdrop it sits on is dark too. */
 :root:not([data-theme='light']) .toolbar-rich-menu {
-  background: #0d0d0d;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  background: #1a1a1d;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
 }
 
 :root:not([data-theme='light']) .toolbar-rich-menu-header {
-  color: #a3a3ab;
+  color: #b4b4bd;
 }
 
 :root:not([data-theme='light']) .toolbar-rich-menu-item:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+:root:not([data-theme='light']) .toolbar-rich-menu-item-desc {
+  color: #a9a9b2;
 }
 
 :root:not([data-theme='light']) .toolbar-rich-menu-item-icon {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #29292e;
   box-shadow: none;
   color: #f2f2f4;
 }
@@ -11266,4 +11271,44 @@ h5.md-heading {
 @media (max-width: 30rem) {
   .messenger-panel { right: .75rem; left: .75rem; width: auto; bottom: 5.25rem; }
   .messenger-facepile { right: 1rem; bottom: 1rem; }
+}
+
+/* ---------------------------------------------------------------------------------------------
+   Dark theme legibility pass (by request: "меню и плашки ноды тяжеловато считываются").
+
+   Measured before: the canvas is #141414 but .node was --c-card #111111 — the card sat *darker*
+   than the surface under it, so it sank instead of lifting; its 8%-white outline barely showed;
+   .field-label (--c-text-dim #5c5c63 on #111) was ~2.9:1, under the 4.5:1 floor; chips, selects
+   and ref slots (--c-panel-2 #1a1a1a) were one shade off the card they sit on.
+
+   Rather than raise the global tokens — they also drive every other panel in the app, none of
+   which were called out — the same tokens are re-declared *locally* on the canvas and on the
+   popover menus. Every node rule already reads them (.node, .node-header, .field-label,
+   .node-option-btn, the index.css select/textarea/input base, .ref-slots, the edge stroke), so
+   this lifts all node types at once — including ones not on screen when this was tuned — and
+   light theme is untouched.
+   --------------------------------------------------------------------------------------------- */
+:root:not([data-theme='light']) .react-flow {
+  --c-card: #202024;
+  --c-panel-2: #2a2a2f;
+  --c-panel-3: #34343a;
+  --c-divider: rgba(255, 255, 255, 0.15);
+  --c-text-muted: #b4b4bd;
+  --c-text-dim: #9b9ba5;
+  --c-pink-dim: rgba(228, 228, 231, 0.62);
+}
+
+:root:not([data-theme='light']) :is(.context-menu, .dropdown-menu, .node-modal) {
+  --c-card: #202024;
+  --c-panel-2: #29292e;
+  --c-panel-3: #35353b;
+  --c-divider: rgba(255, 255, 255, 0.16);
+  --c-text-muted: #b4b4bd;
+  --c-text-dim: #9b9ba5;
+}
+
+/* Inactive mode tabs: muted gray read as disabled. :not(.active):not(:hover) so the existing
+   hover/active colours still win. */
+:root:not([data-theme='light']) .glow-menu-item-btn:not(.active):not(:hover) {
+  color: #bdbdc5;
 }
