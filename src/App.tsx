@@ -1308,8 +1308,10 @@ function Canvas() {
           {import.meta.env.VITE_WEB_MODE === '1' && <AssetsPanel active={mainView === 'assets'} />}
         </div>
       </div>
-      {import.meta.env.VITE_WEB_MODE === '1' &&
-        (authEmail?.toLowerCase().endsWith('@mechta.kz') || authEmail?.toLowerCase() === 'nurgazinov.ayan@gmail.com') && (
+      {/* Every signed-in web account: @mechta.kz colleagues see each other automatically, everyone
+          else adds contacts by invitation (see messenger-contacts). Web-only — messenger/client.ts
+          reuses webApi's session handling, which the desktop build doesn't expose. */}
+      {import.meta.env.VITE_WEB_MODE === '1' && !!authEmail && (
         <MessengerWidget
           key={authEmail}
           email={authEmail!.toLowerCase()}

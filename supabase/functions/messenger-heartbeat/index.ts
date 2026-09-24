@@ -5,9 +5,9 @@
 // let you set a secret with the SUPABASE_ prefix yourself, which is expected, not an error.
 //
 // Called every ~20s while the messenger widget is open (see src/messenger/client.ts) with the
-// user's current activity, and with a display name when the user first sets one. Restricted to
-// @mechta.kz accounts plus the app owner's own account, checked against the caller's own
-// verified JWT rather than anything the client claims. Writing through the service role rather
+// user's current activity, and with a display name when the user first sets one. Open to any
+// signed-in account, identified by the caller's own verified JWT rather than anything the client
+// claims. Writing through the service role rather
 // than a direct REST upsert from the client sidesteps RLS-on-upsert entirely (see
 // public.presence in supabase/schema.sql — that turned out unreliable in practice) and keeps
 // display_name from being blanked out by a routine heartbeat that didn't resend it.
@@ -18,11 +18,11 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const MECHTA_DOMAIN = '@mechta.kz';
-const ADMIN_EMAIL = 'nurgazinov.ayan@gmail.com';
 const STATUSES = ['idle', 'generating', 'copywriting', 'evaluating'];
+// Any signed-in account with an email (was @mechta.kz + the owner only until
+// 202609240001_messenger_contacts.sql).
 function isAllowed(email: string): boolean {
-  return email.endsWith(MECHTA_DOMAIN) || email === ADMIN_EMAIL;
+  return email.includes('@');
 }
 
 const corsHeaders = {

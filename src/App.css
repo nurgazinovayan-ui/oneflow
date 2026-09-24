@@ -11497,3 +11497,102 @@ h5.md-heading {
 }
 .messenger-compose .messenger-picker-toggle:hover:not(:disabled) { transform: none; background: var(--c-panel-2); color: var(--c-text); }
 .messenger-compose .messenger-picker-toggle[aria-pressed='true'] { color: var(--c-text); background: var(--c-panel-3); }
+
+/* ---------------------------------------------------------------------------------------------
+   Messenger contacts by invitation («Пригласить соавтора»). Green is reserved for this flow —
+   the invite prompt and its Accept action — so "someone wants to connect" reads at a glance.
+   --------------------------------------------------------------------------------------------- */
+:root {
+  --invite-green: #15803d;
+  --invite-green-strong: #16a34a;
+  --invite-green-text: #ffffff;
+  --invite-toast-bg: #effaf3;
+  --invite-toast-border: rgba(22, 163, 74, 0.45);
+  --invite-toast-title: #166534;
+  --invite-toast-text: #1f2a24;
+  --invite-toast-muted: #4d6b58;
+}
+:root:not([data-theme='light']) {
+  --invite-green: #22c55e;
+  --invite-green-strong: #22c55e;
+  --invite-green-text: #04130a;
+  --invite-toast-bg: #0d2317;
+  --invite-toast-border: rgba(34, 197, 94, 0.5);
+  --invite-toast-title: #86efac;
+  --invite-toast-text: #e7f5ec;
+  --invite-toast-muted: #9cc3aa;
+}
+
+.messenger-invite { display: flex; flex-direction: column; gap: .5rem; margin: 0 .1rem .75rem; padding: .85rem .9rem .9rem; border-radius: 1rem; background: var(--c-panel-2); }
+.messenger-invite-title { margin: 0; font-size: .88rem; font-weight: 650; color: var(--c-text); }
+.messenger-invite-hint { margin: 0; font-size: .76rem; line-height: 1.4; color: var(--c-text-muted); }
+.messenger-invite input { width: 100%; padding: .55rem .9rem; font-size: .85rem; background: var(--c-panel); }
+.messenger-invite .messenger-primary { width: 100%; padding: .55rem 1rem; border-radius: 999px; border: none; font-size: .85rem; font-weight: 600; cursor: pointer; }
+.messenger-invite-note { margin: 0; font-size: .76rem; line-height: 1.4; }
+.messenger-invite-note.is-ok { color: var(--invite-green); }
+.messenger-invite-note.is-error { color: var(--c-error); }
+.messenger-empty-tight { padding: 1rem 1rem .75rem; }
+
+.messenger-invite-row { cursor: default; }
+.messenger-invite-row:hover { background: transparent !important; }
+.messenger-invite-row-actions { display: flex; gap: .35rem; flex-shrink: 0; }
+.messenger-invite-row-actions button { width: 2rem; height: 2rem; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: filter .12s var(--ease), background .12s var(--ease); }
+.messenger-invite-row-actions .is-accept { background: var(--invite-green-strong); color: var(--invite-green-text); }
+.messenger-invite-row-actions .is-accept:hover:not(:disabled) { filter: brightness(1.08); }
+.messenger-invite-row-actions .is-decline { background: var(--c-panel-2); color: var(--c-text-muted); }
+.messenger-invite-row-actions .is-decline:hover:not(:disabled) { background: var(--c-panel-3); color: var(--c-text); }
+.messenger-invite-row-actions button:disabled { opacity: .5; cursor: default; }
+.messenger-invite-pending { width: 2.3rem; height: 2.3rem; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--c-text-dim); color: var(--c-text-muted); font-weight: 700; font-size: .9rem; }
+.messenger-invite-cancel { flex-shrink: 0; border: none; background: transparent; color: var(--c-text-muted); font-size: .76rem; font-weight: 600; padding: .35rem .55rem; border-radius: 999px; cursor: pointer; }
+.messenger-invite-cancel:hover { background: var(--c-panel-2); color: var(--c-text); }
+
+/* The corner prompt: top-right, clear of the facepile/panel (bottom-right) and the admin toast
+   (bottom-centre); shown whether the messenger panel is open or not. */
+.messenger-invite-toasts {
+  position: fixed;
+  top: 7rem;
+  right: 1.5rem;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  width: min(22rem, calc(100vw - 2rem));
+}
+.messenger-invite-toast {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  padding: .9rem 2.4rem .9rem .9rem;
+  border-radius: 1rem;
+  background: var(--invite-toast-bg);
+  color: var(--invite-toast-text);
+  border: 1px solid var(--invite-toast-border);
+  box-shadow: inset 3px 0 0 var(--invite-green-strong), 0 16px 40px rgba(0, 0, 0, .28), 0 0 40px -12px color-mix(in srgb, var(--invite-green-strong) 45%, transparent);
+  animation: messenger-invite-in .28s var(--ease);
+}
+@keyframes messenger-invite-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .messenger-invite-toast { animation: none; } }
+.messenger-invite-toast .messenger-avatar { box-shadow: 0 0 0 2px var(--invite-toast-bg), 0 0 0 4px var(--invite-green-strong); }
+.messenger-invite-toast .messenger-avatar-dot { display: none; }
+.messenger-invite-toast-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .15rem; }
+.messenger-invite-toast-title { margin: 0; font-size: .7rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--invite-toast-title); }
+.messenger-invite-toast-text { margin: 0; font-size: .9rem; font-weight: 600; line-height: 1.35; }
+.messenger-invite-toast-email { margin: 0; font-size: .75rem; color: var(--invite-toast-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.messenger-invite-toast-actions { display: flex; gap: .5rem; margin-top: .55rem; }
+.messenger-invite-toast-actions button { display: inline-flex; align-items: center; gap: .35rem; padding: .45rem .95rem; border-radius: 999px; font-size: .8rem; font-weight: 650; cursor: pointer; border: 1px solid transparent; transition: filter .12s var(--ease), background .12s var(--ease); }
+.messenger-invite-toast-actions .is-accept { background: var(--invite-green-strong); color: var(--invite-green-text); }
+.messenger-invite-toast-actions .is-accept:hover:not(:disabled) { filter: brightness(1.08); }
+.messenger-invite-toast-actions .is-decline { background: transparent; color: var(--invite-toast-text); border-color: var(--invite-toast-border); }
+.messenger-invite-toast-actions .is-decline:hover:not(:disabled) { background: color-mix(in srgb, var(--invite-green-strong) 10%, transparent); }
+.messenger-invite-toast-actions button:disabled { opacity: .55; cursor: default; }
+.messenger-invite-toast-close { position: absolute; top: .55rem; right: .55rem; width: 1.6rem; height: 1.6rem; border-radius: 50%; border: none; background: transparent; color: var(--invite-toast-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.messenger-invite-toast-close:hover { background: color-mix(in srgb, var(--invite-green-strong) 14%, transparent); color: var(--invite-toast-text); }
+.messenger-invite-toast.is-done { align-items: center; padding-right: .9rem; }
+.messenger-invite-toast-check { width: 2rem; height: 2rem; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--invite-green-strong); color: var(--invite-green-text); }
+@media (max-width: 30rem) { .messenger-invite-toasts { top: 6rem; right: 1rem; } }
+/* With the panel open the prompt moves to its left instead of covering its header; on narrow
+   screens, where the panel spans the width, it steps aside — the invite is in Контакты with a
+   badge anyway. */
+.messenger-invite-toasts.is-beside-panel { right: calc(1.5rem + min(23rem, calc(100vw - 2rem)) + .75rem); }
+@media (max-width: 52rem) { .messenger-invite-toasts.is-beside-panel { display: none; } }

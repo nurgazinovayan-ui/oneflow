@@ -3,14 +3,20 @@ import { useT } from '../i18n';
 import { IconChat, IconClose, IconSend, IconPlus, IconSearch, IconChevronRight, IconAttach, IconCheck, IconDocument, IconDownload, IconEdit } from './Icons';
 import {
   heartbeat, getRoster, listChannels, startDm, createGroup, listMessages, sendMessage, sendSticker, sendGif, searchGifs,
-  markReadServer, sendFile, messageReadByOthers,
-  type RosterEntry, type ChannelSummary, type ChatMessage, type MessengerStatus, type GifResult,
+  markReadServer, sendFile, messageReadByOthers, inviteContact, listInvites, respondInvite, cancelInvite,
+  type RosterEntry, type ChannelSummary, type ChatMessage, type MessengerStatus, type GifResult, type InviteList,
 } from '../messenger/client';
 
 const HEARTBEAT_MS = 20_000;
 const POLL_MS = 4_000;
 const BACKGROUND_POLL_MS = 15_000; // keeps the unread badge + facepile roster live while the widget is closed or on another tab
 const GIF_SEARCH_DEBOUNCE_MS = 400;
+// Incoming contact invites are polled on their own clock, open or closed, so the green prompt
+// shows up in the corner wherever the person is in the app.
+const INVITE_POLL_MS = 15_000;
+const ACCEPTED_TOAST_MS = 4_000;
+const MAX_INVITE_TOASTS = 3;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const READ_KEY_PREFIX = 'oneflow-messenger-read:';
 // 30 pre-made avatar illustrations (public/avatars/avatar-01.png..avatar-30.png) — every person
 // gets one deterministically (hashed from their email, see avatarImage below), rather than the
@@ -145,6 +151,14 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
   const [gifResults, setGifResults] = useState<GifResult[] | null>(null);
   const [gifLoading, setGifLoading] = useState(false);
   const [fileSending, setFileSending] = useState(false);
+  const [invites, setInvites] = useState<InviteList | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteNote, setInviteNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const [dismissedInvites, setDismissedInvites] = useState<Set<string>>(() => new Set());
+  const [respondingId, setRespondingId] = useState<string | null>(null);
+  const [acceptedToast, setAcceptedToast] = useState<string | null>(null);
   const activeChannelRef = useRef<string | null>(null);
   const activityRef = useRef(activity);
   const messagesRef = useRef<ChatMessage[]>(messages);
@@ -243,6 +257,53 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
     }, gifQuery ? GIF_SEARCH_DEBOUNCE_MS : 0);
     return () => { cancelled = true; window.clearTimeout(id); };
   }, [gifPickerOpen, gifQuery]);
+
+  const refreshInvites = () => listInvites().then(setInvites).catch(() => { /* next poll retries */ });
+
+  useEffect(() => {
+    void refreshInvites();
+    const id = window.setInterval(() => void refreshInvites(), INVITE_POLL_MS);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!acceptedToast) return;
+    const id = window.setTimeout(() => setAcceptedToast(null), ACCEPTED_TOAST_MS);
+    return () => window.clearTimeout(id);
+  }, [acceptedToast]);
+
+  const submitInvite = async () => {
+    const target = inviteEmail.trim().toLowerCase();
+    if (!EMAIL_RE.test(target)) { setInviteNote({ ok: false, text: t.inviteInvalid }); return; }
+    setInviteSending(true); setInviteNote(null);
+    try {
+      const result = await inviteContact(target);
+      setInviteEmail('');
+      setInviteNote({ ok: true, text: result === 'already' ? t.inviteAlready : result === 'accepted' ? t.inviteAccepted : t.inviteSent });
+      void refreshInvites();
+      if (result === 'accepted') void getRoster().then(setRoster).catch(() => {});
+    } catch (e) {
+      setInviteNote({ ok: false, text: e instanceof Error && e.message ? e.message : t.error });
+    } finally { setInviteSending(false); }
+  };
+
+  const answerInvite = async (inviteId: string, accept: boolean, name: string) => {
+    setRespondingId(inviteId);
+    try {
+      await respondInvite(inviteId, accept);
+      setInvites(prev => prev && { ...prev, incoming: prev.incoming.filter(i => i.id !== inviteId) });
+      if (accept) {
+        setAcceptedToast(t.inviteAcceptedToast(name));
+        void getRoster().then(setRoster).catch(() => {});
+      }
+    } catch { setError(true); } finally { setRespondingId(null); void refreshInvites(); }
+  };
+
+  const withdrawInvite = async (inviteId: string) => {
+    setInvites(prev => prev && { ...prev, outgoing: prev.outgoing.filter(i => i.id !== inviteId) });
+    try { await cancelInvite(inviteId); } catch { void refreshInvites(); }
+  };
 
   const openThread = async (channelId: string) => {
     setActiveChannelId(channelId);
@@ -343,6 +404,10 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
   const filteredRoster = (roster ?? []).filter(p => !p.isSelf &&
     p.displayName.toLowerCase().includes(peopleQuery.toLowerCase()))
     .sort((a, b) => (a.online !== b.online ? (a.online ? -1 : 1) : a.displayName.localeCompare(b.displayName)));
+  const hasContacts = !!roster && roster.some(p => !p.isSelf);
+  const incomingInvites = invites?.incoming ?? [];
+  const outgoingInvites = invites?.outgoing ?? [];
+  const toastInvites = incomingInvites.filter(i => !dismissedInvites.has(i.id)).slice(0, MAX_INVITE_TOASTS);
   const onlinePeople = filteredRoster.filter(p => p.online);
   const offlinePeople = filteredRoster.filter(p => !p.online);
   const unreadChannelIds = new Set(
@@ -379,7 +444,42 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
   const facepileShown = facepileOthers.slice(0, MAX_FACEPILE_AVATARS);
   const facepileOverflow = facepileOthers.length - facepileShown.length;
 
+  const inviteForm = (
+    <form className="messenger-invite" noValidate onSubmit={e => { e.preventDefault(); void submitInvite(); }}>
+      <p className="messenger-invite-title">{t.inviteTitle}</p>
+      <p className="messenger-invite-hint">{t.inviteHint}</p>
+      <input id="messenger-invite-email" type="email" inputMode="email" autoComplete="off" value={inviteEmail}
+        onChange={e => { setInviteEmail(e.target.value); setInviteNote(null); }} placeholder={t.invitePlaceholder} aria-label={t.inviteTitle} />
+      <button type="submit" className="messenger-primary" disabled={inviteSending || !inviteEmail.trim()}>
+        {inviteSending ? t.inviteSending : t.inviteSend}
+      </button>
+      {inviteNote && <p className={`messenger-invite-note ${inviteNote.ok ? 'is-ok' : 'is-error'}`} role="status">{inviteNote.text}</p>}
+    </form>
+  );
+
   return <>
+    {(toastInvites.length > 0 || acceptedToast) && <div className={`messenger-invite-toasts${open ? ' is-beside-panel' : ''}`} aria-live="polite">
+      {toastInvites.map(inv => <div key={inv.id} className="messenger-invite-toast" role="status">
+        <Avatar name={inv.displayName} email={inv.email} online={false} />
+        <div className="messenger-invite-toast-body">
+          <p className="messenger-invite-toast-title">{t.inviteToastTitle}</p>
+          <p className="messenger-invite-toast-text">{t.inviteToastText(inv.displayName)}</p>
+          <p className="messenger-invite-toast-email">{inv.email}</p>
+          <div className="messenger-invite-toast-actions">
+            <button type="button" className="is-accept" disabled={respondingId === inv.id}
+              onClick={() => void answerInvite(inv.id, true, inv.displayName)}><IconCheck size={13} />{t.accept}</button>
+            <button type="button" className="is-decline" disabled={respondingId === inv.id}
+              onClick={() => void answerInvite(inv.id, false, inv.displayName)}>{t.decline}</button>
+          </div>
+        </div>
+        <button type="button" className="messenger-invite-toast-close" aria-label={t.close}
+          onClick={() => setDismissedInvites(prev => new Set(prev).add(inv.id))}><IconClose size={13} /></button>
+      </div>)}
+      {acceptedToast && <div className="messenger-invite-toast is-done" role="status">
+        <span className="messenger-invite-toast-check"><IconCheck size={16} /></span>
+        <p className="messenger-invite-toast-text">{acceptedToast}</p>
+      </div>}
+    </div>}
     <div className="messenger-facepile">
       {facepileShown.map(p => (
         <button key={p.email} type="button" className="messenger-facepile-avatar" title={p.displayName}
@@ -421,13 +521,16 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
         <button aria-pressed={view === 'groups' || view === 'newGroup'} onClick={() => setView('groups')}>
           {t.tabGroups}{unreadGroups > 0 && <span className="messenger-tab-badge">{badge(unreadGroups)}</span>}
         </button>
-        <button aria-pressed={view === 'people'} onClick={() => setView('people')}>{t.tabPeople}</button>
+        <button aria-pressed={view === 'people'} onClick={() => setView('people')}>
+          {t.tabPeople}{incomingInvites.length > 0 && <span className="messenger-tab-badge">{badge(incomingInvites.length)}</span>}
+        </button>
       </nav>}
 
       {!activeChannelId && (view === 'direct' || view === 'groups') && <section className="messenger-list">
         {view === 'groups' && <button className="messenger-new-group" onClick={() => setView('newGroup')}><IconPlus size={14} />{t.newGroup}</button>}
-        {channels && !(view === 'direct' ? directChannels : groupChannels).length &&
-          <p className="messenger-empty">{view === 'direct' ? t.noDirect : t.noGroups}</p>}
+        {channels && !(view === 'direct' ? directChannels : groupChannels).length && (roster && !hasContacts
+          ? <><p className="messenger-empty messenger-empty-tight">{t.noContacts}</p>{inviteForm}</>
+          : <p className="messenger-empty">{view === 'direct' ? t.noDirect : t.noGroups}</p>)}
         {(view === 'direct' ? directChannels : groupChannels).map(c => {
           const other = c.kind === 'dm' ? c.members.find(m => m.email !== email) : null;
           const unread = unreadChannelIds.has(c.id);
@@ -448,7 +551,28 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
       </section>}
 
       {!activeChannelId && view === 'people' && <section className="messenger-list">
-        <div className="messenger-search"><IconSearch size={14} /><input value={peopleQuery} onChange={e => setPeopleQuery(e.target.value)} placeholder={t.searchPeople} /></div>
+        {incomingInvites.length > 0 && <div className="messenger-section">
+          <h3 className="messenger-section-title">{t.invitesIncoming} <span>{incomingInvites.length}</span></h3>
+          {incomingInvites.map(inv => <div key={inv.id} className="messenger-row messenger-invite-row">
+            <Avatar name={inv.displayName} email={inv.email} online={false} />
+            <span className="messenger-row-body">
+              <span className="messenger-row-title">{inv.displayName}</span>
+              <span className="messenger-row-preview">{inv.email}</span>
+            </span>
+            <span className="messenger-invite-row-actions">
+              <button type="button" className="is-accept" aria-label={t.accept} title={t.accept} disabled={respondingId === inv.id}
+                onClick={() => void answerInvite(inv.id, true, inv.displayName)}><IconCheck size={14} /></button>
+              <button type="button" className="is-decline" aria-label={t.decline} title={t.decline} disabled={respondingId === inv.id}
+                onClick={() => void answerInvite(inv.id, false, inv.displayName)}><IconClose size={13} /></button>
+            </span>
+          </div>)}
+        </div>}
+        {roster && !hasContacts
+          ? <><p className="messenger-empty messenger-empty-tight">{t.noContacts}</p>{inviteForm}</>
+          : inviteOpen
+            ? inviteForm
+            : <button className="messenger-new-group" onClick={() => { setInviteOpen(true); setInviteNote(null); }}><IconPlus size={14} />{t.inviteTitle}</button>}
+        {hasContacts && <div className="messenger-search"><IconSearch size={14} /><input value={peopleQuery} onChange={e => setPeopleQuery(e.target.value)} placeholder={t.searchPeople} /></div>}
         {editingName
           ? <div className="messenger-name-edit">
               <input value={nameDraft} onChange={e => setNameDraft(e.target.value)} placeholder={t.displayNamePrompt} autoFocus
@@ -456,7 +580,7 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
               <button onClick={() => void saveName()}>{t.save}</button>
             </div>
           : <button className="messenger-link" onClick={() => { setNameDraft(''); setEditingName(true); }}><IconEdit size={13} />{t.editName}</button>}
-        {roster && !filteredRoster.length && <p className="messenger-empty">{t.noPeople}</p>}
+        {hasContacts && !filteredRoster.length && <p className="messenger-empty">{t.noPeople}</p>}
         {([[t.onlineSection, onlinePeople], [t.offlineSection, offlinePeople]] as const).map(([label, people]) => people.length > 0 && <div key={label} className="messenger-section">
           <h3 className="messenger-section-title">{label} <span>{people.length}</span></h3>
           {people.map(p => <button key={p.email} className="messenger-row" disabled={busy} onClick={() => void openDm(p.email)}>
@@ -467,6 +591,17 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
             </span>
           </button>)}
         </div>)}
+        {outgoingInvites.length > 0 && <div className="messenger-section">
+          <h3 className="messenger-section-title">{t.invitesOutgoing} <span>{outgoingInvites.length}</span></h3>
+          {outgoingInvites.map(inv => <div key={inv.id} className="messenger-row messenger-invite-row is-outgoing">
+            <span className="messenger-invite-pending" aria-hidden="true">@</span>
+            <span className="messenger-row-body">
+              <span className="messenger-row-title">{inv.email}</span>
+              <span className="messenger-row-preview">{timeLabel(inv.createdAt, t.locale)}</span>
+            </span>
+            <button type="button" className="messenger-invite-cancel" onClick={() => void withdrawInvite(inv.id)}>{t.cancelInvite}</button>
+          </div>)}
+        </div>}
       </section>}
 
       {!activeChannelId && view === 'newGroup' && <section className="messenger-list">

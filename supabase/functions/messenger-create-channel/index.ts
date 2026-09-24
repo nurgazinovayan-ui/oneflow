@@ -4,13 +4,15 @@
 // Supabase injects into every Edge Function automatically.
 //
 // Body: { kind: 'dm' | 'group', title?: string, memberEmails: string[] }
-// For a DM, memberEmails must contain exactly one other @mechta.kz address; an existing DM
-// between the same two people is reused instead of creating a duplicate. For a group,
-// memberEmails is everyone besides the caller and a non-empty title is required. Every email
-// (the caller's own JWT included) is re-validated against @mechta.kz here — the client's
-// dropdown of "who to message" is just UX, this is what actually enforces it.
+// For a DM, memberEmails must contain exactly one other person; an existing DM between the same
+// two people is reused instead of creating a duplicate. For a group, memberEmails is everyone
+// besides the caller and a non-empty title is required.
+// Every member must be reachable from the caller: a contact (accepted invite, either direction)
+// or, when both are colleagues (@mechta.kz or the app owner), anyone — the same set
+// messenger-roster shows. The client's "who to message" list is just UX; this is what enforces
+// it, so nobody can open a chat with a stranger by posting an arbitrary email.
 //
-// Requires supabase/migrations/202609070003_messenger.sql to have been applied first.
+// Requires supabase/migrations/202609070003_messenger.sql and 202609240001_messenger_contacts.sql.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -18,7 +20,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const MECHTA_DOMAIN = '@mechta.kz';
 const ADMIN_EMAIL = 'nurgazinov.ayan@gmail.com';
-function isAllowed(email: string): boolean {
+function isColleague(email: string): boolean {
   return email.endsWith(MECHTA_DOMAIN) || email === ADMIN_EMAIL;
 }
 
@@ -45,15 +47,28 @@ Deno.serve(async (req) => {
     const { data: callerData } = await admin.auth.getUser(token);
     const caller = callerData.user;
     const callerEmail = caller?.email?.toLowerCase() ?? '';
-    if (!caller || !isAllowed(callerEmail)) return jsonError('Доступ запрещён.', 403);
+    if (!caller || !callerEmail.includes('@')) return jsonError('Доступ запрещён.', 403);
 
     const body = await req.json().catch(() => ({}));
     const kind = body?.kind === 'group' ? 'group' : body?.kind === 'dm' ? 'dm' : null;
     const memberEmails: string[] = Array.isArray(body?.memberEmails)
-      ? [...new Set(body.memberEmails.filter((e: unknown) => typeof e === 'string').map((e: string) => e.toLowerCase().trim()))]
+      ? [...new Set<string>(body.memberEmails.filter((e: unknown) => typeof e === 'string').map((e: string) => e.toLowerCase().trim()))]
       : [];
     if (!kind) return jsonError('kind должен быть dm или group.', 400);
-    if (memberEmails.some((e) => !isAllowed(e))) return jsonError('Собеседник должен быть допущенным пользователем мессенджера.', 400);
+    const [sent, received] = await Promise.all([
+      admin.from('messenger_invites').select('to_email').eq('from_email', callerEmail).eq('status', 'accepted'),
+      admin.from('messenger_invites').select('from_email').eq('to_email', callerEmail).eq('status', 'accepted'),
+    ]);
+    if (sent.error) throw sent.error;
+    if (received.error) throw received.error;
+    const contacts = new Set<string>([
+      ...(sent.data ?? []).map((r: { to_email: string }) => r.to_email),
+      ...(received.data ?? []).map((r: { from_email: string }) => r.from_email),
+    ]);
+    const reachable = (e: string) => e === callerEmail || contacts.has(e) || (isColleague(callerEmail) && isColleague(e));
+    if (memberEmails.some((e) => !reachable(e))) {
+      return jsonError('Писать можно только своим контактам. Сначала пригласите человека в контакты.', 403);
+    }
 
     if (kind === 'dm') {
       const other = memberEmails.find((e) => e !== callerEmail);

@@ -10,18 +10,18 @@
 // Body: { query?: string, limit?: number }. Empty/omitted query returns Giphy's trending feed.
 // Proxied so the API key never reaches the browser. Rating capped at "pg" (workplace tool, no
 // search-term filtering beyond what Giphy itself applies at that rating). Only returns the
-// handful of fields the widget needs, never Giphy's full response. Restricted to eligible
-// callers, checked against the caller's own verified JWT — same as every other messenger
-// function, even though this one is read-only, to avoid spending the shared Giphy quota on
-// anyone who isn't allowed into the messenger at all.
+// handful of fields the widget needs, never Giphy's full response. Requires a signed-in account
+// (the caller's own verified JWT) so anonymous traffic can't spend the shared Giphy quota.
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const GIPHY_API_KEY = Deno.env.get('GIPHY_API_KEY') ?? '';
-const MECHTA_DOMAIN = '@mechta.kz';
-const ADMIN_EMAIL = 'nurgazinov.ayan@gmail.com';
+// Any signed-in account with an email may use the messenger (it was @mechta.kz + the owner only
+// until 202609240001_messenger_contacts.sql). What a caller can actually read or write is scoped
+// by channel membership, checked below; who can start a chat with whom is decided in
+// messenger-create-channel.
 function isAllowed(email: string): boolean {
-  return email.endsWith(MECHTA_DOMAIN) || email === ADMIN_EMAIL;
+  return email.includes('@');
 }
 const MAX_LIMIT = 24;
 

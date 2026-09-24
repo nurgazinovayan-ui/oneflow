@@ -1,7 +1,8 @@
-// Thin client for the @mechta.kz-only messenger. All writes go through service-role Edge
-// Functions (see supabase/functions/messenger-*), which re-validate the @mechta.kz domain and
-// channel membership against the caller's own verified JWT — this module and the widget that
-// uses it are just UX, not the security boundary. Web-only for now: it reuses webApi.ts's
+// Thin client for the messenger — open to every signed-in account; @mechta.kz colleagues see each
+// other automatically, everyone else adds contacts by invitation (messenger-contacts). All writes
+// go through service-role Edge Functions (see supabase/functions/messenger-*), which check the
+// caller's own verified JWT, channel membership and who may reach whom — this module and the
+// widget that uses it are just UX, not the security boundary. Web-only for now: it reuses webApi.ts's
 // session/token-refresh logic, which Electron's window.api abstraction doesn't expose (the
 // desktop build talks to Supabase from the main process, not the renderer).
 import { getValidSession } from '../webApi';
@@ -53,6 +54,19 @@ export interface ChatMessage {
   mediaUrl: string | null;
   fileSize: number | null;
 }
+export interface ContactInvite {
+  id: string;
+  email: string;
+  displayName: string;
+  createdAt: string;
+}
+export interface InviteList {
+  incoming: ContactInvite[];
+  outgoing: ContactInvite[];
+}
+// 'sent' is also the answer for an address with no account yet — the server deliberately doesn't
+// say whether an email is registered (see messenger-contacts).
+export type InviteResult = 'sent' | 'already' | 'accepted';
 export interface GifResult {
   id: string;
   title: string;
@@ -114,6 +128,19 @@ export function searchGifs(query: string): Promise<GifResult[]> {
 }
 export function markReadServer(channelId: string): Promise<{ ok: true }> {
   return call('messenger-mark-read', { channelId });
+}
+export async function inviteContact(email: string): Promise<InviteResult> {
+  const res = await call<{ status: InviteResult }>('messenger-contacts', { action: 'invite', email });
+  return res.status;
+}
+export function listInvites(): Promise<InviteList> {
+  return call('messenger-contacts', { action: 'list' });
+}
+export function respondInvite(id: string, accept: boolean): Promise<{ status: 'accepted' | 'declined' }> {
+  return call('messenger-contacts', { action: 'respond', id, accept });
+}
+export function cancelInvite(id: string): Promise<{ ok: true }> {
+  return call('messenger-contacts', { action: 'cancel', id });
 }
 // Multipart, not the JSON call() helper above — the file itself is the body.
 export async function sendFile(channelId: string, file: File): Promise<ChatMessage> {

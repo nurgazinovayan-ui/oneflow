@@ -4,7 +4,7 @@
 // Supabase injects into every Edge Function automatically.
 //
 // Returns the caller's DM/group channels with their members and a last-message preview, in one
-// round trip. Restricted to @mechta.kz callers, checked against the caller's own verified JWT.
+// round trip. Open to any signed-in account; returns only channels the caller is a member of.
 //
 // Requires supabase/migrations/202609070003_messenger.sql, 202609070004_messenger_media.sql AND
 // 202609090001_messenger_read_files.sql to have been applied first.
@@ -13,10 +13,12 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const MECHTA_DOMAIN = '@mechta.kz';
-const ADMIN_EMAIL = 'nurgazinov.ayan@gmail.com';
+// Any signed-in account with an email may use the messenger (it was @mechta.kz + the owner only
+// until 202609240001_messenger_contacts.sql). What a caller can actually read or write is scoped
+// by channel membership, checked below; who can start a chat with whom is decided in
+// messenger-create-channel.
 function isAllowed(email: string): boolean {
-  return email.endsWith(MECHTA_DOMAIN) || email === ADMIN_EMAIL;
+  return email.includes('@');
 }
 const ONLINE_WINDOW_SECONDS = 45;
 const RECENT_MESSAGES_SCANNED = 1000; // enough to find each channel's latest message in one query
