@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useT } from '../i18n';
-import { IconChat, IconClose, IconSend, IconPlus, IconSearch, IconChevronRight, IconAttach, IconCheck, IconDocument, IconDownload } from './Icons';
+import { IconChat, IconClose, IconSend, IconPlus, IconSearch, IconChevronRight, IconAttach, IconCheck, IconDocument, IconDownload, IconEdit } from './Icons';
 import {
   heartbeat, getRoster, listChannels, startDm, createGroup, listMessages, sendMessage, sendSticker, sendGif, searchGifs,
   markReadServer, sendFile, messageReadByOthers,
@@ -20,14 +20,19 @@ const STICKERS = ['🎉', '😂', '❤️', '👍', '🔥', '😢', '😮', '�
 const MAX_FACEPILE_AVATARS = 4;
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 
-type View = 'chats' | 'people' | 'newGroup';
+// Chats are split by kind (by request) — one-to-one conversations and groups each get their own
+// tab rather than sharing one mixed list, where a group row and a DM row read the same at a glance.
+type View = 'direct' | 'groups' | 'people' | 'newGroup';
+// Consecutive messages from the same sender this close together render as one run: the name
+// (in groups) shows once at the top, the avatar once at the bottom, and the bubbles sit tighter.
+const RUN_GAP_MS = 5 * 60_000;
 type Translations = ReturnType<typeof useT>['messenger'];
 
-function timeLabel(iso: string): string {
+function timeLabel(iso: string, locale: string): string {
   const d = new Date(iso);
   const sameDay = d.toDateString() === new Date().toDateString();
-  return sameDay ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : d.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+  return sameDay ? d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' });
 }
 
 function formatFileSize(bytes: number | null): string {
@@ -37,6 +42,43 @@ function formatFileSize(bytes: number | null): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function clockLabel(iso: string, locale: string): string {
+  return new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+}
+
+function dayLabel(iso: string, t: Translations): string {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date(today.getTime() - 86_400_000);
+  if (d.toDateString() === today.toDateString()) return t.today;
+  if (d.toDateString() === yesterday.toDateString()) return t.yesterday;
+  return d.toLocaleDateString(t.locale, {
+    day: 'numeric', month: 'long', ...(d.getFullYear() !== today.getFullYear() ? { year: 'numeric' } : {}),
+  });
+}
+
+function hashOf(text: string): number {
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+  return hash;
+}
+
+// Stable per-person hue slot (0-5) for sender names in group threads — the same colleague always
+// reads in the same color, which is what makes a busy group scannable. CSS maps the slot to a hue
+// tuned separately for each theme (see .messenger-sender).
+function senderHue(email: string): number {
+  return hashOf(email) % 6;
+}
+
+function groupInitials(title: string): string {
+  const words = title.split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w));
+  return words.slice(0, 2).map(w => [...w][0]).join('').toUpperCase() || '#';
+}
+
+function lastActivity(c: ChannelSummary): string {
+  return c.lastMessage?.createdAt ?? '';
+}
+
 function channelLabel(channel: ChannelSummary, myEmail: string): string {
   if (channel.kind === 'group') return channel.title;
   const other = channel.members.find(m => m.email !== myEmail);
@@ -44,9 +86,7 @@ function channelLabel(channel: ChannelSummary, myEmail: string): string {
 }
 
 function avatarImage(email: string): string {
-  let hash = 0;
-  for (let i = 0; i < email.length; i++) hash = (hash * 31 + email.charCodeAt(i)) >>> 0;
-  const n = (hash % AVATAR_COUNT) + 1;
+  const n = (hashOf(email) % AVATAR_COUNT) + 1;
   return `/avatars/avatar-${String(n).padStart(2, '0')}.png`;
 }
 
@@ -66,17 +106,26 @@ function saveReadMap(email: string, map: Record<string, string>) {
   catch { /* per-device convenience only; a full page reload just re-derives from the server */ }
 }
 
-function Avatar({ name, email, online }: { name: string; email: string; online: boolean }) {
-  return <span className={`messenger-avatar ${online ? 'is-online' : 'is-offline'}`}>
+function Avatar({ name, email, online, small }: { name: string; email: string; online: boolean; small?: boolean }) {
+  return <span className={`messenger-avatar ${online ? 'is-online' : 'is-offline'}${small ? ' is-small' : ''}`}>
     <img src={avatarImage(email)} alt={name || email} className="messenger-avatar-img" />
     <span className="messenger-avatar-dot" />
+  </span>;
+}
+
+// Groups get a rounded-square initials tile instead of a person's round avatar — the shape alone
+// tells a group row from a one-to-one row, and every row keeps the same left column so titles
+// line up (group rows used to have no avatar at all and jutted left).
+function GroupAvatar({ title }: { title: string }) {
+  return <span className="messenger-group-avatar" style={{ '--hue': hashOf(title) % 6 } as CSSProperties} aria-hidden="true">
+    {groupInitials(title)}
   </span>;
 }
 
 export default function MessengerWidget({ email, activity }: { email: string; activity: MessengerStatus }) {
   const t = useT().messenger;
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<View>('people');
+  const [view, setView] = useState<View>('direct');
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [channels, setChannels] = useState<ChannelSummary[] | null>(null);
   const [roster, setRoster] = useState<RosterEntry[] | null>(null);
@@ -105,6 +154,18 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
   activityRef.current = activity;
   messagesRef.current = messages;
 
+  // Every path that adds messages goes through here, de-duplicated by id. Two requests can return
+  // the same message: on opening a chat the poll and openThread() both fetch the full history at
+  // once, and a poll already in flight when you send can come back with the message you just sent
+  // — whichever lands second used to append it again.
+  const appendMessages = (incoming: ChatMessage[]) => {
+    setMessages(prev => {
+      const seen = new Set(prev.map(m => m.id));
+      const added = incoming.filter(m => !seen.has(m.id));
+      return added.length ? [...prev, ...added] : prev;
+    });
+  };
+
   const markRead = (channelId: string, at: string) => {
     setReadMap(prev => {
       if (prev[channelId] && prev[channelId] >= at) return prev;
@@ -125,7 +186,7 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
   // tab other than Chats — the fast poll below already refreshes channels every 4s in that one
   // case, so this steps aside instead of doubling up.
   useEffect(() => {
-    if (open && view === 'chats') return;
+    if (open && (view === 'direct' || view === 'groups')) return;
     let cancelled = false;
     const poll = () => {
       void listChannels().then(list => { if (!cancelled) setChannels(list); }).catch(() => {});
@@ -150,11 +211,11 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
           const last = current.length ? current[current.length - 1].createdAt : undefined;
           const fresh = await listMessages(activeChannelRef.current, last);
           if (!cancelled && fresh.length) {
-            setMessages(prev => [...prev, ...fresh]);
+            appendMessages(fresh);
             markRead(activeChannelRef.current, fresh[fresh.length - 1].createdAt);
             void markReadServer(activeChannelRef.current).catch(() => {});
           }
-        } else if (view === 'chats') {
+        } else if (view === 'direct' || view === 'groups') {
           const list = await listChannels();
           if (!cancelled) setChannels(list);
         } else if (view === 'people') {
@@ -202,7 +263,7 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
     setBusy(true); setError(false);
     try {
       const { id } = await startDm(otherEmail);
-      setView('chats');
+      setView('direct');
       await openThread(id);
       // Refreshes .channels right away so the just-opened thread's member list (and their
       // lastReadAt, for read receipts) is available immediately rather than waiting for the
@@ -223,7 +284,7 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
     setBusy(true); setError(false);
     try {
       const { id } = await createGroup(groupTitle.trim(), groupMembers);
-      setGroupTitle(''); setGroupMembers([]); setView('chats');
+      setGroupTitle(''); setGroupMembers([]); setView('groups');
       await openThread(id);
     } catch { setError(true); } finally { setBusy(false); }
   };
@@ -234,7 +295,7 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
     setDraft('');
     try {
       const created = await sendMessage(activeChannelId, text);
-      setMessages(prev => [...prev, created]);
+      appendMessages([created]);
       markRead(activeChannelId, created.createdAt);
     } catch { setError(true); setDraft(text); }
   };
@@ -244,7 +305,7 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
     setStickerPickerOpen(false);
     try {
       const created = await sendSticker(activeChannelId, emoji);
-      setMessages(prev => [...prev, created]);
+      appendMessages([created]);
       markRead(activeChannelId, created.createdAt);
     } catch { setError(true); }
   };
@@ -254,7 +315,7 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
     setGifPickerOpen(false);
     try {
       const created = await sendGif(activeChannelId, url);
-      setMessages(prev => [...prev, created]);
+      appendMessages([created]);
       markRead(activeChannelId, created.createdAt);
     } catch { setError(true); }
   };
@@ -265,7 +326,7 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
     setFileSending(true);
     try {
       const created = await sendFile(activeChannelId, file);
-      setMessages(prev => [...prev, created]);
+      appendMessages([created]);
       markRead(activeChannelId, created.createdAt);
     } catch { setError(true); } finally { setFileSending(false); }
   };
@@ -280,7 +341,10 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
   const activeChannel = channels?.find(c => c.id === activeChannelId) ?? null;
   const activeOther = activeChannel?.kind === 'dm' ? activeChannel.members.find(m => m.email !== email) : null;
   const filteredRoster = (roster ?? []).filter(p => !p.isSelf &&
-    p.displayName.toLowerCase().includes(peopleQuery.toLowerCase()));
+    p.displayName.toLowerCase().includes(peopleQuery.toLowerCase()))
+    .sort((a, b) => (a.online !== b.online ? (a.online ? -1 : 1) : a.displayName.localeCompare(b.displayName)));
+  const onlinePeople = filteredRoster.filter(p => p.online);
+  const offlinePeople = filteredRoster.filter(p => !p.online);
   const unreadChannelIds = new Set(
     (channels ?? [])
       .filter(c => c.lastMessage && c.lastMessage.senderEmail !== email &&
@@ -288,7 +352,25 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
       .map(c => c.id)
   );
   const unreadCount = unreadChannelIds.size;
+  const badge = (n: number) => (n > 9 ? '9+' : `${n}`);
   const unreadLabel = unreadCount > 9 ? '9+' : `+${unreadCount}`;
+  const byRecent = (a: ChannelSummary, b: ChannelSummary) => lastActivity(b).localeCompare(lastActivity(a));
+  const directChannels = (channels ?? []).filter(c => c.kind === 'dm').sort(byRecent);
+  const groupChannels = (channels ?? []).filter(c => c.kind === 'group').sort(byRecent);
+  const unreadDirect = directChannels.filter(c => unreadChannelIds.has(c.id)).length;
+  const unreadGroups = groupChannels.filter(c => unreadChannelIds.has(c.id)).length;
+  const isGroupThread = activeChannel?.kind === 'group';
+  const memberName = (senderEmail: string) =>
+    activeChannel?.members.find(mm => mm.email === senderEmail)?.displayName || senderEmail.split('@')[0];
+  const previewText = (c: ChannelSummary) => {
+    const lm = c.lastMessage;
+    if (!lm) return '';
+    const who = lm.senderEmail === email ? t.you
+      : c.kind === 'group' ? (c.members.find(mm => mm.email === lm.senderEmail)?.displayName.split(' ')[0] ?? '') : '';
+    const body = lm.kind === 'gif' ? `\u{1F3AC} GIF${lm.body ? ' · ' + lm.body : ''}`
+      : lm.kind === 'file' ? `\u{1F4CE} ${lm.body}` : lm.body;
+    return who ? `${who}: ${body}` : body;
+  };
 
   // Facepile trigger: online colleagues first, capped at MAX_FACEPILE_AVATARS with a "+N"
   // overflow circle (opens the full Colleagues list) beyond that.
@@ -323,37 +405,44 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
           ? <><button className="messenger-back" onClick={backToList} aria-label={t.back}><IconChevronRight size={14} /></button>
               <div className="messenger-header-title">
                 <h2>{activeChannel ? channelLabel(activeChannel, email) : ''}</h2>
-                {activeOther && <span className="messenger-header-status">{activeOther.online ? statusLabel(t, activeOther.status) : t.offline}</span>}
+                {activeOther && <span className={`messenger-header-status${activeOther.online ? ' is-online' : ''}`}>{activeOther.online ? statusLabel(t, activeOther.status) : t.offline}</span>}
+                {isGroupThread && activeChannel && <span className="messenger-header-status">
+                  {t.groupMembers(activeChannel.members.length, activeChannel.members.filter(mm => mm.online).length)}
+                </span>}
               </div></>
           : <h2>{t.title}</h2>}
         <button className="messenger-close" onClick={() => setOpen(false)} aria-label={t.close}><IconClose size={16} /></button>
       </header>
 
       {!activeChannelId && <nav className="messenger-tabs">
-        <button aria-pressed={view === 'chats'} onClick={() => setView('chats')}>
-          {t.tabChats}{unreadCount > 0 && <span className="messenger-tab-badge">{unreadLabel}</span>}
+        <button aria-pressed={view === 'direct'} onClick={() => setView('direct')}>
+          {t.tabDirect}{unreadDirect > 0 && <span className="messenger-tab-badge">{badge(unreadDirect)}</span>}
+        </button>
+        <button aria-pressed={view === 'groups' || view === 'newGroup'} onClick={() => setView('groups')}>
+          {t.tabGroups}{unreadGroups > 0 && <span className="messenger-tab-badge">{badge(unreadGroups)}</span>}
         </button>
         <button aria-pressed={view === 'people'} onClick={() => setView('people')}>{t.tabPeople}</button>
       </nav>}
 
-      {!activeChannelId && view === 'chats' && <section className="messenger-list">
-        {!channels?.length && <p className="messenger-empty">{t.noChannels}</p>}
-        {channels?.map(c => {
+      {!activeChannelId && (view === 'direct' || view === 'groups') && <section className="messenger-list">
+        {view === 'groups' && <button className="messenger-new-group" onClick={() => setView('newGroup')}><IconPlus size={14} />{t.newGroup}</button>}
+        {channels && !(view === 'direct' ? directChannels : groupChannels).length &&
+          <p className="messenger-empty">{view === 'direct' ? t.noDirect : t.noGroups}</p>}
+        {(view === 'direct' ? directChannels : groupChannels).map(c => {
           const other = c.kind === 'dm' ? c.members.find(m => m.email !== email) : null;
           const unread = unreadChannelIds.has(c.id);
           return <button key={c.id} className={`messenger-row ${unread ? 'is-unread' : ''}`} onClick={() => void openThread(c.id)}>
-            {c.kind === 'dm' && other && <Avatar name={other.displayName} email={other.email} online={other.online} />}
+            {c.kind === 'dm' && other ? <Avatar name={other.displayName} email={other.email} online={other.online} /> : <GroupAvatar title={c.title} />}
             <span className="messenger-row-body">
-              <span className="messenger-row-title">{channelLabel(c, email)}</span>
-              <span className="messenger-row-preview">
-                {c.lastMessage ? `${c.lastMessage.senderEmail === email ? t.you + ': ' : ''}${
-                  c.lastMessage.kind === 'gif' ? `\u{1F3AC} GIF${c.lastMessage.body ? ' · ' + c.lastMessage.body : ''}`
-                    : c.lastMessage.kind === 'file' ? `\u{1F4CE} ${c.lastMessage.body}`
-                    : c.lastMessage.body
-                }` : ''}
+              <span className="messenger-row-top">
+                <span className="messenger-row-title">{channelLabel(c, email)}</span>
+                {c.lastMessage && <span className="messenger-row-time">{timeLabel(c.lastMessage.createdAt, t.locale)}</span>}
+              </span>
+              <span className="messenger-row-bottom">
+                <span className="messenger-row-preview">{previewText(c)}</span>
+                {unread && <span className="messenger-row-dot" aria-hidden="true" />}
               </span>
             </span>
-            {unread && <span className="messenger-row-dot" />}
           </button>;
         })}
       </section>}
@@ -366,16 +455,18 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
                 onKeyDown={e => e.key === 'Enter' && void saveName()} />
               <button onClick={() => void saveName()}>{t.save}</button>
             </div>
-          : <button className="messenger-link" onClick={() => { setNameDraft(''); setEditingName(true); }}>{t.displayNamePrompt}</button>}
+          : <button className="messenger-link" onClick={() => { setNameDraft(''); setEditingName(true); }}><IconEdit size={13} />{t.editName}</button>}
         {roster && !filteredRoster.length && <p className="messenger-empty">{t.noPeople}</p>}
-        {filteredRoster.map(p => <button key={p.email} className="messenger-row" disabled={busy} onClick={() => void openDm(p.email)}>
-          <Avatar name={p.displayName} email={p.email} online={p.online} />
-          <span className="messenger-row-body">
-            <span className="messenger-row-title">{p.displayName}</span>
-            <span className="messenger-row-preview">{p.online ? statusLabel(t, p.status) : t.offline}</span>
-          </span>
-        </button>)}
-        <button className="messenger-new-group" onClick={() => setView('newGroup')}><IconPlus size={14} />{t.newGroup}</button>
+        {([[t.onlineSection, onlinePeople], [t.offlineSection, offlinePeople]] as const).map(([label, people]) => people.length > 0 && <div key={label} className="messenger-section">
+          <h3 className="messenger-section-title">{label} <span>{people.length}</span></h3>
+          {people.map(p => <button key={p.email} className="messenger-row" disabled={busy} onClick={() => void openDm(p.email)}>
+            <Avatar name={p.displayName} email={p.email} online={p.online} />
+            <span className="messenger-row-body">
+              <span className="messenger-row-title">{p.displayName}</span>
+              <span className="messenger-row-preview">{p.online ? statusLabel(t, p.status) : t.offline}</span>
+            </span>
+          </button>)}
+        </div>)}
       </section>}
 
       {!activeChannelId && view === 'newGroup' && <section className="messenger-list">
@@ -388,37 +479,59 @@ export default function MessengerWidget({ email, activity }: { email: string; ac
           {p.displayName}
         </label>)}
         <footer className="messenger-form-actions">
-          <button onClick={() => { setView('people'); setGroupTitle(''); setGroupMembers([]); }}>{t.cancel}</button>
+          <button onClick={() => { setView('groups'); setGroupTitle(''); setGroupMembers([]); }}>{t.cancel}</button>
           <button className="messenger-primary" disabled={busy || !groupTitle.trim() || !groupMembers.length} onClick={() => void submitGroup()}>{t.create}</button>
         </footer>
       </section>}
 
       {activeChannelId && <section className="messenger-thread">
         <div className="messenger-messages">
-          {messages.map(m => {
+          {messages.map((m, i) => {
             const mine = m.senderEmail === email;
             const read = mine && !!activeChannel && messageReadByOthers(m, activeChannel.members);
-            return <div key={m.id} className={`messenger-bubble-row ${mine ? 'is-mine' : ''}`}>
-              {m.kind === 'sticker' && <p className="messenger-sticker">{m.body}</p>}
-              {m.kind === 'gif' && <figure className="messenger-gif">
-                <img src={m.mediaUrl ?? ''} alt={t.gifs} loading="lazy" />
-                {m.body && <figcaption>{m.body}</figcaption>}
-              </figure>}
-              {m.kind === 'file' && <a className="messenger-file" href={m.mediaUrl ?? '#'} target="_blank" rel="noreferrer" download={m.body} title={t.downloadFile}>
-                <span className="messenger-file-icon"><IconDocument size={18} /></span>
-                <span className="messenger-file-body">
-                  <span className="messenger-file-name">{m.body}</span>
-                  <span className="messenger-file-size">{formatFileSize(m.fileSize)}</span>
-                </span>
-                <IconDownload size={14} />
-              </a>}
-              {m.kind === 'text' && <p className="messenger-bubble-text">{m.body}</p>}
-              <span className="messenger-bubble-meta">
-                <span className="messenger-bubble-time">{timeLabel(m.createdAt)}</span>
-                {mine && <span className={`messenger-receipt${read ? ' is-read' : ''}`} title={read ? t.readLabel : t.sentLabel}>
-                  <IconCheck size={11} />{read && <IconCheck size={11} />}
-                </span>}
-              </span>
+            const prev = messages[i - 1];
+            const next = messages[i + 1];
+            const sameDay = (a?: ChatMessage, b?: ChatMessage) =>
+              !!a && !!b && new Date(a.createdAt).toDateString() === new Date(b.createdAt).toDateString();
+            const joins = (a?: ChatMessage, b?: ChatMessage) => !!a && !!b && a.senderEmail === b.senderEmail && sameDay(a, b) &&
+              Math.abs(new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) < RUN_GAP_MS;
+            const newDay = !prev || !sameDay(prev, m);
+            const runStart = !joins(prev, m);
+            const runEnd = !joins(m, next);
+            const showSender = isGroupThread && !mine && runStart;
+            const sender = activeChannel?.members.find(mm => mm.email === m.senderEmail);
+            return <div key={m.id} className="messenger-message">
+              {newDay && <div className="messenger-day"><span>{dayLabel(m.createdAt, t)}</span></div>}
+              <div className={`messenger-bubble-line${mine ? ' is-mine' : ''}${runStart ? ' is-run-start' : ''}${runEnd ? ' is-run-end' : ''}`}>
+                {isGroupThread && !mine && (runEnd
+                  ? <Avatar small name={memberName(m.senderEmail)} email={m.senderEmail} online={!!sender?.online} />
+                  : <span className="messenger-avatar-spacer" />)}
+                <div className={`messenger-bubble-row ${mine ? 'is-mine' : ''}`}>
+                  {showSender && <span className="messenger-sender" style={{ '--hue': senderHue(m.senderEmail) } as CSSProperties}>
+                    {memberName(m.senderEmail)}
+                  </span>}
+                  {m.kind === 'sticker' && <p className="messenger-sticker">{m.body}</p>}
+                  {m.kind === 'gif' && <figure className="messenger-gif">
+                    <img src={m.mediaUrl ?? ''} alt={t.gifs} loading="lazy" />
+                    {m.body && <figcaption>{m.body}</figcaption>}
+                  </figure>}
+                  {m.kind === 'file' && <a className="messenger-file" href={m.mediaUrl ?? '#'} target="_blank" rel="noreferrer" download={m.body} title={t.downloadFile}>
+                    <span className="messenger-file-icon"><IconDocument size={18} /></span>
+                    <span className="messenger-file-body">
+                      <span className="messenger-file-name">{m.body}</span>
+                      <span className="messenger-file-size">{formatFileSize(m.fileSize)}</span>
+                    </span>
+                    <IconDownload size={14} />
+                  </a>}
+                  {m.kind === 'text' && <p className="messenger-bubble-text">{m.body}</p>}
+                  {runEnd && <span className="messenger-bubble-meta">
+                    <span className="messenger-bubble-time">{clockLabel(m.createdAt, t.locale)}</span>
+                    {mine && <span className={`messenger-receipt${read ? ' is-read' : ''}`} title={read ? t.readLabel : t.sentLabel}>
+                      <IconCheck size={11} />{read && <IconCheck size={11} />}
+                    </span>}
+                  </span>}
+                </div>
+              </div>
             </div>;
           })}
           {!messages.length && <p className="messenger-empty">{t.noMessages}</p>}

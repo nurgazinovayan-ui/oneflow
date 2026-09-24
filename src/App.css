@@ -11312,3 +11312,188 @@ h5.md-heading {
 :root:not([data-theme='light']) .glow-menu-item-btn:not(.active):not(:hover) {
   color: #bdbdc5;
 }
+
+/* ---------------------------------------------------------------------------------------------
+   Dark theme, sections pass. Each section's main card is --c-card #111 (or a 0.9 #0f0f12 glass)
+   sitting straight on the #000 panel, held apart only by an 8–12% white ring — invisible at a
+   glance. Lightening the cards would drift from the black look these panels were asked for, so
+   instead the one primary card per section gets a firmer ring plus a faint white halo (reads as
+   a soft glow on black, gives the card an edge without changing its fill); secondary surfaces
+   get the firmer ring only. Composers brighten their ring on focus so the active field is clear.
+   --------------------------------------------------------------------------------------------- */
+:root:not([data-theme='light']) {
+  --raise-ring: 0 0 0 1px rgba(255, 255, 255, 0.15);
+  --raise-glow:
+    0 0 0 1px rgba(255, 255, 255, 0.15),
+    0 0 60px -18px rgba(255, 255, 255, 0.14),
+    0 24px 60px -24px rgba(0, 0, 0, 0.9);
+  --raise-focus:
+    0 0 0 1px rgba(255, 255, 255, 0.32),
+    0 0 60px -14px rgba(255, 255, 255, 0.2),
+    0 24px 60px -24px rgba(0, 0, 0, 0.9);
+}
+
+:root:not([data-theme='light']) :is(
+  .quick-gen-composer,
+  .evaluation-composer,
+  .musicaudio-side,
+  .strategy-onboarding-modal,
+  .onelaunch-step:not(.locked)
+) {
+  box-shadow: var(--raise-glow);
+}
+
+:root:not([data-theme='light']) .cw-composer {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 60px -18px rgba(255, 255, 255, 0.14);
+}
+
+:root:not([data-theme='light']) :is(.quick-gen-composer, .evaluation-composer):focus-within {
+  box-shadow: var(--raise-focus);
+}
+
+:root:not([data-theme='light']) .cw-composer:focus-within {
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 0 60px -14px rgba(255, 255, 255, 0.2);
+}
+
+:root:not([data-theme='light']) .strategy-selection-card {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+:root:not([data-theme='light']) .strategy-selection-card:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
+:root:not([data-theme='light']) .admin-toast {
+  box-shadow: var(--raise-ring), var(--shadow-md);
+}
+
+/* Floko: an always-#0a0a0a panel over the #141414 canvas with only a black drop shadow — a
+   dark hole with no edge. A ring gives it one. */
+:root:not([data-theme='light']) .ai-panel {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16), 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+
+/* Assets was the one mode still on the always-light --c-canvas-bg "paper" in dark theme — a
+   light-gray page between black ones. Black like its siblings (.musicaudio-panel etc.), and the
+   sidebar's light-pinned tokens re-pinned to dark values. */
+:root:not([data-theme='light']) .assets-panel {
+  background: #000000;
+}
+
+:root:not([data-theme='light']) .assets-sidebar {
+  border-right-color: rgba(255, 255, 255, 0.1);
+  --c-text: #f2f2f4;
+  --c-text-muted: #b4b4bd;
+  --c-panel-2: #1f1f23;
+  --c-pink: #2e2e34;
+}
+
+:root:not([data-theme='light']) .assets-tile {
+  box-shadow: var(--raise-ring);
+}
+
+/* ---------------------------------------------------------------------------------------------
+   Messenger, readability pass (by request: split chats into groups and direct, make it clearer).
+   --------------------------------------------------------------------------------------------- */
+
+/* Dark theme: the #111 panel sat on the #141414 canvas with an 8% border — no edge at all — and
+   the other side's bubbles (#1a1a1a) were one shade off it. Same local-token lift as the canvas. */
+:root:not([data-theme='light']) .messenger-panel {
+  --c-panel: #161619;
+  --c-panel-2: #26262b;
+  --c-panel-3: #313137;
+  --c-divider: rgba(255, 255, 255, 0.11);
+  --c-text-muted: #adadb6;
+  --c-text-dim: #85858f;
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 0 60px -18px rgba(255, 255, 255, 0.14), var(--shadow-lg);
+}
+
+.messenger-panel { height: min(36rem, calc(100dvh - 8rem)); }
+.messenger-tabs button { padding: .45rem .4rem; }
+
+/* List rows: title + time on top, preview + unread marker below; every row has an avatar slot. */
+.messenger-row { padding: .6rem .6rem; }
+.messenger-row-top, .messenger-row-bottom { display: flex; align-items: baseline; gap: .5rem; min-width: 0; }
+.messenger-row-bottom { align-items: center; }
+.messenger-row-top .messenger-row-title { flex: 1; min-width: 0; }
+.messenger-row-bottom .messenger-row-preview { flex: 1; min-width: 0; }
+.messenger-row-time { flex-shrink: 0; font-size: .72rem; color: var(--c-text-dim); font-variant-numeric: tabular-nums; }
+.messenger-row.is-unread .messenger-row-time { color: var(--c-text); font-weight: 600; }
+.messenger-row-dot { width: .6rem; height: .6rem; box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-pink) 22%, transparent); }
+.messenger-list > .messenger-row + .messenger-row { box-shadow: 0 -1px 0 var(--c-divider); }
+.messenger-list > .messenger-row:hover:not(:disabled), .messenger-list > .messenger-row:hover + .messenger-row { box-shadow: none; }
+
+.messenger-group-avatar {
+  width: 2.3rem;
+  height: 2.3rem;
+  flex-shrink: 0;
+  border-radius: .75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: hsl(calc(var(--hue) * 60 + 190) 45% 30%);
+  background: hsl(calc(var(--hue) * 60 + 190) 55% 89%);
+}
+:root:not([data-theme='light']) .messenger-group-avatar {
+  color: hsl(calc(var(--hue) * 60 + 190) 75% 82%);
+  background: hsl(calc(var(--hue) * 60 + 190) 25% 22%);
+  box-shadow: inset 0 0 0 1px hsl(calc(var(--hue) * 60 + 190) 35% 40% / .55);
+}
+
+.messenger-new-group { margin: 0 .1rem .5rem; justify-content: center; border-style: dashed; }
+
+/* Colleagues: online first, under small section headings; the name editor is a quiet action,
+   not bold accent text that read like a heading. */
+.messenger-section { display: flex; flex-direction: column; gap: .1rem; }
+.messenger-section + .messenger-section { margin-top: .6rem; }
+.messenger-section-title { margin: .2rem .6rem .25rem; font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--c-text-dim); }
+.messenger-section-title span { margin-left: .25rem; font-weight: 600; color: var(--c-text-muted); }
+.messenger-link { display: inline-flex; align-items: center; gap: .4rem; color: var(--c-text-muted); font-weight: 500; padding: .2rem .6rem .7rem; }
+.messenger-link:hover { color: var(--c-text); }
+
+.messenger-header-status.is-online { color: #2ecc71; }
+
+/* Thread: date chips between days; consecutive messages from one person form a run — name once
+   at the top (groups), avatar once at the bottom, tail only on the last bubble. */
+.messenger-messages { gap: 0; padding-top: .4rem; }
+.messenger-day { display: flex; justify-content: center; margin: .9rem 0 .35rem; }
+.messenger-day span { font-size: .7rem; font-weight: 600; color: var(--c-text-muted); background: var(--c-panel-2); padding: .22rem .7rem; border-radius: 999px; }
+.messenger-bubble-line { display: flex; align-items: flex-end; gap: .45rem; margin-top: .15rem; }
+.messenger-bubble-line.is-run-start { margin-top: .6rem; }
+.messenger-bubble-line.is-mine { justify-content: flex-end; }
+.messenger-bubble-line .messenger-bubble-row { align-self: auto; max-width: 80%; }
+.messenger-bubble-line:not(.is-run-end) .messenger-bubble-text,
+.messenger-bubble-line:not(.is-run-end) .messenger-file { border-radius: 1.1rem; }
+.messenger-avatar.is-small { width: 1.75rem; height: 1.75rem; margin-bottom: 1.2rem; }
+.messenger-avatar.is-small .messenger-avatar-dot { display: none; }
+.messenger-avatar.is-small.is-online, .messenger-avatar.is-small.is-offline { box-shadow: 0 0 0 2px var(--c-panel); }
+.messenger-avatar-spacer { width: 1.75rem; flex-shrink: 0; }
+.messenger-sender {
+  font-size: .74rem;
+  font-weight: 650;
+  padding: 0 .4rem .1rem;
+  color: hsl(calc(var(--hue) * 60 + 190) 55% 36%);
+}
+:root:not([data-theme='light']) .messenger-sender { color: hsl(calc(var(--hue) * 60 + 190) 80% 76%); }
+.messenger-bubble-text { font-size: .9rem; line-height: 1.45; }
+
+/* Compose: `.messenger-compose button` (0,1,1) out-ranked `.messenger-picker-toggle` (0,1,0), so
+   the attach/sticker/GIF toggles rendered as three filled accent circles and crowded the input
+   until the send button was pushed past the panel's edge. Toggles back to quiet icon buttons;
+   the input may shrink; send stays the one filled circle. */
+.messenger-compose { gap: .25rem; padding: .65rem .8rem; }
+.messenger-compose input { min-width: 0; margin: 0 .3rem; }
+.messenger-compose .messenger-picker-toggle {
+  width: 2.1rem;
+  height: 2.1rem;
+  background: transparent;
+  color: var(--c-text-muted);
+}
+.messenger-compose .messenger-picker-toggle:hover:not(:disabled) { transform: none; background: var(--c-panel-2); color: var(--c-text); }
+.messenger-compose .messenger-picker-toggle[aria-pressed='true'] { color: var(--c-text); background: var(--c-panel-3); }

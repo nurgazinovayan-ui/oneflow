@@ -1,4 +1,15 @@
 export const messengerRu = {
+  tabDirect: 'Личные', tabGroups: 'Группы',
+  noDirect: 'Личных переписок пока нет. Откройте «Коллеги» и выберите, кому написать.',
+  noGroups: 'Групп пока нет. Создайте первую — для проекта, запуска или команды.',
+  today: 'Сегодня', yesterday: 'Вчера', locale: 'ru-RU',
+  editName: 'Изменить имя для коллег',
+  onlineSection: 'В сети', offlineSection: 'Не в сети',
+  groupMembers: (total: number, online: number) => {
+    const m10 = total % 10, m100 = total % 100;
+    const word = m10 === 1 && m100 !== 11 ? 'участник' : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'участника' : 'участников';
+    return online > 0 ? `${total} ${word} · ${online} в сети` : `${total} ${word}`;
+  },
   bubbleLabel: 'Открыть мессенджер', title: 'Мессенджер', close: 'Закрыть',
   tabChats: 'Чаты', tabPeople: 'Коллеги',
   newDm: 'Написать', newGroup: 'Новая группа',
@@ -21,6 +32,14 @@ export const messengerRu = {
   readLabel: 'Прочитано', sentLabel: 'Отправлено', downloadFile: 'Скачать',
 };
 export const messengerEn: typeof messengerRu = {
+  tabDirect: 'Direct', tabGroups: 'Groups',
+  noDirect: 'No direct chats yet. Open "Colleagues" and pick someone to message.',
+  noGroups: 'No groups yet. Create one for a project, a launch or your team.',
+  today: 'Today', yesterday: 'Yesterday', locale: 'en-US',
+  editName: 'Change your name for colleagues',
+  onlineSection: 'Online', offlineSection: 'Offline',
+  groupMembers: (total: number, online: number) =>
+    `${total} member${total === 1 ? '' : 's'}${online > 0 ? ` · ${online} online` : ''}`,
   bubbleLabel: 'Open messenger', title: 'Messenger', close: 'Close',
   tabChats: 'Chats', tabPeople: 'Colleagues',
   newDm: 'Message', newGroup: 'New group',
