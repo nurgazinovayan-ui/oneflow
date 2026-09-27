@@ -20,6 +20,13 @@ interface WebAuthGateProps {
 type Stage = 'login' | 'unlocked';
 type PanelMode = 'login' | 'register';
 
+// The landing links straight to a tab of this start window: «Войти» → /?auth=login,
+// «Регистрация» / «Начать бесплатно» → /?auth=register. Pure read — the parameter is dropped from
+// the address bar in an effect on mount, so a refresh or a copied link doesn't keep forcing the tab.
+function panelModeFromUrl(): PanelMode {
+  return new URLSearchParams(window.location.search).get('auth') === 'register' ? 'register' : 'login';
+}
+
 // Gates the whole app behind Supabase login on the web build. Login is required on every page
 // load by design — nothing is persisted to localStorage — matching the desktop app's "check
 // login every launch" behavior. An unpaid LemonSqueezy subscription no longer blocks entry
@@ -34,7 +41,7 @@ type PanelMode = 'login' | 'register';
 export default function WebAuthGate({ children }: WebAuthGateProps) {
   const t = useT();
   const [stage, setStage] = useState<Stage>('login');
-  const [mode, setMode] = useState<PanelMode>('login');
+  const [mode, setMode] = useState<PanelMode>(panelModeFromUrl);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [registerEmail, setRegisterEmail] = useState('');
@@ -47,6 +54,14 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
   const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('auth')) return;
+    params.delete('auth');
+    const query = params.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+  }, []);
 
   // Supabase's implicit OAuth flow (used by handleGoogleAuth below) redirects back here with
   // the session in the URL fragment rather than a query string or POST body — pick it up once
