@@ -413,6 +413,9 @@ export interface NodeApi {
   getOnlineUsers: () => Promise<OnlineUser[]>;
   // Admin-only (nurgazinov.ayan@gmail.com) — see AdminGenerationRecord's comment.
   getMechtaGenerations: () => Promise<AdminGenerationRecord[]>;
+  // Admin-only manual Trendswatching refresh — sent with the caller's own JWT, which
+  // trendswatch-refresh checks server-side (anonymous calls are refused). true = accepted.
+  refreshTrends: () => Promise<boolean>;
   getSubscriptionStatus: () => Promise<SubscriptionStatus>;
   openCheckout: (url: string) => void;
   // Real dollars available to spend on generations funded by the shared owner Replicate

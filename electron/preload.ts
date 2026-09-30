@@ -197,6 +197,7 @@ const api = {
   getOnlineUsers: (): Promise<OnlineUser[]> => ipcRenderer.invoke('admin:get-online-users'),
   getMechtaGenerations: (): Promise<AdminGenerationRecord[]> =>
     ipcRenderer.invoke('admin:get-mechta-generations'),
+  refreshTrends: (): Promise<boolean> => ipcRenderer.invoke('admin:refresh-trends'),
   getSubscriptionStatus: (): Promise<SubscriptionStatus> =>
     ipcRenderer.invoke('subscription:get-status'),
   // Not metered on desktop — generation runs on the user's own Replicate key (see

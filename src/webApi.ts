@@ -566,6 +566,14 @@ export function installWebApi(): void {
         return [];
       }
     },
+    refreshTrends: async () => {
+      try {
+        await callFunction<unknown>('trendswatch-refresh', {});
+        return true;
+      } catch {
+        return false;
+      }
+    },
     getSubscriptionStatus: async () => {
       if (!LEMONSQUEEZY_CHECKOUT_URL) return { active: true, checkoutUrl: '' } satisfies SubscriptionStatus;
       const session = await getValidSession();

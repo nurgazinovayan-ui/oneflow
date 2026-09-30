@@ -224,18 +224,14 @@ export default function TrendsPanel({ active, authEmail, onCreateScenario, onSen
     });
   };
 
-  // Admin-only manual trigger — trendswatch-refresh itself has a cooldown (see its own code)
-  // so this can't be spammed into racking up Apify/OpenRouter cost, even by someone who reads
-  // the anon key out of the bundle and calls the function URL directly.
+  // Admin-only manual trigger. Sent with the admin's own session token: trendswatch-refresh
+  // refuses anyone else (and anonymous calls), on top of its own cooldown.
   const triggerRefresh = () => {
     setRefreshing(true);
     setRefreshError(false);
-    fetch(`${SUPABASE_URL}/functions/v1/trendswatch-refresh`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(String(res.status));
+    window.api.refreshTrends()
+      .then((ok) => {
+        if (!ok) throw new Error('refresh refused');
         setReloadKey((v) => v + 1);
       })
       .catch(() => setRefreshError(true))

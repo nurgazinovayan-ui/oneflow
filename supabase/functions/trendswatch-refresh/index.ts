@@ -1,10 +1,16 @@
 // Deploy in Supabase Studio → Edge Functions → Create a new function → name it
-// "trendswatch-refresh" → paste this file → Deploy. Turn "Verify JWT" OFF — this only ever runs
-// on a schedule (Edge Functions → trendswatch-refresh → Cron, e.g. once a day) or via a manual
-// "Invoke" from Supabase Studio, never called from the client directly, so there's no user JWT
-// to verify.
+// "trendswatch-refresh" → paste this file → Deploy. Turn "Verify JWT" OFF — the schedule calls it
+// without a user JWT; the function checks who is calling itself (see isAuthorized below).
+//
+// Who may run it (every run spends Apify + OpenRouter money):
+//   - the schedule: Integrations → Cron → the job's HTTP request → add header
+//       x-cron-secret: <the CRON_SECRET value>
+//   - the admin's "Обновить" button in the app: sent with the admin's own session JWT.
+// Anyone else — including a call with just the public anon/publishable key — gets 403.
 //
 // Secrets needed (Edge Functions → trendswatch-refresh → Secrets):
+//   CRON_SECRET — any long random string (e.g. from a password generator, 32+ chars). Without it
+//                 scheduled runs are refused; the admin button still works.
 //   APIFY_API_TOKEN — apify.com → Settings → Integrations → API tokens.
 //   OPENROUTER_API_KEY — the same key already used by generate-*/evaluate-creative
 //                         (openrouter.ai/settings/keys).
@@ -78,6 +84,26 @@ const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
+
+const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? '';
+const ADMIN_EMAIL = 'nurgazinov.ayan@gmail.com';
+
+const sameSecret = (a: string, b: string) => {  // constant-time compare
+  if (!a || !b || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+};
+
+// the schedule (x-cron-secret header) or the admin's own verified, confirmed session — nobody else
+async function isAuthorized(req: Request): Promise<boolean> {
+  if (sameSecret(req.headers.get('x-cron-secret') ?? '', CRON_SECRET)) return true;
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+  if (!token) return false;
+  const { data } = await supabaseAdmin.auth.getUser(token);
+  const user = data.user;
+  return Boolean(user && user.email_confirmed_at && user.email?.toLowerCase() === ADMIN_EMAIL);
+}
 
 type Platform = 'tiktok' | 'instagram' | 'threads';
 type Region = 'cis' | 'europe' | 'america' | 'unknown';
@@ -419,11 +445,8 @@ async function addAdvice(items: TrendItem[]): Promise<TrendItem[]> {
   }
 }
 
-// The panel has an admin-only "Обновить"/"Refresh" button that calls this function's public URL
-// directly with the anon key — which is public in the client bundle by design, so anyone who
-// reads it out could script repeated calls. This cooldown is the real guard (the button's own
-// admin-only gating is UI-level only): refuse to spend on Apify/OpenRouter again this soon after
-// the last successful run, cron or manual.
+// Second guard behind isAuthorized: even an authorized caller (a mis-set cron, a double click)
+// can't spend on Apify/OpenRouter again this soon after the last successful run.
 const MANUAL_REFRESH_COOLDOWN_MINUTES = 10;
 
 // The admin "Обновить"/"Refresh" button calls this function directly from the browser (not
@@ -432,12 +455,18 @@ const MANUAL_REFRESH_COOLDOWN_MINUTES = 10;
 // POST before it's ever sent, which looks like the button just hanging forever.
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
+  if (!(await isAuthorized(req))) {
+    return new Response(JSON.stringify({ error: 'Доступ запрещён.' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+    });
+  }
   try {
     const { data: lastRun } = await supabaseAdmin
       .from('trend_watch_items')

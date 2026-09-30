@@ -1147,6 +1147,26 @@ ipcMain.handle('admin:get-mechta-generations', async (): Promise<AdminGeneration
   }
 });
 
+ipcMain.handle('admin:refresh-trends', async (): Promise<boolean> => {
+  const session = await getValidSession();
+  if (!session) return false;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/trendswatch-refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${session.accessToken}`,
+      },
+      body: '{}',
+    });
+    return res.ok;
+  } catch (err) {
+    console.error('Trends refresh failed', err);
+    return false;
+  }
+});
+
 ipcMain.handle('auth:logout', () => {
   store.delete('authSession');
   store.delete('rememberMe');

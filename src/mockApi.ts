@@ -525,6 +525,7 @@ export function installMockApiIfNeeded(): void {
       { email: ADMIN_EMAIL, lastSeen: new Date().toISOString() },
       { email: 'demo.user@example.com', lastSeen: new Date(Date.now() - 90_000).toISOString() },
     ],
+    refreshTrends: async () => true,
     getMechtaGenerations: async () => [
       {
         email: 'demo.user@mechta.kz',
