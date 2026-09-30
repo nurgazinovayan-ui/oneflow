@@ -582,6 +582,16 @@ export interface Translations {
     width: string;
     height: string;
     customHint: (min: number, max: number) => string;
+    reference: string;
+    refAdd: string;
+    refAddHint: string;
+    refAnalyzing: (pct: number) => string;
+    refSummary: (shots: number, duration: number, pace: string) => string;
+    refImages: (n: number) => string;
+    refHint: string;
+    refWithStyle: (style: string) => string;
+    likeReference: string;
+    likeReferenceHint: string;
   };
   musicAudio: {
     title: string;
@@ -1614,6 +1624,21 @@ export const ru: Translations = {
     width: 'Ширина',
     height: 'Высота',
     customHint: (min, max) => `Любой размер от ${min} до ${max} px по стороне, округляем до чётного. Сцены перестроятся под эти пропорции.`,
+    reference: 'Референс',
+    refAdd: 'Загрузить референс',
+    refAddHint: 'Видео или до 4 картинок, на которые ролик должен быть похож',
+    refAnalyzing: (pct) => `Разбираю референс… ${pct}%`,
+    refSummary: (shots, duration, pace) => {
+      const m10 = shots % 10;
+      const m100 = shots % 100;
+      const word = m10 === 1 && m100 !== 11 ? 'сцена' : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'сцены' : 'сцен';
+      return `${shots} ${word} · ${duration.toFixed(1)} с · ${pace.toLowerCase()}`;
+    },
+    refImages: (n) => `${n} ${n === 1 ? 'картинка' : n < 5 ? 'картинки' : 'картинок'} — повторим цвета и подачу`,
+    refHint: 'Повторим ритм склеек, цвета, раскладку, движение и переходы — с вашими материалами и текстами. Сам референс в ролик не попадёт.',
+    refWithStyle: (style) => `Выбран стиль «${style}»: внешний вид возьмём из него, от референса — ритм и структуру сцен.`,
+    likeReference: 'Как в референсе',
+    likeReferenceHint: 'Цвета, шрифт и эффекты — по референсу',
   },
   musicAudio: {
     title: 'Музыка и аудио',
@@ -2756,6 +2781,16 @@ export const en: Translations = {
     width: 'Width',
     height: 'Height',
     customHint: (min, max) => `Any size from ${min} to ${max} px per side, rounded to even. Scenes re-flow to these proportions.`,
+    reference: 'Reference',
+    refAdd: 'Upload a reference',
+    refAddHint: 'A video or up to 4 images the clip should look like',
+    refAnalyzing: (pct) => `Analysing the reference… ${pct}%`,
+    refSummary: (shots, duration, pace) => `${shots} shot${shots === 1 ? '' : 's'} · ${duration.toFixed(1)}s · ${pace.toLowerCase()}`,
+    refImages: (n) => `${n} image${n === 1 ? '' : 's'} — we’ll mirror the colours and feel`,
+    refHint: 'We mirror the cut rhythm, colours, layout, motion and transitions — with your materials and copy. The reference itself never goes into the video.',
+    refWithStyle: (style) => `Style “${style}” is selected: the look comes from it, the rhythm and scene structure from the reference.`,
+    likeReference: 'Like the reference',
+    likeReferenceHint: 'Colours, type and effects follow the reference',
   },
   musicAudio: {
     title: 'Music & audio',

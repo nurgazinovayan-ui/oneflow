@@ -5,6 +5,7 @@ import { useT } from '../i18n';
 import { drawFrame, drawStill, frameSize, prepareFrame, sceneIndexAt, type MotionSource, type MotionSources } from '../motion/render';
 import { canEncodeMp4, canRecordWebm, renderVideo } from '../motion/export';
 import { fileToAsset, framesForModel, loadSource, newId } from '../motion/media';
+import { analyzeImageReference, analyzeVideoReference, motionLevel } from '../motion/reference';
 import { loadMotionState, saveMotionState, type MotionState } from '../motion/store';
 import {
   MOTION_ASPECTS,
@@ -70,6 +71,8 @@ const EMPTY: MotionState = {
   selectedId: null,
   style: null,
   styleOptions: [],
+  refIds: [],
+  reference: null,
 };
 
 const DRAG_TYPE = 'application/x-oneflow-variant';
@@ -207,7 +210,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
 
   // drop library assets nobody uses any more
   const pruneAssets = (s: MotionState): MotionState => {
-    const used = new Set([...s.materialIds, ...s.variants.flatMap((v) => v.assetIds)]);
+    const used = new Set([...s.materialIds, ...s.refIds, ...s.variants.flatMap((v) => v.assetIds)]);
     return { ...s, assets: s.assets.filter((a) => used.has(a.id)) };
   };
 
@@ -265,6 +268,49 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
     }
   };
 
+  // ---- reference: one video (its shots, rhythm, motion, palette) or up to 4 images (the look)
+  const [refBusy, setRefBusy] = useState<number | null>(null);
+  const refInput = useRef<HTMLInputElement>(null);
+  const addReference = async (files: FileList | File[]) => {
+    const list = [...files].filter((f) => f.type.startsWith('image/') || f.type.startsWith('video/'));
+    const video = list.find((f) => f.type.startsWith('video/'));
+    const pick = video ? [video] : list.slice(0, 4);
+    if (!pick.length) return;
+    setError('');
+    setRefBusy(0);
+    const loaded: { release: () => void }[] = [];
+    try {
+      const assets: MotionAsset[] = [];
+      for (const f of pick) assets.push(await fileToAsset(f));
+      const srcs: MotionSource[] = [];
+      for (const a of assets) {
+        const l = await loadSource(a);
+        loaded.push(l);
+        srcs.push(l.source);
+      }
+      const info = video ? await analyzeVideoReference(srcs[0], (p) => setRefBusy(p)) : analyzeImageReference(srcs);
+      setState((s) =>
+        pruneAssets({
+          ...s,
+          assets: [...s.assets, ...assets],
+          refIds: assets.map((a) => a.id),
+          reference: info,
+          // a video reference sets the clip length to its own (the slider can still change it)
+          duration: info.kind === 'video' ? Math.max(MOTION_MIN_DURATION, Math.min(MOTION_MAX_DURATION, Math.round(info.duration))) : s.duration,
+        })
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      loaded.forEach((l) => l.release());
+      setRefBusy(null);
+    }
+  };
+  const removeReference = () => setState((s) => pruneAssets({ ...s, refIds: [], reference: null }));
+  const refPace = state.reference?.shots.length
+    ? motionLevel(state.reference.shots.reduce((a, s) => a + s.motion * s.dur, 0) / Math.max(0.01, state.reference.shots.reduce((a, s) => a + s.dur, 0)))
+    : null;
+
   const generate = async () => {
     if (!state.brief.trim() && !materials.length) {
       setError(tm.errorNoInput);
@@ -280,6 +326,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
         assets: await materialsForModel(),
         previous: state.variants.map((v) => `${v.storyboard.title}: ${v.storyboard.concept}`),
         style: state.style,
+        reference: state.reference,
       });
       const v: MotionVariant = {
         id: newId(),
@@ -288,7 +335,8 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
         aspect: state.aspect,
         assetIds: materials.map((a) => a.id),
         costUsd,
-        styleName: state.style?.name,
+        styleName: state.style?.name ?? (state.reference ? tm.likeReference : undefined),
+        fromReference: Boolean(state.reference),
       };
       setState((s) => ({ ...s, variants: [...s.variants, v], selectedId: v.id }));
     } catch (e) {
@@ -462,14 +510,70 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
           </div>
 
           <div className="mk-card">
+            <span className="mk-label">{tm.reference}</span>
+            {state.reference ? (
+              <div className="mk-ref">
+                <div className="mk-ref-frames">
+                  {state.reference.frames.slice(0, 6).map((f, i) => (
+                    <img key={i} src={f} alt="" />
+                  ))}
+                </div>
+                <div className="mk-ref-meta">
+                  <b>
+                    {state.reference.kind === 'video'
+                      ? tm.refSummary(state.reference.shots.length, state.reference.duration, tm.paceLabels[refPace ?? 'medium'])
+                      : tm.refImages(state.reference.frames.length)}
+                  </b>
+                  <span className="motion-swatches">
+                    {state.reference.palette.map((c) => (
+                      <i key={c} style={{ background: c }} />
+                    ))}
+                  </span>
+                  <button type="button" className="motion-icon-btn" onClick={removeReference} title={tm.remove} aria-label={tm.remove}>
+                    <IconClose size={11} />
+                  </button>
+                </div>
+                <span className="motion-hint">{state.style ? tm.refWithStyle(state.style.name) : tm.refHint}</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="mk-ref-drop"
+                onClick={() => refInput.current?.click()}
+                disabled={refBusy !== null}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (e.dataTransfer.files.length) void addReference(e.dataTransfer.files);
+                }}
+              >
+                <IconVideo size={16} />
+                <b>{refBusy !== null ? tm.refAnalyzing(Math.round(refBusy * 100)) : tm.refAdd}</b>
+                <small>{tm.refAddHint}</small>
+              </button>
+            )}
+            <input
+              ref={refInput}
+              type="file"
+              accept="video/*,image/*"
+              multiple
+              hidden
+              onChange={(e) => {
+                if (e.target.files) void addReference(e.target.files);
+                e.target.value = '';
+              }}
+            />
+          </div>
+
+          <div className="mk-card">
             <span className="mk-label">{tm.styleLabel}</span>
             <button type="button" className={`mk-style-row ${!state.style ? 'on' : ''}`} onClick={() => update({ style: null })}>
               <span className="mk-style-auto">
                 <IconSparkles size={12} />
               </span>
               <span className="mk-style-text">
-                <b>{tm.styleAutoShort}</b>
-                <small>{tm.styleAuto}</small>
+                <b>{state.reference ? tm.likeReference : tm.styleAutoShort}</b>
+                <small>{state.reference ? tm.likeReferenceHint : tm.styleAuto}</small>
               </span>
             </button>
             {styling && [0, 1].map((k) => <div key={k} className="mk-style-row skeleton" />)}

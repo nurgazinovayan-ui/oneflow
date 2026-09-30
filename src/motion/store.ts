@@ -1,7 +1,7 @@
 // Motion Engine persistence: materials (as Blobs) and every storyboard variant stay in this
 // browser's IndexedDB, per account, so the history survives reloads and the user can come back
 // and render any earlier variant. Nothing here is uploaded anywhere.
-import type { MotionAsset, MotionStyleDirection, MotionVariant } from './types';
+import type { MotionAsset, MotionReferenceInfo, MotionStyleDirection, MotionVariant } from './types';
 
 export interface MotionState {
   brief: string;
@@ -18,6 +18,8 @@ export interface MotionState {
   selectedId: string | null;
   style: MotionStyleDirection | null; // pinned look for the next storyboards (null = the model decides)
   styleOptions: MotionStyleDirection[]; // every direction proposed so far
+  refIds: string[]; // the reference file(s) — library assets too, but never storyboard materials
+  reference: MotionReferenceInfo | null; // their analysis, sent with every storyboard while set
 }
 
 const DB = 'oneflow-motion';

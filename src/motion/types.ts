@@ -76,6 +76,26 @@ export interface MotionVariant {
   assetIds: string[]; // storyboard asset indexes → these assets, frozen at generation time
   costUsd: number;
   styleName?: string; // the chosen style direction, if one was pinned
+  fromReference?: boolean; // made to mirror the uploaded reference
+}
+
+// A reference the video should look like (src/motion/reference.ts). Only this summary is sent to
+// the model; the reference file itself never ends up in the video.
+export interface MotionReferenceShot {
+  start: number;
+  dur: number;
+  motion: number; // mean frame-to-frame change inside the shot, 0…1
+}
+
+export interface MotionReferenceInfo {
+  kind: 'video' | 'images';
+  duration: number; // 0 for images
+  width: number;
+  height: number;
+  shots: MotionReferenceShot[];
+  palette: string[];
+  frames: string[]; // JPEG data URLs: one per shot (video) or per image
+  frameShots: number[]; // frames[i] belongs to shots[frameShots[i]]
 }
 
 export interface MotionStoryboardRequest {
@@ -85,6 +105,7 @@ export interface MotionStoryboardRequest {
   assets: { kind: 'image' | 'video'; name: string; duration?: number; frames: string[] }[];
   previous: string[];
   style?: MotionStyleDirection | null;
+  reference?: MotionReferenceInfo | null;
 }
 
 export interface MotionStylesRequest {

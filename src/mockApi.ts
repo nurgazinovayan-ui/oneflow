@@ -1,5 +1,5 @@
 import type { NodeApi, GenerationLogEntry, AdminMessage, CreativeEvaluationResult, AudioGenParams } from './types';
-import type { MotionScene, MotionStoryboard, MotionStoryboardRequest, MotionStyleDirection, MotionStylesRequest } from './motion/types';
+import type { MotionScene, MotionStoryboard, MotionStoryboardRequest, MotionStyle, MotionStyleDirection, MotionStylesRequest } from './motion/types';
 import { estimateImageCost, estimateVideoCost, DSP_URL, ADMIN_EMAIL } from './types';
 import { useLanguageStore, ru, en } from './i18n';
 
@@ -242,6 +242,25 @@ function logMockGeneration(entry: GenerationLogEntry): void {
   }
 }
 
+// Reference palette → a look: most common colour as the background, the most saturated one that
+// differs from it as the accent, black or white ink by background lightness.
+function styleFromPalette(palette: string[]): MotionStyle {
+  const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const lum = (h: string) => {
+    const [r, g, b] = rgb(h);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  };
+  const sat = (h: string) => {
+    const c = rgb(h);
+    return (Math.max(...c) - Math.min(...c)) / 255;
+  };
+  const bg = palette[0];
+  const rest = palette.slice(1).filter((h) => Math.abs(lum(h) - lum(bg)) > 0.15);
+  const accent = [...(rest.length ? rest : palette.slice(1))].sort((a, b) => sat(b) - sat(a))[0] ?? '#3b5cff';
+  const dark = lum(bg) < 0.5;
+  return { bg, ink: dark ? '#ffffff' : '#0f1222', accent, font: 'sans', mood: 'Mock: палитра референса', fx: dark ? ['grain'] : [] };
+}
+
 // Demo-mode stand-in for motion-storyboard: a plausible board built from the request itself, so
 // the whole Motion Engine flow (board → variants → render) works without the backend. Each call
 // rotates through a few looks so "Ещё вариант" visibly changes something.
@@ -261,7 +280,11 @@ function mockMotionStoryboard(req: MotionStoryboardRequest): MotionStoryboard {
   const cams: MotionScene['camera'][] = pinned?.cameras.length ? pinned.cameras : ['zoom-in', 'pan-left', 'drift', 'zoom-out', 'pan-up', 'pan-right'];
   const trs: MotionScene['transition'][] = pinned?.transitions.length ? pinned.transitions : ['fade', 'slide', 'glitch', 'zoom', 'wipe', 'flash'];
   const anims: MotionScene['textAnim'][] = pinned?.textAnims.length ? pinned.textAnims : ['mask-up', 'words', 'blur-in', 'fade-up', 'tracking', 'type', 'scale', 'slide-left'];
-  const count = Math.max(3, Math.min(8, Math.round(req.duration / 3)));
+  // a video reference: same number of shots, same rhythm (scaled to the length), pace-matched moves
+  const ref = req.reference;
+  const refShots = ref?.shots.length ? ref.shots.slice(0, 20) : null;
+  const refTotal = refShots ? refShots.reduce((a, s) => a + s.dur, 0) || 1 : 1;
+  const count = refShots ? refShots.length : Math.max(3, Math.min(8, Math.round(req.duration / 3)));
   const scenes: MotionScene[] = [];
   for (let i = 0; i < count; i++) {
     const last = i === count - 1;
@@ -270,7 +293,7 @@ function mockMotionStoryboard(req: MotionStoryboardRequest): MotionStoryboard {
     const asset = n ? (i + k) % n : null;
     scenes.push({
       start: 0,
-      dur: req.duration / count,
+      dur: refShots ? (refShots[i].dur / refTotal) * req.duration : req.duration / count,
       layout: last || asset === null ? 'text-only' : grid ? 'grid' : layouts[i % layouts.length] === 'grid' ? 'full' : layouts[i % layouts.length],
       asset: last ? null : asset,
       assets: grid ? [0, 1, 2, 3].slice(0, Math.min(4, n)) : [],
@@ -281,8 +304,14 @@ function mockMotionStoryboard(req: MotionStoryboardRequest): MotionStoryboard {
       textAnim: anims[(i + k) % anims.length],
       transition: first ? 'fade' : trs[(i + k) % trs.length],
       bg: '',
-      note: 'Mock: демо-раскадровка без обращения к модели.',
+      note: refShots ? `Mock: как сцена ${i + 1} референса.` : 'Mock: демо-раскадровка без обращения к модели.',
     });
+    if (refShots && !pinned) {
+      const m = refShots[i].motion;
+      const sc = scenes[scenes.length - 1];
+      sc.camera = m < 0.02 ? (['static', 'drift'] as const)[i % 2] : m < 0.05 ? (['zoom-in', 'pan-left', 'pan-right'] as const)[i % 3] : (['zoom-in', 'pan-up', 'zoom-out'] as const)[i % 3];
+      if (!first) sc.transition = m < 0.02 ? 'fade' : m < 0.05 ? (['slide', 'wipe'] as const)[i % 2] : (['cut', 'glitch', 'flash'] as const)[i % 3];
+    }
   }
   let t = 0;
   scenes.forEach((s) => {
@@ -290,10 +319,11 @@ function mockMotionStoryboard(req: MotionStoryboardRequest): MotionStoryboard {
     s.dur = Math.round(s.dur * 100) / 100;
     t += s.dur;
   });
+  const refLook = ref?.palette.length ? styleFromPalette(ref.palette) : null;
   return {
-    title: `Mock-вариант ${req.previous.length + 1}${pinned ? ` · ${pinned.name}` : ''}`,
+    title: `Mock-вариант ${req.previous.length + 1}${pinned ? ` · ${pinned.name}` : refLook ? ' · как референс' : ''}`,
     concept: 'Mock: демо-режим — раскадровку собирает приложение, не модель.',
-    style: pinned ? pinned.style : { ...looks[k], fx: k === 0 ? ['grain'] : k === 2 ? ['vignette', 'letterbox'] : [] },
+    style: pinned ? pinned.style : refLook ?? { ...looks[k], fx: k === 0 ? ['grain'] : k === 2 ? ['vignette', 'letterbox'] : [] },
     duration: req.duration,
     scenes,
   };

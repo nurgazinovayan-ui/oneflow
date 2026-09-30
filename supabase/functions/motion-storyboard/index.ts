@@ -14,7 +14,10 @@
 //     back as `style` on later storyboard calls and pins their look.
 //
 // Body: { mode?, brief, duration, aspect, assets: [{ kind, name, duration?, frames: [dataUrl] }],
-//         previous?: string[], style?: StyleDirection }
+//         previous?: string[], style?: StyleDirection, reference?: Reference }
+//   reference = the summary the client makes of a video/images the clip should look like
+//   (src/motion/reference.ts): shots with timing and motion, palette, one keyframe per shot. The
+//   storyboard then mirrors its rhythm, structure and (unless a style is pinned) its look.
 //   previous = one-line summaries of what was already made (variants or style names), so a new
 //   call asks for something genuinely different rather than a reshuffle.
 // → { storyboard, costUsd } | { styles, costUsd }
@@ -32,6 +35,8 @@ const PRICE_OUT = 20 / 1_000_000;
 
 const MAX_ASSETS = 8;
 const MAX_FRAMES_TOTAL = 16;
+const MAX_REF_FRAMES = 12;
+const MAX_REF_SHOTS = 24;
 const MAX_FRAME_CHARS = 900_000; // one downscaled JPEG data URL
 const MAX_BRIEF = 4000;
 const MIN_DURATION = 3;
@@ -134,6 +139,26 @@ ${ENGINE}
 ink должен хорошо читаться на bg. Цвета бери из материалов/бренда, если они есть.`;
 
 type AssetIn = { kind: 'image' | 'video'; name: string; duration?: number; frames: string[] };
+type Reference = { kind: 'video' | 'images'; duration: number; shots: { start: number; dur: number; motion: number }[]; palette: string[]; frames: string[]; frameShots: number[] };
+
+function normReference(raw: any): Reference | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const frames = (Array.isArray(raw.frames) ? raw.frames : [])
+    .filter((f: unknown) => typeof f === 'string' && f.startsWith('data:image/') && f.length <= MAX_FRAME_CHARS)
+    .slice(0, MAX_REF_FRAMES);
+  if (!frames.length) return null;
+  const num = (v: unknown, max: number) => Math.max(0, Math.min(max, Number(v) || 0));
+  return {
+    kind: raw.kind === 'video' ? 'video' : 'images',
+    duration: num(raw.duration, 600),
+    shots: (Array.isArray(raw.shots) ? raw.shots : []).slice(0, MAX_REF_SHOTS).map((x: any) => ({ start: num(x?.start, 600), dur: num(x?.dur, 600), motion: num(x?.motion, 1) })),
+    palette: (Array.isArray(raw.palette) ? raw.palette : []).map((c: unknown) => hex(c, '')).filter(Boolean).slice(0, 8),
+    frames,
+    frameShots: (Array.isArray(raw.frameShots) ? raw.frameShots : []).map((v: unknown) => Math.round(num(v, MAX_REF_SHOTS))).slice(0, frames.length),
+  };
+}
+
+const pace = (m: number) => (m < 0.02 ? 'спокойная' : m < 0.05 ? 'средняя' : 'высокая');
 
 const pickOne = <T extends string>(v: unknown, list: readonly T[], def: T): T => ((list as readonly string[]).includes(String(v)) ? (v as T) : def);
 const pickMany = <T extends string>(v: unknown, list: readonly T[], max: number): T[] =>
@@ -237,6 +262,7 @@ Deno.serve(async (req) => {
     const previous: string[] = (Array.isArray(body.previous) ? body.previous : []).filter((p: unknown) => typeof p === 'string').slice(-12).map((p: string) => p.slice(0, 300));
     const pinned = mode === 'storyboard' && body.style && typeof body.style === 'object' ? normDirection(body.style, 0) : null;
     if (pinned) pinned.name = str(body.style.name, 40) || pinned.name;
+    const reference = normReference(body.reference);
     if (!brief && !assets.length) return json({ error: 'Добавьте материалы или опишите задачу.' }, 400);
 
     const [w, h] = aspect.split(':').map(Number);
@@ -253,6 +279,23 @@ Deno.serve(async (req) => {
           `${pinned.textAnims.length ? `, textAnim: ${pinned.textAnims.join(', ')}` : ''}${pinned.transitions.length ? `, transition: ${pinned.transitions.join(', ')}` : ''}. ${pinned.description}`
       );
     }
+    if (reference) {
+      const shots = reference.shots;
+      lines.push(
+        `РЕФЕРЕНС: пользователь хочет ролик «как этот». Повтори его ${reference.kind === 'video' ? 'монтаж и стиль' : 'стиль'} средствами движка, но с материалами и текстами пользователя. ` +
+          'Сам референс в ролик не попадает; не копируй его тексты, логотипы и бренд.',
+        reference.kind === 'video'
+          ? `Референс — видео ${reference.duration.toFixed(1)} с, ${shots.length} сцен (склеек). Сцены: ${shots.map((x, i) => `${i + 1}) ${x.dur.toFixed(1)} с, динамика ${pace(x.motion)}`).join('; ')}.`
+          : `Референс — ${reference.frames.length} картинк(и) со стилем, без монтажа.`,
+        reference.palette.length ? `Палитра референса: ${reference.palette.join(', ')}.` : '',
+        reference.kind === 'video'
+          ? `Сделай столько же сцен (не больше 20) и сохрани соотношение их длительностей — пропорционально подгони к длительности ролика ${duration} с. Для каждой сцены выбери layout, camera, textAnim и transition, максимально похожие на то, что видно на кадре соответствующей сцены референса; сценам с высокой динамикой — активная камера и резкие переходы, спокойным — медленные.`
+          : 'Повтори композицию, подачу текста и настроение картинок.',
+        pinned
+          ? 'Внешний вид (цвета, шрифт, эффекты) бери из выбранного стиля выше, от референса — ритм, структуру и подачу.'
+          : 'Внешний вид (цвета style.bg/ink/accent, font, fx) подбери по референсу, чтобы ролик выглядел как он.'
+      );
+    }
     if (previous.length) {
       lines.push(`${mode === 'styles' ? 'Уже предложенные направления' : 'Уже сделанные варианты'} (придумай заметно другое):\n- ${previous.join('\n- ')}`);
     }
@@ -261,6 +304,12 @@ Deno.serve(async (req) => {
     assets.forEach((a, i) => {
       content.push({ type: 'text', text: `Материал ${i}: ${a.kind === 'video' ? `видео${a.duration ? `, ${a.duration.toFixed(1)} с` : ''}${a.frames.length > 1 ? `, ${a.frames.length} кадра` : ''}` : 'фото'} «${a.name}»` });
       for (const f of a.frames) if (budget-- > 0) content.push({ type: 'image_url', image_url: { url: f } });
+    });
+    reference?.frames.forEach((f, i) => {
+      const k = reference.frameShots[i];
+      const shot = reference.shots[k];
+      content.push({ type: 'text', text: shot ? `Кадр референса — сцена ${k + 1} (${shot.start.toFixed(1)}–${(shot.start + shot.dur).toFixed(1)} с)` : `Картинка-референс ${i + 1}` });
+      content.push({ type: 'image_url', image_url: { url: f } });
     });
 
     const res = await fetch(OPENROUTER_CHAT_URL, {
