@@ -23,6 +23,20 @@ type PanelMode = 'login' | 'register';
 // The landing links straight to a tab of this start window: «Войти» → /?auth=login,
 // «Регистрация» / «Начать бесплатно» → /?auth=register. Pure read — the parameter is dropped from
 // the address bar in an effect on mount, so a refresh or a copied link doesn't keep forcing the tab.
+// The landing's «Открыть демо» links to /app?demo=1: straight into demo mode, no login screen.
+const demoFromUrl = () => new URLSearchParams(window.location.search).has('demo');
+
+function enterDemoMode(): void {
+  // The web build already installs the real Supabase-backed webApi.ts before this component
+  // mounts (see main.tsx), so installMockApiIfNeeded()'s "window.api already defined" guard
+  // would normally no-op. Clearing it first forces the mock NodeApi in instead, giving
+  // visitors a UI/UX preview without touching real Supabase/Edge Function auth — desktop's
+  // demo mode instead opens the main window with no session at all, which isn't an option
+  // here since the web Edge Functions require a verified JWT on every call.
+  delete (window as unknown as { api?: unknown }).api;
+  installMockApiIfNeeded();
+}
+
 function panelModeFromUrl(): PanelMode {
   return new URLSearchParams(window.location.search).get('auth') === 'register' ? 'register' : 'login';
 }
@@ -40,7 +54,11 @@ function panelModeFromUrl(): PanelMode {
 // .web-auth-gate block for the token-based (no Tailwind) port of its typography/spacing scale.
 export default function WebAuthGate({ children }: WebAuthGateProps) {
   const t = useT();
-  const [stage, setStage] = useState<Stage>('login');
+  const [stage, setStage] = useState<Stage>(() => {
+    if (!demoFromUrl()) return 'login';
+    enterDemoMode();
+    return 'unlocked';
+  });
   const [mode, setMode] = useState<PanelMode>(panelModeFromUrl);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -57,8 +75,9 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (!params.has('auth')) return;
+    if (!params.has('auth') && !params.has('demo')) return;
     params.delete('auth');
+    params.delete('demo');
     const query = params.toString();
     window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
   }, []);
@@ -220,14 +239,7 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
   };
 
   const handleDemoMode = () => {
-    // The web build already installs the real Supabase-backed webApi.ts before this component
-    // mounts (see main.tsx), so installMockApiIfNeeded()'s "window.api already defined" guard
-    // would normally no-op. Clearing it first forces the mock NodeApi in instead, giving
-    // visitors a UI/UX preview without touching real Supabase/Edge Function auth — desktop's
-    // demo mode instead opens the main window with no session at all, which isn't an option
-    // here since the web Edge Functions require a verified JWT on every call.
-    delete (window as unknown as { api?: unknown }).api;
-    installMockApiIfNeeded();
+    enterDemoMode();
     setStage('unlocked');
   };
 

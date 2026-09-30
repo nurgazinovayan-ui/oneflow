@@ -560,7 +560,7 @@ export interface Translations {
     colBoards: string;
     colRender: string;
     colDone: string;
-    stylesFromClaude: string;
+    styleLabel: string;
     styleAutoShort: string;
     scenesDur: (scenes: number, duration: number) => string;
     inQueue: (n: number) => string;
@@ -578,6 +578,10 @@ export interface Translations {
     close: string;
     previewAt: (aspect: string) => string;
     renderThis: (label: string) => string;
+    customSize: string;
+    width: string;
+    height: string;
+    customHint: (min: number, max: number) => string;
   };
   musicAudio: {
     title: string;
@@ -1541,8 +1545,8 @@ export const ru: Translations = {
     aspect: 'Формат кадра',
     makeBoard: 'Сделать раскадровку',
     moreVariant: 'Ещё вариант',
-    generating: (time) => `Claude Opus 5.5 делает раскадровку… ${time}`,
-    costHint: 'Раскадровку делает Claude Opus 5.5, ≈ $0.05–0.20 за вариант. Рендер видео бесплатный — идёт прямо в браузере.',
+    generating: (time) => `ONEFLOW делает раскадровку… ${time}`,
+    costHint: 'Раскадровка ≈ $0.05–0.20 за вариант. Рендер видео бесплатный — идёт прямо в браузере.',
     errorNoInput: 'Добавьте материалы или опишите задачу.',
     variantN: (n) => `Вариант ${n}`,
     deleteVariant: 'Удалить вариант',
@@ -1577,10 +1581,10 @@ export const ru: Translations = {
     cancel: 'Остановить',
     download: 'Скачать',
     webmNote: 'Браузер не умеет MP4, поэтому видео сохранено в WebM. Для MP4 откройте ONEFLOW в Chrome или Edge.',
-    styleAuto: 'Авто — стиль выберет Claude',
+    styleAuto: 'Авто — стиль подберёт ONEFLOW',
     suggestStyles: 'Предложи стили',
     moreStyles: 'Ещё стили',
-    suggestingStyles: (time) => `Claude подбирает стили… ${time}`,
+    suggestingStyles: (time) => `ONEFLOW подбирает стили… ${time}`,
     paceLabels: { calm: 'Спокойный темп', medium: 'Средний темп', fast: 'Быстрый темп' },
     fontLabels: { sans: 'Гротеск', display: 'Жирный гротеск', serif: 'Антиква', mono: 'Моноширинный' },
     fxLabels: { grain: 'Зерно', glow: 'Свечение', vignette: 'Виньетка', letterbox: 'Кинополосы', duotone: 'Дуотон' },
@@ -1588,14 +1592,14 @@ export const ru: Translations = {
     colBoards: 'Раскадровки',
     colRender: 'Рендер',
     colDone: 'Готово',
-    stylesFromClaude: 'Стиль видео',
+    styleLabel: 'Стиль видео',
     styleAutoShort: 'Авто',
     scenesDur: (scenes, duration) => `${scenes} сцен · ${duration} с`,
     inQueue: (n) => `в рендере: ${n}`,
     open: 'Открыть',
     toRender: 'В рендер',
-    addVariant: 'Ещё вариант от Claude',
-    emptyBoards: 'Здесь появятся раскадровки от Claude. Заполните бриф слева и нажмите «Сделать раскадровку».',
+    addVariant: 'Ещё вариант',
+    emptyBoards: 'Здесь появятся раскадровки. Заполните бриф слева и нажмите «Сделать раскадровку».',
     emptyDone: 'Здесь появятся готовые видео с кнопкой «Скачать».',
     renderSettings: 'Настройки рендера',
     willRender: (w, h, fps) => `Получится MP4 ${w}×${h}, ${fps} кадров в секунду. Рендер бесплатный.`,
@@ -1606,6 +1610,10 @@ export const ru: Translations = {
     close: 'Закрыть',
     previewAt: (aspect) => `Кадры в формате ${aspect} — так будет в видео`,
     renderThis: (label) => `В рендер · ${label}`,
+    customSize: 'Свой размер',
+    width: 'Ширина',
+    height: 'Высота',
+    customHint: (min, max) => `Любой размер от ${min} до ${max} px по стороне, округляем до чётного. Сцены перестроятся под эти пропорции.`,
   },
   musicAudio: {
     title: 'Музыка и аудио',
@@ -2679,8 +2687,8 @@ export const en: Translations = {
     aspect: 'Frame',
     makeBoard: 'Create storyboard',
     moreVariant: 'Another variant',
-    generating: (time) => `Claude Opus 5.5 is storyboarding… ${time}`,
-    costHint: 'Storyboards are made by Claude Opus 5.5, ≈ $0.05–0.20 per variant. Video rendering is free — it runs in your browser.',
+    generating: (time) => `ONEFLOW is storyboarding… ${time}`,
+    costHint: 'A storyboard costs ≈ $0.05–0.20 per variant. Video rendering is free — it runs in your browser.',
     errorNoInput: 'Add materials or describe the task.',
     variantN: (n) => `Variant ${n}`,
     deleteVariant: 'Delete variant',
@@ -2715,10 +2723,10 @@ export const en: Translations = {
     cancel: 'Stop',
     download: 'Download',
     webmNote: 'This browser can’t encode MP4, so the video was saved as WebM. Open ONEFLOW in Chrome or Edge for MP4.',
-    styleAuto: 'Auto — Claude picks the style',
+    styleAuto: 'Auto — ONEFLOW picks the style',
     suggestStyles: 'Suggest styles',
     moreStyles: 'More styles',
-    suggestingStyles: (time) => `Claude is picking styles… ${time}`,
+    suggestingStyles: (time) => `ONEFLOW is picking styles… ${time}`,
     paceLabels: { calm: 'Calm pace', medium: 'Medium pace', fast: 'Fast pace' },
     fontLabels: { sans: 'Grotesque', display: 'Bold grotesque', serif: 'Serif', mono: 'Monospace' },
     fxLabels: { grain: 'Grain', glow: 'Glow', vignette: 'Vignette', letterbox: 'Letterbox', duotone: 'Duotone' },
@@ -2726,14 +2734,14 @@ export const en: Translations = {
     colBoards: 'Storyboards',
     colRender: 'Render',
     colDone: 'Done',
-    stylesFromClaude: 'Video style',
+    styleLabel: 'Video style',
     styleAutoShort: 'Auto',
     scenesDur: (scenes, duration) => `${scenes} scenes · ${duration}s`,
     inQueue: (n) => `rendering: ${n}`,
     open: 'Open',
     toRender: 'Render',
-    addVariant: 'Another variant from Claude',
-    emptyBoards: 'Claude’s storyboards appear here. Fill in the brief on the left and press “Create storyboard”.',
+    addVariant: 'Another variant',
+    emptyBoards: 'Storyboards appear here. Fill in the brief on the left and press “Create storyboard”.',
     emptyDone: 'Finished videos appear here with a “Download” button.',
     renderSettings: 'Render settings',
     willRender: (w, h, fps) => `You’ll get an MP4 ${w}×${h} at ${fps} fps. Rendering is free.`,
@@ -2744,6 +2752,10 @@ export const en: Translations = {
     close: 'Close',
     previewAt: (aspect) => `Frames in ${aspect} — as they’ll look in the video`,
     renderThis: (label) => `Render · ${label}`,
+    customSize: 'Custom size',
+    width: 'Width',
+    height: 'Height',
+    customHint: (min, max) => `Any size from ${min} to ${max} px per side, rounded to even. Scenes re-flow to these proportions.`,
   },
   musicAudio: {
     title: 'Music & audio',

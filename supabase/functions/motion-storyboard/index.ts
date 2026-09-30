@@ -24,7 +24,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY') ?? '';
 const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL = 'anthropic/claude-opus-5.5';
-const MODEL_LABEL = 'Claude Opus 5.5';
+const MODEL_LABEL = 'ONEFLOW Motion Engine'; // what users see in their generation history
 // Fallback pricing (USD per token) when OpenRouter doesn't report usage.cost — its public
 // $4 / $20 per million input/output tokens for this model.
 const PRICE_IN = 4 / 1_000_000;

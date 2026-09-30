@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { IconClose, IconDownload, IconPause, IconPlay, IconPlus, IconRegenerate, IconSparkles, IconVideo } from './Icons';
 import { formatGenerationError } from '../errorMessages';
 import { useT } from '../i18n';
@@ -8,7 +8,11 @@ import { fileToAsset, framesForModel, loadSource, newId } from '../motion/media'
 import { loadMotionState, saveMotionState, type MotionState } from '../motion/store';
 import {
   MOTION_ASPECTS,
-  MOTION_DURATIONS,
+  MOTION_CUSTOM_MAX,
+  MOTION_CUSTOM_MIN,
+  MOTION_DURATION_MARKS,
+  MOTION_MAX_DURATION,
+  MOTION_MIN_DURATION,
   MOTION_FPS,
   MOTION_MAX_ASSETS,
   MOTION_QUALITIES,
@@ -57,6 +61,8 @@ const EMPTY: MotionState = {
   aspect: '16:9',
   renderAspect: '16:9',
   quality: '1080',
+  customW: 1200,
+  customH: 628,
   fps: 30,
   assets: [],
   materialIds: [],
@@ -70,6 +76,8 @@ const DRAG_TYPE = 'application/x-oneflow-variant';
 const fmtTime = (s: number) => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
 const fmtUsd = (v: number) => `$${v.toFixed(v < 1 ? 3 : 2)}`;
 const fmtMb = (bytes: number) => `${(bytes / 1048576).toFixed(1)} МБ`;
+const evenClamp = (v: number) => Math.round(Math.min(MOTION_CUSTOM_MAX, Math.max(MOTION_CUSTOM_MIN, Number(v) || MOTION_CUSTOM_MIN)) / 2) * 2;
+const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
 
 // Web-only (see App.tsx). A pipeline board: Бриф (materials, brief, style) → Раскадровки (every
 // Claude Opus 5.5 storyboard, kept per account in IndexedDB) → Рендер (a queue; drop a storyboard
@@ -162,8 +170,13 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
   const materials = state.materialIds.map((id) => assetById.get(id)).filter((a): a is MotionAsset => Boolean(a));
   const materialSources: MotionSources = useMemo(() => state.materialIds.map((id) => sources[id] ?? null), [state.materialIds, sources]);
   const sourcesFor = useCallback((v: MotionVariant): MotionSources => v.assetIds.map((id) => sources[id] ?? null), [sources]);
+  const custom = state.quality === 'custom';
   const quality = MOTION_QUALITIES.find((q) => q.id === state.quality) ?? MOTION_QUALITIES[1];
-  const size = frameSize(state.renderAspect, quality.short);
+  // the next render's frame: a preset aspect × resolution, or «Свой размер» (its own aspect)
+  const size = custom ? { width: evenClamp(state.customW), height: evenClamp(state.customH) } : frameSize(state.renderAspect, quality.short);
+  const g = gcd(size.width, size.height);
+  const renderAspect = custom ? `${size.width / g}:${size.height / g}` : state.renderAspect;
+  const aspectLabel = custom ? tm.customSize : state.renderAspect;
   const opened = state.variants.find((v) => v.id === openId) ?? null;
 
   // which render sizes this browser can encode
@@ -181,7 +194,16 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
       cancelled = true;
     };
   }, [state.renderAspect]);
-  const qualityOk = (q: string, fps: number) => supported[`${q}@${fps}`] !== false;
+  const [customOk, setCustomOk] = useState(true);
+  useEffect(() => {
+    if (!custom) return;
+    let cancelled = false;
+    void canEncodeMp4(size.width, size.height, state.fps).then((ok) => !cancelled && setCustomOk(ok || canRecordWebm()));
+    return () => {
+      cancelled = true;
+    };
+  }, [custom, size.width, size.height, state.fps]);
+  const qualityOk = (q: string, fps: number) => (q === 'custom' ? customOk : supported[`${q}@${fps}`] !== false);
 
   // drop library assets nobody uses any more
   const pruneAssets = (s: MotionState): MotionState => {
@@ -287,7 +309,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
     setError('');
     setJobs((list) => [
       ...list,
-      { id: newId(), variantId, aspect: state.renderAspect, width: size.width, height: size.height, fps: state.fps, status: 'queued', progress: 0 },
+      { id: newId(), variantId, aspect: aspectLabel, width: size.width, height: size.height, fps: state.fps, status: 'queued', progress: 0 },
     ]);
   };
 
@@ -361,7 +383,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
     return i < 0 ? '' : `${tm.variantN(i + 1)} · ${state.variants[i].storyboard.title}`;
   };
 
-  const renderLabel = `${state.renderAspect} · ${size.width}×${size.height}`;
+  const renderLabel = custom ? `${size.width}×${size.height}` : `${state.renderAspect} · ${size.width}×${size.height}`;
 
   return (
     <div className={`motion-panel ${active ? '' : 'motion-hidden'}`}>
@@ -408,9 +430,22 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
             <textarea className="node-textarea motion-brief" value={state.brief} onChange={(e) => update({ brief: e.target.value })} placeholder={tm.briefPlaceholder} maxLength={4000} />
 
             <span className="mk-label">{tm.duration}</span>
-            <div className="mk-chips">
-              {MOTION_DURATIONS.map((d) => (
-                <button key={d} type="button" className={`mk-chip ${state.duration === d ? 'on' : ''}`} onClick={() => update({ duration: d })}>
+            <div className="mk-range">
+              <input
+                type="range"
+                min={MOTION_MIN_DURATION}
+                max={MOTION_MAX_DURATION}
+                step={1}
+                value={Math.min(MOTION_MAX_DURATION, state.duration)}
+                onChange={(e) => update({ duration: Number(e.target.value) })}
+                aria-label={tm.duration}
+                style={{ '--p': `${((Math.min(MOTION_MAX_DURATION, state.duration) - MOTION_MIN_DURATION) / (MOTION_MAX_DURATION - MOTION_MIN_DURATION)) * 100}%` } as CSSProperties}
+              />
+              <b>{tm.seconds(state.duration)}</b>
+            </div>
+            <div className="mk-range-marks">
+              {MOTION_DURATION_MARKS.map((d) => (
+                <button key={d} type="button" onClick={() => update({ duration: d })}>
                   {tm.seconds(d)}
                 </button>
               ))}
@@ -427,7 +462,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
           </div>
 
           <div className="mk-card">
-            <span className="mk-label">{tm.stylesFromClaude}</span>
+            <span className="mk-label">{tm.styleLabel}</span>
             <button type="button" className={`mk-style-row ${!state.style ? 'on' : ''}`} onClick={() => update({ style: null })}>
               <span className="mk-style-auto">
                 <IconSparkles size={12} />
@@ -570,7 +605,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
             <span className="mk-sublabel">{tm.renderAspect}</span>
             <div className="mk-chips">
               {MOTION_ASPECTS.map((a) => (
-                <button key={a} type="button" className={`mk-chip ${state.renderAspect === a ? 'on' : ''}`} onClick={() => update({ renderAspect: a })}>
+                <button key={a} type="button" className={`mk-chip ${!custom && state.renderAspect === a ? 'on' : ''}`} onClick={() => update({ renderAspect: a, ...(custom ? { quality: '1080' } : {}) })}>
                   <AspectIcon aspect={a} /> {a}
                 </button>
               ))}
@@ -589,7 +624,44 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
                   {q.label}
                 </button>
               ))}
+              <button type="button" className={`mk-chip ${custom ? 'on' : ''}`} onClick={() => update({ quality: 'custom' })}>
+                {tm.customSize}
+              </button>
             </div>
+            {custom && (
+              <div className="mk-custom">
+                <label>
+                  <small>{tm.width}</small>
+                  <input
+                    type="number"
+                    className="node-number"
+                    min={MOTION_CUSTOM_MIN}
+                    max={MOTION_CUSTOM_MAX}
+                    step={2}
+                    value={state.customW}
+                    onChange={(e) => update({ customW: Number(e.target.value) })}
+                    onBlur={() => update({ customW: evenClamp(state.customW) })}
+                  />
+                </label>
+                <span>×</span>
+                <label>
+                  <small>{tm.height}</small>
+                  <input
+                    type="number"
+                    className="node-number"
+                    min={MOTION_CUSTOM_MIN}
+                    max={MOTION_CUSTOM_MAX}
+                    step={2}
+                    value={state.customH}
+                    onChange={(e) => update({ customH: Number(e.target.value) })}
+                    onBlur={() => update({ customH: evenClamp(state.customH) })}
+                  />
+                </label>
+                <span className="motion-hint mk-custom-hint">
+                  {customOk ? tm.customHint(MOTION_CUSTOM_MIN, MOTION_CUSTOM_MAX) : tm.notSupported}
+                </span>
+              </div>
+            )}
             <span className="mk-sublabel">{tm.fps}</span>
             <div className="mk-chips">
               {MOTION_FPS.map((f) => (
@@ -660,7 +732,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
           variant={opened}
           index={state.variants.indexOf(opened)}
           sources={sourcesFor(opened)}
-          aspect={state.renderAspect}
+          aspect={renderAspect}
           fontsReady={fontsReady}
           active={active}
           renderLabel={renderLabel}

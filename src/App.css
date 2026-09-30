@@ -6867,7 +6867,8 @@
   background: var(--c-panel-3);
 }
 
-.mk-chip.on {
+.mk-chip.on,
+.mk-chip.on:hover:not(:disabled) {
   background: var(--c-pink);
   color: var(--c-pink-text);
 }
@@ -6890,6 +6891,99 @@
   font-size: 12.5px;
   line-height: 1.5;
   text-align: center;
+}
+
+/* duration slider in Бриф */
+.mk-range {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mk-range input[type='range'] {
+  flex: 1;
+  height: 6px;
+  border-radius: 6px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: linear-gradient(90deg, var(--c-pink) var(--p), var(--c-panel-3) var(--p));
+  cursor: pointer;
+}
+
+.mk-range input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--c-card);
+  box-shadow: 0 0 0 2px var(--c-pink), 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.mk-range input[type='range']::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--c-pink);
+  border-radius: 50%;
+  background: var(--c-card);
+}
+
+.mk-range b {
+  min-width: 46px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: var(--c-panel-2);
+  font-size: 13px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text);
+}
+
+.mk-range-marks {
+  display: flex;
+  justify-content: space-between;
+  margin: -2px 58px 0 0;
+}
+
+.mk-range-marks button {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 10.5px;
+  color: var(--c-text-dim);
+  cursor: pointer;
+}
+
+.mk-range-marks button:hover {
+  color: var(--c-text);
+}
+
+/* «Свой размер» */
+.mk-custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.mk-custom label {
+  width: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mk-custom small {
+  font-size: 10.5px;
+  color: var(--c-text-dim);
+}
+
+.mk-custom > span:not(.mk-custom-hint) {
+  padding-bottom: 7px;
+  color: var(--c-text-dim);
+}
+
+.mk-custom-hint {
+  flex-basis: 100%;
 }
 
 /* style rows in Бриф */

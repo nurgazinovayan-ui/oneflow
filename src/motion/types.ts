@@ -95,7 +95,12 @@ export interface MotionStylesRequest {
   previous: string[]; // names of directions already proposed
 }
 
-export const MOTION_DURATIONS = [6, 10, 15, 20, 30, 45, 60] as const;
+export const MOTION_MIN_DURATION = 3;
+export const MOTION_MAX_DURATION = 60;
+export const MOTION_DURATION_MARKS = [3, 15, 30, 45, 60] as const;
+// «Свой размер»: any width × height within these bounds (rounded to even numbers for H.264).
+export const MOTION_CUSTOM_MIN = 128;
+export const MOTION_CUSTOM_MAX = 4096;
 export const MOTION_ASPECTS = ['16:9', '9:16', '1:1', '4:5', '4:3', '3:4', '21:9', '2:3'] as const;
 // Short side of the frame; the long side follows from the aspect ratio.
 export const MOTION_QUALITIES = [

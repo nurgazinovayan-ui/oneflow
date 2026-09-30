@@ -8,14 +8,16 @@ export interface MotionState {
   duration: number;
   aspect: string; // frame the next storyboard is composed for
   renderAspect: string; // frame of the next render (any storyboard re-flows to it)
-  quality: string;
+  quality: string; // a MOTION_QUALITIES id, or 'custom' → customW × customH
+  customW: number;
+  customH: number;
   fps: number;
   assets: MotionAsset[]; // every asset still in use — materials plus anything an older variant uses
   materialIds: string[]; // what goes into the next storyboard
   variants: MotionVariant[];
   selectedId: string | null;
-  style: MotionStyleDirection | null; // pinned look for the next storyboards (null = Claude decides)
-  styleOptions: MotionStyleDirection[]; // every direction Claude has proposed
+  style: MotionStyleDirection | null; // pinned look for the next storyboards (null = the model decides)
+  styleOptions: MotionStyleDirection[]; // every direction proposed so far
 }
 
 const DB = 'oneflow-motion';

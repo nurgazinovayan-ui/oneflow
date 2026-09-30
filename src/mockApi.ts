@@ -642,14 +642,14 @@ export function installMockApiIfNeeded(): void {
       await new Promise((r) => setTimeout(r, 1200));
       const costUsd = 0.08;
       bumpMockUsage(costUsd);
-      logMockGeneration({ timestamp: Date.now(), model: 'Claude Opus 5.5', category: 'motion', costUsd });
+      logMockGeneration({ timestamp: Date.now(), model: 'ONEFLOW Motion Engine', category: 'motion', costUsd });
       return { storyboard: mockMotionStoryboard(req), costUsd };
     },
     suggestMotionStyles: async (req) => {
       await new Promise((r) => setTimeout(r, 1000));
       const costUsd = 0.04;
       bumpMockUsage(costUsd);
-      logMockGeneration({ timestamp: Date.now(), model: 'Claude Opus 5.5', category: 'motion', costUsd });
+      logMockGeneration({ timestamp: Date.now(), model: 'ONEFLOW Motion Engine', category: 'motion', costUsd });
       return { styles: mockMotionStyles(req), costUsd };
     },
     evaluateCreative: async (images): Promise<CreativeEvaluationResult> => {
