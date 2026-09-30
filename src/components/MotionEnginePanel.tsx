@@ -24,21 +24,38 @@ interface MotionEnginePanelProps {
   authEmail: string | null;
 }
 
-interface RenderedVideo {
+// One video in the Рендер column: waits its turn, then renders with the settings it was queued with.
+interface RenderJob {
   id: string;
   variantId: string;
-  url: string;
-  ext: 'mp4' | 'webm';
-  codec: string;
+  aspect: string;
   width: number;
   height: number;
   fps: number;
+  status: 'queued' | 'rendering' | 'error';
+  progress: number;
+  error?: string;
+}
+
+interface RenderedVideo {
+  id: string;
+  variantId: string;
+  title: string;
+  url: string;
+  ext: 'mp4' | 'webm';
+  codec: string;
+  aspect: string;
+  width: number;
+  height: number;
+  fps: number;
+  size: number;
 }
 
 const EMPTY: MotionState = {
   brief: '',
   duration: 15,
   aspect: '16:9',
+  renderAspect: '16:9',
   quality: '1080',
   fps: 30,
   assets: [],
@@ -49,12 +66,15 @@ const EMPTY: MotionState = {
   styleOptions: [],
 };
 
+const DRAG_TYPE = 'application/x-oneflow-variant';
 const fmtTime = (s: number) => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
 const fmtUsd = (v: number) => `$${v.toFixed(v < 1 ? 3 : 2)}`;
+const fmtMb = (bytes: number) => `${(bytes / 1048576).toFixed(1)} МБ`;
 
-// Web-only (see App.tsx). Materials + brief → Claude Opus 5.5 storyboard (motion-storyboard Edge
-// Function) → static board → preview / render to video in the browser (src/motion). Every
-// variant is kept (IndexedDB, per account) and any of them can be rendered at any size.
+// Web-only (see App.tsx). A pipeline board: Бриф (materials, brief, style) → Раскадровки (every
+// Claude Opus 5.5 storyboard, kept per account in IndexedDB) → Рендер (a queue; drop a storyboard
+// here or press «В рендер») → Готово (videos to download). Rendering runs in the browser
+// (src/motion/export.ts), one job at a time, at any frame and size.
 export default function MotionEnginePanel({ active, authEmail }: MotionEnginePanelProps) {
   const t = useT();
   const tm = t.motion;
@@ -64,19 +84,17 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
   const [sources, setSources] = useState<Record<string, MotionSource>>({});
   const [generating, setGenerating] = useState(false);
   const [styling, setStyling] = useState(false);
-  const [showStyles, setShowStyles] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState('');
-  const [renderAspect, setRenderAspect] = useState<string | null>(null);
   const [supported, setSupported] = useState<Record<string, boolean>>({});
-  const [rendering, setRendering] = useState<{ progress: number; abort: AbortController } | null>(null);
+  const [jobs, setJobs] = useState<RenderJob[]>([]);
   const [renders, setRenders] = useState<RenderedVideo[]>([]);
-  const [playing, setPlaying] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [dropActive, setDropActive] = useState(false);
   const [fontsReady, setFontsReady] = useState(false);
   const releases = useRef<Record<string, () => void>>({});
+  const aborts = useRef<Record<string, AbortController>>({});
   const fileInput = useRef<HTMLInputElement>(null);
-  const previewCanvas = useRef<HTMLCanvasElement>(null);
-  const [previewTime, setPreviewTime] = useState(0);
 
   // ---- persistence
   useEffect(() => {
@@ -142,20 +160,11 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
   const update = (patch: Partial<MotionState>) => setState((s) => ({ ...s, ...patch }));
   const assetById = useMemo(() => new Map(state.assets.map((a) => [a.id, a])), [state.assets]);
   const materials = state.materialIds.map((id) => assetById.get(id)).filter((a): a is MotionAsset => Boolean(a));
-  const materialSources: MotionSources = useMemo(
-    () => state.materialIds.map((id) => sources[id] ?? null),
-    [state.materialIds, sources]
-  );
-  const variant = state.variants.find((v) => v.id === state.selectedId) ?? state.variants[state.variants.length - 1] ?? null;
-  const aspect = renderAspect ?? variant?.aspect ?? state.aspect;
+  const materialSources: MotionSources = useMemo(() => state.materialIds.map((id) => sources[id] ?? null), [state.materialIds, sources]);
+  const sourcesFor = useCallback((v: MotionVariant): MotionSources => v.assetIds.map((id) => sources[id] ?? null), [sources]);
   const quality = MOTION_QUALITIES.find((q) => q.id === state.quality) ?? MOTION_QUALITIES[1];
-  const size = frameSize(aspect, quality.short);
-  const variantSources: MotionSources = useMemo(
-    () => (variant ? variant.assetIds.map((id) => sources[id] ?? null) : []),
-    [variant, sources]
-  );
-
-  useEffect(() => setRenderAspect(null), [variant?.id]);
+  const size = frameSize(state.renderAspect, quality.short);
+  const opened = state.variants.find((v) => v.id === openId) ?? null;
 
   // which render sizes this browser can encode
   useEffect(() => {
@@ -163,7 +172,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
     void Promise.all(
       MOTION_QUALITIES.flatMap((q) =>
         MOTION_FPS.map(async (fps) => {
-          const s = frameSize(aspect, q.short);
+          const s = frameSize(state.renderAspect, q.short);
           return [`${q.id}@${fps}`, (await canEncodeMp4(s.width, s.height, fps)) || canRecordWebm()] as const;
         })
       )
@@ -171,7 +180,8 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
     return () => {
       cancelled = true;
     };
-  }, [aspect]);
+  }, [state.renderAspect]);
+  const qualityOk = (q: string, fps: number) => supported[`${q}@${fps}`] !== false;
 
   // drop library assets nobody uses any more
   const pruneAssets = (s: MotionState): MotionState => {
@@ -217,7 +227,6 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
     }
     setError('');
     setStyling(true);
-    setShowStyles(true);
     try {
       const { styles } = await window.api.suggestMotionStyles({
         brief: state.brief.trim(),
@@ -260,7 +269,6 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
         styleName: state.style?.name,
       };
       setState((s) => ({ ...s, variants: [...s.variants, v], selectedId: v.id }));
-      setShowStyles(false);
     } catch (e) {
       setError(formatGenerationError(e));
     } finally {
@@ -268,84 +276,71 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
     }
   };
 
-  const deleteVariant = (id: string) =>
+  const deleteVariant = (id: string) => {
+    setOpenId((o) => (o === id ? null : o));
     setState((s) => pruneAssets({ ...s, variants: s.variants.filter((v) => v.id !== id), selectedId: s.selectedId === id ? null : s.selectedId }));
-
-  // ---- preview player (same renderer as the export, played against the wall clock)
-  const playRef = useRef(0);
-  const stopPreview = useCallback(() => {
-    playRef.current++;
-    setPlaying(false);
-  }, []);
-  const startPreview = async () => {
-    if (!variant || !previewCanvas.current) return;
-    const token = ++playRef.current;
-    setPlaying(true);
-    const cv = previewCanvas.current;
-    const ctx = cv.getContext('2d')!;
-    const board = variant.storyboard;
-    const t0 = performance.now();
-    while (playRef.current === token) {
-      const tt = (performance.now() - t0) / 1000;
-      if (tt >= board.duration) break;
-      await prepareFrame(board, variantSources, tt);
-      if (playRef.current !== token) return;
-      drawFrame(ctx, cv.width, cv.height, board, variantSources, tt);
-      setPreviewTime(tt);
-      await new Promise((r) => requestAnimationFrame(r));
-    }
-    if (playRef.current === token) setPlaying(false);
   };
-  useEffect(() => {
-    if (!active) stopPreview();
-  }, [active, stopPreview]);
-  useEffect(stopPreview, [variant?.id, aspect, stopPreview]);
 
-  // idle preview frame: first moment of the board
-  const previewSize = useMemo(() => frameSize(aspect, 540), [aspect]);
-  useEffect(() => {
-    const cv = previewCanvas.current;
-    if (!cv || !variant || playing) return;
-    const ctx = cv.getContext('2d')!;
-    const board = variant.storyboard;
-    const tt = Math.min(board.duration - 0.01, board.scenes[0] ? Math.min(board.scenes[0].dur * 0.6, 1.2) : 0);
-    queueDraw(async () => {
-      await prepareFrame(board, variantSources, tt);
-      drawFrame(ctx, cv.width, cv.height, board, variantSources, tt);
-    });
-    setPreviewTime(0);
-  }, [variant, variantSources, previewSize, playing, fontsReady]);
-
-  // ---- render
-  const render = async () => {
-    if (!variant || rendering) return;
-    stopPreview();
+  // ---- render queue: one job at a time, each with the settings it was queued with
+  const enqueue = (variantId: string) => {
+    if (!qualityOk(quality.id, state.fps)) return;
     setError('');
-    const abort = new AbortController();
-    setRendering({ progress: 0, abort });
-    // own <video> elements for the export, so nothing else on the panel can seek them mid-render
-    const own = await Promise.all(variant.assetIds.map((id) => {
-      const a = assetById.get(id);
-      return a ? loadSource(a).catch(() => null) : Promise.resolve(null);
-    }));
-    try {
-      const { blob, ext, codec } = await renderVideo({
-        board: variant.storyboard,
-        sources: own.map((o) => o?.source ?? null),
-        width: size.width,
-        height: size.height,
-        fps: state.fps,
-        signal: abort.signal,
-        onProgress: (p) => setRendering((r) => (r ? { ...r, progress: p } : r)),
-      });
-      const url = URL.createObjectURL(blob);
-      setRenders((list) => [{ id: newId(), variantId: variant.id, url, ext, codec, width: size.width, height: size.height, fps: state.fps }, ...list]);
-    } catch (e) {
-      if (!(e instanceof DOMException && e.name === 'AbortError')) setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      own.forEach((o) => o?.release());
-      setRendering(null);
+    setJobs((list) => [
+      ...list,
+      { id: newId(), variantId, aspect: state.renderAspect, width: size.width, height: size.height, fps: state.fps, status: 'queued', progress: 0 },
+    ]);
+  };
+
+  const running = jobs.find((j) => j.status === 'rendering');
+  const nextJob = jobs.find((j) => j.status === 'queued');
+  const started = useRef(new Set<string>());
+  useEffect(() => {
+    if (running || !nextJob || started.current.has(nextJob.id)) return;
+    const job = nextJob;
+    started.current.add(job.id);
+    const variant = state.variants.find((v) => v.id === job.variantId);
+    if (!variant) {
+      setJobs((list) => list.filter((j) => j.id !== job.id));
+      return;
     }
+    const abort = new AbortController();
+    aborts.current[job.id] = abort;
+    setJobs((list) => list.map((j) => (j.id === job.id ? { ...j, status: 'rendering' } : j)));
+    void (async () => {
+      // own <video> elements for the export, so the board's stills can't seek them mid-render
+      const own = await Promise.all(variant.assetIds.map((id) => {
+        const a = assetById.get(id);
+        return a ? loadSource(a).catch(() => null) : Promise.resolve(null);
+      }));
+      try {
+        const { blob, ext, codec } = await renderVideo({
+          board: variant.storyboard,
+          sources: own.map((o) => o?.source ?? null),
+          width: job.width,
+          height: job.height,
+          fps: job.fps,
+          signal: abort.signal,
+          onProgress: (p) => setJobs((list) => list.map((j) => (j.id === job.id ? { ...j, progress: p } : j))),
+        });
+        const url = URL.createObjectURL(blob);
+        setRenders((list) => [
+          { id: newId(), variantId: variant.id, title: variant.storyboard.title, url, ext, codec, aspect: job.aspect, width: job.width, height: job.height, fps: job.fps, size: blob.size },
+          ...list,
+        ]);
+        setJobs((list) => list.filter((j) => j.id !== job.id));
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') setJobs((list) => list.filter((j) => j.id !== job.id));
+        else setJobs((list) => list.map((j) => (j.id === job.id ? { ...j, status: 'error', error: e instanceof Error ? e.message : String(e) } : j)));
+      } finally {
+        own.forEach((o) => o?.release());
+        delete aborts.current[job.id];
+      }
+    })();
+  }, [running, nextJob, state.variants, assetById]);
+
+  const cancelJob = (id: string) => {
+    if (aborts.current[id]) aborts.current[id].abort();
+    else setJobs((list) => list.filter((j) => j.id !== id));
   };
 
   const download = (r: RenderedVideo) => {
@@ -354,299 +349,462 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
     a.download = `oneflow-motion-${r.width}x${r.height}.${r.ext}`;
     a.click();
   };
+  const removeRender = (id: string) =>
+    setRenders((list) => {
+      const r = list.find((x) => x.id === id);
+      if (r) URL.revokeObjectURL(r.url);
+      return list.filter((x) => x.id !== id);
+    });
 
-  const variantRenders = renders.filter((r) => r.variantId === variant?.id);
-  const hasVariants = state.variants.length > 0;
-  const qualityOk = (q: string, fps: number) => supported[`${q}@${fps}`] !== false;
+  const variantTitle = (id: string) => {
+    const i = state.variants.findIndex((v) => v.id === id);
+    return i < 0 ? '' : `${tm.variantN(i + 1)} · ${state.variants[i].storyboard.title}`;
+  };
+
+  const renderLabel = `${state.renderAspect} · ${size.width}×${size.height}`;
 
   return (
     <div className={`motion-panel ${active ? '' : 'motion-hidden'}`}>
-      <div className="motion-layout">
-        <div className="motion-side">
-          <span className="field-label">{tm.materials}</span>
-          <div
-            className="motion-assets"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              void addFiles(e.dataTransfer.files);
-            }}
-          >
-            {materials.map((a) => (
-              <AssetThumb key={a.id} asset={a} source={sources[a.id]} onRemove={() => removeMaterial(a.id)} removeLabel={tm.removeAsset} />
-            ))}
-            {materials.length < MOTION_MAX_ASSETS && (
-              <button type="button" className="motion-asset-add" onClick={() => fileInput.current?.click()} title={tm.addMaterials}>
-                <IconPlus size={16} />
-                <span>{materials.length ? tm.addMore : tm.addMaterials}</span>
-              </button>
-            )}
-            <input
-              ref={fileInput}
-              type="file"
-              accept="image/*,video/*"
-              multiple
-              hidden
-              onChange={(e) => {
-                if (e.target.files) void addFiles(e.target.files);
-                e.target.value = '';
+      <div className="mk-board">
+        {/* ---------------------------------------------------------------- Бриф */}
+        <section className="mk-col">
+          <header className="mk-col-head">
+            <b>{tm.colBrief}</b>
+          </header>
+          <div className="mk-card">
+            <span className="mk-label">{tm.materials}</span>
+            <div
+              className="motion-assets"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (e.dataTransfer.files.length) void addFiles(e.dataTransfer.files);
               }}
-            />
-          </div>
-          <span className="motion-hint">{tm.materialsHint}</span>
-
-          <span className="field-label">{tm.brief}</span>
-          <textarea
-            className="node-textarea motion-brief"
-            value={state.brief}
-            onChange={(e) => update({ brief: e.target.value })}
-            placeholder={tm.briefPlaceholder}
-            maxLength={4000}
-          />
-
-          <span className="field-label">{tm.duration}</span>
-          <div className="musicaudio-genre-grid">
-            {MOTION_DURATIONS.map((d) => (
-              <button key={d} type="button" className={`musicaudio-genre-btn ${state.duration === d ? 'active' : ''}`} onClick={() => update({ duration: d })}>
-                {tm.seconds(d)}
-              </button>
-            ))}
-          </div>
-
-          <span className="field-label">{tm.aspect}</span>
-          <div className="musicaudio-genre-grid">
-            {MOTION_ASPECTS.map((a) => (
-              <button key={a} type="button" className={`musicaudio-genre-btn ${state.aspect === a ? 'active' : ''}`} onClick={() => update({ aspect: a })}>
-                <AspectIcon aspect={a} /> {a}
-              </button>
-            ))}
-          </div>
-
-          <span className="field-label">{tm.style}</span>
-          {state.style ? (
-            <div className="motion-style-pin">
-              <Swatches d={state.style} />
-              <span>
-                <b>{state.style.name}</b>
-                <small>{tm.paceLabels[state.style.pace]} · {tm.fontLabels[state.style.style.font]}</small>
-              </span>
-              <button type="button" className="motion-icon-btn" onClick={() => update({ style: null })} title={tm.clearStyle} aria-label={tm.clearStyle}>
-                <IconClose size={11} />
-              </button>
+            >
+              {materials.map((a) => (
+                <AssetThumb key={a.id} asset={a} source={sources[a.id]} onRemove={() => removeMaterial(a.id)} removeLabel={tm.removeAsset} />
+              ))}
+              {materials.length < MOTION_MAX_ASSETS && (
+                <button type="button" className="motion-asset-add" onClick={() => fileInput.current?.click()} title={tm.addMaterials}>
+                  <IconPlus size={16} />
+                  <span>{materials.length ? tm.addMore : tm.addMaterials}</span>
+                </button>
+              )}
+              <input
+                ref={fileInput}
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                hidden
+                onChange={(e) => {
+                  if (e.target.files) void addFiles(e.target.files);
+                  e.target.value = '';
+                }}
+              />
             </div>
-          ) : (
-            <span className="motion-style-auto">{tm.styleAuto}</span>
-          )}
-          <button type="button" className="motion-secondary motion-suggest-btn" onClick={() => (state.styleOptions.length && !showStyles ? setShowStyles(true) : void suggestStyles())} disabled={styling || !loaded}>
-            <IconSparkles size={13} /> {styling ? tm.suggestingStyles(fmtTime(elapsed)) : state.styleOptions.length && !showStyles ? tm.stylesTitle : state.styleOptions.length ? tm.moreStyles : tm.suggestStyles}
-          </button>
+            <span className="motion-hint">{tm.materialsHint}</span>
 
-          <button className="generate-btn motion-generate-btn" onClick={generate} disabled={generating || !loaded}>
-            {generating ? tm.generating(fmtTime(elapsed)) : hasVariants ? tm.moreVariant : tm.makeBoard}
+            <span className="mk-label">{tm.brief}</span>
+            <textarea className="node-textarea motion-brief" value={state.brief} onChange={(e) => update({ brief: e.target.value })} placeholder={tm.briefPlaceholder} maxLength={4000} />
+
+            <span className="mk-label">{tm.duration}</span>
+            <div className="mk-chips">
+              {MOTION_DURATIONS.map((d) => (
+                <button key={d} type="button" className={`mk-chip ${state.duration === d ? 'on' : ''}`} onClick={() => update({ duration: d })}>
+                  {tm.seconds(d)}
+                </button>
+              ))}
+            </div>
+
+            <span className="mk-label">{tm.aspect}</span>
+            <div className="mk-chips">
+              {MOTION_ASPECTS.map((a) => (
+                <button key={a} type="button" className={`mk-chip ${state.aspect === a ? 'on' : ''}`} onClick={() => update({ aspect: a })}>
+                  <AspectIcon aspect={a} /> {a}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mk-card">
+            <span className="mk-label">{tm.stylesFromClaude}</span>
+            <button type="button" className={`mk-style-row ${!state.style ? 'on' : ''}`} onClick={() => update({ style: null })}>
+              <span className="mk-style-auto">
+                <IconSparkles size={12} />
+              </span>
+              <span className="mk-style-text">
+                <b>{tm.styleAutoShort}</b>
+                <small>{tm.styleAuto}</small>
+              </span>
+            </button>
+            {styling && [0, 1].map((k) => <div key={k} className="mk-style-row skeleton" />)}
+            {state.styleOptions.map((d) => (
+              <StyleRow
+                key={d.id}
+                d={d}
+                chosen={state.style?.id === d.id}
+                onPick={() => update({ style: d })}
+                sources={materialSources}
+                fontsReady={fontsReady}
+                meta={`${tm.paceLabels[d.pace]} · ${tm.fontLabels[d.style.font]}${(d.style.fx ?? []).length ? ` · ${(d.style.fx ?? []).map((f) => tm.fxLabels[f]).join(', ')}` : ''}`}
+              />
+            ))}
+            <button type="button" className="motion-secondary mk-wide" onClick={() => void suggestStyles()} disabled={styling || !loaded}>
+              <IconSparkles size={13} /> {styling ? tm.suggestingStyles(fmtTime(elapsed)) : state.styleOptions.length ? tm.moreStyles : tm.suggestStyles}
+            </button>
+          </div>
+
+          <button className="generate-btn mk-wide" onClick={generate} disabled={generating || !loaded}>
+            {generating ? tm.generating(fmtTime(elapsed)) : state.variants.length ? tm.moreVariant : tm.makeBoard}
           </button>
           <span className="motion-hint">{tm.costHint}</span>
           {error && <div className="error-text">{error}</div>}
-        </div>
+        </section>
 
-        <div className="motion-main">
-          {showStyles && (styling || state.styleOptions.length > 0) && (
-            <div className="motion-styles">
-              <div className="motion-styles-head">
-                <span>
-                  <b>{tm.stylesTitle}</b>
-                  <small>{tm.stylesHint}</small>
-                </span>
-                <button type="button" className="motion-secondary" onClick={() => void suggestStyles()} disabled={styling}>
-                  <IconRegenerate size={13} /> {styling ? tm.suggestingStyles(fmtTime(elapsed)) : tm.moreStyles}
-                </button>
-                <button type="button" className="motion-icon-btn" onClick={() => setShowStyles(false)} title={tm.hideStyles} aria-label={tm.hideStyles}>
-                  <IconClose size={12} />
-                </button>
-              </div>
-              <div className="motion-style-grid">
-                {styling && [0, 1, 2, 3].map((k) => <div key={`sk${k}`} className="motion-style-card skeleton" />)}
-                {state.styleOptions.map((d) => (
-                  <StyleCard
-                    key={d.id}
-                    d={d}
-                    aspect={state.aspect}
-                    sources={materialSources}
-                    fontsReady={fontsReady}
-                    chosen={state.style?.id === d.id}
-                    onPick={() => update({ style: d })}
-                    labels={{ use: tm.useStyle, chosen: tm.styleChosen, pace: tm.paceLabels[d.pace], font: tm.fontLabels[d.style.font], fx: (d.style.fx ?? []).map((f) => tm.fxLabels[f]).join(' · ') }}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-          {(hasVariants || generating) && (
-            <div className="motion-variants" role="tablist" aria-label={tm.variants}>
-              {state.variants.map((v, i) => (
-                <button
-                  key={v.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={variant?.id === v.id}
-                  className={`motion-variant-chip ${variant?.id === v.id ? 'active' : ''}`}
-                  onClick={() => update({ selectedId: v.id })}
-                >
-                  <b>{tm.variantN(i + 1)}</b>
-                  <span>{v.styleName ? `${v.styleName} · ` : ''}{v.storyboard.title}</span>
-                </button>
-              ))}
-              {generating && (
-                <span className="motion-variant-chip pending">
-                  <b>{tm.variantN(state.variants.length + 1)}</b>
-                  <span>{tm.thinking}</span>
-                </span>
-              )}
-            </div>
-          )}
-
-          {!variant && !generating && (
-            <div className="motion-empty">
-              <IconVideo size={22} />
-              <b>{tm.emptyTitle}</b>
-              <span>{tm.emptyText}</span>
-            </div>
-          )}
-          {!variant && generating && <div className="motion-loading">{tm.generating(fmtTime(elapsed))}</div>}
-
-          {variant && (
-            <>
-              <div className="motion-head">
-                <div>
-                  <h3>{variant.storyboard.title}</h3>
-                  {variant.storyboard.concept && <p>{variant.storyboard.concept}</p>}
-                  <span className="motion-meta">
-                    {tm.meta(variant.storyboard.scenes.length, variant.storyboard.duration, variant.aspect)}
-                    {variant.costUsd > 0 && ` · ${fmtUsd(variant.costUsd)}`}
-                  </span>
-                </div>
-                <button type="button" className="motion-icon-btn" onClick={() => deleteVariant(variant.id)} title={tm.deleteVariant}>
-                  <IconClose size={13} />
-                </button>
-              </div>
-
-              <div className={`motion-board ${size.height > size.width ? 'portrait' : ''}`}>
-                {variant.storyboard.scenes.map((s, i) => (
-                  <div key={i} className="motion-scene">
-                    <SceneStill board={variant.storyboard} sources={variantSources} index={i} aspect={aspect} fontsReady={fontsReady} />
-                    <div className="motion-scene-info">
-                      <span className="motion-scene-time">
-                        {tm.sceneN(i + 1)} · {s.start.toFixed(1)}–{(s.start + s.dur).toFixed(1)} с
-                      </span>
-                      <span className="motion-scene-tags">
-                        {tm.layoutLabels[s.layout]} · {tm.cameraLabels[s.camera]} · {tm.transitionLabels[s.transition]}
-                      </span>
-                      {s.note && <span className="motion-scene-note">{s.note}</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="motion-stage">
-                <div className="motion-preview" style={{ aspectRatio: `${previewSize.width} / ${previewSize.height}` }}>
-                  <canvas ref={previewCanvas} width={previewSize.width} height={previewSize.height} />
-                </div>
-                <div className="motion-preview-bar">
-                  <button type="button" className="motion-play" onClick={() => (playing ? stopPreview() : void startPreview())} disabled={Boolean(rendering)}>
-                    {playing ? <IconPause size={14} /> : <IconPlay size={14} />}
-                  </button>
-                  <span className="motion-time">
-                    {fmtTime(previewTime)} / {fmtTime(variant.storyboard.duration)} · {tm.sceneN(sceneIndexAt(variant.storyboard, previewTime) + 1)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="motion-render">
-                <div className="motion-render-row">
-                  <span className="field-label">{tm.renderAspect}</span>
-                  <div className="musicaudio-genre-grid">
-                    {MOTION_ASPECTS.map((a) => (
-                      <button key={a} type="button" className={`musicaudio-genre-btn ${aspect === a ? 'active' : ''}`} onClick={() => setRenderAspect(a)} disabled={Boolean(rendering)}>
-                        <AspectIcon aspect={a} /> {a}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="motion-render-row">
-                  <span className="field-label">{tm.quality}</span>
-                  <div className="musicaudio-genre-grid">
-                    {MOTION_QUALITIES.map((q) => (
-                      <button
-                        key={q.id}
-                        type="button"
-                        className={`musicaudio-genre-btn ${state.quality === q.id ? 'active' : ''}`}
-                        onClick={() => update({ quality: q.id })}
-                        disabled={Boolean(rendering) || !qualityOk(q.id, state.fps)}
-                        title={qualityOk(q.id, state.fps) ? '' : tm.notSupported}
-                      >
-                        {q.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="motion-render-row">
-                  <span className="field-label">{tm.fps}</span>
-                  <div className="musicaudio-genre-grid">
-                    {MOTION_FPS.map((f) => (
-                      <button key={f} type="button" className={`musicaudio-genre-btn ${state.fps === f ? 'active' : ''}`} onClick={() => update({ fps: f })} disabled={Boolean(rendering)}>
-                        {f}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {variant.aspect !== aspect && <span className="motion-hint">{tm.composedFor(variant.aspect)}</span>}
-
-                <div className="motion-actions">
-                  {rendering ? (
-                    <>
-                      <div className="motion-progress" aria-label={tm.rendering(Math.round(rendering.progress * 100))}>
-                        <i style={{ width: `${rendering.progress * 100}%` }} />
-                      </div>
-                      <span className="motion-time">{tm.rendering(Math.round(rendering.progress * 100))}</span>
-                      <button type="button" className="motion-secondary" onClick={() => rendering.abort.abort()}>
-                        {tm.cancel}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button type="button" className="generate-btn motion-render-btn" onClick={render} disabled={!qualityOk(quality.id, state.fps)}>
-                        <IconVideo size={14} /> {tm.render(size.width, size.height)}
-                      </button>
-                      <button type="button" className="motion-secondary" onClick={generate} disabled={generating}>
-                        <IconRegenerate size={13} /> {generating ? tm.thinking : tm.moreVariant}
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {variantRenders.length > 0 && (
-                <div className="motion-renders">
-                  <span className="field-label">{tm.renders}</span>
-                  {variantRenders.map((r) => (
-                    <div key={r.id} className="motion-rendered">
-                      <video src={r.url} controls playsInline style={{ aspectRatio: `${r.width} / ${r.height}` }} />
-                      <div className="motion-rendered-bar">
-                        <span className="motion-time">
-                          {r.width}×{r.height} · {r.fps} fps · {r.ext.toUpperCase()} ({r.codec})
-                        </span>
-                        <button type="button" className="motion-secondary" onClick={() => download(r)}>
-                          <IconDownload size={13} /> {tm.download}
-                        </button>
-                      </div>
-                      {r.ext === 'webm' && <span className="motion-hint">{tm.webmNote}</span>}
-                    </div>
+        {/* ---------------------------------------------------------------- Раскадровки */}
+        <section className="mk-col">
+          <header className="mk-col-head">
+            <b>{tm.colBoards}</b>
+            <i>{state.variants.length}</i>
+          </header>
+          {!state.variants.length && !generating && <div className="mk-empty">{tm.emptyBoards}</div>}
+          {[...state.variants].reverse().map((v) => {
+            const i = state.variants.indexOf(v);
+            const queuedCount = jobs.filter((j) => j.variantId === v.id).length;
+            return (
+              <article
+                key={v.id}
+                className={`mk-card mk-variant ${openId === v.id ? 'open' : ''}`}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData(DRAG_TYPE, v.id);
+                  e.dataTransfer.effectAllowed = 'copy';
+                }}
+                onClick={() => setOpenId(v.id)}
+              >
+                <div className="mk-strip">
+                  {v.storyboard.scenes.slice(0, 6).map((_, k) => (
+                    <SceneStill key={k} board={v.storyboard} sources={sourcesFor(v)} index={k} aspect={v.aspect} fontsReady={fontsReady} short={140} />
                   ))}
                 </div>
-              )}
-            </>
+                <b className="mk-variant-title">
+                  {tm.variantN(i + 1)} · {v.storyboard.title}
+                </b>
+                <div className="mk-tags">
+                  <span className="mk-tag blue">{v.styleName ?? tm.styleAutoShort}</span>
+                  <span className="mk-tag green">{tm.scenesDur(v.storyboard.scenes.length, v.storyboard.duration)}</span>
+                  <span className="mk-tag">{v.aspect}</span>
+                  {queuedCount > 0 && <span className="mk-tag orange">{tm.inQueue(queuedCount)}</span>}
+                </div>
+                <div className="mk-variant-actions">
+                  <button
+                    type="button"
+                    className="motion-secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenId(v.id);
+                    }}
+                  >
+                    <IconPlay size={11} /> {tm.open}
+                  </button>
+                  <button
+                    type="button"
+                    className="mk-to-render"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      enqueue(v.id);
+                    }}
+                    title={renderLabel}
+                  >
+                    <IconVideo size={13} /> {tm.toRender}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+          {generating && (
+            <div className="mk-card mk-pending">
+              <div className="mk-strip">
+                {[0, 1, 2, 3, 4].map((k) => (
+                  <i key={k} />
+                ))}
+              </div>
+              <b>{tm.variantN(state.variants.length + 1)}</b>
+              <span className="motion-hint">{tm.generating(fmtTime(elapsed))}</span>
+            </div>
           )}
-        </div>
+          {state.variants.length > 0 && !generating && (
+            <button type="button" className="mk-add" onClick={generate}>
+              <IconRegenerate size={13} /> {tm.addVariant}
+            </button>
+          )}
+        </section>
+
+        {/* ---------------------------------------------------------------- Рендер */}
+        <section
+          className={`mk-col mk-render-col ${dropActive ? 'drop' : ''}`}
+          onDragOver={(e) => {
+            if (e.dataTransfer.types.includes(DRAG_TYPE)) {
+              e.preventDefault();
+              setDropActive(true);
+            }
+          }}
+          onDragLeave={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropActive(false);
+          }}
+          onDrop={(e) => {
+            const id = e.dataTransfer.getData(DRAG_TYPE);
+            setDropActive(false);
+            if (id) {
+              e.preventDefault();
+              enqueue(id);
+            }
+          }}
+        >
+          <header className="mk-col-head">
+            <b>{tm.colRender}</b>
+            <i>{jobs.length}</i>
+          </header>
+          <div className="mk-card">
+            <span className="mk-label">{tm.renderSettings}</span>
+            <span className="mk-sublabel">{tm.renderAspect}</span>
+            <div className="mk-chips">
+              {MOTION_ASPECTS.map((a) => (
+                <button key={a} type="button" className={`mk-chip ${state.renderAspect === a ? 'on' : ''}`} onClick={() => update({ renderAspect: a })}>
+                  <AspectIcon aspect={a} /> {a}
+                </button>
+              ))}
+            </div>
+            <span className="mk-sublabel">{tm.quality}</span>
+            <div className="mk-chips">
+              {MOTION_QUALITIES.map((q) => (
+                <button
+                  key={q.id}
+                  type="button"
+                  className={`mk-chip ${state.quality === q.id ? 'on' : ''}`}
+                  onClick={() => update({ quality: q.id })}
+                  disabled={!qualityOk(q.id, state.fps)}
+                  title={qualityOk(q.id, state.fps) ? '' : tm.notSupported}
+                >
+                  {q.label}
+                </button>
+              ))}
+            </div>
+            <span className="mk-sublabel">{tm.fps}</span>
+            <div className="mk-chips">
+              {MOTION_FPS.map((f) => (
+                <button key={f} type="button" className={`mk-chip ${state.fps === f ? 'on' : ''}`} onClick={() => update({ fps: f })}>
+                  {f}
+                </button>
+              ))}
+            </div>
+            <span className="mk-size">{tm.willRender(size.width, size.height, state.fps)}</span>
+          </div>
+
+          {jobs.map((j) => (
+            <div key={j.id} className={`mk-card mk-job ${j.status}`}>
+              <b>{variantTitle(j.variantId)}</b>
+              <span className="motion-hint">
+                {j.aspect} · {j.width}×{j.height} · {j.fps} fps
+              </span>
+              {j.status === 'error' ? (
+                <span className="error-text">{j.error}</span>
+              ) : (
+                <>
+                  <div className="motion-progress">
+                    <i style={{ width: `${j.progress * 100}%` }} />
+                  </div>
+                  <span className="mk-job-state">{j.status === 'rendering' ? tm.rendering(Math.round(j.progress * 100)) : tm.queued}</span>
+                </>
+              )}
+              <button type="button" className="motion-secondary" onClick={() => (j.status === 'error' ? setJobs((l) => l.filter((x) => x.id !== j.id)) : cancelJob(j.id))}>
+                {j.status === 'error' ? tm.remove : tm.cancel}
+              </button>
+            </div>
+          ))}
+          <div className="mk-drop">{tm.dropHere}</div>
+        </section>
+
+        {/* ---------------------------------------------------------------- Готово */}
+        <section className="mk-col">
+          <header className="mk-col-head">
+            <b>{tm.colDone}</b>
+            <i>{renders.length}</i>
+          </header>
+          {!renders.length && <div className="mk-empty">{tm.emptyDone}</div>}
+          {renders.map((r) => (
+            <div key={r.id} className="mk-card mk-done">
+              <video src={r.url} controls playsInline style={{ aspectRatio: `${r.width} / ${r.height}` }} />
+              <b>{r.title}</b>
+              <span className="motion-hint">
+                {r.aspect} · {r.width}×{r.height} · {r.fps} fps · {r.ext.toUpperCase()} ({r.codec}) · {fmtMb(r.size)}
+              </span>
+              {r.ext === 'webm' && <span className="motion-hint">{tm.webmNote}</span>}
+              <div className="mk-variant-actions">
+                <button type="button" className="mk-download" onClick={() => download(r)}>
+                  <IconDownload size={13} /> {tm.download}
+                </button>
+                <button type="button" className="motion-icon-btn" onClick={() => removeRender(r.id)} title={tm.remove} aria-label={tm.remove}>
+                  <IconClose size={11} />
+                </button>
+              </div>
+            </div>
+          ))}
+          {renders.length > 0 && <span className="motion-hint">{tm.doneHint}</span>}
+        </section>
       </div>
+
+      {opened && (
+        <VariantDrawer
+          key={opened.id}
+          variant={opened}
+          index={state.variants.indexOf(opened)}
+          sources={sourcesFor(opened)}
+          aspect={state.renderAspect}
+          fontsReady={fontsReady}
+          active={active}
+          renderLabel={renderLabel}
+          canRender={qualityOk(quality.id, state.fps)}
+          onRender={() => enqueue(opened.id)}
+          onDelete={() => deleteVariant(opened.id)}
+          onClose={() => setOpenId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Full storyboard of one variant: live preview, every scene at the current render frame, and the
+// same «В рендер» as on the card.
+function VariantDrawer({ variant, index, sources, aspect, fontsReady, active, renderLabel, canRender, onRender, onDelete, onClose }: {
+  variant: MotionVariant;
+  index: number;
+  sources: MotionSources;
+  aspect: string;
+  fontsReady: boolean;
+  active: boolean;
+  renderLabel: string;
+  canRender: boolean;
+  onRender: () => void;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  const tm = useT().motion;
+  const board = variant.storyboard;
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [time, setTime] = useState(0);
+  const playRef = useRef(0);
+  const previewSize = useMemo(() => frameSize(aspect, 540), [aspect]);
+
+  const stop = useCallback(() => {
+    playRef.current++;
+    setPlaying(false);
+  }, []);
+  const play = async () => {
+    const cv = canvas.current;
+    if (!cv) return;
+    const token = ++playRef.current;
+    setPlaying(true);
+    const ctx = cv.getContext('2d')!;
+    const t0 = performance.now();
+    while (playRef.current === token) {
+      const tt = (performance.now() - t0) / 1000;
+      if (tt >= board.duration) break;
+      await prepareFrame(board, sources, tt);
+      if (playRef.current !== token) return;
+      drawFrame(ctx, cv.width, cv.height, board, sources, tt);
+      setTime(tt);
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    if (playRef.current === token) setPlaying(false);
+  };
+  useEffect(() => {
+    if (!active) stop();
+  }, [active, stop]);
+  useEffect(() => stop, [stop]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  // idle frame
+  useEffect(() => {
+    const cv = canvas.current;
+    if (!cv || playing) return;
+    const ctx = cv.getContext('2d')!;
+    const tt = Math.min(board.duration - 0.01, board.scenes[0] ? Math.min(board.scenes[0].dur * 0.6, 1.2) : 0);
+    queueDraw(async () => {
+      await prepareFrame(board, sources, tt);
+      drawFrame(ctx, cv.width, cv.height, board, sources, tt);
+    });
+  }, [board, sources, previewSize, playing, fontsReady]);
+
+  return (
+    <div className="mk-drawer-shade" onClick={onClose}>
+      <aside className="mk-drawer" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <header className="mk-drawer-head">
+          <div>
+            <span className="mk-label">{tm.variantN(index + 1)}{variant.styleName ? ` · ${variant.styleName}` : ''}</span>
+            <h3>{board.title}</h3>
+            {board.concept && <p>{board.concept}</p>}
+            <span className="motion-meta">
+              {tm.meta(board.scenes.length, board.duration, variant.aspect)}
+              {variant.costUsd > 0 && ` · ${fmtUsd(variant.costUsd)}`}
+            </span>
+          </div>
+          <button type="button" className="motion-icon-btn" onClick={onClose} title={tm.close} aria-label={tm.close}>
+            <IconClose size={13} />
+          </button>
+        </header>
+
+        <div className="motion-preview" style={{ aspectRatio: `${previewSize.width} / ${previewSize.height}` }}>
+          <canvas ref={canvas} width={previewSize.width} height={previewSize.height} />
+        </div>
+        <div className="motion-preview-bar">
+          <button type="button" className="motion-play" onClick={() => (playing ? stop() : void play())}>
+            {playing ? <IconPause size={14} /> : <IconPlay size={14} />}
+          </button>
+          <span className="motion-time">
+            {fmtTime(time)} / {fmtTime(board.duration)} · {tm.sceneN(sceneIndexAt(board, time) + 1)}
+          </span>
+        </div>
+        {variant.aspect !== aspect && <span className="motion-hint">{tm.composedFor(variant.aspect)}</span>}
+
+        <span className="mk-label">{tm.previewAt(aspect)}</span>
+        <div className={`mk-scenes ${frameSize(aspect, 100).height > frameSize(aspect, 100).width ? 'portrait' : ''}`}>
+          {board.scenes.map((s: MotionScene, i: number) => (
+            <div key={i} className="motion-scene">
+              <SceneStill board={board} sources={sources} index={i} aspect={aspect} fontsReady={fontsReady} short={300} />
+              <span className="motion-scene-time">
+                {tm.sceneN(i + 1)} · {s.start.toFixed(1)}–{(s.start + s.dur).toFixed(1)} с
+              </span>
+              <span className="motion-scene-tags">
+                {tm.layoutLabels[s.layout]} · {tm.cameraLabels[s.camera]} · {tm.transitionLabels[s.transition]}
+              </span>
+              {s.note && <span className="motion-scene-note">{s.note}</span>}
+            </div>
+          ))}
+        </div>
+
+        <footer className="mk-drawer-foot">
+          <button type="button" className="motion-secondary" onClick={onDelete}>
+            {tm.deleteVariant}
+          </button>
+          <button
+            type="button"
+            className="generate-btn mk-render-now"
+            disabled={!canRender}
+            onClick={() => {
+              onRender();
+              onClose();
+            }}
+          >
+            <IconVideo size={14} /> {tm.renderThis(renderLabel)}
+          </button>
+        </footer>
+      </aside>
     </div>
   );
 }
@@ -661,19 +819,17 @@ function Swatches({ d }: { d: MotionStyleDirection }) {
   );
 }
 
-// One proposed style direction: an example frame in that style built from the user's own first
-// materials, the palette, and what it means for pace / type / effects.
-function StyleCard({ d, aspect, sources, fontsReady, chosen, onPick, labels }: {
+// A proposed style direction as a compact row: example frame built from the user's own materials,
+// name, palette and what it means for pace / type / effects. Click = use it for the next storyboards.
+function StyleRow({ d, chosen, onPick, sources, fontsReady, meta }: {
   d: MotionStyleDirection;
-  aspect: string;
-  sources: MotionSources;
-  fontsReady: boolean;
   chosen: boolean;
   onPick: () => void;
-  labels: { use: string; chosen: string; pace: string; font: string; fx: string };
+  sources: MotionSources;
+  fontsReady: boolean;
+  meta: string;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  const size = frameSize(aspect, 300);
   const board = useMemo<MotionStoryboard>(() => {
     const n = sources.filter(Boolean).length;
     const want = d.layouts.find((l) => (l === 'grid' ? n >= 2 : l === 'text-only' || n > 0)) ?? (n ? 'full' : 'text-only');
@@ -706,25 +862,17 @@ function StyleCard({ d, aspect, sources, fontsReady, chosen, onPick, labels }: {
     return () => {
       cancelled = true;
     };
-  }, [board, sources, size.width, size.height, fontsReady]);
+  }, [board, sources, fontsReady]);
   return (
-    <div className={`motion-style-card ${chosen ? 'chosen' : ''}`}>
-      <canvas ref={ref} width={size.width} height={size.height} className="motion-still" />
-      <div className="motion-style-body">
-        <div className="motion-style-title">
-          <b>{d.name}</b>
-          <Swatches d={d} />
-        </div>
-        <p>{d.description}</p>
-        <span className="motion-scene-tags">
-          {labels.pace} · {labels.font}
-          {labels.fx ? ` · ${labels.fx}` : ''}
-        </span>
-        <button type="button" className={chosen ? 'motion-secondary chosen' : 'generate-btn motion-style-use'} onClick={onPick} disabled={chosen}>
-          {chosen ? labels.chosen : labels.use}
-        </button>
-      </div>
-    </div>
+    <button type="button" className={`mk-style-row ${chosen ? 'on' : ''}`} onClick={onPick} title={d.description}>
+      <canvas ref={ref} width={192} height={108} className="mk-style-thumb" />
+      <span className="mk-style-text">
+        <b>
+          {d.name} <Swatches d={d} />
+        </b>
+        <small>{meta}</small>
+      </span>
+    </button>
   );
 }
 
@@ -758,11 +906,11 @@ function AssetThumb({ asset, source, onRemove, removeLabel }: { asset: MotionAss
   );
 }
 
-// Static storyboard frame of one scene, drawn at the chosen render aspect. Videos share their
-// <video> element with the preview/export, so their frame is captured once into this canvas.
-function SceneStill({ board, sources, index, aspect, fontsReady }: { board: MotionStoryboard; sources: MotionSources; index: number; aspect: string; fontsReady: boolean }) {
+// Static storyboard frame of one scene at a given frame shape. Videos share their <video> element
+// across the board, so their frame is captured once into this canvas.
+function SceneStill({ board, sources, index, aspect, fontsReady, short }: { board: MotionStoryboard; sources: MotionSources; index: number; aspect: string; fontsReady: boolean; short: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  const size = frameSize(aspect, 360);
+  const size = frameSize(aspect, short);
   useEffect(() => {
     const cv = ref.current;
     if (!cv) return;

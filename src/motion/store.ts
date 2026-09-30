@@ -6,7 +6,8 @@ import type { MotionAsset, MotionStyleDirection, MotionVariant } from './types';
 export interface MotionState {
   brief: string;
   duration: number;
-  aspect: string;
+  aspect: string; // frame the next storyboard is composed for
+  renderAspect: string; // frame of the next render (any storyboard re-flows to it)
   quality: string;
   fps: number;
   assets: MotionAsset[]; // every asset still in use — materials plus anything an older variant uses
