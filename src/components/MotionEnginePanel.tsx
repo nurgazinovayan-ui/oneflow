@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { IconClose, IconDownload, IconPause, IconPlay, IconPlus, IconRegenerate, IconVideo } from './Icons';
+import { IconClose, IconDownload, IconPause, IconPlay, IconPlus, IconRegenerate, IconSparkles, IconVideo } from './Icons';
 import { formatGenerationError } from '../errorMessages';
 import { useT } from '../i18n';
 import { drawFrame, drawStill, frameSize, prepareFrame, sceneIndexAt, type MotionSource, type MotionSources } from '../motion/render';
@@ -13,7 +13,9 @@ import {
   MOTION_MAX_ASSETS,
   MOTION_QUALITIES,
   type MotionAsset,
+  type MotionScene,
   type MotionStoryboard,
+  type MotionStyleDirection,
   type MotionVariant,
 } from '../motion/types';
 
@@ -43,6 +45,8 @@ const EMPTY: MotionState = {
   materialIds: [],
   variants: [],
   selectedId: null,
+  style: null,
+  styleOptions: [],
 };
 
 const fmtTime = (s: number) => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
@@ -59,6 +63,8 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
   const [loaded, setLoaded] = useState(false);
   const [sources, setSources] = useState<Record<string, MotionSource>>({});
   const [generating, setGenerating] = useState(false);
+  const [styling, setStyling] = useState(false);
+  const [showStyles, setShowStyles] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState('');
   const [renderAspect, setRenderAspect] = useState<string | null>(null);
@@ -126,16 +132,20 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
   useEffect(() => () => rendersRef.current.forEach((r) => URL.revokeObjectURL(r.url)), []);
 
   useEffect(() => {
-    if (!generating) return;
+    if (!generating && !styling) return;
     const t0 = Date.now();
     setElapsed(0);
     const id = setInterval(() => setElapsed((Date.now() - t0) / 1000), 500);
     return () => clearInterval(id);
-  }, [generating]);
+  }, [generating, styling]);
 
   const update = (patch: Partial<MotionState>) => setState((s) => ({ ...s, ...patch }));
   const assetById = useMemo(() => new Map(state.assets.map((a) => [a.id, a])), [state.assets]);
   const materials = state.materialIds.map((id) => assetById.get(id)).filter((a): a is MotionAsset => Boolean(a));
+  const materialSources: MotionSources = useMemo(
+    () => state.materialIds.map((id) => sources[id] ?? null),
+    [state.materialIds, sources]
+  );
   const variant = state.variants.find((v) => v.id === state.selectedId) ?? state.variants[state.variants.length - 1] ?? null;
   const aspect = renderAspect ?? variant?.aspect ?? state.aspect;
   const quality = MOTION_QUALITIES.find((q) => q.id === state.quality) ?? MOTION_QUALITIES[1];
@@ -190,6 +200,40 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
 
   const removeMaterial = (id: string) => setState((s) => pruneAssets({ ...s, materialIds: s.materialIds.filter((m) => m !== id) }));
 
+  // what Claude gets to see of the materials: downscaled photos, 3 keyframes per video
+  const materialsForModel = async () => {
+    const assets = [];
+    for (const a of materials) {
+      const src = sources[a.id] ?? (await loadSource(a)).source;
+      assets.push({ kind: a.kind, name: a.name, duration: a.duration, frames: await framesForModel(a, src) });
+    }
+    return assets;
+  };
+
+  const suggestStyles = async () => {
+    if (!state.brief.trim() && !materials.length) {
+      setError(tm.errorNoInput);
+      return;
+    }
+    setError('');
+    setStyling(true);
+    setShowStyles(true);
+    try {
+      const { styles } = await window.api.suggestMotionStyles({
+        brief: state.brief.trim(),
+        duration: state.duration,
+        aspect: state.aspect,
+        assets: await materialsForModel(),
+        previous: state.styleOptions.map((d) => d.name),
+      });
+      setState((s) => ({ ...s, styleOptions: [...styles, ...s.styleOptions].slice(0, 24) }));
+    } catch (e) {
+      setError(formatGenerationError(e));
+    } finally {
+      setStyling(false);
+    }
+  };
+
   const generate = async () => {
     if (!state.brief.trim() && !materials.length) {
       setError(tm.errorNoInput);
@@ -198,17 +242,13 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
     setError('');
     setGenerating(true);
     try {
-      const assets = [];
-      for (const a of materials) {
-        const src = sources[a.id] ?? (await loadSource(a)).source;
-        assets.push({ kind: a.kind, name: a.name, duration: a.duration, frames: await framesForModel(a, src) });
-      }
       const { storyboard, costUsd } = await window.api.createMotionStoryboard({
         brief: state.brief.trim(),
         duration: state.duration,
         aspect: state.aspect,
-        assets,
+        assets: await materialsForModel(),
         previous: state.variants.map((v) => `${v.storyboard.title}: ${v.storyboard.concept}`),
+        style: state.style,
       });
       const v: MotionVariant = {
         id: newId(),
@@ -217,8 +257,10 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
         aspect: state.aspect,
         assetIds: materials.map((a) => a.id),
         costUsd,
+        styleName: state.style?.name,
       };
       setState((s) => ({ ...s, variants: [...s.variants, v], selectedId: v.id }));
+      setShowStyles(false);
     } catch (e) {
       setError(formatGenerationError(e));
     } finally {
@@ -380,6 +422,25 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
             ))}
           </div>
 
+          <span className="field-label">{tm.style}</span>
+          {state.style ? (
+            <div className="motion-style-pin">
+              <Swatches d={state.style} />
+              <span>
+                <b>{state.style.name}</b>
+                <small>{tm.paceLabels[state.style.pace]} · {tm.fontLabels[state.style.style.font]}</small>
+              </span>
+              <button type="button" className="motion-icon-btn" onClick={() => update({ style: null })} title={tm.clearStyle} aria-label={tm.clearStyle}>
+                <IconClose size={11} />
+              </button>
+            </div>
+          ) : (
+            <span className="motion-style-auto">{tm.styleAuto}</span>
+          )}
+          <button type="button" className="motion-secondary motion-suggest-btn" onClick={() => (state.styleOptions.length && !showStyles ? setShowStyles(true) : void suggestStyles())} disabled={styling || !loaded}>
+            <IconSparkles size={13} /> {styling ? tm.suggestingStyles(fmtTime(elapsed)) : state.styleOptions.length && !showStyles ? tm.stylesTitle : state.styleOptions.length ? tm.moreStyles : tm.suggestStyles}
+          </button>
+
           <button className="generate-btn motion-generate-btn" onClick={generate} disabled={generating || !loaded}>
             {generating ? tm.generating(fmtTime(elapsed)) : hasVariants ? tm.moreVariant : tm.makeBoard}
           </button>
@@ -388,6 +449,37 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
         </div>
 
         <div className="motion-main">
+          {showStyles && (styling || state.styleOptions.length > 0) && (
+            <div className="motion-styles">
+              <div className="motion-styles-head">
+                <span>
+                  <b>{tm.stylesTitle}</b>
+                  <small>{tm.stylesHint}</small>
+                </span>
+                <button type="button" className="motion-secondary" onClick={() => void suggestStyles()} disabled={styling}>
+                  <IconRegenerate size={13} /> {styling ? tm.suggestingStyles(fmtTime(elapsed)) : tm.moreStyles}
+                </button>
+                <button type="button" className="motion-icon-btn" onClick={() => setShowStyles(false)} title={tm.hideStyles} aria-label={tm.hideStyles}>
+                  <IconClose size={12} />
+                </button>
+              </div>
+              <div className="motion-style-grid">
+                {styling && [0, 1, 2, 3].map((k) => <div key={`sk${k}`} className="motion-style-card skeleton" />)}
+                {state.styleOptions.map((d) => (
+                  <StyleCard
+                    key={d.id}
+                    d={d}
+                    aspect={state.aspect}
+                    sources={materialSources}
+                    fontsReady={fontsReady}
+                    chosen={state.style?.id === d.id}
+                    onPick={() => update({ style: d })}
+                    labels={{ use: tm.useStyle, chosen: tm.styleChosen, pace: tm.paceLabels[d.pace], font: tm.fontLabels[d.style.font], fx: (d.style.fx ?? []).map((f) => tm.fxLabels[f]).join(' · ') }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
           {(hasVariants || generating) && (
             <div className="motion-variants" role="tablist" aria-label={tm.variants}>
               {state.variants.map((v, i) => (
@@ -400,7 +492,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
                   onClick={() => update({ selectedId: v.id })}
                 >
                   <b>{tm.variantN(i + 1)}</b>
-                  <span>{v.storyboard.title}</span>
+                  <span>{v.styleName ? `${v.styleName} · ` : ''}{v.storyboard.title}</span>
                 </button>
               ))}
               {generating && (
@@ -554,6 +646,83 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
             </>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function Swatches({ d }: { d: MotionStyleDirection }) {
+  return (
+    <span className="motion-swatches" aria-hidden="true">
+      {[d.style.bg, d.style.ink, d.style.accent].map((c, i) => (
+        <i key={i} style={{ background: c }} />
+      ))}
+    </span>
+  );
+}
+
+// One proposed style direction: an example frame in that style built from the user's own first
+// materials, the palette, and what it means for pace / type / effects.
+function StyleCard({ d, aspect, sources, fontsReady, chosen, onPick, labels }: {
+  d: MotionStyleDirection;
+  aspect: string;
+  sources: MotionSources;
+  fontsReady: boolean;
+  chosen: boolean;
+  onPick: () => void;
+  labels: { use: string; chosen: string; pace: string; font: string; fx: string };
+}) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const size = frameSize(aspect, 300);
+  const board = useMemo<MotionStoryboard>(() => {
+    const n = sources.filter(Boolean).length;
+    const want = d.layouts.find((l) => (l === 'grid' ? n >= 2 : l === 'text-only' || n > 0)) ?? (n ? 'full' : 'text-only');
+    const scene: MotionScene = {
+      start: 0,
+      dur: 3,
+      layout: want,
+      asset: want === 'text-only' || !n ? null : 0,
+      assets: want === 'grid' ? [0, 1, 2, 3].slice(0, Math.min(4, n)) : [],
+      headline: d.sample || d.name,
+      sub: '',
+      cta: '',
+      camera: d.cameras[0] ?? 'static',
+      textAnim: d.textAnims[0] ?? 'fade-up',
+      transition: 'fade',
+      bg: '',
+      note: '',
+    };
+    return { title: d.name, concept: d.description, style: d.style, duration: 3, scenes: [scene] };
+  }, [d, sources]);
+  useEffect(() => {
+    const cv = ref.current;
+    if (!cv) return;
+    let cancelled = false;
+    queueDraw(async () => {
+      if (cancelled) return;
+      await prepareFrame(board, sources, 1);
+      if (!cancelled) drawStill(cv.getContext('2d')!, cv.width, cv.height, board, sources, 0);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [board, sources, size.width, size.height, fontsReady]);
+  return (
+    <div className={`motion-style-card ${chosen ? 'chosen' : ''}`}>
+      <canvas ref={ref} width={size.width} height={size.height} className="motion-still" />
+      <div className="motion-style-body">
+        <div className="motion-style-title">
+          <b>{d.name}</b>
+          <Swatches d={d} />
+        </div>
+        <p>{d.description}</p>
+        <span className="motion-scene-tags">
+          {labels.pace} · {labels.font}
+          {labels.fx ? ` · ${labels.fx}` : ''}
+        </span>
+        <button type="button" className={chosen ? 'motion-secondary chosen' : 'generate-btn motion-style-use'} onClick={onPick} disabled={chosen}>
+          {chosen ? labels.chosen : labels.use}
+        </button>
       </div>
     </div>
   );

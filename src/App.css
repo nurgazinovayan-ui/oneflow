@@ -7195,6 +7195,156 @@
   background: #000;
 }
 
+.motion-style-auto {
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
+.motion-style-pin {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 10px;
+  border-radius: var(--radius-md);
+  background: var(--c-panel-2);
+}
+
+.motion-style-pin > span:not(.motion-swatches) {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.motion-style-pin b {
+  font-size: 12.5px;
+  color: var(--c-text);
+}
+
+.motion-style-pin small {
+  font-size: 11px;
+  color: var(--c-text-dim);
+}
+
+.motion-suggest-btn {
+  justify-content: center;
+}
+
+.motion-swatches {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.motion-swatches i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--c-card);
+}
+
+.motion-swatches i + i {
+  margin-left: -4px;
+}
+
+.motion-styles {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  background: var(--c-card);
+  box-shadow: 0 0 0 1px var(--c-divider);
+}
+
+.motion-styles-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.motion-styles-head > span {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.motion-styles-head b {
+  font-size: 14px;
+  color: var(--c-text);
+}
+
+.motion-styles-head small {
+  font-size: 11.5px;
+  color: var(--c-text-dim);
+}
+
+.motion-style-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.motion-style-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--c-panel-2);
+}
+
+.motion-style-card.chosen {
+  border-color: var(--c-pink);
+}
+
+.motion-style-card.skeleton {
+  min-height: 260px;
+  animation: motion-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes motion-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.motion-style-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 4px 4px;
+}
+
+.motion-style-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.motion-style-title b {
+  font-size: 13px;
+  color: var(--c-text);
+}
+
+.motion-style-body p {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--c-text-muted);
+}
+
+.motion-style-use {
+  margin-top: 2px;
+}
+
+.motion-secondary.chosen {
+  justify-content: center;
+  cursor: default;
+}
+
 @media (max-width: 900px) {
   .motion-layout {
     flex-direction: column;

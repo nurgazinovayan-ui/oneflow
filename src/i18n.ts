@@ -555,6 +555,20 @@ export interface Translations {
     renders: string;
     download: string;
     webmNote: string;
+    style: string;
+    styleAuto: string;
+    suggestStyles: string;
+    moreStyles: string;
+    suggestingStyles: (time: string) => string;
+    stylesTitle: string;
+    stylesHint: string;
+    useStyle: string;
+    styleChosen: string;
+    clearStyle: string;
+    hideStyles: string;
+    paceLabels: Record<string, string>;
+    fontLabels: Record<string, string>;
+    fxLabels: Record<string, string>;
   };
   musicAudio: {
     title: string;
@@ -1546,8 +1560,9 @@ export const ru: Translations = {
       'pan-right': 'Панорама вправо',
       'pan-up': 'Панорама вверх',
       'pan-down': 'Панорама вниз',
+      drift: 'Дрейф',
     },
-    transitionLabels: { cut: 'Склейка', fade: 'Растворение', slide: 'Сдвиг', zoom: 'Зум', wipe: 'Шторка' },
+    transitionLabels: { cut: 'Склейка', fade: 'Растворение', slide: 'Сдвиг', zoom: 'Зум', wipe: 'Шторка', glitch: 'Глитч', flash: 'Вспышка', blur: 'Размытие', 'push-up': 'Сдвиг вверх' },
     renderAspect: 'Формат видео',
     quality: 'Разрешение',
     fps: 'Кадров в секунду',
@@ -1559,6 +1574,20 @@ export const ru: Translations = {
     renders: 'Готовые видео',
     download: 'Скачать',
     webmNote: 'Браузер не умеет MP4, поэтому видео сохранено в WebM. Для MP4 откройте ONEFLOW в Chrome или Edge.',
+    style: 'Стиль видео',
+    styleAuto: 'Авто — стиль выберет Claude',
+    suggestStyles: 'Предложи стили',
+    moreStyles: 'Ещё стили',
+    suggestingStyles: (time) => `Claude подбирает стили… ${time}`,
+    stylesTitle: 'Стилевые направления',
+    stylesHint: 'Выберите стиль — следующие раскадровки будут сделаны в нём. Пример кадра собран из ваших материалов.',
+    useStyle: 'Выбрать',
+    styleChosen: 'Выбран',
+    clearStyle: 'Сбросить стиль',
+    hideStyles: 'Скрыть',
+    paceLabels: { calm: 'Спокойный темп', medium: 'Средний темп', fast: 'Быстрый темп' },
+    fontLabels: { sans: 'Гротеск', display: 'Жирный гротеск', serif: 'Антиква', mono: 'Моноширинный' },
+    fxLabels: { grain: 'Зерно', glow: 'Свечение', vignette: 'Виньетка', letterbox: 'Кинополосы', duotone: 'Дуотон' },
   },
   musicAudio: {
     title: 'Музыка и аудио',
@@ -2660,8 +2689,9 @@ export const en: Translations = {
       'pan-right': 'Pan right',
       'pan-up': 'Pan up',
       'pan-down': 'Pan down',
+      drift: 'Drift',
     },
-    transitionLabels: { cut: 'Cut', fade: 'Dissolve', slide: 'Slide', zoom: 'Zoom', wipe: 'Wipe' },
+    transitionLabels: { cut: 'Cut', fade: 'Dissolve', slide: 'Slide', zoom: 'Zoom', wipe: 'Wipe', glitch: 'Glitch', flash: 'Flash', blur: 'Blur', 'push-up': 'Push up' },
     renderAspect: 'Video frame',
     quality: 'Resolution',
     fps: 'Frames per second',
@@ -2673,6 +2703,20 @@ export const en: Translations = {
     renders: 'Rendered videos',
     download: 'Download',
     webmNote: 'This browser can’t encode MP4, so the video was saved as WebM. Open ONEFLOW in Chrome or Edge for MP4.',
+    style: 'Video style',
+    styleAuto: 'Auto — Claude picks the style',
+    suggestStyles: 'Suggest styles',
+    moreStyles: 'More styles',
+    suggestingStyles: (time) => `Claude is picking styles… ${time}`,
+    stylesTitle: 'Style directions',
+    stylesHint: 'Pick a style — the next storyboards will use it. The example frame is built from your materials.',
+    useStyle: 'Use',
+    styleChosen: 'Selected',
+    clearStyle: 'Clear style',
+    hideStyles: 'Hide',
+    paceLabels: { calm: 'Calm pace', medium: 'Medium pace', fast: 'Fast pace' },
+    fontLabels: { sans: 'Grotesque', display: 'Bold grotesque', serif: 'Serif', mono: 'Monospace' },
+    fxLabels: { grain: 'Grain', glow: 'Glow', vignette: 'Vignette', letterbox: 'Letterbox', duotone: 'Duotone' },
   },
   musicAudio: {
     title: 'Music & audio',

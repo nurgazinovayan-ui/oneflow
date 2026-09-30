@@ -34,6 +34,72 @@ function rgba(hex: string, a: number): string {
   return `rgba(${parseInt(h.slice(1, 3), 16)}, ${parseInt(h.slice(3, 5), 16)}, ${parseInt(h.slice(5, 7), 16)}, ${a})`;
 }
 
+const hasFx = (board: MotionStoryboard, fx: string) => Boolean(board.style.fx?.includes(fx as never));
+
+// Deterministic pseudo-random numbers (grain, glitch) so a re-render gives the same video.
+function rng(seed: number) {
+  let x = (seed * 2654435761) >>> 0 || 1;
+  return () => {
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    return ((x >>> 0) % 100000) / 100000;
+  };
+}
+
+let grainTiles: HTMLCanvasElement[] | null = null;
+function grain(): HTMLCanvasElement[] {
+  if (grainTiles) return grainTiles;
+  grainTiles = [0, 1, 2, 3].map((k) => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 192;
+    const g = c.getContext('2d')!;
+    const img = g.createImageData(192, 192);
+    const r = rng(k + 7);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = Math.floor(r() * 255);
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+      img.data[i + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    return c;
+  });
+  return grainTiles;
+}
+
+const letterboxBar = (W: number, H: number) => (H > W ? H * 0.05 : H * 0.09);
+
+// Whole-frame looks from style.fx, drawn over the finished frame.
+function applyFx(ctx: CanvasRenderingContext2D, W: number, H: number, board: MotionStoryboard, frame: number) {
+  ctx.save();
+  if (hasFx(board, 'vignette')) {
+    const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.hypot(W, H) * 0.6);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.5)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+  if (hasFx(board, 'grain')) {
+    const tile = grain()[Math.abs(frame) % 4];
+    const pat = ctx.createPattern(tile, 'repeat');
+    if (pat) {
+      ctx.globalAlpha = 0.09;
+      ctx.globalCompositeOperation = 'overlay';
+      ctx.fillStyle = pat;
+      const k = Math.max(1, Math.min(W, H) / 720);
+      ctx.scale(k, k);
+      ctx.fillRect(0, 0, W / k, H / k);
+    }
+  }
+  ctx.restore();
+  if (hasFx(board, 'letterbox')) {
+    const bar = letterboxBar(W, H);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, bar);
+    ctx.fillRect(0, H - bar, W, bar);
+  }
+}
+
 export function sceneIndexAt(board: MotionStoryboard, t: number): number {
   for (let i = 0; i < board.scenes.length; i++) {
     const s = board.scenes[i];
@@ -128,6 +194,7 @@ function drawMedia(c: Ctx, asset: number | null, x: number, y: number, w: number
   let oy = 0;
   if (camera === 'zoom-in') z = 1 + 0.12 * e;
   else if (camera === 'zoom-out') z = 1.12 - 0.12 * e;
+  else if (camera === 'drift') z = 1.1 + 0.05 * e;
   else if (camera !== 'static') z = 1.12;
   const dw = src.width * cover * z;
   const dh = src.height * cover * z;
@@ -137,7 +204,22 @@ function drawMedia(c: Ctx, asset: number | null, x: number, y: number, w: number
   else if (camera === 'pan-right') ox = -rx * (1 - 2 * e);
   else if (camera === 'pan-up') oy = ry * (1 - 2 * e);
   else if (camera === 'pan-down') oy = -ry * (1 - 2 * e);
+  else if (camera === 'drift') {
+    ox = rx * 0.7 * (1 - 2 * e);
+    oy = ry * 0.7 * (1 - 2 * e);
+  }
+  const duo = hasFx(c.board, 'duotone');
+  if (duo) ctx.filter = `${ctx.filter && ctx.filter !== 'none' ? ctx.filter + ' ' : ''}grayscale(1) contrast(1.15)`;
   ctx.drawImage(src.el, x + w / 2 - dw / 2 + ox, y + h / 2 - dh / 2 + oy, dw, dh);
+  if (duo) {
+    ctx.filter = 'none';
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = c.board.style.accent;
+    ctx.fillRect(x, y, w, h);
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = rgba(c.board.style.bg, 0.45);
+    ctx.fillRect(x, y, w, h);
+  }
   ctx.restore();
 }
 
@@ -198,7 +280,11 @@ function textBlock(c: Ctx, s: MotionScene, local: number, box: TextBox, draw: bo
   const base = ctx.globalAlpha;
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = box.ink;
-  if (box.shadow) {
+  const glow = hasFx(c.board, 'glow');
+  if (glow) {
+    ctx.shadowColor = c.board.style.accent;
+    ctx.shadowBlur = hs * 0.55;
+  } else if (box.shadow) {
     ctx.shadowColor = 'rgba(0,0,0,0.35)';
     ctx.shadowBlur = hs * 0.25;
   }
@@ -246,6 +332,13 @@ function textBlock(c: Ctx, s: MotionScene, local: number, box: TextBox, draw: bo
       let dy = 0;
       if (anim === 'fade-up') dy = (1 - e) * hs * 0.5;
       if (anim === 'slide-left') dx = (1 - e) * c.W * 0.06;
+      if (anim === 'blur-in' && e < 1) ctx.filter = `blur(${((1 - e) * hs * 0.22).toFixed(1)}px)`;
+      if (anim === 'tracking' && e < 1) {
+        const ls = (-0.02 + 0.45 * (1 - e)) * hs;
+        (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${ls.toFixed(2)}px`;
+        const w2 = ctx.measureText(lineText).width;
+        if (box.align === 'center') dx = (lw - w2) / 2;
+      }
       if (anim === 'scale') {
         const sc = 0.86 + 0.14 * e;
         const cx = lx + lw / 2;
@@ -278,7 +371,7 @@ function textBlock(c: Ctx, s: MotionScene, local: number, box: TextBox, draw: bo
   // CTA pill
   if (ctaH) {
     y += gap * 1.4;
-    ctx.shadowColor = 'transparent';
+    if (!glow) ctx.shadowColor = 'transparent';
     setFont(c, hs * 0.4, 650);
     const tw = ctx.measureText(s.cta).width;
     const pw = tw + hs * 1.1;
@@ -324,7 +417,8 @@ function drawScene(c: Ctx, s: MotionScene, local: number) {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  switch (s.layout) {
+  const layout = s.layout === 'grid' && !s.assets.length ? (s.asset === null ? 'text-only' : 'full') : s.layout;
+  switch (layout) {
     case 'full': {
       drawMedia(c, s.asset, 0, 0, W, H, s.camera, p);
       if (hasText) {
@@ -452,56 +546,104 @@ function drawScene(c: Ctx, s: MotionScene, local: number) {
 
 // One frame of the video at time t, transitions included.
 export function drawFrame(ctx: CanvasRenderingContext2D, W: number, H: number, board: MotionStoryboard, sources: MotionSources, t: number) {
+  const bar = hasFx(board, 'letterbox') ? letterboxBar(W, H) : 0;
+  ctx.save();
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+  ctx.translate(0, bar);
+  drawTimeline(ctx, W, H - bar * 2, board, sources, t);
+  ctx.restore();
+  applyFx(ctx, W, H, board, Math.floor(t * 24));
+}
+
+function drawTimeline(ctx: CanvasRenderingContext2D, W: number, H: number, board: MotionStoryboard, sources: MotionSources, t: number) {
   const c: Ctx = { ctx, W, H, board, sources, still: false };
   const i = sceneIndexAt(board, t);
   const s = board.scenes[i];
   const local = Math.max(0, t - s.start);
   const T = transitionLength(s, i === 0);
   ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, W, H);
+  ctx.clip();
   ctx.globalAlpha = 1;
   if (T > 0 && local < T) {
-    const e = easeInOut(local / T);
+    const p = local / T;
+    const e = easeInOut(p);
     if (i === 0) {
       ctx.fillStyle = s.bg || board.style.bg;
       ctx.fillRect(0, 0, W, H);
-      ctx.globalAlpha = easeOut(local / T);
+      ctx.globalAlpha = easeOut(p);
       drawScene(c, s, local);
     } else {
       const prev = board.scenes[i - 1];
       const prevLocal = prev.dur + local;
-      if (s.transition === 'slide') {
-        ctx.save();
-        ctx.translate(-W * 0.3 * e, 0);
-        drawScene(c, prev, prevLocal);
-        ctx.restore();
-        ctx.save();
-        ctx.translate(W * (1 - e), 0);
-        drawScene(c, s, local);
-        ctx.restore();
-      } else if (s.transition === 'zoom') {
-        drawScene(c, prev, prevLocal);
-        ctx.save();
-        ctx.globalAlpha = e;
-        const z = 1.15 - 0.15 * e;
-        ctx.translate(W / 2, H / 2);
-        ctx.scale(z, z);
-        ctx.translate(-W / 2, -H / 2);
-        drawScene(c, s, local);
-        ctx.restore();
-      } else if (s.transition === 'wipe') {
-        drawScene(c, prev, prevLocal);
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(0, 0, W * e, H);
-        ctx.clip();
-        drawScene(c, s, local);
-        ctx.restore();
-        ctx.fillStyle = board.style.accent;
-        ctx.fillRect(W * e - Math.min(W, H) * 0.01, 0, Math.min(W, H) * 0.01, H);
-      } else {
-        drawScene(c, prev, prevLocal);
-        ctx.globalAlpha = e;
-        drawScene(c, s, local);
+      switch (s.transition) {
+        case 'slide':
+        case 'push-up': {
+          const up = s.transition === 'push-up';
+          ctx.save();
+          ctx.translate(up ? 0 : -W * 0.3 * e, up ? -H * 0.3 * e : 0);
+          drawScene(c, prev, prevLocal);
+          ctx.restore();
+          ctx.save();
+          ctx.translate(up ? 0 : W * (1 - e), up ? H * (1 - e) : 0);
+          drawScene(c, s, local);
+          ctx.restore();
+          break;
+        }
+        case 'zoom': {
+          drawScene(c, prev, prevLocal);
+          ctx.save();
+          ctx.globalAlpha = e;
+          const z = 1.15 - 0.15 * e;
+          ctx.translate(W / 2, H / 2);
+          ctx.scale(z, z);
+          ctx.translate(-W / 2, -H / 2);
+          drawScene(c, s, local);
+          ctx.restore();
+          break;
+        }
+        case 'wipe': {
+          drawScene(c, prev, prevLocal);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(0, 0, W * e, H);
+          ctx.clip();
+          drawScene(c, s, local);
+          ctx.restore();
+          ctx.fillStyle = board.style.accent;
+          ctx.fillRect(W * e - Math.min(W, H) * 0.01, 0, Math.min(W, H) * 0.01, H);
+          break;
+        }
+        case 'flash': {
+          if (p < 0.5) drawScene(c, prev, prevLocal);
+          else drawScene(c, s, local);
+          ctx.globalAlpha = 1 - Math.abs(2 * p - 1);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, W, H);
+          break;
+        }
+        case 'blur': {
+          const amount = Math.min(W, H) * 0.03 * (1 - Math.abs(2 * p - 1));
+          ctx.filter = `blur(${amount.toFixed(1)}px)`;
+          drawScene(c, prev, prevLocal);
+          ctx.globalAlpha = e;
+          drawScene(c, s, local);
+          ctx.filter = 'none';
+          break;
+        }
+        case 'glitch': {
+          if (p < 0.5) drawScene(c, prev, prevLocal);
+          else drawScene(c, s, local);
+          glitch(ctx, W, H, Math.sin(Math.PI * p), Math.floor(t * 30), board.style.accent);
+          break;
+        }
+        default: {
+          drawScene(c, prev, prevLocal);
+          ctx.globalAlpha = e;
+          drawScene(c, s, local);
+        }
       }
     }
   } else {
@@ -510,12 +652,49 @@ export function drawFrame(ctx: CanvasRenderingContext2D, W: number, H: number, b
   ctx.restore();
 }
 
+// Digital-glitch transition: horizontal bands of the frame knocked sideways, a colour-split band
+// and a stripe of the accent colour. amount 0…1.
+function glitch(ctx: CanvasRenderingContext2D, W: number, H: number, amount: number, seed: number, accent: string) {
+  if (amount <= 0.02) return;
+  const r = rng(seed + 11);
+  const canvas = ctx.canvas;
+  const m = ctx.getTransform();
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const oy = m.f;
+  const bands = 5 + Math.floor(r() * 5);
+  for (let k = 0; k < bands; k++) {
+    const y = oy + r() * H;
+    const h = Math.max(2, r() * H * 0.08);
+    const dx = (r() - 0.5) * W * 0.12 * amount;
+    ctx.drawImage(canvas, 0, y, W, h, dx, y, W, h);
+  }
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = 0.55 * amount;
+  const y2 = oy + r() * H * 0.8;
+  const h2 = H * (0.1 + r() * 0.15);
+  ctx.drawImage(canvas, 0, y2, W, h2, W * 0.012 * amount, y2, W, h2);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 0.8 * amount;
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, oy + r() * H, W, Math.max(2, H * 0.006));
+  ctx.restore();
+}
+
 // The static storyboard frame of one scene: everything settled, no transition.
 export function drawStill(ctx: CanvasRenderingContext2D, W: number, H: number, board: MotionStoryboard, sources: MotionSources, index: number) {
   const s = board.scenes[index];
+  const bar = hasFx(board, 'letterbox') ? letterboxBar(W, H) : 0;
   ctx.save();
-  drawScene({ ctx, W, H, board, sources, still: true }, s, Math.min(s.dur * 0.5, 1));
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+  ctx.translate(0, bar);
+  ctx.beginPath();
+  ctx.rect(0, 0, W, H - bar * 2);
+  ctx.clip();
+  drawScene({ ctx, W, H: H - bar * 2, board, sources, still: true }, s, Math.min(s.dur * 0.5, 1));
   ctx.restore();
+  applyFx(ctx, W, H, board, 0);
 }
 
 // Frame size for an aspect ratio at a quality (short side), rounded to even numbers for H.264.

@@ -1,19 +1,23 @@
 // Deploy in Supabase Studio → Edge Functions → Create a new function → name it
 // "motion-storyboard" → paste this file → Deploy. Keep "Verify JWT" ON (default).
 // Secret needed: OPENROUTER_API_KEY — the same key generate-*/evaluate-creative already use.
-// Requires the generation_log table (see admin-list-generations) — every storyboard is logged
-// there with its real OpenRouter cost, like every other paid call.
+// Requires the generation_log table (see admin-list-generations) — every call is logged there
+// with its real OpenRouter cost, like every other paid call.
 //
 // Motion Engine (src/components/MotionEnginePanel.tsx): the user's photos, video keyframes and
-// brief go to Claude Opus 5.5, which answers with a storyboard as JSON — scenes with timing,
-// layout, which asset each scene uses, on-screen text, camera move and transition. The client
-// draws the static storyboard and later renders the actual video from the same JSON in the
-// browser (src/motion/render.ts), so this function never touches video itself.
+// brief go to Claude Opus 5.5. Two modes:
+//   mode 'storyboard' (default) → a storyboard as JSON — scenes with timing, layout, which asset
+//     each scene uses, on-screen text, camera move, transition — plus the video's look (palette,
+//     font, effects). The client draws the static board and renders the video from the same JSON
+//     in the browser (src/motion/render.ts); this function never touches video itself.
+//   mode 'styles' → 4 distinct style directions for this brief; the one the user picks is sent
+//     back as `style` on later storyboard calls and pins their look.
 //
-// Body: { brief, duration, aspect, lang?, assets: [{ kind, name, duration?, frames: [dataUrl] }],
-//         previous?: string[] }  — previous = one-line summaries of the variants already made,
-//         so "Ещё вариант" asks for something genuinely different rather than a reshuffle.
-// → { storyboard, costUsd }
+// Body: { mode?, brief, duration, aspect, assets: [{ kind, name, duration?, frames: [dataUrl] }],
+//         previous?: string[], style?: StyleDirection }
+//   previous = one-line summaries of what was already made (variants or style names), so a new
+//   call asks for something genuinely different rather than a reshuffle.
+// → { storyboard, costUsd } | { styles, costUsd }
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -34,10 +38,12 @@ const MIN_DURATION = 3;
 const MAX_DURATION = 120;
 
 const LAYOUTS = ['full', 'split-left', 'split-right', 'center-card', 'grid', 'text-only', 'caption-bottom'] as const;
-const CAMERAS = ['static', 'zoom-in', 'zoom-out', 'pan-left', 'pan-right', 'pan-up', 'pan-down'] as const;
-const TEXT_ANIMS = ['fade-up', 'slide-left', 'scale', 'mask-up', 'words', 'type'] as const;
-const TRANSITIONS = ['cut', 'fade', 'slide', 'zoom', 'wipe'] as const;
+const CAMERAS = ['static', 'zoom-in', 'zoom-out', 'pan-left', 'pan-right', 'pan-up', 'pan-down', 'drift'] as const;
+const TEXT_ANIMS = ['fade-up', 'slide-left', 'scale', 'mask-up', 'words', 'type', 'blur-in', 'tracking'] as const;
+const TRANSITIONS = ['cut', 'fade', 'slide', 'zoom', 'wipe', 'glitch', 'flash', 'blur', 'push-up'] as const;
 const FONTS = ['sans', 'serif', 'mono', 'display'] as const;
+const FX = ['grain', 'glow', 'vignette', 'letterbox', 'duotone'] as const;
+const PACES = ['calm', 'medium', 'fast'] as const;
 
 const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -59,64 +65,117 @@ async function getCaller(req: Request): Promise<{ id: string; email: string } | 
   return { id: data.user.id, email: data.user.email ?? '' };
 }
 
-const SYSTEM_PROMPT = `Ты — моушн-дизайнер и режиссёр рекламных роликов уровня дорогих SaaS-брендов. По материалам пользователя (фото, кадры из видео, текст задачи) ты придумываешь раскадровку короткого ролика, который потом автоматически анимирует движок. Движок умеет только то, что описано в схеме ниже, — не придумывай другие эффекты.
+// What the renderer can do — shared by both prompts so Claude never asks for an effect that
+// doesn't exist.
+const ENGINE = `Возможности движка (используй только их):
+- layout: full — материал на весь кадр, текст поверх; split-left/split-right — материал на половине кадра (слева/справа, в вертикальном формате — сверху/снизу), текст на другой половине; center-card — материал карточкой по центру на цветном фоне; grid — 2–4 материала сеткой; text-only — только текст на фоне; caption-bottom — материал на весь кадр, текст плашкой снизу.
+- camera (движение по материалу внутри сцены): static, zoom-in, zoom-out, pan-left, pan-right, pan-up, pan-down, drift (медленный диагональный дрейф с лёгким наездом).
+- textAnim (как появляется текст): fade-up, slide-left, scale, mask-up (строки выезжают из-под маски), words (по словам), type (печатная машинка), blur-in (из размытия в резкость), tracking (буквы сходятся из широкой разрядки).
+- transition (как сцена сменяет предыдущую): cut, fade, slide, zoom, wipe (шторка акцентным цветом), glitch (цифровой сбой с RGB-сдвигом), flash (вспышка), blur (через размытие), push-up (сдвиг вверх).
+- fx (эффекты на весь ролик, 0–3 шт.): grain (плёночное зерно), glow (неоновое свечение текста и акцентов), vignette (затемнение краёв), letterbox (кинематографичные чёрные полосы), duotone (материалы перекрашены в два цвета стиля).
+- font: sans (современный гротеск), display (жирный плотный гротеск для крупных заголовков), serif (антиква, премиально/редакционно), mono (моноширинный, tech).`;
+
+const STORYBOARD_PROMPT = `Ты — моушн-дизайнер и режиссёр рекламных роликов уровня дорогих SaaS-брендов. По материалам пользователя (фото, кадры из видео, текст задачи) ты придумываешь раскадровку короткого ролика, который потом автоматически анимирует движок.
+
+${ENGINE}
 
 Ответь СТРОГО одним JSON-объектом без markdown и пояснений:
 {
   "title": "короткое название идеи ролика",
   "concept": "1–2 предложения: в чём идея и почему она сработает",
-  "style": { "bg": "#RRGGBB", "ink": "#RRGGBB", "accent": "#RRGGBB", "font": "sans|serif|mono|display", "mood": "2–4 слова" },
+  "style": { "bg": "#RRGGBB", "ink": "#RRGGBB", "accent": "#RRGGBB", "font": "sans|serif|mono|display", "mood": "2–4 слова", "fx": ["..."] },
   "scenes": [
     {
       "dur": <секунды, число>,
-      "layout": "full|split-left|split-right|center-card|grid|text-only|caption-bottom",
+      "layout": "...",
       "asset": <номер материала с 0 или null>,
       "assets": [<номера для layout grid, 2–4 шт.>],
       "headline": "главный текст сцены (коротко, до ~40 символов) или пустая строка",
       "sub": "второстепенный текст (до ~80 символов) или пустая строка",
       "cta": "текст кнопки-призыва (только в финальной сцене, иначе пустая строка)",
-      "camera": "static|zoom-in|zoom-out|pan-left|pan-right|pan-up|pan-down",
-      "textAnim": "fade-up|slide-left|scale|mask-up|words|type",
-      "transition": "cut|fade|slide|zoom|wipe",
+      "camera": "...",
+      "textAnim": "...",
+      "transition": "...",
       "bg": "#RRGGBB или пустая строка",
       "note": "одна фраза для пользователя: что происходит в кадре и зачем"
     }
   ]
 }
 
-Что значат поля:
-- layout: full — материал на весь кадр, текст поверх; split-left/split-right — материал на половине кадра (слева/справа), текст на другой половине; center-card — материал карточкой по центру на цветном фоне; grid — 2–4 материала сеткой; text-only — только текст на фоне; caption-bottom — материал на весь кадр, текст плашкой снизу.
-- camera — движение по материалу внутри сцены. transition — как сцена появляется после предыдущей (у первой сцены — как появляется из чёрного/фона).
-- Сумма dur всех сцен должна быть равна длительности ролика. Обычно сцена 1.5–5 секунд, динамичнее — короче.
-
 Правила:
+- Сумма dur всех сцен должна быть равна длительности ролика. Обычно сцена 1.5–5 секунд, динамичнее — короче.
 - Используй материалы пользователя; каждый материал, который он дал, по возможности хотя бы раз. Номера материалов — как в списке «Материал N». Видео-материалы в ролике проигрываются, фото — анимируются камерой.
 - Весь текст в кадре — на языке задачи пользователя (по умолчанию русский), живой рекламный язык, без воды. Не выдумывай цены, скидки, факты и обещания, которых нет в задаче.
 - Композиция под указанный формат кадра: для вертикального — крупные тексты и layout full/caption-bottom/center-card, для горизонтального — можно split.
 - Цвета стиля бери из материалов/бренда; ink должен хорошо читаться на bg.
+- Эффекты и переходы — осмысленно, под настроение: glitch/flash хороши для дерзкого и tech, blur/fade — для спокойного и премиального. Не ставь glitch в каждую сцену.
 - Финальная сцена — сильная точка: логотип/название/призыв, если это уместно по задаче.`;
 
-type Frame = { kind: 'image' | 'video'; name: string; duration?: number; frames: string[] };
+const STYLES_PROMPT = `Ты — арт-директор моушн-роликов. По материалам и задаче пользователя предложи 4 РАЗНЫХ стилевых направления для рекламного ролика — от ожидаемого до смелого. Направления должны заметно отличаться палитрой, шрифтом, темпом и эффектами, но каждое должно подходить бренду и задаче.
+
+${ENGINE}
+
+Ответь СТРОГО одним JSON-объектом без markdown и пояснений:
+{
+  "styles": [
+    {
+      "name": "короткое название направления, 1–3 слова",
+      "description": "одно предложение: какое ощущение и почему подходит",
+      "sample": "пример короткой фразы в кадре в этом стиле (до ~30 символов, на языке задачи, без выдуманных фактов)",
+      "style": { "bg": "#RRGGBB", "ink": "#RRGGBB", "accent": "#RRGGBB", "font": "...", "mood": "2–4 слова", "fx": ["..."] },
+      "pace": "calm|medium|fast",
+      "layouts": ["2–4 любимых layout этого стиля"],
+      "cameras": ["2–3 camera"],
+      "textAnims": ["1–3 textAnim"],
+      "transitions": ["1–3 transition"]
+    }
+  ]
+}
+ink должен хорошо читаться на bg. Цвета бери из материалов/бренда, если они есть.`;
+
+type AssetIn = { kind: 'image' | 'video'; name: string; duration?: number; frames: string[] };
+
+const pickOne = <T extends string>(v: unknown, list: readonly T[], def: T): T => ((list as readonly string[]).includes(String(v)) ? (v as T) : def);
+const pickMany = <T extends string>(v: unknown, list: readonly T[], max: number): T[] =>
+  [...new Set((Array.isArray(v) ? v : []).filter((x) => (list as readonly string[]).includes(String(x))))].slice(0, max) as T[];
+const hex = (v: unknown, def: string) => (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v.trim()) ? v.trim().toLowerCase() : def);
+const str = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
+
+function normStyle(raw: any) {
+  return {
+    bg: hex(raw?.bg, '#0f1222'),
+    ink: hex(raw?.ink, '#ffffff'),
+    accent: hex(raw?.accent, '#3b5cff'),
+    font: pickOne(raw?.font, FONTS, 'sans'),
+    mood: str(raw?.mood, 60),
+    fx: pickMany(raw?.fx, FX, 3),
+  };
+}
+
+function normDirection(raw: any, i: number) {
+  return {
+    id: `s${Date.now().toString(36)}${i}`,
+    name: str(raw?.name, 40) || `Стиль ${i + 1}`,
+    description: str(raw?.description, 220),
+    sample: str(raw?.sample, 60),
+    style: normStyle(raw?.style),
+    pace: pickOne(raw?.pace, PACES, 'medium'),
+    layouts: pickMany(raw?.layouts, LAYOUTS, 4),
+    cameras: pickMany(raw?.cameras, CAMERAS, 3),
+    textAnims: pickMany(raw?.textAnims, TEXT_ANIMS, 3),
+    transitions: pickMany(raw?.transitions, TRANSITIONS, 3),
+  };
+}
 
 // Clamp everything the model says to what the renderer understands, so a slightly-off answer
-// still renders instead of breaking the client.
-function normalize(raw: any, duration: number, assetCount: number) {
-  const pick = <T extends string>(v: unknown, list: readonly T[], def: T): T => (list as readonly string[]).includes(String(v)) ? (v as T) : def;
-  const hex = (v: unknown, def: string) => (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v.trim()) ? v.trim().toLowerCase() : def);
-  const str = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
+// still renders instead of breaking the client. A pinned style direction overrides the look.
+function normalize(raw: any, duration: number, assetCount: number, pinned: ReturnType<typeof normDirection> | null) {
   const idx = (v: unknown) => (Number.isInteger(v) && (v as number) >= 0 && (v as number) < assetCount ? (v as number) : null);
-
-  const style = {
-    bg: hex(raw?.style?.bg, '#0f1222'),
-    ink: hex(raw?.style?.ink, '#ffffff'),
-    accent: hex(raw?.style?.accent, '#3b5cff'),
-    font: pick(raw?.style?.font, FONTS, 'sans'),
-    mood: str(raw?.style?.mood, 60),
-  };
+  const style = pinned ? { ...pinned.style } : normStyle(raw?.style);
   let scenes = (Array.isArray(raw?.scenes) ? raw.scenes : []).slice(0, 24).map((s: any) => {
     const assets = (Array.isArray(s?.assets) ? s.assets : []).map(idx).filter((v: number | null): v is number => v !== null).slice(0, 4);
     const asset = idx(s?.asset) ?? (assets.length ? assets[0] : null);
-    let layout = pick(s?.layout, LAYOUTS, asset === null ? 'text-only' : 'full');
+    let layout = pickOne(s?.layout, LAYOUTS, asset === null ? 'text-only' : 'full');
     if (layout === 'grid' && assets.length < 2) layout = asset === null ? 'text-only' : 'full';
     if (layout !== 'text-only' && layout !== 'grid' && asset === null) layout = 'text-only';
     return {
@@ -127,9 +186,9 @@ function normalize(raw: any, duration: number, assetCount: number) {
       headline: str(s?.headline, 90),
       sub: str(s?.sub, 160),
       cta: str(s?.cta, 40),
-      camera: pick(s?.camera, CAMERAS, 'zoom-in'),
-      textAnim: pick(s?.textAnim, TEXT_ANIMS, 'fade-up'),
-      transition: pick(s?.transition, TRANSITIONS, 'fade'),
+      camera: pickOne(s?.camera, CAMERAS, 'zoom-in'),
+      textAnim: pickOne(s?.textAnim, TEXT_ANIMS, 'fade-up'),
+      transition: pickOne(s?.transition, TRANSITIONS, 'fade'),
       bg: hex(s?.bg, ''),
       note: str(s?.note, 200),
     };
@@ -163,10 +222,11 @@ Deno.serve(async (req) => {
     if (!OPENROUTER_API_KEY) return json({ error: 'OPENROUTER_API_KEY is not configured.' }, 500);
 
     const body = await req.json().catch(() => ({}));
+    const mode = body.mode === 'styles' ? 'styles' : 'storyboard';
     const brief = typeof body.brief === 'string' ? body.brief.trim().slice(0, MAX_BRIEF) : '';
     const duration = Math.min(MAX_DURATION, Math.max(MIN_DURATION, Math.round(Number(body.duration) || 15)));
     const aspect = typeof body.aspect === 'string' && /^\d{1,2}:\d{1,2}$/.test(body.aspect) ? body.aspect : '16:9';
-    const assets: Frame[] = (Array.isArray(body.assets) ? body.assets : []).slice(0, MAX_ASSETS).map((a: any) => ({
+    const assets: AssetIn[] = (Array.isArray(body.assets) ? body.assets : []).slice(0, MAX_ASSETS).map((a: any) => ({
       kind: a?.kind === 'video' ? 'video' : 'image',
       name: String(a?.name ?? '').slice(0, 80),
       duration: Number(a?.duration) || undefined,
@@ -175,19 +235,28 @@ Deno.serve(async (req) => {
         .slice(0, 3),
     }));
     const previous: string[] = (Array.isArray(body.previous) ? body.previous : []).filter((p: unknown) => typeof p === 'string').slice(-12).map((p: string) => p.slice(0, 300));
+    const pinned = mode === 'storyboard' && body.style && typeof body.style === 'object' ? normDirection(body.style, 0) : null;
+    if (pinned) pinned.name = str(body.style.name, 40) || pinned.name;
     if (!brief && !assets.length) return json({ error: 'Добавьте материалы или опишите задачу.' }, 400);
 
     const [w, h] = aspect.split(':').map(Number);
     const orientation = w > h ? 'горизонтальный' : w < h ? 'вертикальный' : 'квадратный';
-    const content: ({ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } })[] = [{
-      type: 'text',
-      text: [
-        `Задача пользователя: ${brief || '(не указана — придумай ролик по материалам)'}`,
-        `Длительность ролика: ${duration} с. Формат кадра: ${aspect} (${orientation}).`,
-        assets.length ? `Материалов: ${assets.length}.` : 'Материалов нет — делай ролик только из текста и графики (layout text-only).',
-        previous.length ? `Уже сделанные варианты (придумай заметно другую идею, структуру и подачу):\n- ${previous.join('\n- ')}` : '',
-      ].filter(Boolean).join('\n'),
-    }];
+    const lines = [
+      `Задача пользователя: ${brief || '(не указана — придумай по материалам)'}`,
+      `Длительность ролика: ${duration} с. Формат кадра: ${aspect} (${orientation}).`,
+      assets.length ? `Материалов: ${assets.length}.` : 'Материалов нет — только текст и графика (layout text-only).',
+    ];
+    if (pinned) {
+      lines.push(
+        `Выбранный пользователем стиль «${pinned.name}» — держись его строго: палитра bg ${pinned.style.bg}, ink ${pinned.style.ink}, accent ${pinned.style.accent}, font ${pinned.style.font}, fx [${pinned.style.fx.join(', ')}], темп ${pinned.pace}` +
+          `${pinned.layouts.length ? `, любимые layout: ${pinned.layouts.join(', ')}` : ''}${pinned.cameras.length ? `, camera: ${pinned.cameras.join(', ')}` : ''}` +
+          `${pinned.textAnims.length ? `, textAnim: ${pinned.textAnims.join(', ')}` : ''}${pinned.transitions.length ? `, transition: ${pinned.transitions.join(', ')}` : ''}. ${pinned.description}`
+      );
+    }
+    if (previous.length) {
+      lines.push(`${mode === 'styles' ? 'Уже предложенные направления' : 'Уже сделанные варианты'} (придумай заметно другое):\n- ${previous.join('\n- ')}`);
+    }
+    const content: ({ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } })[] = [{ type: 'text', text: lines.join('\n') }];
     let budget = MAX_FRAMES_TOTAL;
     assets.forEach((a, i) => {
       content.push({ type: 'text', text: `Материал ${i}: ${a.kind === 'video' ? `видео${a.duration ? `, ${a.duration.toFixed(1)} с` : ''}${a.frames.length > 1 ? `, ${a.frames.length} кадра` : ''}` : 'фото'} «${a.name}»` });
@@ -199,29 +268,34 @@ Deno.serve(async (req) => {
       headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: MODEL,
-        messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content }],
-        max_tokens: 6000,
-        temperature: previous.length ? 1 : 0.8,
+        messages: [{ role: 'system', content: mode === 'styles' ? STYLES_PROMPT : STORYBOARD_PROMPT }, { role: 'user', content }],
+        max_tokens: mode === 'styles' ? 3000 : 6000,
+        temperature: mode === 'styles' || previous.length ? 1 : 0.8,
         usage: { include: true },
       }),
     });
     if (!res.ok) {
       console.error('OpenRouter error', res.status, await res.text());
-      return json({ error: 'Не удалось получить раскадровку от модели. Попробуйте ещё раз.' }, 502);
+      return json({ error: 'Не удалось получить ответ от модели. Попробуйте ещё раз.' }, 502);
     }
     const data = await res.json();
     const text: string = data.choices?.[0]?.message?.content ?? '';
     const usage = data.usage ?? {};
     const costUsd = Number(usage.cost) || (Number(usage.prompt_tokens) || 0) * PRICE_IN + (Number(usage.completion_tokens) || 0) * PRICE_OUT;
+    const parsed = extractJson(text) as any;
 
-    const storyboard = normalize(extractJson(text), duration, assets.length);
+    const result = mode === 'styles'
+      ? { styles: (Array.isArray(parsed?.styles) ? parsed.styles : []).slice(0, 6).map(normDirection) }
+      : { storyboard: normalize(parsed, duration, assets.length, pinned) };
+    if ('styles' in result && !result.styles.length) throw new Error('Модель не предложила ни одного стиля.');
+
     const { error: logError } = await supabaseAdmin.from('generation_log')
       .insert({ user_id: caller.id, email: caller.email, model: MODEL_LABEL, category: 'motion', cost_usd: costUsd });
     if (logError) console.error('Failed to log generation', logError);
 
-    return json({ storyboard, costUsd });
+    return json({ ...result, costUsd });
   } catch (err) {
     console.error(err);
-    return json({ error: 'Не удалось сделать раскадровку. Попробуйте ещё раз.' }, 500);
+    return json({ error: 'Не удалось выполнить запрос. Попробуйте ещё раз.' }, 500);
   }
 });

@@ -3,10 +3,36 @@
 // reviews and the exact script src/motion/render.ts animates, so what they approve is what renders.
 
 export type MotionLayout = 'full' | 'split-left' | 'split-right' | 'center-card' | 'grid' | 'text-only' | 'caption-bottom';
-export type MotionCamera = 'static' | 'zoom-in' | 'zoom-out' | 'pan-left' | 'pan-right' | 'pan-up' | 'pan-down';
-export type MotionTextAnim = 'fade-up' | 'slide-left' | 'scale' | 'mask-up' | 'words' | 'type';
-export type MotionTransition = 'cut' | 'fade' | 'slide' | 'zoom' | 'wipe';
+export type MotionCamera = 'static' | 'zoom-in' | 'zoom-out' | 'pan-left' | 'pan-right' | 'pan-up' | 'pan-down' | 'drift';
+export type MotionTextAnim = 'fade-up' | 'slide-left' | 'scale' | 'mask-up' | 'words' | 'type' | 'blur-in' | 'tracking';
+export type MotionTransition = 'cut' | 'fade' | 'slide' | 'zoom' | 'wipe' | 'glitch' | 'flash' | 'blur' | 'push-up';
 export type MotionFont = 'sans' | 'serif' | 'mono' | 'display';
+// Whole-video looks layered over every frame (src/motion/render.ts → applyFx).
+export type MotionFx = 'grain' | 'glow' | 'vignette' | 'letterbox' | 'duotone';
+export type MotionPace = 'calm' | 'medium' | 'fast';
+
+export interface MotionStyle {
+  bg: string;
+  ink: string;
+  accent: string;
+  font: MotionFont;
+  mood: string;
+  fx?: MotionFx[]; // absent on storyboards made before effects existed
+}
+
+// A style direction Claude proposes on «Предложи стили»; picking one pins the next storyboards to it.
+export interface MotionStyleDirection {
+  id: string;
+  name: string;
+  description: string;
+  sample: string; // a short on-screen line in this voice, used on the style card's example frame
+  style: MotionStyle;
+  pace: MotionPace;
+  layouts: MotionLayout[];
+  cameras: MotionCamera[];
+  textAnims: MotionTextAnim[];
+  transitions: MotionTransition[];
+}
 
 export interface MotionScene {
   start: number;
@@ -27,7 +53,7 @@ export interface MotionScene {
 export interface MotionStoryboard {
   title: string;
   concept: string;
-  style: { bg: string; ink: string; accent: string; font: MotionFont; mood: string };
+  style: MotionStyle;
   duration: number;
   scenes: MotionScene[];
 }
@@ -49,6 +75,7 @@ export interface MotionVariant {
   aspect: string; // the frame the board was composed for; rendering may pick another
   assetIds: string[]; // storyboard asset indexes → these assets, frozen at generation time
   costUsd: number;
+  styleName?: string; // the chosen style direction, if one was pinned
 }
 
 export interface MotionStoryboardRequest {
@@ -57,6 +84,15 @@ export interface MotionStoryboardRequest {
   aspect: string;
   assets: { kind: 'image' | 'video'; name: string; duration?: number; frames: string[] }[];
   previous: string[];
+  style?: MotionStyleDirection | null;
+}
+
+export interface MotionStylesRequest {
+  brief: string;
+  duration: number;
+  aspect: string;
+  assets: MotionStoryboardRequest['assets'];
+  previous: string[]; // names of directions already proposed
 }
 
 export const MOTION_DURATIONS = [6, 10, 15, 20, 30, 45, 60] as const;

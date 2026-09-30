@@ -1,5 +1,5 @@
 import type { NodeApi, GenerationLogEntry, AdminMessage, CreativeEvaluationResult, AudioGenParams } from './types';
-import type { MotionScene, MotionStoryboard, MotionStoryboardRequest } from './motion/types';
+import type { MotionScene, MotionStoryboard, MotionStoryboardRequest, MotionStyleDirection, MotionStylesRequest } from './motion/types';
 import { estimateImageCost, estimateVideoCost, DSP_URL, ADMIN_EMAIL } from './types';
 import { useLanguageStore, ru, en } from './i18n';
 
@@ -252,13 +252,15 @@ function mockMotionStoryboard(req: MotionStoryboardRequest): MotionStoryboard {
     { bg: '#12201a', ink: '#f3efe6', accent: '#c8f560', font: 'serif' as const, mood: 'Mock: премиально' },
   ];
   const k = req.previous.length % looks.length;
+  const pinned = req.style;
   const words = req.brief.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
   const head = (i: number, n: number) => words.slice(i * n, i * n + n).join(' ');
   const n = req.assets.length;
-  const layouts: MotionScene['layout'][] = [['full', 'split-left', 'center-card', 'caption-bottom'], ['center-card', 'full', 'split-right', 'caption-bottom'], ['split-right', 'caption-bottom', 'full', 'center-card']][k] as MotionScene['layout'][];
-  const cams: MotionScene['camera'][] = ['zoom-in', 'pan-left', 'zoom-out', 'pan-up', 'pan-right'];
-  const trs: MotionScene['transition'][] = ['fade', 'slide', 'zoom', 'wipe'];
-  const anims: MotionScene['textAnim'][] = ['mask-up', 'words', 'fade-up', 'type', 'scale', 'slide-left'];
+  const layoutsDefault: MotionScene['layout'][] = [['full', 'split-left', 'center-card', 'caption-bottom'], ['center-card', 'full', 'split-right', 'caption-bottom'], ['split-right', 'caption-bottom', 'full', 'center-card']][k] as MotionScene['layout'][];
+  const layouts = pinned?.layouts.length ? pinned.layouts : layoutsDefault;
+  const cams: MotionScene['camera'][] = pinned?.cameras.length ? pinned.cameras : ['zoom-in', 'pan-left', 'drift', 'zoom-out', 'pan-up', 'pan-right'];
+  const trs: MotionScene['transition'][] = pinned?.transitions.length ? pinned.transitions : ['fade', 'slide', 'glitch', 'zoom', 'wipe', 'flash'];
+  const anims: MotionScene['textAnim'][] = pinned?.textAnims.length ? pinned.textAnims : ['mask-up', 'words', 'blur-in', 'fade-up', 'tracking', 'type', 'scale', 'slide-left'];
   const count = Math.max(3, Math.min(8, Math.round(req.duration / 3)));
   const scenes: MotionScene[] = [];
   for (let i = 0; i < count; i++) {
@@ -269,7 +271,7 @@ function mockMotionStoryboard(req: MotionStoryboardRequest): MotionStoryboard {
     scenes.push({
       start: 0,
       dur: req.duration / count,
-      layout: last || asset === null ? 'text-only' : grid ? 'grid' : layouts[i % layouts.length],
+      layout: last || asset === null ? 'text-only' : grid ? 'grid' : layouts[i % layouts.length] === 'grid' ? 'full' : layouts[i % layouts.length],
       asset: last ? null : asset,
       assets: grid ? [0, 1, 2, 3].slice(0, Math.min(4, n)) : [],
       headline: last ? 'ONEFLOW' : head(i, 4) || ['Mock: первая сцена', 'Mock: главное', 'Mock: детали', 'Mock: результат'][i % 4],
@@ -288,7 +290,26 @@ function mockMotionStoryboard(req: MotionStoryboardRequest): MotionStoryboard {
     s.dur = Math.round(s.dur * 100) / 100;
     t += s.dur;
   });
-  return { title: `Mock-вариант ${req.previous.length + 1}`, concept: 'Mock: демо-режим — раскадровку собирает приложение, не модель.', style: looks[k], duration: req.duration, scenes };
+  return {
+    title: `Mock-вариант ${req.previous.length + 1}${pinned ? ` · ${pinned.name}` : ''}`,
+    concept: 'Mock: демо-режим — раскадровку собирает приложение, не модель.',
+    style: pinned ? pinned.style : { ...looks[k], fx: k === 0 ? ['grain'] : k === 2 ? ['vignette', 'letterbox'] : [] },
+    duration: req.duration,
+    scenes,
+  };
+}
+
+// Demo-mode stand-in for the 'styles' mode: four fixed, clearly different directions.
+function mockMotionStyles(req: MotionStylesRequest): MotionStyleDirection[] {
+  const round = req.previous.length;
+  const all: Omit<MotionStyleDirection, 'id'>[] = [
+    { name: 'Тихая роскошь', description: 'Mock: спокойный темп, антиква и много воздуха — дорого и уверенно.', sample: 'Сделано со вкусом', style: { bg: '#141210', ink: '#f3ece0', accent: '#c9a45c', font: 'serif', mood: 'премиально, спокойно', fx: ['grain', 'vignette'] }, pace: 'calm', layouts: ['center-card', 'full', 'text-only'], cameras: ['drift', 'zoom-in'], textAnims: ['blur-in', 'tracking'], transitions: ['fade', 'blur'] },
+    { name: 'Энергичный ритейл', description: 'Mock: быстрый монтаж, крупные надписи и яркий акцент — для акций.', sample: 'Скидка уже здесь', style: { bg: '#ff4b1f', ink: '#ffffff', accent: '#111111', font: 'display', mood: 'громко, быстро', fx: [] }, pace: 'fast', layouts: ['full', 'split-left', 'grid'], cameras: ['zoom-in', 'pan-left'], textAnims: ['words', 'scale'], transitions: ['slide', 'flash', 'push-up'] },
+    { name: 'Tech-неон', description: 'Mock: тёмный фон, неоновое свечение и цифровые сбои — смело и современно.', sample: 'Будущее уже тут', style: { bg: '#07070c', ink: '#e8f7ff', accent: '#00e5ff', font: 'mono', mood: 'tech, дерзко', fx: ['glow', 'grain'] }, pace: 'fast', layouts: ['full', 'split-right', 'text-only'], cameras: ['zoom-out', 'drift'], textAnims: ['type', 'mask-up'], transitions: ['glitch', 'cut'] },
+    { name: 'Кино', description: 'Mock: кинематографичные полосы, дуотон и медленная камера.', sample: 'История начинается', style: { bg: '#0d1b2a', ink: '#f1f1f1', accent: '#e76f51', font: 'sans', mood: 'атмосферно', fx: ['letterbox', 'duotone', 'vignette'] }, pace: 'calm', layouts: ['full', 'caption-bottom'], cameras: ['pan-right', 'drift'], textAnims: ['fade-up', 'blur-in'], transitions: ['fade', 'wipe'] },
+    { name: 'Чистый минимализм', description: 'Mock: светлый фон, карточки и аккуратная типографика.', sample: 'Просто и понятно', style: { bg: '#f6f6fa', ink: '#0f1222', accent: '#3b5cff', font: 'sans', mood: 'чисто, легко', fx: [] }, pace: 'medium', layouts: ['center-card', 'split-left', 'grid'], cameras: ['zoom-in', 'static'], textAnims: ['mask-up', 'fade-up'], transitions: ['slide', 'fade'] },
+  ];
+  return [0, 1, 2, 3].map((i) => ({ ...all[(i + round) % all.length], id: `mock-${round}-${i}` }));
 }
 
 export function installMockApiIfNeeded(): void {
@@ -623,6 +644,13 @@ export function installMockApiIfNeeded(): void {
       bumpMockUsage(costUsd);
       logMockGeneration({ timestamp: Date.now(), model: 'Claude Opus 5.5', category: 'motion', costUsd });
       return { storyboard: mockMotionStoryboard(req), costUsd };
+    },
+    suggestMotionStyles: async (req) => {
+      await new Promise((r) => setTimeout(r, 1000));
+      const costUsd = 0.04;
+      bumpMockUsage(costUsd);
+      logMockGeneration({ timestamp: Date.now(), model: 'Claude Opus 5.5', category: 'motion', costUsd });
+      return { styles: mockMotionStyles(req), costUsd };
     },
     evaluateCreative: async (images): Promise<CreativeEvaluationResult> => {
       await new Promise((r) => setTimeout(r, 900));
