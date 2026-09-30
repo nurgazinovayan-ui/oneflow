@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src https://ayxmfihtrsacfdhszsri.supabase.co; frame-src 'self'; base-uri 'none'; form-action 'none'">
+<title>ONEFLOW Admin</title>
+<style>
+:root { --bg: #f5f5f7; --surface: #fff; --ink: #111114; --ink2: #3c3c46; --muted: #80808c; --line: #e6e6ec; --soft: #f0f0f4; --acc: #3b5cff; --acc-soft: #eef1ff;
+  --good: #16a36a; --warn: #c27c0e; --bad: #d64545; --r: 14px; --f: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif; --m: ui-monospace, 'JetBrains Mono', Menlo, monospace; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0c0c10; --surface: #15151b; --ink: #f2f2f5; --ink2: #c6c6d0; --muted: #8b8b98; --line: #26262f; --soft: #1d1d25; --acc: #6f8bff; --acc-soft: #1b2140; } }
+:root[data-theme="dark"] { --bg: #0c0c10; --surface: #15151b; --ink: #f2f2f5; --ink2: #c6c6d0; --muted: #8b8b98; --line: #26262f; --soft: #1d1d25; --acc: #6f8bff; --acc-soft: #1b2140; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--ink); font: 400 14px/1.45 var(--f); -webkit-font-smoothing: antialiased; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: var(--acc); text-decoration: none; } a:hover { text-decoration: underline; }
+.hide { display: none !important; }
+.mk { width: 26px; height: 18px; flex: none; }
+/* login */
+.login { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+.login form { width: 100%; max-width: 360px; display: grid; gap: 12px; padding: 28px; border-radius: 20px; background: var(--surface); box-shadow: 0 0 0 1px var(--line), 0 30px 60px -40px rgba(0,0,0,.35); }
+.login h1 { display: flex; align-items: center; gap: 10px; font-size: 20px; margin-bottom: 6px; }
+.field { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.in { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); outline: none; }
+.in:focus { border-color: var(--acc); box-shadow: 0 0 0 3px var(--acc-soft); }
+textarea.in { min-height: 90px; resize: vertical; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 14px; border: 0; border-radius: 10px; background: var(--ink); color: var(--bg); font-weight: 600; white-space: nowrap; }
+.btn.s { background: var(--soft); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); font-weight: 500; }
+.btn.a { background: var(--acc); color: #fff; }
+.btn:disabled { opacity: .5; cursor: default; }
+.err { color: var(--bad); font-size: 13px; min-height: 18px; }
+.or { text-align: center; color: var(--muted); font-size: 12px; }
+/* shell */
+.app { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 100vh; }
+.side { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 4px; padding: 18px 12px; border-right: 1px solid var(--line); background: var(--surface); }
+.brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 18px; font-weight: 700; letter-spacing: -.01em; } .brand small { font-weight: 500; color: var(--muted); }
+.nav { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: 0; border-radius: 9px; background: none; text-align: left; color: var(--ink2); font-weight: 500; }
+.nav:hover { background: var(--soft); } .nav.on { background: var(--acc-soft); color: var(--acc); }
+.nav .cnt { margin-left: auto; min-width: 20px; padding: 0 6px; border-radius: 99px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 700; text-align: center; }
+.side .foot { margin-top: auto; display: grid; gap: 6px; padding: 10px; font-size: 12px; color: var(--muted); }
+.main { min-width: 0; padding: 22px 28px 60px; }
+.top { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; } .top h2 { font-size: 22px; letter-spacing: -.02em; margin-right: auto; }
+.upd { font-size: 12px; color: var(--muted); }
+.demo { padding: 3px 8px; border-radius: 6px; background: #fff4d6; color: #7a5200; font-size: 12px; font-weight: 600; white-space: nowrap; }
+/* cards / tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile { padding: 16px; border-radius: var(--r); background: var(--surface); box-shadow: 0 0 0 1px var(--line); }
+.tile span { font-size: 12.5px; color: var(--muted); } .tile b { display: block; margin-top: 6px; font-size: 28px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.tile small { color: var(--muted); font-size: 12px; }
+.card { padding: 18px; border-radius: var(--r); background: var(--surface); box-shadow: 0 0 0 1px var(--line); margin-bottom: 16px; }
+.card h3 { font-size: 14px; margin-bottom: 12px; } .card h3 small { font-weight: 400; color: var(--muted); margin-left: 6px; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; }
+/* chart */
+.chart { position: relative; height: 220px; }
+.chart svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.chart .gl { stroke: var(--line); stroke-width: 1; } .chart .ax { fill: var(--muted); font-size: 11px; font-family: var(--f); }
+.chart .bar { fill: var(--acc); } .chart .hit { fill: transparent; } .chart .hit:hover + .bar, .chart g.on .bar { fill: var(--ink); }
+.tip { position: absolute; pointer-events: none; padding: 7px 10px; border-radius: 8px; background: var(--ink); color: var(--bg); font-size: 12px; white-space: nowrap; transform: translate(-50%, -110%); }
+/* tables */
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; } .tools .in { max-width: 280px; }
+.seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--soft); }
+.seg button { padding: 6px 11px; border: 0; border-radius: 8px; background: none; color: var(--ink2); font-size: 13px; font-weight: 500; } .seg button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.tw { overflow-x: auto; border-radius: var(--r); background: var(--surface); box-shadow: 0 0 0 1px var(--line); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { position: sticky; top: 0; padding: 10px 12px; background: var(--surface); border-bottom: 1px solid var(--line); color: var(--muted); font-weight: 500; font-size: 12.5px; text-align: left; white-space: nowrap; }
+th.s { cursor: pointer; user-select: none; } th.s:hover { color: var(--ink); } th .ar { margin-left: 4px; }
+td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; } tr:last-child td { border-bottom: 0; }
+tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft); }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mono { font-family: var(--m); font-size: 12.5px; }
+.dim { color: var(--muted); }
+.dot { display: inline-flex; align-items: center; gap: 6px; } .dot::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.dot.good::before { background: var(--good); } .dot.warn::before { background: var(--warn); } .dot.bad::before { background: var(--bad); }
+.share { display: inline-block; width: 90px; height: 6px; margin-left: 8px; border-radius: 3px; background: var(--soft); vertical-align: middle; overflow: hidden; } .share i { display: block; height: 100%; border-radius: 3px; background: var(--acc); }
+.empty { padding: 28px; text-align: center; color: var(--muted); }
+/* drawer */
+.drawer { position: fixed; inset: 0 0 0 auto; z-index: 20; width: min(520px, 100vw); overflow-y: auto; padding: 22px; background: var(--surface); box-shadow: -30px 0 60px -30px rgba(0,0,0,.35); }
+.shade { position: fixed; inset: 0; z-index: 19; background: rgba(0,0,0,.25); }
+.drawer h3 { font-size: 18px; margin: 0 40px 4px 0; word-break: break-all; } .drawer .x { position: absolute; right: 16px; top: 16px; }
+.kv { display: grid; grid-template-columns: 140px 1fr; gap: 8px 12px; margin: 16px 0; font-size: 13.5px; } .kv dt { color: var(--muted); }
+.msg { white-space: pre-wrap; padding: 14px; border-radius: 12px; background: var(--soft); margin: 12px 0; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.ok { color: var(--good); font-size: 13px; }
+/* content editor */
+.grp { margin-bottom: 18px; } .grp > h4 { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.ci { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 12px; border-bottom: 1px solid var(--line); }
+.ci:last-child { border-bottom: 0; } .ci .k { font-family: var(--m); font-size: 11.5px; color: var(--muted); word-break: break-all; padding-top: 10px; }
+.ci textarea { min-height: 40px; } .ci .acts { display: grid; gap: 6px; } .ci.changed { background: var(--acc-soft); }
+.tag { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 5px; background: var(--acc); color: #fff; font: 600 10.5px var(--f); vertical-align: 1px; }
+.tag.old { background: var(--warn); }
+@media (max-width: 900px) { .app { grid-template-columns: 1fr; }
+  .side { z-index: 5; height: auto; flex-direction: row; align-items: center; gap: 2px; padding: 8px 12px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); scrollbar-width: none; }
+  .side::-webkit-scrollbar { display: none; } .side .brand { padding: 4px 8px 4px 0; } .brand small, .side .foot > :not(#out) { display: none; }
+  .nav { width: auto; flex: none; white-space: nowrap; padding: 8px 10px; } .side .foot { margin: 0 0 0 auto; padding: 0 0 0 8px; }
+  .main { padding: 16px; } .grid2 { grid-template-columns: 1fr; } .ci { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="mk" viewBox="0 0 76 52"><path fill="currentColor" d="M17 0C18.66 0 20 1.34 20 3V14C20 15.1 20.9 16 22 16H32C33.66 16 35 17.34 35 19V30C35 31.1 35.9 32 37 32H38C39.1 32 40 31.1 40 30V19C40 17.34 41.34 16 43 16H57C58.66 16 60 17.34 60 19V30C60 31.1 60.9 32 62 32H73C74.66 32 76 33.34 76 35V49C76 50.66 74.66 52 73 52H59C57.34 52 56 50.66 56 49V38C56 36.9 55.1 36 54 36H51C49.9 36 49 36.9 49 38V49C49 50.66 47.66 52 46 52H32C30.34 52 29 50.66 29 49V38C29 36.9 28.1 36 27 36H24C22.9 36 22 36.9 22 38V49C22 50.66 20.66 52 19 52H5C3.34 52 2 50.66 2 49V35C2 33.34 3.34 32 5 32H13C14.1 32 15 31.1 15 30V22C15 20.9 14.1 20 13 20H3C1.34 20 0 18.66 0 17V3C0 1.34 1.34 0 3 0H17Z"/></symbol></svg>
+
+<section class="login hide" id="login">
+  <form id="lf" autocomplete="on">
+    <h1><svg class="mk"><use href="#mk"/></svg>ONEFLOW Admin</h1>
+    <label class="field">Email<input class="in" id="le" type="email" autocomplete="username" required></label>
+    <label class="field">Пароль<input class="in" id="lp" type="password" autocomplete="current-password" required></label>
+    <button class="btn" type="submit" id="lb">Войти</button>
+    <p class="or">или</p>
+    <button class="btn s" type="button" id="lg">Войти через Google</button>
+    <p class="err" id="lerr" role="alert"></p>
+  </form>
+</section>
+
+<div class="app hide" id="app">
+  <aside class="side">
+    <div class="brand"><svg class="mk"><use href="#mk"/></svg>ONEFLOW <small>Admin</small></div>
+    <button class="nav on" data-v="overview">Обзор</button>
+    <button class="nav" data-v="users">Пользователи</button>
+    <button class="nav" data-v="gens">Генерации</button>
+    <button class="nav" data-v="support">Поддержка <span class="cnt hide" id="tcnt"></span></button>
+    <button class="nav" data-v="content">Тексты сайта</button>
+    <div class="foot"><span id="who"></span><a href="/" target="_blank" rel="noopener">Открыть сайт ↗</a><button class="btn s" id="out" type="button">Выйти</button></div>
+  </aside>
+  <main class="main">
+    <div class="top"><h2 id="title">Обзор</h2><span class="demo hide" id="demo">Демо-данные</span><span class="upd" id="upd"></span><button class="btn s" id="rf" type="button">Обновить</button></div>
+    <section id="v-overview"></section>
+    <section id="v-users" class="hide"></section>
+    <section id="v-gens" class="hide"></section>
+    <section id="v-support" class="hide"></section>
+    <section id="v-content" class="hide"></section>
+  </main>
+</div>
+<div class="shade hide" id="shade"></div><aside class="drawer hide" id="drawer" role="dialog" aria-modal="true"></aside>
+<iframe id="site" class="hide" title="site" aria-hidden="true" tabindex="-1"></iframe>
+
+<script>
+(() => {
+  const SB = 'https://ayxmfihtrsacfdhszsri.supabase.co';
+  const KEY = 'sb_publishable_xfd5nkUu18qvdzoo-dzhHQ_f5RKq4tS';   // publishable by design (it ships in the app bundle too)
+  const DEMO = new URLSearchParams(location.search).has('demo');
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const fmtN = (n) => Number(n || 0).toLocaleString('ru-RU');
+  const fmt$ = (n) => '$' + Number(n || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtD = (s, time = true) => s ? new Date(s).toLocaleString('ru-RU', time ? { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+  const ago = (s) => { if (!s) return '—'; const m = Math.round((Date.now() - Date.parse(s)) / 60000); if (m < 1) return 'только что'; if (m < 60) return m + ' мин назад'; const h = Math.round(m / 60); if (h < 24) return h + ' ч назад'; return Math.round(h / 24) + ' дн назад'; };
+
+  // ---------------------------------------------------------------- session (Supabase Auth REST)
+  const store = { get: () => { try { return JSON.parse(localStorage.getItem('of-admin') || 'null'); } catch { return null; } },
+    set: (s) => { try { s ? localStorage.setItem('of-admin', JSON.stringify(s)) : localStorage.removeItem('of-admin'); } catch {} } };
+  let session = store.get();
+  const saveTokens = (d) => { session = { access: d.access_token, refresh: d.refresh_token, exp: Date.now() + (Number(d.expires_in) || 3600) * 1000, email: d.user?.email || session?.email || '' }; store.set(session); };
+  const refresh = async () => {
+    const r = await fetch(SB + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: session.refresh }) });
+    if (!r.ok) throw new Error('Сессия истекла, войдите снова.');
+    saveTokens(await r.json());
+  };
+  const token = async () => { if (!session) throw new Error('Не выполнен вход.'); if (Date.now() > session.exp - 60000) await refresh(); return session.access; };
+  const call = async (fn, body) => {
+    const r = await fetch(`${SB}/functions/v1/${fn}`, { method: 'POST', headers: { Authorization: 'Bearer ' + await token(), apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || ('Ошибка ' + r.status));
+    return d;
+  };
+  // Google OAuth returns tokens in the URL hash (same flow as the app's WebAuthGate)
+  if (location.hash.includes('access_token=')) {
+    const h = new URLSearchParams(location.hash.slice(1));
+    saveTokens({ access_token: h.get('access_token'), refresh_token: h.get('refresh_token'), expires_in: h.get('expires_in') });
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+
+  // ---------------------------------------------------------------- data
+  let D = null, view = 'overview';
+  const api = DEMO ? demoApi() : { overview: () => call('admin-api', { action: 'overview' }), ticket: (b) => call('admin-api', { action: 'ticket-update', ...b }),
+    content: (b) => call('admin-api', { action: 'content-save', ...b }), send: (emails, message) => call('admin-send-message', { mode: 'selected', emails, message }) };
+  const load = async () => {
+    $('#rf').disabled = true;
+    try { D = await api.overview(); $('#upd').textContent = 'обновлено ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); render(); }
+    catch (e) { if (/Доступ|Сессия|вход/.test(e.message)) return logout(e.message); $('#upd').textContent = e.message; }
+    finally { $('#rf').disabled = false; }
+  };
+
+  // ---------------------------------------------------------------- views
+  const TITLES = { overview: 'Обзор', users: 'Пользователи', gens: 'Генерации', support: 'Поддержка', content: 'Тексты сайта' };
+  const go = (v) => { view = v; $$('.nav').forEach((b) => b.classList.toggle('on', b.dataset.v === v)); Object.keys(TITLES).forEach((k) => $('#v-' + k).classList.toggle('hide', k !== v)); $('#title').textContent = TITLES[v]; render(); };
+  $$('.nav').forEach((b) => b.addEventListener('click', () => go(b.dataset.v)));
+  const render = () => { if (!D) return; const n = D.tickets.filter((t) => t.status === 'new').length; $('#tcnt').textContent = n; $('#tcnt').classList.toggle('hide', !n);
+    ({ overview: vOverview, users: vUsers, gens: vGens, support: vSupport, content: vContent })[view](); };
+
+  const days = () => { const out = [], m = new Map(D.stats.byDay.map((d) => [d.day, d])); for (let i = D.stats.days - 1; i >= 0; i--) { const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10); out.push(m.get(d) || { day: d, count: 0, spend: 0 }); } return out; };
+
+  function barChart(el, data) {  // single series → no legend; hover tooltip per bar; 4px rounded tops on the baseline
+    const W = Math.max(el.clientWidth, 300), H = 220, L = 36, B = 22, T = 8, max = Math.max(4, ...data.map((d) => d.count)), step = Math.pow(10, Math.floor(Math.log10(max))) * (max / Math.pow(10, Math.floor(Math.log10(max))) > 5 ? 2 : 1);
+    const top = Math.ceil(max / step) * step, y = (v) => T + (H - T - B) * (1 - v / top), bw = (W - L) / data.length, gap = 2;
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Генерации по дням">`;
+    for (let v = 0; v <= top; v += step) s += `<line class="gl" x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+    data.forEach((d, i) => { const x = L + i * bw + gap / 2, w = Math.max(2, bw - gap), h = (H - T - B) - (y(d.count) - T), r = Math.min(4, w / 2, h);
+      const path = h > 0 ? `M${x},${H - B} v${-(h - r)} q0,${-r} ${r},${-r} h${w - 2 * r} q${r},0 ${r},${r} v${h - r} z` : '';
+      s += `<g data-i="${i}"><rect class="hit" x="${L + i * bw}" y="${T}" width="${bw}" height="${H - T - B}"/><path class="bar" d="${path}"/></g>`;
+      if (i % 5 === 0 || i === data.length - 1) s += `<text class="ax" x="${x + w / 2}" y="${H - 6}" text-anchor="middle">${d.day.slice(8, 10)}.${d.day.slice(5, 7)}</text>`; });
+    el.innerHTML = s + '</svg><div class="tip hide"></div>';
+    const tip = $('.tip', el);
+    $$('g[data-i]', el).forEach((g) => { g.addEventListener('mouseenter', () => { const d = data[+g.dataset.i], rc = $('.hit', g);
+      tip.innerHTML = `<b>${d.day.slice(8, 10)}.${d.day.slice(5, 7)}</b> · ${fmtN(d.count)} генераций · ${fmt$(d.spend)}`; tip.style.left = (+rc.getAttribute('x') + bw / 2) / W * 100 + '%'; tip.style.top = y(d.count) + 'px'; tip.classList.remove('hide'); g.classList.add('on'); });
+      g.addEventListener('mouseleave', () => { tip.classList.add('hide'); g.classList.remove('on'); }); });
+  }
+
+  function vOverview() {
+    const u = D.users, week = Date.now() - 7 * 86400000, dd = days(), gen30 = dd.reduce((a, d) => a + d.count, 0), sp30 = dd.reduce((a, d) => a + d.spend, 0);
+    const tiles = [['Пользователей', fmtN(u.length), `${fmtN(u.filter((x) => Date.parse(x.createdAt) > week).length)} новых за 7 дней`], ['Онлайн сейчас', fmtN(u.filter((x) => x.online).length), 'за последние 3 мин'],
+      ['Генераций за 30 дней', fmtN(gen30), `${fmtN(D.stats.totalGenerations)} за всё время`], ['Расход за 30 дней', fmt$(sp30), 'по цене моделей'],
+      ['Новых обращений', fmtN(D.tickets.filter((t) => t.status === 'new').length), `${fmtN(D.tickets.filter((t) => t.status === 'in_progress').length)} в работе`]];
+    const top = D.stats.byModel.slice(0, 6), mx = Math.max(1, ...top.map((m) => m.count));
+    const online = u.filter((x) => x.online);
+    $('#v-overview').innerHTML = `<div class="tiles">${tiles.map(([a, b, c]) => `<div class="tile"><span>${a}</span><b>${b}</b><small>${c}</small></div>`).join('')}</div>
+      <div class="grid2"><div class="card"><h3>Генерации по дням<small>последние ${D.stats.days} дней</small></h3><div class="chart" id="ch"></div></div>
+      <div class="card"><h3>Популярные модели<small>30 дней</small></h3>${top.length ? `<table><tbody>${top.map((m) => `<tr><td>${esc(m.model)}<div class="dim">${esc(m.category)}</div></td><td class="num">${fmtN(m.count)}<span class="share"><i style="width:${m.count / mx * 100}%"></i></span></td></tr>`).join('')}</tbody></table>` : '<p class="empty">Пока нет генераций</p>'}</div></div>
+      <div class="card"><h3>Сейчас онлайн<small>${online.length}</small></h3>${online.length ? online.map((x) => `<span class="dot good" style="margin:0 16px 6px 0">${esc(x.email)}</span>`).join('') : '<p class="dim">Никого</p>'}</div>`;
+    barChart($('#ch'), dd);
+  }
+
+  // users
+  let uq = '', uf = 'all', us = { k: 'createdAt', d: -1 };
+  function vUsers() {
+    const cols = [['email', 'Email'], ['createdAt', 'Регистрация'], ['lastSignIn', 'Последний вход'], ['online', 'Статус'], ['generations', 'Генераций'], ['generations30', 'За 30 дней'], ['spendUsd', 'Расход']];
+    let rows = D.users.filter((x) => (!uq || x.email.includes(uq.toLowerCase())) && (uf === 'all' || (uf === 'online' ? x.online : uf === 'active' ? x.generations > 0 : !x.confirmed)));
+    rows.sort((a, b) => { const va = a[us.k] ?? '', vb = b[us.k] ?? ''; return (va > vb ? 1 : va < vb ? -1 : 0) * us.d; });
+    $('#v-users').innerHTML = `<div class="tools"><input class="in" id="uq" type="search" placeholder="Поиск по email" value="${esc(uq)}"><div class="seg" id="uf">${[['all', 'Все'], ['online', 'Онлайн'], ['active', 'С генерациями'], ['unconf', 'Без подтверждения']].map(([k, t]) => `<button class="${uf === k ? 'on' : ''}" data-f="${k}">${t}</button>`).join('')}</div><span class="dim">${fmtN(rows.length)} из ${fmtN(D.users.length)}</span></div>
+      <div class="tw"><table><thead><tr>${cols.map(([k, t]) => `<th class="s ${['generations', 'generations30', 'spendUsd'].includes(k) ? 'num' : ''}" data-k="${k}">${t}${us.k === k ? `<span class="ar">${us.d > 0 ? '↑' : '↓'}</span>` : ''}</th>`).join('')}</tr></thead><tbody>
+      ${rows.map((x) => `<tr class="cl" data-id="${x.id}"><td>${esc(x.email)}${x.confirmed ? '' : ' <span class="dim">· не подтверждён</span>'}</td><td>${fmtD(x.createdAt, false)}</td><td>${ago(x.lastSignIn)}</td>
+        <td>${x.online ? '<span class="dot good">онлайн</span>' : `<span class="dot">был ${ago(x.lastSeen || x.lastSignIn)}</span>`}</td><td class="num">${fmtN(x.generations)}</td><td class="num">${fmtN(x.generations30)}</td><td class="num">${fmt$(x.spendUsd)}</td></tr>`).join('') || `<tr><td colspan="7" class="empty">Никого не нашлось</td></tr>`}</tbody></table></div>`;
+    $('#uq').addEventListener('input', (e) => { uq = e.target.value; const p = e.target.selectionStart; vUsers(); const i = $('#uq'); i.focus(); i.setSelectionRange(p, p); });
+    $$('#uf button').forEach((b) => b.addEventListener('click', () => { uf = b.dataset.f; vUsers(); }));
+    $$('#v-users th.s').forEach((th) => th.addEventListener('click', () => { us = { k: th.dataset.k, d: us.k === th.dataset.k ? -us.d : -1 }; vUsers(); }));
+    $$('#v-users tr.cl').forEach((tr) => tr.addEventListener('click', () => userDrawer(D.users.find((x) => x.id === tr.dataset.id))));
+  }
+  function userDrawer(x) {
+    const mine = D.recent.filter((r) => r.email === x.email).slice(0, 30);
+    openDrawer(`<h3>${esc(x.email)}</h3><span class="${x.online ? 'dot good' : 'dot'}">${x.online ? 'онлайн' : 'не в сети'}</span>
+      <dl class="kv"><dt>Регистрация</dt><dd>${fmtD(x.createdAt)}</dd><dt>Вход через</dt><dd>${esc(x.provider)}</dd><dt>Последний вход</dt><dd>${fmtD(x.lastSignIn)}</dd><dt>Активность</dt><dd>${fmtD(x.lastSeen)}</dd>
+      <dt>Генераций</dt><dd>${fmtN(x.generations)} · за 30 дней ${fmtN(x.generations30)}</dd><dt>Расход</dt><dd>${fmt$(x.spendUsd)}</dd><dt>Последняя генерация</dt><dd>${fmtD(x.lastGenerationAt)}</dd></dl>
+      <h4 style="margin:18px 0 8px">Сообщение в приложение</h4><textarea class="in" id="um" placeholder="Появится у пользователя всплывающим уведомлением"></textarea>
+      <div class="row"><button class="btn a" id="us">Отправить</button><a class="btn s" href="mailto:${esc(x.email)}">Написать на почту</a><span id="ur" class="ok" role="status"></span></div>
+      <h4 style="margin:22px 0 8px">Последние генерации</h4>${mine.length ? `<table><tbody>${mine.map((r) => `<tr><td>${fmtD(r.createdAt)}</td><td>${esc(r.model)}</td><td class="num">${fmt$(r.costUsd)}</td></tr>`).join('')}</tbody></table>` : '<p class="dim">Нет в последних 300 генерациях</p>'}`);
+    $('#us').addEventListener('click', async () => { const m = $('#um').value.trim(); if (!m) return; $('#us').disabled = true;
+      try { await api.send([x.email], m); $('#ur').textContent = 'Отправлено'; $('#um').value = ''; } catch (e) { $('#ur').textContent = e.message; $('#ur').className = 'err'; } finally { $('#us').disabled = false; } });
+  }
+
+  // generations
+  let gq = '';
+  function vGens() {
+    const tot = D.stats.byModel.reduce((a, m) => a + m.count, 0) || 1, rows = D.recent.filter((r) => !gq || (r.email + ' ' + r.model + ' ' + r.category).toLowerCase().includes(gq.toLowerCase()));
+    $('#v-gens').innerHTML = `<div class="card"><h3>По моделям<small>последние ${D.stats.days} дней</small></h3><div class="tw" style="box-shadow:none"><table><thead><tr><th>Модель</th><th>Категория</th><th class="num">Генераций</th><th class="num">Доля</th><th class="num">Расход</th></tr></thead><tbody>
+      ${D.stats.byModel.map((m) => `<tr><td>${esc(m.model)}</td><td class="dim">${esc(m.category)}</td><td class="num">${fmtN(m.count)}</td><td class="num">${Math.round(m.count / tot * 100)}%<span class="share"><i style="width:${m.count / tot * 100}%"></i></span></td><td class="num">${fmt$(m.spend)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">Пока нет генераций</td></tr>'}</tbody></table></div></div>
+      <div class="tools"><input class="in" id="gq" type="search" placeholder="Email, модель или категория" value="${esc(gq)}"><span class="dim">последние ${fmtN(D.recent.length)} генераций</span></div>
+      <div class="tw"><table><thead><tr><th>Время</th><th>Пользователь</th><th>Модель</th><th>Категория</th><th class="num">Стоимость</th></tr></thead><tbody>
+      ${rows.map((r) => `<tr><td class="mono">${fmtD(r.createdAt)}</td><td>${esc(r.email)}</td><td>${esc(r.model)}</td><td class="dim">${esc(r.category)}</td><td class="num">${fmt$(r.costUsd)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">Ничего не нашлось</td></tr>'}</tbody></table></div>`;
+    $('#gq').addEventListener('input', (e) => { gq = e.target.value; const p = e.target.selectionStart; vGens(); const i = $('#gq'); i.focus(); i.setSelectionRange(p, p); });
+  }
+
+  // support
+  let sf = 'new';
+  const ST = { new: ['Новое', 'bad'], in_progress: ['В работе', 'warn'], closed: ['Закрыто', 'good'] };
+  function vSupport() {
+    const rows = D.tickets.filter((t) => sf === 'all' || t.status === sf);
+    $('#v-support').innerHTML = `<div class="tools"><div class="seg" id="sf">${[['new', 'Новые'], ['in_progress', 'В работе'], ['closed', 'Закрытые'], ['all', 'Все']].map(([k, t]) => `<button class="${sf === k ? 'on' : ''}" data-f="${k}">${t} · ${fmtN(k === 'all' ? D.tickets.length : D.tickets.filter((x) => x.status === k).length)}</button>`).join('')}</div></div>
+      <div class="tw"><table><thead><tr><th>Когда</th><th>От кого</th><th>Сообщение</th><th>Статус</th></tr></thead><tbody>
+      ${rows.map((t) => `<tr class="cl" data-id="${t.id}"><td class="mono">${fmtD(t.created_at)}</td><td>${esc(t.name || '—')}<div class="dim">${esc(t.contact)}</div></td><td>${esc(t.message.length > 140 ? t.message.slice(0, 140) + '…' : t.message)}</td><td><span class="dot ${ST[t.status][1]}">${ST[t.status][0]}</span></td></tr>`).join('') || '<tr><td colspan="4" class="empty">Обращений нет</td></tr>'}</tbody></table></div>`;
+    $$('#sf button').forEach((b) => b.addEventListener('click', () => { sf = b.dataset.f; vSupport(); }));
+    $$('#v-support tr.cl').forEach((tr) => tr.addEventListener('click', () => ticketDrawer(D.tickets.find((t) => t.id === tr.dataset.id))));
+  }
+  function ticketDrawer(t) {
+    const isMail = /@/.test(t.contact), isUser = isMail && D.users.some((u) => u.email === t.contact.toLowerCase());
+    const mail = isMail ? `mailto:${encodeURIComponent(t.contact)}?subject=${encodeURIComponent('ONEFLOW — ответ поддержки')}&body=${encodeURIComponent('\n\n> ' + t.message.split('\n').join('\n> '))}` : '';
+    const tel = !isMail ? t.contact.replace(/[^\d+]/g, '') : '';
+    openDrawer(`<h3>${esc(t.name || 'Без имени')}</h3><span class="dot ${ST[t.status][1]}">${ST[t.status][0]}</span>
+      <dl class="kv"><dt>Контакт</dt><dd>${isMail ? `<a href="${mail}">${esc(t.contact)}</a>` : `<a href="tel:${esc(tel)}">${esc(t.contact)}</a> · <a href="https://wa.me/${esc(tel.replace('+', ''))}" target="_blank" rel="noopener">WhatsApp</a>`}${isUser ? ' <span class="tag">аккаунт ONEFLOW</span>' : ''}</dd>
+      <dt>Получено</dt><dd>${fmtD(t.created_at)}</dd>${t.page ? `<dt>Страница</dt><dd class="dim">${esc(t.page)}</dd>` : ''}</dl>
+      <div class="msg">${esc(t.message)}</div>${t.reply ? `<h4 style="margin:14px 0 6px">Ваш ответ · ${fmtD(t.replied_at)}</h4><div class="msg">${esc(t.reply)}</div>` : ''}
+      <div class="row"><button class="btn s" data-s="new">Новое</button><button class="btn s" data-s="in_progress">В работе</button><button class="btn s" data-s="closed">Закрыть</button></div>
+      <h4 style="margin:20px 0 8px">Ответ</h4><textarea class="in" id="tr" placeholder="${isUser ? 'Уйдёт уведомлением в приложение ONEFLOW' : 'Сохранится в истории; отправьте его по почте или в мессенджер'}"></textarea>
+      <div class="row"><button class="btn a" id="ts">${isUser ? 'Ответить в приложение' : 'Сохранить ответ'}</button>${isMail ? `<a class="btn s" href="${mail}">Ответить по почте</a>` : ''}<span id="tres" class="ok" role="status"></span></div>`);
+    const upd = async (b) => { try { const r = await api.ticket({ id: t.id, ...b }); Object.assign(t, b.status ? { status: b.status } : {}, b.reply ? { reply: b.reply, replied_at: new Date().toISOString(), status: b.status || 'closed' } : {});
+      $('#tres').textContent = b.reply ? (r.deliveredInApp ? 'Ответ отправлен в приложение' : 'Ответ сохранён') : 'Статус обновлён'; render(); } catch (e) { $('#tres').textContent = e.message; $('#tres').className = 'err'; } };
+    $$('.drawer [data-s]').forEach((b) => b.addEventListener('click', () => upd({ status: b.dataset.s })));
+    $('#ts').addEventListener('click', () => { const r = $('#tr').value.trim(); if (r) upd({ reply: r }); });
+  }
+
+  // content editor: the landing page itself lists its editable texts (window.__ofCMS, same key scheme as its loader)
+  let site = null, cq = '';
+  const SEC = { nav: 'Меню', hero: 'Первый экран', why: 'Почему ONEFLOW', how: 'Как это работает', modules: 'Модули', business: 'Для бизнеса', horeca: 'HoReCa',
+    assistant: 'Ассистент', sec: 'Галерея', pricing: 'Тарифы', faq: 'Вопросы', end: 'Финальный призыв', footer: 'Подвал' };
+  const TAG = { h1: 'главный заголовок', h2: 'заголовок', h3: 'подзаголовок', h4: 'подзаголовок', p: 'текст', li: 'пункт списка', summary: 'вопрос', a: 'ссылка / кнопка',
+    button: 'кнопка', span: 'строка заголовка', th: 'таблица', td: 'таблица', figcaption: 'подпись' };
+  const loadSite = () => new Promise((res) => {
+    if (site) return res(site);
+    const f = $('#site'); f.onload = () => { try { site = f.contentWindow.__ofCMS || []; } catch { site = []; } res(site); }; f.src = '/?cms-edit=1';
+  });
+  async function vContent() {
+    const el = $('#v-content'); if (!site) el.innerHTML = '<p class="dim">Загружаю тексты сайта…</p>';
+    const items = await loadSite(); if (view !== 'content') return;
+    if (!items.length) { el.innerHTML = '<p class="empty">Не удалось прочитать тексты лендинга. Откройте админку на том же домене, что и сайт (oneflow.art/admin).</p>'; return; }
+    const ov = new Map(D.content.map((c) => { try { return [c.key, JSON.parse(c.value)]; } catch { return [c.key, null]; } }));
+    const groups = new Map(); items.filter((it) => !cq || (it.key + ' ' + it.text + ' ' + (ov.get(it.key)?.t || '')).toLowerCase().includes(cq.toLowerCase())).forEach((it) => { if (!groups.has(it.section)) groups.set(it.section, []); groups.get(it.section).push(it); });
+    const orphan = D.content.filter((c) => !items.some((it) => it.key === c.key));
+    el.innerHTML = `<div class="tools"><input class="in" id="cq" type="search" placeholder="Найти текст" value="${esc(cq)}"><span class="dim">${fmtN(items.length)} текстов · изменено ${fmtN(D.content.length)}</span><a class="btn s" href="/" target="_blank" rel="noopener" style="margin-left:auto">Открыть сайт ↗</a></div>
+      <p class="dim" style="margin:-4px 0 14px">Изменения появляются на сайте сразу после сохранения. Пустое поле или «Сбросить» — вернуть исходный текст. Перенос строки = новая строка на сайте.</p>
+      ${[...groups.entries()].map(([sec, list]) => `<div class="grp"><h4>${esc(SEC[sec] || sec)}</h4><div class="tw">${list.map((it) => { const o = ov.get(it.key), stale = o && o.o !== it.text, val = o && !stale ? o.t : it.text;
+        return `<div class="ci ${o ? 'changed' : ''}" data-k="${esc(it.key)}"><div class="k">${esc(it.key)}${o ? `<span class="tag ${stale ? 'old' : ''}">${stale ? 'устарело' : 'изменено'}</span>` : ''}<div class="dim" style="font-family:var(--f);margin-top:4px">${esc(TAG[it.tag] || it.tag)}</div></div>
+        <textarea class="in" rows="${Math.min(6, Math.max(1, Math.ceil(val.length / 70) + (val.match(/\n/g) || []).length))}">${esc(val)}</textarea><div class="acts"><button class="btn a" data-a="save" disabled>Сохранить</button>${o ? '<button class="btn s" data-a="reset">Сбросить</button>' : ''}</div></div>`; }).join('')}</div></div>`).join('') || '<p class="empty">Ничего не нашлось</p>'}
+      ${orphan.length ? `<p class="dim">Сохранённых текстов, которых больше нет на сайте: ${orphan.length}. Они не применяются.</p>` : ''}`;
+    $('#cq').addEventListener('input', (e) => { cq = e.target.value; const p = e.target.selectionStart; vContent().then(() => { const i = $('#cq'); if (i) { i.focus(); i.setSelectionRange(p, p); } }); });
+    $$('.ci').forEach((row) => { const it = items.find((x) => x.key === row.dataset.k), ta = $('textarea', row), sv = $('[data-a=save]', row), v0 = ta.value;
+      ta.addEventListener('input', () => { sv.disabled = ta.value === v0; });
+      $$('button', row).forEach((b) => b.addEventListener('click', async () => {
+        const reset = b.dataset.a === 'reset', v = $('textarea', row).value.replace(/\r/g, '');
+        const value = reset || !v.trim() || v === it.text ? null : JSON.stringify({ t: v, o: it.text });
+        b.disabled = true;
+        try { await api.content({ key: it.key, value }); D.content = D.content.filter((c) => c.key !== it.key); if (value) D.content.push({ key: it.key, value, updated_at: new Date().toISOString() }); vContent(); }
+        catch (e) { alert(e.message); b.disabled = false; }
+      })); });
+  }
+
+  // ---------------------------------------------------------------- drawer, auth wiring
+  const openDrawer = (html) => { $('#drawer').innerHTML = '<button class="btn s x" type="button" aria-label="Закрыть">✕</button>' + html; $('#drawer').classList.remove('hide'); $('#shade').classList.remove('hide'); $('.drawer .x').addEventListener('click', closeDrawer); };
+  const closeDrawer = () => { $('#drawer').classList.add('hide'); $('#shade').classList.add('hide'); };
+  $('#shade').addEventListener('click', closeDrawer); addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
+  $('#rf').addEventListener('click', load);
+  const logout = (msg) => { if (session?.access && !DEMO) fetch(SB + '/auth/v1/logout?scope=local', { method: 'POST', headers: { apikey: KEY, Authorization: 'Bearer ' + session.access } }).catch(() => {});  // revoke the refresh token server-side
+    session = null; store.set(null); $('#app').classList.add('hide'); $('#login').classList.remove('hide'); $('#lerr').textContent = typeof msg === 'string' ? msg : ''; };
+  $('#out').addEventListener('click', () => logout());
+  const start = () => { $('#login').classList.add('hide'); $('#app').classList.remove('hide'); $('#who').textContent = DEMO ? 'demo@oneflow.art' : (session?.email || ''); $('#demo').classList.toggle('hide', !DEMO); load(); };
+  $('#lf').addEventListener('submit', async (e) => { e.preventDefault(); $('#lb').disabled = true; $('#lerr').textContent = '';
+    try { const r = await fetch(SB + '/auth/v1/token?grant_type=password', { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: $('#le').value.trim(), password: $('#lp').value }) });
+      const d = await r.json(); if (!r.ok) throw new Error(d.error_description || d.msg || 'Неверный email или пароль'); saveTokens(d); start(); }
+    catch (err) { $('#lerr').textContent = err.message; } finally { $('#lb').disabled = false; } });
+  $('#lg').addEventListener('click', () => { location.href = `${SB}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(location.origin + location.pathname)}`; });
+  (DEMO || session) ? start() : logout();
+
+  // ---------------------------------------------------------------- demo data (?demo=1): lets the page be previewed without the backend
+  function demoApi() {
+    const now = Date.now(), iso = (ms) => new Date(ms).toISOString(), rnd = (a) => a[Math.floor(Math.random() * a.length)];
+    const models = [['Nano Banana Pro', 'image', 0.067], ['GPT Image 2.5', 'image', 0.042], ['Kling 3.0', 'video', 0.42], ['Veo 3.1', 'video', 0.8], ['Seedream', 'image', 0.03], ['ChatGPT 6', 'text', 0.01]];
+    const emails = ['aliya@mechta.kz', 'timur.shop@gmail.com', 'coffee.point@mail.ru', 'dana.brand@gmail.com', 'marat@startup.kz', 'beauty.lab@yandex.kz', 'nurgazinov.ayan@gmail.com', 'sales@toys.kz'];
+    const users = emails.map((e, i) => ({ id: 'u' + i, email: e, createdAt: iso(now - (i * 5 + 2) * 86400000), lastSignIn: iso(now - i * 3600000 * 7), confirmed: i !== 5, provider: i % 2 ? 'google' : 'email', lastSeen: iso(now - i * 60000 * 50), online: i < 3 }));
+    const recent = [], byDayM = new Map(), byModel = new Map();
+    for (let k = 0; k < 420; k++) { const [m, c, p] = rnd(models), t = now - Math.floor(Math.pow(Math.random(), 1.4) * 30 * 86400000), u = rnd(users); recent.push({ email: u.email, model: m, category: c, costUsd: p, createdAt: iso(t) });
+      const d = iso(t).slice(0, 10), x = byDayM.get(d) || { count: 0, spend: 0 }; x.count++; x.spend += p; byDayM.set(d, x); const y = byModel.get(m) || { model: m, category: c, count: 0, spend: 0 }; y.count++; y.spend += p; byModel.set(m, y); }
+    recent.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    users.forEach((u) => { const g = recent.filter((r) => r.email === u.email); u.generations = g.length; u.generations30 = g.length; u.spendUsd = Math.round(g.reduce((a, r) => a + r.costUsd, 0) * 100) / 100; u.lastGenerationAt = g[0]?.createdAt || null; });
+    const tickets = [{ id: 't1', name: 'Тимур', contact: 'timur.shop@gmail.com', message: 'Здравствуйте! Не получается адаптировать карточку под Kaspi 1125×330 — картинка обрезается сверху. Что делать?', status: 'new', created_at: iso(now - 3600000) },
+      { id: 't2', name: 'Айгерим', contact: '+7 701 555 12 34', message: 'Можно оплатить по счёту для ТОО?', status: 'new', created_at: iso(now - 5 * 3600000) },
+      { id: 't3', name: 'Дана', contact: 'dana.brand@gmail.com', message: 'Подскажите, остаток бюджета точно переносится?', status: 'closed', reply: 'Да, неизрасходованный бюджет переходит на следующий месяц.', replied_at: iso(now - 20 * 3600000), created_at: iso(now - 26 * 3600000) }];
+    const D0 = { generatedAt: iso(now), users, recent: recent.slice(0, 300), tickets, content: [], stats: { days: 30, totalGenerations: 1843, byDay: [...byDayM.entries()].map(([day, v]) => ({ day, ...v })), byModel: [...byModel.values()].sort((a, b) => b.count - a.count) } };
+    const wait = (v) => new Promise((r) => setTimeout(() => r(v), 250));
+    return { overview: () => wait(JSON.parse(JSON.stringify(D0))), ticket: (b) => wait({ ok: true, deliveredInApp: true }), content: () => wait({ ok: true }), send: () => wait({ ok: true }) };
+  }
+})();
+</script>
+</body>
+</html>
