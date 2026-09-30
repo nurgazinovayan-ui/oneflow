@@ -6752,6 +6752,461 @@
   text-align: center;
 }
 
+/* Motion Engine — web-only (see App.tsx, MotionEnginePanel.tsx). Same backdrop and side card as
+   Музыка и аудио; the main column holds the variant history, the static storyboard, the live
+   preview and the render controls. */
+.motion-panel {
+  position: absolute;
+  inset: var(--topbar-height) 0 0 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-canvas-bg);
+  overflow-y: auto;
+}
+
+:root:not([data-theme='light']) .motion-panel {
+  background: #000000;
+}
+
+.motion-hidden {
+  display: none;
+}
+
+.motion-layout {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  max-width: 1320px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.motion-side {
+  position: sticky;
+  top: 0;
+  flex-shrink: 0;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--c-card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 1px var(--c-divider);
+  padding: 18px;
+}
+
+:root:not([data-theme='light']) .motion-side {
+  box-shadow: var(--raise-glow);
+}
+
+.motion-assets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.motion-asset,
+.motion-asset-add {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--c-panel-2);
+}
+
+.motion-asset canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.motion-asset-badge {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.motion-asset-remove {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s var(--ease);
+}
+
+.motion-asset:hover .motion-asset-remove,
+.motion-asset-remove:focus-visible {
+  opacity: 1;
+}
+
+.motion-asset-add {
+  border: 1.5px dashed var(--c-divider);
+  color: var(--c-text-dim);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+
+.motion-asset-add:hover {
+  background: var(--c-panel-3);
+  color: var(--c-text);
+}
+
+.motion-hint {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--c-text-dim);
+}
+
+.motion-brief {
+  min-height: 110px;
+}
+
+.motion-aspect-icon {
+  display: inline-block;
+  margin-right: 5px;
+  vertical-align: -1px;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+}
+
+.motion-generate-btn {
+  width: 100%;
+}
+
+.motion-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.motion-variants {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.motion-variant-chip {
+  flex-shrink: 0;
+  max-width: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 7px 12px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--c-card);
+  box-shadow: 0 0 0 1px var(--c-divider);
+  color: var(--c-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.motion-variant-chip b {
+  font-size: 11.5px;
+}
+
+.motion-variant-chip span {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  color: var(--c-text-dim);
+}
+
+.motion-variant-chip.active {
+  border-color: var(--c-pink);
+}
+
+.motion-variant-chip.pending {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.motion-empty,
+.motion-loading {
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  background: var(--c-panel-2);
+  color: var(--c-text-dim);
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.motion-empty b {
+  color: var(--c-text);
+  font-size: 15px;
+}
+
+.motion-empty span {
+  max-width: 440px;
+}
+
+.motion-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.motion-head h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  color: var(--c-text);
+}
+
+.motion-head p {
+  margin: 0 0 6px;
+  max-width: 720px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--c-text-muted);
+}
+
+.motion-meta,
+.motion-time {
+  font-size: 11px;
+  color: var(--c-text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.motion-icon-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: var(--c-panel-2);
+  color: var(--c-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.motion-icon-btn:hover {
+  background: var(--c-panel-3);
+}
+
+.motion-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.motion-board.portrait {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.motion-scene {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.motion-still {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 1px var(--c-divider);
+  background: var(--c-panel-2);
+}
+
+.motion-scene-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.motion-scene-time {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.motion-scene-tags {
+  font-size: 10.5px;
+  color: var(--c-text-dim);
+}
+
+.motion-scene-note {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--c-text-muted);
+}
+
+.motion-stage,
+.motion-render {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  background: var(--c-card);
+  box-shadow: 0 0 0 1px var(--c-divider);
+}
+
+.motion-preview {
+  width: 100%;
+  max-height: 62vh;
+  display: flex;
+  justify-content: center;
+}
+
+.motion-preview canvas {
+  max-width: 100%;
+  max-height: 62vh;
+  border-radius: var(--radius-sm);
+  background: #000;
+}
+
+.motion-preview-bar,
+.motion-actions,
+.motion-rendered-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.motion-play {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--c-pink);
+  color: var(--c-pink-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.motion-render-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.motion-render-row .musicaudio-genre-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.motion-render-btn {
+  margin-top: 0;
+}
+
+.motion-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--c-panel-2);
+  color: var(--c-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.motion-secondary:hover:not(:disabled) {
+  background: var(--c-panel-3);
+}
+
+.motion-progress {
+  flex: 1;
+  min-width: 160px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--c-panel-2);
+  overflow: hidden;
+}
+
+.motion-progress i {
+  display: block;
+  height: 100%;
+  background: var(--c-pink);
+  transition: width 0.2s linear;
+}
+
+.motion-renders {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.motion-rendered {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  background: var(--c-card);
+  box-shadow: 0 0 0 1px var(--c-divider);
+}
+
+.motion-rendered video {
+  width: 100%;
+  max-height: 62vh;
+  border-radius: var(--radius-sm);
+  background: #000;
+}
+
+@media (max-width: 900px) {
+  .motion-layout {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+  }
+  .motion-side {
+    position: static;
+    width: auto;
+  }
+}
+
 /* The topbar's "Ассеты" entry point — reuses .toolbar-label-btn's chip look (see App.tsx, next
    to BudgetBar), just with .project-tab's smaller corner radius instead of the default pill
    shape, per the design ask to match the project tabs' rounding. */

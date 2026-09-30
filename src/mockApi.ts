@@ -1,4 +1,5 @@
 import type { NodeApi, GenerationLogEntry, AdminMessage, CreativeEvaluationResult, AudioGenParams } from './types';
+import type { MotionScene, MotionStoryboard, MotionStoryboardRequest } from './motion/types';
 import { estimateImageCost, estimateVideoCost, DSP_URL, ADMIN_EMAIL } from './types';
 import { useLanguageStore, ru, en } from './i18n';
 
@@ -239,6 +240,55 @@ function logMockGeneration(entry: GenerationLogEntry): void {
   } catch {
     // Corrupt/oversized localStorage entry — drop silently rather than block generation.
   }
+}
+
+// Demo-mode stand-in for motion-storyboard: a plausible board built from the request itself, so
+// the whole Motion Engine flow (board → variants → render) works without the backend. Each call
+// rotates through a few looks so "Ещё вариант" visibly changes something.
+function mockMotionStoryboard(req: MotionStoryboardRequest): MotionStoryboard {
+  const looks = [
+    { bg: '#0f1222', ink: '#ffffff', accent: '#3b5cff', font: 'display' as const, mood: 'Mock: смело, контрастно' },
+    { bg: '#f6f6fa', ink: '#0f1222', accent: '#ff5a36', font: 'sans' as const, mood: 'Mock: светло, чисто' },
+    { bg: '#12201a', ink: '#f3efe6', accent: '#c8f560', font: 'serif' as const, mood: 'Mock: премиально' },
+  ];
+  const k = req.previous.length % looks.length;
+  const words = req.brief.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+  const head = (i: number, n: number) => words.slice(i * n, i * n + n).join(' ');
+  const n = req.assets.length;
+  const layouts: MotionScene['layout'][] = [['full', 'split-left', 'center-card', 'caption-bottom'], ['center-card', 'full', 'split-right', 'caption-bottom'], ['split-right', 'caption-bottom', 'full', 'center-card']][k] as MotionScene['layout'][];
+  const cams: MotionScene['camera'][] = ['zoom-in', 'pan-left', 'zoom-out', 'pan-up', 'pan-right'];
+  const trs: MotionScene['transition'][] = ['fade', 'slide', 'zoom', 'wipe'];
+  const anims: MotionScene['textAnim'][] = ['mask-up', 'words', 'fade-up', 'type', 'scale', 'slide-left'];
+  const count = Math.max(3, Math.min(8, Math.round(req.duration / 3)));
+  const scenes: MotionScene[] = [];
+  for (let i = 0; i < count; i++) {
+    const last = i === count - 1;
+    const first = i === 0;
+    const grid = !first && !last && n >= 3 && i === 2;
+    const asset = n ? (i + k) % n : null;
+    scenes.push({
+      start: 0,
+      dur: req.duration / count,
+      layout: last || asset === null ? 'text-only' : grid ? 'grid' : layouts[i % layouts.length],
+      asset: last ? null : asset,
+      assets: grid ? [0, 1, 2, 3].slice(0, Math.min(4, n)) : [],
+      headline: last ? 'ONEFLOW' : head(i, 4) || ['Mock: первая сцена', 'Mock: главное', 'Mock: детали', 'Mock: результат'][i % 4],
+      sub: last ? 'Mock: финальный призыв' : i === 1 ? head(8, 8) : '',
+      cta: last ? 'Попробовать' : '',
+      camera: cams[(i + k) % cams.length],
+      textAnim: anims[(i + k) % anims.length],
+      transition: first ? 'fade' : trs[(i + k) % trs.length],
+      bg: '',
+      note: 'Mock: демо-раскадровка без обращения к модели.',
+    });
+  }
+  let t = 0;
+  scenes.forEach((s) => {
+    s.start = Math.round(t * 100) / 100;
+    s.dur = Math.round(s.dur * 100) / 100;
+    t += s.dur;
+  });
+  return { title: `Mock-вариант ${req.previous.length + 1}`, concept: 'Mock: демо-режим — раскадровку собирает приложение, не модель.', style: looks[k], duration: req.duration, scenes };
 }
 
 export function installMockApiIfNeeded(): void {
@@ -567,6 +617,13 @@ export function installMockApiIfNeeded(): void {
     disconnectYandexDisk: () => {},
     listYandexAssets: async () => [],
     loadYandexAsset: async (path: string) => path,
+    createMotionStoryboard: async (req) => {
+      await new Promise((r) => setTimeout(r, 1200));
+      const costUsd = 0.08;
+      bumpMockUsage(costUsd);
+      logMockGeneration({ timestamp: Date.now(), model: 'Claude Opus 5.5', category: 'motion', costUsd });
+      return { storyboard: mockMotionStoryboard(req), costUsd };
+    },
     evaluateCreative: async (images): Promise<CreativeEvaluationResult> => {
       await new Promise((r) => setTimeout(r, 900));
       const variants = images.map((_, i) => ({

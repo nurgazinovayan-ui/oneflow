@@ -35,6 +35,7 @@ import QuickGenPanel from './components/QuickGenPanel';
 import EvaluationPanel from './components/EvaluationPanel';
 import OneLaunchPanel from './components/OneLaunchPanel';
 import MusicAudioPanel from './components/MusicAudioPanel';
+import MotionEnginePanel from './components/MotionEnginePanel';
 import StrategyPanel from './components/StrategyPanel';
 import { GlowMenuBar, type GlowMenuItem } from './components/GlowMenuBar';
 import AssetsPanel from './components/AssetsPanel';
@@ -104,7 +105,7 @@ import './App.css';
 // these panels (.cw-panel, .quick-gen-panel, .evaluation-panel, .onelaunch-panel,
 // .musicaudio-panel, .trends-panel) goes black instead, by request, so .topbar-black applies to
 // the same set rather than a separate list.
-const WHITE_TOPBAR_VIEWS = new Set(['text', 'generate', 'onelaunch', 'musicaudio', 'evaluate', 'trends']);
+const WHITE_TOPBAR_VIEWS = new Set(['text', 'generate', 'onelaunch', 'musicaudio', 'motion', 'evaluate', 'trends']);
 
 // LemonSqueezy subscription statuses that count as "has a subscription" for the avatar's ring
 // (see ProfileModal.tsx, which uses the same set for its own badge).
@@ -395,7 +396,7 @@ function Canvas() {
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
   const [mainView, setMainView] = useState<
-    'canvas' | 'text' | 'generate' | 'evaluate' | 'onelaunch' | 'musicaudio' | 'strategy' | 'assets' | 'trends'
+    'canvas' | 'text' | 'generate' | 'evaluate' | 'onelaunch' | 'musicaudio' | 'motion' | 'strategy' | 'assets' | 'trends'
   >('canvas');
   const [copywriteAuthReady, setCopywriteAuthReady] = useState(false);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
@@ -1189,6 +1190,11 @@ function Canvas() {
                   icon: IconMusic,
                 },
                 import.meta.env.VITE_WEB_MODE === '1' && {
+                  value: 'motion',
+                  label: t.modeSwitch.motionEngine,
+                  icon: IconVideo,
+                },
+                import.meta.env.VITE_WEB_MODE === '1' && {
                   value: 'strategy',
                   label: t.modeSwitch.strategy,
                   icon: IconTarget,
@@ -1293,6 +1299,9 @@ function Canvas() {
           )}
           {import.meta.env.VITE_WEB_MODE === '1' && (
             <MusicAudioPanel active={mainView === 'musicaudio'} />
+          )}
+          {import.meta.env.VITE_WEB_MODE === '1' && (
+            <MotionEnginePanel active={mainView === 'motion'} authEmail={authEmail} />
           )}
           {import.meta.env.VITE_WEB_MODE === '1' && (
             <StrategyPanel active={mainView === 'strategy'} onCreateWorkflow={handleCreateFromStrategy} />

@@ -29,6 +29,7 @@
     "electron-store": "^8.2.0",
     "framer-motion": "^13.2.0",
     "jszip": "^3.10.1",
+    "mp4-muxer": "^5.2.2",
     "ogl": "^1.0.11",
     "posthog-js": "^1.430.3",
     "pptxgenjs": "^4.0.1",

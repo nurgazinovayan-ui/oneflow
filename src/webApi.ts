@@ -90,6 +90,7 @@ const TRACKED_FUNCTIONS: Record<string, string> = {
   'generate-audio': 'generation',
   'generate-chat': 'chat',
   'evaluate-creative': 'evaluation',
+  'motion-storyboard': 'motion',
 };
 
 async function callFunction<T>(name: string, body: unknown): Promise<T> {
@@ -598,6 +599,7 @@ export function installWebApi(): void {
     },
     evaluateCreative: (images, platform) =>
       callFunction<CreativeEvaluationResult>('evaluate-creative', { images, platform }),
+    createMotionStoryboard: (req) => callFunction('motion-storyboard', req),
     generateAudio: async (params: AudioGenParams) => {
       const { url } = await callFunction<{ url: string }>('generate-audio', params);
       backupToYandexDisk([url], params.mode === 'music' ? 'music' : 'speech');

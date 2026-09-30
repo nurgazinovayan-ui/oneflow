@@ -68,6 +68,7 @@ export interface Translations {
     evaluation: string;
     oneLaunch: string;
     musicAudio: string;
+    motionEngine: string;
     strategy: string;
   };
   nodeLabels: {
@@ -514,6 +515,46 @@ export interface Translations {
     cropOriginal: string;
     cropSquare: string;
     resetBtn: string;
+  };
+  motion: {
+    materials: string;
+    addMaterials: string;
+    addMore: string;
+    materialsHint: string;
+    removeAsset: string;
+    maxAssets: (n: number) => string;
+    brief: string;
+    briefPlaceholder: string;
+    duration: string;
+    seconds: (n: number) => string;
+    aspect: string;
+    makeBoard: string;
+    moreVariant: string;
+    generating: (time: string) => string;
+    thinking: string;
+    costHint: string;
+    errorNoInput: string;
+    variants: string;
+    variantN: (n: number) => string;
+    deleteVariant: string;
+    emptyTitle: string;
+    emptyText: string;
+    meta: (scenes: number, duration: number, aspect: string) => string;
+    sceneN: (n: number) => string;
+    layoutLabels: Record<string, string>;
+    cameraLabels: Record<string, string>;
+    transitionLabels: Record<string, string>;
+    renderAspect: string;
+    quality: string;
+    fps: string;
+    notSupported: string;
+    composedFor: (aspect: string) => string;
+    render: (w: number, h: number) => string;
+    rendering: (pct: number) => string;
+    cancel: string;
+    renders: string;
+    download: string;
+    webmNote: string;
   };
   musicAudio: {
     title: string;
@@ -989,6 +1030,7 @@ export const ru: Translations = {
     evaluation: 'Creative Predictor',
     oneLaunch: 'One Launch',
     musicAudio: 'Музыка и аудио',
+    motionEngine: 'Motion Engine',
     strategy: 'Стратегия',
   },
   nodeLabels: {
@@ -1066,6 +1108,7 @@ export const ru: Translations = {
       video: 'Видео',
       adapt: 'Адаптация',
       vector: 'Вектор',
+      motion: 'Motion Engine',
     },
     csvHeader: 'Дата,Время,Модель,Категория,Стоимость USD',
     exportError: 'Не удалось сохранить файл',
@@ -1460,6 +1503,62 @@ export const ru: Translations = {
     cropOriginal: 'Оригинал',
     cropSquare: 'Квадрат',
     resetBtn: 'Сбросить',
+  },
+  motion: {
+    materials: 'Материалы',
+    addMaterials: 'Фото или видео',
+    addMore: 'Добавить',
+    materialsHint: 'До 8 файлов. Можно перетащить сюда.',
+    removeAsset: 'Убрать',
+    maxAssets: (n) => `Можно добавить не больше ${n} материалов.`,
+    brief: 'Задача и тексты',
+    briefPlaceholder: 'Что рекламируем, для кого, какие тексты и призыв должны быть в ролике. Например: «Кофейня Bean, новое сезонное меню, скидка 20% до конца месяца, призыв — заходите в гости»',
+    duration: 'Длительность',
+    seconds: (n) => `${n} с`,
+    aspect: 'Формат кадра',
+    makeBoard: 'Сделать раскадровку',
+    moreVariant: 'Ещё вариант',
+    generating: (time) => `Claude Opus 5.5 делает раскадровку… ${time}`,
+    thinking: 'Claude думает…',
+    costHint: 'Раскадровку делает Claude Opus 5.5, ≈ $0.05–0.20 за вариант. Рендер видео бесплатный — идёт прямо в браузере.',
+    errorNoInput: 'Добавьте материалы или опишите задачу.',
+    variants: 'Варианты',
+    variantN: (n) => `Вариант ${n}`,
+    deleteVariant: 'Удалить вариант',
+    emptyTitle: 'Motion Engine',
+    emptyText: 'Загрузите фото или видео, опишите задачу и выберите длительность. Claude Opus 5.5 сделает раскадровку, а вы решите: рендерить видео или попросить ещё вариант. Все варианты сохраняются.',
+    meta: (scenes, duration, aspect) => `${scenes} сцен · ${duration} с · сделано под ${aspect}`,
+    sceneN: (n) => `Сцена ${n}`,
+    layoutLabels: {
+      full: 'На весь кадр',
+      'split-left': 'Разделение',
+      'split-right': 'Разделение',
+      'center-card': 'Карточка',
+      grid: 'Сетка',
+      'text-only': 'Текст',
+      'caption-bottom': 'Подпись снизу',
+    },
+    cameraLabels: {
+      static: 'Статика',
+      'zoom-in': 'Наезд',
+      'zoom-out': 'Отъезд',
+      'pan-left': 'Панорама влево',
+      'pan-right': 'Панорама вправо',
+      'pan-up': 'Панорама вверх',
+      'pan-down': 'Панорама вниз',
+    },
+    transitionLabels: { cut: 'Склейка', fade: 'Растворение', slide: 'Сдвиг', zoom: 'Зум', wipe: 'Шторка' },
+    renderAspect: 'Формат видео',
+    quality: 'Разрешение',
+    fps: 'Кадров в секунду',
+    notSupported: 'Этот браузер не может закодировать видео такого размера',
+    composedFor: (aspect) => `Раскадровка придумана под ${aspect} — в другом формате сцены перестроятся автоматически, проверьте кадры выше.`,
+    render: (w, h) => `Рендерить видео ${w}×${h}`,
+    rendering: (pct) => `Рендер… ${pct}%`,
+    cancel: 'Остановить',
+    renders: 'Готовые видео',
+    download: 'Скачать',
+    webmNote: 'Браузер не умеет MP4, поэтому видео сохранено в WebM. Для MP4 откройте ONEFLOW в Chrome или Edge.',
   },
   musicAudio: {
     title: 'Музыка и аудио',
@@ -2046,6 +2145,7 @@ export const en: Translations = {
     evaluation: 'Creative Predictor',
     oneLaunch: 'One Launch',
     musicAudio: 'Music & audio',
+    motionEngine: 'Motion Engine',
     strategy: 'Strategy',
   },
   nodeLabels: {
@@ -2122,6 +2222,7 @@ export const en: Translations = {
       video: 'Video',
       adapt: 'Adapt',
       vector: 'Vector',
+      motion: 'Motion Engine',
     },
     csvHeader: 'Date,Time,Model,Category,Cost USD',
     exportError: 'Could not save the file',
@@ -2516,6 +2617,62 @@ export const en: Translations = {
     cropOriginal: 'Original',
     cropSquare: 'Square',
     resetBtn: 'Reset',
+  },
+  motion: {
+    materials: 'Materials',
+    addMaterials: 'Photo or video',
+    addMore: 'Add',
+    materialsHint: 'Up to 8 files. You can drop them here.',
+    removeAsset: 'Remove',
+    maxAssets: (n) => `You can add up to ${n} materials.`,
+    brief: 'Brief and copy',
+    briefPlaceholder: 'What you promote, for whom, which copy and call to action the video needs. E.g. “Bean coffee shop, new seasonal menu, 20% off until the end of the month, come visit us”',
+    duration: 'Duration',
+    seconds: (n) => `${n}s`,
+    aspect: 'Frame',
+    makeBoard: 'Create storyboard',
+    moreVariant: 'Another variant',
+    generating: (time) => `Claude Opus 5.5 is storyboarding… ${time}`,
+    thinking: 'Claude is thinking…',
+    costHint: 'Storyboards are made by Claude Opus 5.5, ≈ $0.05–0.20 per variant. Video rendering is free — it runs in your browser.',
+    errorNoInput: 'Add materials or describe the task.',
+    variants: 'Variants',
+    variantN: (n) => `Variant ${n}`,
+    deleteVariant: 'Delete variant',
+    emptyTitle: 'Motion Engine',
+    emptyText: 'Upload photos or videos, describe the task and pick a duration. Claude Opus 5.5 makes a storyboard; then render it to video or ask for another variant. Every variant is kept.',
+    meta: (scenes, duration, aspect) => `${scenes} scenes · ${duration}s · composed for ${aspect}`,
+    sceneN: (n) => `Scene ${n}`,
+    layoutLabels: {
+      full: 'Full frame',
+      'split-left': 'Split',
+      'split-right': 'Split',
+      'center-card': 'Card',
+      grid: 'Grid',
+      'text-only': 'Text',
+      'caption-bottom': 'Bottom caption',
+    },
+    cameraLabels: {
+      static: 'Static',
+      'zoom-in': 'Push in',
+      'zoom-out': 'Pull out',
+      'pan-left': 'Pan left',
+      'pan-right': 'Pan right',
+      'pan-up': 'Pan up',
+      'pan-down': 'Pan down',
+    },
+    transitionLabels: { cut: 'Cut', fade: 'Dissolve', slide: 'Slide', zoom: 'Zoom', wipe: 'Wipe' },
+    renderAspect: 'Video frame',
+    quality: 'Resolution',
+    fps: 'Frames per second',
+    notSupported: 'This browser can’t encode video this large',
+    composedFor: (aspect) => `The storyboard was composed for ${aspect} — in another frame the scenes re-flow automatically; check the frames above.`,
+    render: (w, h) => `Render video ${w}×${h}`,
+    rendering: (pct) => `Rendering… ${pct}%`,
+    cancel: 'Stop',
+    renders: 'Rendered videos',
+    download: 'Download',
+    webmNote: 'This browser can’t encode MP4, so the video was saved as WebM. Open ONEFLOW in Chrome or Edge for MP4.',
   },
   musicAudio: {
     title: 'Music & audio',

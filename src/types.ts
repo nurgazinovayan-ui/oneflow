@@ -1,3 +1,5 @@
+import type { MotionStoryboard, MotionStoryboardRequest } from './motion/types';
+
 export interface ImageGenParams {
   model: string;
   prompt: string;
@@ -221,7 +223,7 @@ export interface SubscriptionStatus {
 export interface GenerationLogEntry {
   timestamp: number;
   model: string;
-  category: 'image' | 'video' | 'adapt' | 'vector' | 'audio';
+  category: 'image' | 'video' | 'adapt' | 'vector' | 'audio' | 'motion';
   costUsd: number;
 }
 
@@ -429,6 +431,8 @@ export interface NodeApi {
   // regardless of subscription status.
   getCheckoutUrl: () => Promise<string>;
   evaluateCreative: (images: string[], platform?: string) => Promise<CreativeEvaluationResult>;
+  // Motion Engine — Claude Opus 5.5 turns materials + brief into a storyboard (motion-storyboard).
+  createMotionStoryboard: (req: MotionStoryboardRequest) => Promise<{ storyboard: MotionStoryboard; costUsd: number }>;
   generateAudio: (params: AudioGenParams) => Promise<string>;
   connectYandexDisk: (code: string) => Promise<boolean>;
   isYandexDiskConnected: () => boolean;
