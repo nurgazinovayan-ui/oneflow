@@ -1,5 +1,5 @@
 // Vercel build for oneflow.art — one project, one domain:
-//   /     → the landing (landing/index.html, a self-contained page)
+//   /     → the landing in English (landing/index.html, a self-contained page); /ru → the Russian one (landing/ru.html)
 //   /app  → the web app (Vite's index.html, renamed to app.html; vercel.json cleanUrls serves it at /app)
 //   /admin → the admin panel (landing/admin.html; security headers for it are in vercel.json)
 // landing/index.html, landing/admin.html and public/oneflow-promo.* are built in the marketing repo
@@ -15,5 +15,6 @@ if (!existsSync('.env.web')) copyFileSync('.env.web.example', '.env.web');
 execSync('npm run build:web', { stdio: 'inherit' });
 renameSync('dist/index.html', 'dist/app.html');
 copyFileSync('landing/index.html', 'dist/index.html');
+if (existsSync('landing/ru.html')) copyFileSync('landing/ru.html', 'dist/ru.html');
 copyFileSync('landing/admin.html', 'dist/admin.html');
-console.log('oneflow.art: landing → dist/index.html, app → dist/app.html (/app), admin → dist/admin.html (/admin)');
+console.log('oneflow.art: landing → dist/index.html (+ ru.html), app → dist/app.html (/app), admin → dist/admin.html (/admin)');

@@ -289,14 +289,14 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
   }
 
   // content editor: the landing page itself lists its editable texts (window.__ofCMS, same key scheme as its loader)
-  let site = null, cq = '';
+  let site = null, cq = '', cmsLang = 'en';  // the site is English at / and Russian at /ru; each language has its own texts
   const SEC = { nav: 'Меню', hero: 'Первый экран', why: 'Почему ONEFLOW', how: 'Как это работает', modules: 'Модули', business: 'Для бизнеса', horeca: 'HoReCa',
     assistant: 'Ассистент', sec: 'Галерея', pricing: 'Тарифы', faq: 'Вопросы', end: 'Финальный призыв', footer: 'Подвал' };
   const TAG = { h1: 'главный заголовок', h2: 'заголовок', h3: 'подзаголовок', h4: 'подзаголовок', p: 'текст', li: 'пункт списка', summary: 'вопрос', a: 'ссылка / кнопка',
     button: 'кнопка', span: 'строка заголовка', th: 'таблица', td: 'таблица', figcaption: 'подпись' };
   const loadSite = () => new Promise((res) => {
     if (site) return res(site);
-    const f = $('#site'); f.onload = () => { try { site = f.contentWindow.__ofCMS || []; } catch { site = []; } res(site); }; f.src = '/?cms-edit=1';
+    const f = $('#site'); f.onload = () => { try { site = f.contentWindow.__ofCMS || []; } catch { site = []; } res(site); }; f.src = cmsLang === 'ru' ? '/ru?cms-edit=1' : '/?cms-edit=1';
   });
   async function vContent() {
     const el = $('#v-content'); if (!site) el.innerHTML = '<p class="dim">Загружаю тексты сайта…</p>';
@@ -304,13 +304,14 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
     if (!items.length) { el.innerHTML = '<p class="empty">Не удалось прочитать тексты лендинга. Откройте админку на том же домене, что и сайт (oneflow.art/admin).</p>'; return; }
     const ov = new Map(D.content.map((c) => { try { return [c.key, JSON.parse(c.value)]; } catch { return [c.key, null]; } }));
     const groups = new Map(); items.filter((it) => !cq || (it.key + ' ' + it.text + ' ' + (ov.get(it.key)?.t || '')).toLowerCase().includes(cq.toLowerCase())).forEach((it) => { if (!groups.has(it.section)) groups.set(it.section, []); groups.get(it.section).push(it); });
-    const orphan = D.content.filter((c) => !items.some((it) => it.key === c.key));
-    el.innerHTML = `<div class="tools"><input class="in" id="cq" type="search" placeholder="Найти текст" value="${esc(cq)}"><span class="dim">${fmtN(items.length)} текстов · изменено ${fmtN(D.content.length)}</span><a class="btn s" href="/" target="_blank" rel="noopener" style="margin-left:auto">Открыть сайт ↗</a></div>
+    const orphan = D.content.filter((c) => (cmsLang === 'en') === c.key.startsWith('en:') && !items.some((it) => it.key === c.key));
+    el.innerHTML = `<div class="tools"><span class="seg" role="group" aria-label="Язык сайта">${['en', 'ru'].map((l) => `<button class="btn s ${cmsLang === l ? 'a' : ''}" data-cl="${l}" type="button">${l === 'en' ? 'English' : 'Русский'}</button>`).join('')}</span><input class="in" id="cq" type="search" placeholder="Найти текст" value="${esc(cq)}"><span class="dim">${fmtN(items.length)} текстов · изменено ${fmtN(D.content.length)}</span><a class="btn s" href="${cmsLang === 'ru' ? '/ru' : '/'}" target="_blank" rel="noopener" style="margin-left:auto">Открыть сайт ↗</a></div>
       <p class="dim" style="margin:-4px 0 14px">Изменения появляются на сайте сразу после сохранения. Пустое поле или «Сбросить» — вернуть исходный текст. Перенос строки = новая строка на сайте.</p>
       ${[...groups.entries()].map(([sec, list]) => `<div class="grp"><h4>${esc(SEC[sec] || sec)}</h4><div class="tw">${list.map((it) => { const o = ov.get(it.key), stale = o && o.o !== it.text, val = o && !stale ? o.t : it.text;
         return `<div class="ci ${o ? 'changed' : ''}" data-k="${esc(it.key)}"><div class="k">${esc(it.key)}${o ? `<span class="tag ${stale ? 'old' : ''}">${stale ? 'устарело' : 'изменено'}</span>` : ''}<div class="dim" style="font-family:var(--f);margin-top:4px">${esc(TAG[it.tag] || it.tag)}</div></div>
         <textarea class="in" rows="${Math.min(6, Math.max(1, Math.ceil(val.length / 70) + (val.match(/\n/g) || []).length))}">${esc(val)}</textarea><div class="acts"><button class="btn a" data-a="save" disabled>Сохранить</button>${o ? '<button class="btn s" data-a="reset">Сбросить</button>' : ''}</div></div>`; }).join('')}</div></div>`).join('') || '<p class="empty">Ничего не нашлось</p>'}
       ${orphan.length ? `<p class="dim">Сохранённых текстов, которых больше нет на сайте: ${orphan.length}. Они не применяются.</p>` : ''}`;
+    $$('[data-cl]').forEach((b) => b.addEventListener('click', () => { if (b.dataset.cl === cmsLang) return; cmsLang = b.dataset.cl; site = null; vContent(); }));
     $('#cq').addEventListener('input', (e) => { cq = e.target.value; const p = e.target.selectionStart; vContent().then(() => { const i = $('#cq'); if (i) { i.focus(); i.setSelectionRange(p, p); } }); });
     $$('.ci').forEach((row) => { const it = items.find((x) => x.key === row.dataset.k), ta = $('textarea', row), sv = $('[data-a=save]', row), v0 = ta.value;
       ta.addEventListener('input', () => { sv.disabled = ta.value === v0; });
