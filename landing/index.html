@@ -592,27 +592,24 @@ dialog.doc { background: var(--card); } .sf input, .sf textarea { background: va
   .bens { gap: 18px; } .bens b { font-size: 27px; } .bens small { font-size: 12.5px; } .lt .acts { flex-direction: column; align-items: stretch; } .win { margin-top: 8px; border-radius: 16px; }
 }
 
-/* hero: the campaign photo full-bleed under the menu, text pinned bottom-left, the bottom blurs and fades into the page */
-.hero { position: relative; isolation: isolate; display: flex; align-items: flex-end; min-height: clamp(640px, 56vw, 980px); margin-top: -72px; padding: 130px 0 72px; text-align: left; overflow: hidden; }
-.hbg { position: absolute; inset: 0; z-index: -1; background: var(--img-hero) 88% 30% / cover no-repeat;
-  -webkit-mask-image: linear-gradient(180deg, #000 64%, transparent 100%); mask-image: linear-gradient(180deg, #000 64%, transparent 100%); }
-.hbg::before { content: ''; position: absolute; inset: 0; -webkit-backdrop-filter: blur(22px); backdrop-filter: blur(22px);
-  -webkit-mask-image: linear-gradient(180deg, transparent 48%, #000 86%); mask-image: linear-gradient(180deg, transparent 48%, #000 86%); }
+/* hero: the campaign photo under the menu at its natural proportions (never zoomed in on desktop), a soft dark band
+   under the menu, text pinned bottom-left, and the bottom of the photo dissolving into the page */
+.hero { position: relative; isolation: isolate; display: flex; align-items: flex-end; min-height: max(640px, calc(max(100vw, 1180px) * .424 + 60px));
+  margin-top: -72px; padding: 130px 0 72px; text-align: left; overflow: hidden; }
+.hbg { position: absolute; left: 0; right: 0; top: 0; height: calc(max(100vw, 1180px) * .424); z-index: -1; background: var(--img-hero) 50% 0 / max(100%, 1180px) auto no-repeat;
+  -webkit-mask-image: linear-gradient(180deg, #000 50%, transparent 100%); mask-image: linear-gradient(180deg, #000 50%, transparent 100%); }
 .hbg::after { content: ''; position: absolute; inset: 0;
-  background: linear-gradient(90deg, rgba(9,14,18,.74) 0%, rgba(9,14,18,.36) 36%, rgba(9,14,18,0) 62%), linear-gradient(180deg, rgba(9,14,18,0) 38%, rgba(9,14,18,.62) 72%, rgba(9,14,18,.75) 100%); }
-.hero h1 { margin-top: 0; max-width: 820px; font-size: clamp(40px, 5.6vw, 80px); text-shadow: 0 2px 30px rgba(0,0,0,.28); }
+  background: linear-gradient(180deg, rgba(9,14,18,.62) 0%, rgba(9,14,18,.28) 9%, rgba(9,14,18,0) 20%),
+    linear-gradient(90deg, rgba(9,14,18,.72) 0%, rgba(9,14,18,.34) 36%, rgba(9,14,18,0) 62%); }
+.hero h1 { margin-top: 0; max-width: 820px; font-size: clamp(40px, 5.6vw, 80px); }
 .hero .sub { margin: 22px 0 0; max-width: 560px; color: #d3e3ec; } .hero .acts { justify-content: flex-start; margin-top: 30px; }
 .mrow { padding-top: 34px; } .mrow .models { margin-top: 0; }
-/* the menu sits on the light top of the photo: dark ink */
-.nav .logo, .nav .lg { color: #0a1822; } .nav nav a { color: rgba(10,24,34,.78); } .nav nav a:hover { color: #0a1822; }
-.nav .logo, .nav .lg, .nav nav a { text-shadow: 0 0 10px rgba(225,240,250,.9), 0 0 2px rgba(225,240,250,.8); }
-.nav nav { margin-left: auto; } .nav .sp { display: none; }
-.nav .btn.p { background: #0a1822; color: #fff; box-shadow: 0 10px 24px -12px rgba(10,24,34,.6); } .burger i { background: #0a1822; }
-.lang { display: inline-flex; gap: 2px; padding: 3px; border-radius: 9px; background: rgba(10,24,34,.07); box-shadow: inset 0 0 0 1px rgba(10,24,34,.16); }
-.lang a { padding: 4px 9px; border-radius: 7px; font: 600 12px/1.2 var(--d); color: rgba(10,24,34,.66); } .lang a:hover { color: #0a1822; }
-.lang a[aria-current] { background: #0a1822; color: #fff; }
-@media (max-width: 760px) { .hero { min-height: clamp(600px, 92svh, 820px); padding-bottom: 48px; } .hbg { background-position: 70% 30%; }
-  .hbg::after { background: linear-gradient(180deg, rgba(9,14,18,0) 30%, rgba(9,14,18,.7) 62%, rgba(9,14,18,.8) 100%); } .nav .lang { margin-left: auto; } .hero .acts { flex-direction: column; align-items: stretch; } }
+.nav nav a { color: rgba(238,247,251,.78); } .nav nav a:hover { color: #fff; }
+.lang { display: inline-flex; gap: 2px; padding: 3px; border-radius: 9px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.16); }
+.lang a { padding: 4px 9px; border-radius: 7px; font: 600 12px/1.2 var(--d); color: rgba(238,247,251,.7); } .lang a:hover { color: #fff; }
+.lang a[aria-current] { background: var(--ac); color: var(--acink); }
+@media (max-width: 760px) { .hero { min-height: clamp(600px, 92svh, 820px); padding-bottom: 48px; } .hbg { height: auto; bottom: 0; background-size: cover; background-position: 70% 30%; }
+  .hero .acts { flex-direction: column; align-items: stretch; } .nav .lang { margin-left: auto; } }
 </style>
 </head>
 <body id="top">
