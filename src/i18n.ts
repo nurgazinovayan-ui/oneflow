@@ -930,6 +930,11 @@ export interface Translations {
     insufficientBalance: string;
     sendFailed: string;
     userNotFound: string;
+    // server spend guard (supabase/migrations/202610010001_generation_guard.sql)
+    quotaExceeded: string;
+    tooManyJobs: string;
+    emailNotConfirmed: string;
+    jobTooExpensive: string;
   };
   nodes: {
     common: {
@@ -1146,6 +1151,8 @@ export const ru: Translations = {
       adapt: 'Адаптация',
       vector: 'Вектор',
       motion: 'Motion Engine',
+      evaluate: 'Creative Predictor',
+      text: 'Тексты',
     },
     csvHeader: 'Дата,Время,Модель,Категория,Стоимость USD',
     exportError: 'Не удалось сохранить файл',
@@ -2083,6 +2090,10 @@ export const ru: Translations = {
       'Недостаточно средств на балансе для этой генерации. Пополните баланс, чтобы продолжить.',
     sendFailed: 'Не удалось отправить.',
     userNotFound: 'Пользователь с таким email не найден.',
+    quotaExceeded: 'Лимит генераций на этот месяц исчерпан. Оформите тариф, чтобы продолжить.',
+    tooManyJobs: 'Слишком много генераций одновременно — дождитесь завершения текущих.',
+    emailNotConfirmed: 'Подтвердите email по ссылке из письма, чтобы пользоваться генерацией.',
+    jobTooExpensive: 'Этот запрос слишком дорогой для одной генерации — уменьшите длительность или разрешение.',
   },
   nodes: {
     common: {
@@ -2303,6 +2314,8 @@ export const en: Translations = {
       adapt: 'Adapt',
       vector: 'Vector',
       motion: 'Motion Engine',
+      evaluate: 'Creative Predictor',
+      text: 'Text',
     },
     csvHeader: 'Date,Time,Model,Category,Cost USD',
     exportError: 'Could not save the file',
@@ -3230,6 +3243,10 @@ export const en: Translations = {
     insufficientBalance: 'Insufficient balance for this generation. Top up your balance to continue.',
     sendFailed: 'Could not send.',
     userNotFound: 'No user found with that email.',
+    quotaExceeded: 'You have used up this month’s generation limit. Choose a plan to continue.',
+    tooManyJobs: 'Too many generations at once — wait for the current ones to finish.',
+    emailNotConfirmed: 'Confirm your email via the link we sent you to use generation.',
+    jobTooExpensive: 'This request is too expensive for a single generation — lower the duration or resolution.',
   },
   nodes: {
     common: {

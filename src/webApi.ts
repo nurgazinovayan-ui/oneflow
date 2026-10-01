@@ -112,9 +112,16 @@ async function callFunction<T>(name: string, body: unknown): Promise<T> {
       },
       body: JSON.stringify(body),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => null);
     if (!res.ok) {
-      throw new Error(data?.error || t().errors.generationError);
+      // limits from the server's spend guard come with a code → a message in the user's language
+      const byCode: Record<string, string> = {
+        quota_exceeded: t().errors.quotaExceeded,
+        too_many_jobs: t().errors.tooManyJobs,
+        email_not_confirmed: t().errors.emailNotConfirmed,
+        job_too_expensive: t().errors.jobTooExpensive,
+      };
+      throw new Error(byCode[data?.code] || data?.error || t().errors.generationError);
     }
     if (kind) capture(`${kind}_succeeded`, { fn: name, model, ms: Date.now() - startedAt });
     return data as T;

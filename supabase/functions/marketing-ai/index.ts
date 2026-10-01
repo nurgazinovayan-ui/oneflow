@@ -483,11 +483,78 @@ function logTelemetry(entry: Record<string, unknown>): void {
   console.log(JSON.stringify({ scope: 'marketing-ai', promptVersion: PROMPT_VERSION, schemaVersion: SCHEMA_VERSION, ...entry }));
 }
 
+// ---- Spend guard (security audit C-1/M-1). The same block is pasted into every paid function
+// (they deploy as single files, no shared imports). Before a paid provider call the estimated cost
+// is reserved against the caller's monthly allowance — who may spend what is decided in ONE place,
+// supabase/migrations/202610010001_generation_guard.sql. After the call the reservation is settled
+// with the real cost (that writes generation_log, once) or released if the call failed.
+class GuardError extends Error {
+  constructor(readonly status: number, readonly code: string, message: string) {
+    super(message);
+  }
+}
+const GUARD_ERRORS: Record<string, [number, string]> = {
+  email_not_confirmed: [403, 'Подтвердите email, чтобы пользоваться генерацией.'],
+  quota_exceeded: [402, 'Лимит генераций на этот месяц исчерпан.'],
+  too_many_jobs: [429, 'Слишком много генераций одновременно — дождитесь завершения.'],
+  job_too_expensive: [400, 'Запрос слишком дорогой для одной генерации.'],
+};
+const badRequest = (message: string) => new GuardError(400, 'bad_request', message);
+
+async function reserveSpend(userId: string, model: string, category: string, amountUsd: number): Promise<string> {
+  const { data, error } = await supabaseAdmin.rpc('reserve_generation', {
+    p_user: userId,
+    p_model: model,
+    p_category: category,
+    p_amount: Math.max(0, Number(amountUsd) || 0),
+  });
+  if (error) {
+    const code = Object.keys(GUARD_ERRORS).find((k) => (error.message ?? '').includes(k));
+    if (code) throw new GuardError(GUARD_ERRORS[code][0], code, GUARD_ERRORS[code][1]);
+    throw error;
+  }
+  return data as string;
+}
+
+async function settleSpend(reservation: string | null, email: string, costUsd: number): Promise<void> {
+  if (!reservation) return;
+  const { error } = await supabaseAdmin.rpc('settle_generation', { p_reservation: reservation, p_email: email, p_cost: costUsd });
+  if (error) console.error('settle_generation failed', error);
+}
+
+// Releases an unsettled reservation and turns any error into a response without internal details
+// (audit L-2) — the details go to the function's logs instead.
+async function failResponse(err: unknown, reservation: string | null, message: string): Promise<Response> {
+  if (reservation) {
+    const { error } = await supabaseAdmin.rpc('release_generation', { p_reservation: reservation });
+    if (error) console.error('release_generation failed', error);
+  }
+  if (err instanceof GuardError) return jsonResponse({ error: err.message, code: err.code }, err.status);
+  console.error(err);
+  return jsonResponse({ error: message }, 500);
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
+
+// Reference images: https URLs or image data URLs only, bounded in size.
+const MAX_IMAGE_REF_CHARS = 12_000_000;
+const isImageRef = (v: unknown): v is string =>
+  typeof v === 'string' && v.length <= MAX_IMAGE_REF_CHARS && (v.startsWith('https://') || v.startsWith('data:image/'));
+const clipText = (v: unknown, max: number): string => (typeof v === 'string' ? v.slice(0, max) : '');
+// ---- end of spend guard
+
+// Audit M-1: the strategy context is user-written; cap it before it becomes prompt tokens.
+const MAX_CONTEXT_CHARS = 60_000;
+const MARKETING_RESERVE_USD = 0.1;  // per task (OpenAI reports tokens, not dollars — a flat estimate)
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
 
   const requestId = crypto.randomUUID();
+  let reservation: string | null = null;
   try {
     const caller = await getCaller(req);
     if (!caller) {
@@ -505,7 +572,9 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const ctx: MarketingAIContext = { taskType: task, ...(body.context ?? {}) };
+    const ctx: MarketingAIContext = { taskType: task, ...(body.context && typeof body.context === 'object' ? body.context : {}) };
+    if (JSON.stringify(ctx).length > MAX_CONTEXT_CHARS) throw badRequest('Слишком большой контекст стратегии.');
+    if (ctx.imageUrl !== undefined && !isImageRef(ctx.imageUrl)) throw badRequest('Bad image.');
 
     if (body.mock === true) {
       logTelemetry({ requestId, task, mock: true, userId: caller.id });
@@ -523,6 +592,7 @@ Deno.serve(async (req) => {
       );
     }
 
+    reservation = await reserveSpend(caller.id, modelFor(TASKS[task].complexity), 'text', MARKETING_RESERVE_USD * 2);  // up to two attempts
     let attempt = 0;
     let lastError: unknown;
     while (attempt < 2) {
@@ -530,6 +600,8 @@ Deno.serve(async (req) => {
       try {
         const { result, model, latencyMs } = await callOpenAI(task, ctx);
         logTelemetry({ requestId, task, model, latencyMs, attempt, validation: 'pass', userId: caller.id });
+        await settleSpend(reservation, caller.email, MARKETING_RESERVE_USD * attempt);
+        reservation = null;
         return new Response(
           JSON.stringify({ result, schemaVersion: SCHEMA_VERSION, promptVersion: PROMPT_VERSION, model }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -541,15 +613,13 @@ Deno.serve(async (req) => {
     }
     // spec §94/§119 — never save a partially-invalid AI output as the active strategy; surface a
     // recoverable error instead of guessing.
-    return new Response(JSON.stringify({ error: `AI request failed after retries: ${String(lastError)}` }), {
-      status: 502,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    // both attempts were billed by OpenAI even though the output was unusable
+    await settleSpend(reservation, caller.email, MARKETING_RESERVE_USD * attempt);
+    reservation = null;
+    console.error('marketing-ai failed after retries', lastError);
+    return jsonResponse({ error: 'Не удалось получить корректный ответ ИИ. Попробуйте ещё раз.' }, 502);
   } catch (err) {
     logTelemetry({ requestId, error: String(err) });
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return failResponse(err, reservation, 'Не удалось выполнить запрос. Попробуйте ещё раз.');
   }
 });

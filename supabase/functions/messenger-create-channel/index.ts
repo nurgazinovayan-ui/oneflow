@@ -65,7 +65,9 @@ Deno.serve(async (req) => {
       ...(sent.data ?? []).map((r: { to_email: string }) => r.to_email),
       ...(received.data ?? []).map((r: { from_email: string }) => r.from_email),
     ]);
-    const reachable = (e: string) => e === callerEmail || contacts.has(e) || (isColleague(callerEmail) && isColleague(e));
+    // Audit M-2: only a confirmed @mechta.kz address may reach colleagues without an invite.
+    const colleague = isColleague(callerEmail) && !!caller.email_confirmed_at;
+    const reachable = (e: string) => e === callerEmail || contacts.has(e) || (colleague && isColleague(e));
     if (memberEmails.some((e) => !reachable(e))) {
       return jsonError('Писать можно только своим контактам. Сначала пригласите человека в контакты.', 403);
     }
@@ -131,6 +133,7 @@ Deno.serve(async (req) => {
     if (memErr) throw memErr;
     return new Response(JSON.stringify({ id: created.id }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (err) {
-    return jsonError(String(err), 500);
+    console.error(err);  // audit L-2: details stay in the function logs
+    return jsonError('Внутренняя ошибка. Попробуйте ещё раз.', 500);
   }
 });

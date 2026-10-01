@@ -9,9 +9,10 @@
 //   OPENROUTER_API_KEY — your OpenRouter token (openrouter.ai/settings/keys)
 // SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY are normally already set automatically.
 //
-// No per-user billing here — every generation is funded by the single shared
-// OPENROUTER_API_KEY, topped up directly at openrouter.ai. Requires the generation_log table
-// — see the SQL comment in admin-list-generations/index.ts — for admin usage history only.
+// Every call is funded by the single shared OPENROUTER_API_KEY, but each user may only spend their
+// own monthly allowance: the spend guard below reserves the cost before the provider call and
+// settles it into generation_log afterwards. Requires supabase/migrations/
+// 202610010001_generation_guard.sql (and the generation_log table — see admin-list-generations).
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -37,18 +38,6 @@ async function getCaller(req: Request): Promise<{ id: string; email: string } | 
   return { id: data.user.id, email: data.user.email ?? '' };
 }
 
-async function logGeneration(
-  userId: string,
-  email: string,
-  model: string,
-  category: string,
-  costUsd: number
-): Promise<void> {
-  const { error } = await supabaseAdmin
-    .from('generation_log')
-    .insert({ user_id: userId, email, model, category, cost_usd: costUsd });
-  if (error) console.error('Failed to log generation', error);
-}
 
 // The web build is served from a different origin than *.supabase.co, so every browser call
 // here is cross-origin and triggers a CORS preflight (OPTIONS) first — without these headers
@@ -113,40 +102,88 @@ async function callOpenRouterImage(
   return { urls, realCostUsd };
 }
 
+// ---- Spend guard (security audit C-1/M-1). The same block is pasted into every paid function
+// (they deploy as single files, no shared imports). Before a paid provider call the estimated cost
+// is reserved against the caller's monthly allowance — who may spend what is decided in ONE place,
+// supabase/migrations/202610010001_generation_guard.sql. After the call the reservation is settled
+// with the real cost (that writes generation_log, once) or released if the call failed.
+class GuardError extends Error {
+  constructor(readonly status: number, readonly code: string, message: string) {
+    super(message);
+  }
+}
+const GUARD_ERRORS: Record<string, [number, string]> = {
+  email_not_confirmed: [403, 'Подтвердите email, чтобы пользоваться генерацией.'],
+  quota_exceeded: [402, 'Лимит генераций на этот месяц исчерпан.'],
+  too_many_jobs: [429, 'Слишком много генераций одновременно — дождитесь завершения.'],
+  job_too_expensive: [400, 'Запрос слишком дорогой для одной генерации.'],
+};
+const badRequest = (message: string) => new GuardError(400, 'bad_request', message);
+
+async function reserveSpend(userId: string, model: string, category: string, amountUsd: number): Promise<string> {
+  const { data, error } = await supabaseAdmin.rpc('reserve_generation', {
+    p_user: userId,
+    p_model: model,
+    p_category: category,
+    p_amount: Math.max(0, Number(amountUsd) || 0),
+  });
+  if (error) {
+    const code = Object.keys(GUARD_ERRORS).find((k) => (error.message ?? '').includes(k));
+    if (code) throw new GuardError(GUARD_ERRORS[code][0], code, GUARD_ERRORS[code][1]);
+    throw error;
+  }
+  return data as string;
+}
+
+async function settleSpend(reservation: string | null, email: string, costUsd: number): Promise<void> {
+  if (!reservation) return;
+  const { error } = await supabaseAdmin.rpc('settle_generation', { p_reservation: reservation, p_email: email, p_cost: costUsd });
+  if (error) console.error('settle_generation failed', error);
+}
+
+// Releases an unsettled reservation and turns any error into a response without internal details
+// (audit L-2) — the details go to the function's logs instead.
+async function failResponse(err: unknown, reservation: string | null, message: string): Promise<Response> {
+  if (reservation) {
+    const { error } = await supabaseAdmin.rpc('release_generation', { p_reservation: reservation });
+    if (error) console.error('release_generation failed', error);
+  }
+  if (err instanceof GuardError) return jsonResponse({ error: err.message, code: err.code }, err.status);
+  console.error(err);
+  return jsonResponse({ error: message }, 500);
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
+
+// Reference images: https URLs or image data URLs only, bounded in size.
+const MAX_IMAGE_REF_CHARS = 12_000_000;
+const isImageRef = (v: unknown): v is string =>
+  typeof v === 'string' && v.length <= MAX_IMAGE_REF_CHARS && (v.startsWith('https://') || v.startsWith('data:image/'));
+const clipText = (v: unknown, max: number): string => (typeof v === 'string' ? v.slice(0, max) : '');
+const validRatio = (v: unknown, fallback: string): string => (typeof v === 'string' && /^\d{1,2}:\d{1,2}$/.test(v) ? v : fallback);
+// ---- end of spend guard
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
+  let reservation: string | null = null;
   try {
     const caller = await getCaller(req);
-    if (!caller) {
-      return new Response(JSON.stringify({ error: 'Not authenticated.' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const callerId = caller.id;
+    if (!caller) return jsonResponse({ error: 'Not authenticated.' }, 401);
+    const params = await req.json().catch(() => null);
+    if (!params || typeof params !== 'object') throw badRequest('Bad request.');
 
-    const params = await req.json();
-    const { prompt, aspectRatio } = params;
+    reservation = await reserveSpend(caller.id, 'recraft-ai/recraft-v4-svg', 'vector', RECRAFT_V4_SVG_PRICE_USD);
 
-    const input = buildVectorInput(prompt, aspectRatio);
+    const input = buildVectorInput(clipText(params.prompt, 4000), validRatio(params.aspectRatio, '1:1'));
     const { urls, realCostUsd } = await callOpenRouterImage(input);
 
-    void logGeneration(
-      callerId,
-      caller.email,
-      'recraft-ai/recraft-v4-svg',
-      'vector',
-      realCostUsd ?? RECRAFT_V4_SVG_PRICE_USD
-    );
-
-    return new Response(JSON.stringify(urls), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    await settleSpend(reservation, caller.email, realCostUsd ?? RECRAFT_V4_SVG_PRICE_USD);
+    reservation = null;
+    return jsonResponse(urls);
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return failResponse(err, reservation, 'Не удалось сгенерировать вектор. Попробуйте ещё раз.');
   }
 });

@@ -37,7 +37,8 @@ Deno.serve(async (req) => {
 
     const { data: callerData } = await admin.auth.getUser(token);
     const caller = callerData.user;
-    if (!caller || caller.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    // Audit M-2: the owner's address must also be confirmed — an unconfirmed sign-up proves nothing.
+    if (!caller || !caller.email_confirmed_at || caller.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
       return new Response(JSON.stringify({ error: 'Доступ запрещён.' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -93,7 +94,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
+    console.error(err);  // audit L-2: details stay in the logs
+    return new Response(JSON.stringify({ error: 'Внутренняя ошибка.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

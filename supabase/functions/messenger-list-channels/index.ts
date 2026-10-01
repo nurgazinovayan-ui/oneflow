@@ -123,7 +123,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
+    console.error(err);  // audit L-2: details stay in the function logs
+    return new Response(JSON.stringify({ error: 'Внутренняя ошибка. Попробуйте ещё раз.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

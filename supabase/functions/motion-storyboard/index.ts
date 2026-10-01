@@ -238,9 +238,72 @@ function extractJson(text: string): unknown {
   return JSON.parse(text.slice(start, end + 1));
 }
 
+// ---- Spend guard (security audit C-1/M-1). The same block is pasted into every paid function
+// (they deploy as single files, no shared imports). Before a paid provider call the estimated cost
+// is reserved against the caller's monthly allowance — who may spend what is decided in ONE place,
+// supabase/migrations/202610010001_generation_guard.sql. After the call the reservation is settled
+// with the real cost (that writes generation_log, once) or released if the call failed.
+class GuardError extends Error {
+  constructor(readonly status: number, readonly code: string, message: string) {
+    super(message);
+  }
+}
+const GUARD_ERRORS: Record<string, [number, string]> = {
+  email_not_confirmed: [403, 'Подтвердите email, чтобы пользоваться генерацией.'],
+  quota_exceeded: [402, 'Лимит генераций на этот месяц исчерпан.'],
+  too_many_jobs: [429, 'Слишком много генераций одновременно — дождитесь завершения.'],
+  job_too_expensive: [400, 'Запрос слишком дорогой для одной генерации.'],
+};
+const badRequest = (message: string) => new GuardError(400, 'bad_request', message);
+
+async function reserveSpend(userId: string, model: string, category: string, amountUsd: number): Promise<string> {
+  const { data, error } = await supabaseAdmin.rpc('reserve_generation', {
+    p_user: userId,
+    p_model: model,
+    p_category: category,
+    p_amount: Math.max(0, Number(amountUsd) || 0),
+  });
+  if (error) {
+    const code = Object.keys(GUARD_ERRORS).find((k) => (error.message ?? '').includes(k));
+    if (code) throw new GuardError(GUARD_ERRORS[code][0], code, GUARD_ERRORS[code][1]);
+    throw error;
+  }
+  return data as string;
+}
+
+async function settleSpend(reservation: string | null, email: string, costUsd: number): Promise<void> {
+  if (!reservation) return;
+  const { error } = await supabaseAdmin.rpc('settle_generation', { p_reservation: reservation, p_email: email, p_cost: costUsd });
+  if (error) console.error('settle_generation failed', error);
+}
+
+// Releases an unsettled reservation and turns any error into a response without internal details
+// (audit L-2) — the details go to the function's logs instead.
+async function failResponse(err: unknown, reservation: string | null, message: string): Promise<Response> {
+  if (reservation) {
+    const { error } = await supabaseAdmin.rpc('release_generation', { p_reservation: reservation });
+    if (error) console.error('release_generation failed', error);
+  }
+  if (err instanceof GuardError) return jsonResponse({ error: err.message, code: err.code }, err.status);
+  console.error(err);
+  return jsonResponse({ error: message }, 500);
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
+
+// Reference images: https URLs or image data URLs only, bounded in size.
+const MAX_IMAGE_REF_CHARS = 12_000_000;
+const isImageRef = (v: unknown): v is string =>
+  typeof v === 'string' && v.length <= MAX_IMAGE_REF_CHARS && (v.startsWith('https://') || v.startsWith('data:image/'));
+const clipText = (v: unknown, max: number): string => (typeof v === 'string' ? v.slice(0, max) : '');
+// ---- end of spend guard
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
+  let reservation: string | null = null;
   try {
     const caller = await getCaller(req);
     if (!caller) return json({ error: 'Not authenticated.' }, 401);
@@ -312,6 +375,8 @@ Deno.serve(async (req) => {
       content.push({ type: 'image_url', image_url: { url: f } });
     });
 
+    // worst case for this request size (max_tokens below + up to ~30 frames in); settled with the real cost
+    reservation = await reserveSpend(caller.id, MODEL_LABEL, 'motion', mode === 'styles' ? 0.15 : 0.35);
     const res = await fetch(OPENROUTER_CHAT_URL, {
       method: 'POST',
       headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, 'Content-Type': 'application/json' },
@@ -325,7 +390,7 @@ Deno.serve(async (req) => {
     });
     if (!res.ok) {
       console.error('OpenRouter error', res.status, await res.text());
-      return json({ error: 'Не удалось получить ответ от модели. Попробуйте ещё раз.' }, 502);
+      return failResponse(new GuardError(502, 'provider_error', 'Не удалось получить ответ от модели. Попробуйте ещё раз.'), reservation, '');
     }
     const data = await res.json();
     const text: string = data.choices?.[0]?.message?.content ?? '';
@@ -338,13 +403,11 @@ Deno.serve(async (req) => {
       : { storyboard: normalize(parsed, duration, assets.length, pinned) };
     if ('styles' in result && !result.styles.length) throw new Error('Модель не предложила ни одного стиля.');
 
-    const { error: logError } = await supabaseAdmin.from('generation_log')
-      .insert({ user_id: caller.id, email: caller.email, model: MODEL_LABEL, category: 'motion', cost_usd: costUsd });
-    if (logError) console.error('Failed to log generation', logError);
+    await settleSpend(reservation, caller.email, costUsd);
+    reservation = null;
 
     return json({ ...result, costUsd });
   } catch (err) {
-    console.error(err);
-    return json({ error: 'Не удалось выполнить запрос. Попробуйте ещё раз.' }, 500);
+    return failResponse(err, reservation, 'Не удалось выполнить запрос. Попробуйте ещё раз.');
   }
 });

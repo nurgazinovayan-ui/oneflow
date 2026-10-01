@@ -4,9 +4,9 @@
 // openrouter.ai/settings/keys). SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are normally already
 // set automatically for Edge Functions.
 //
-// No per-user billing here — every generation is funded by the single shared
-// OPENROUTER_API_KEY, topped up directly at openrouter.ai. Requires the generation_log
-// table — see the SQL comment in admin-list-generations/index.ts (usage history only) — AND the
+// Funded by the shared OPENROUTER_API_KEY, within each user's monthly allowance (spend guard
+// below + supabase/migrations/202610010001_generation_guard.sql). Requires the generation_log
+// table — see the SQL comment in admin-list-generations/index.ts — AND the
 // "ai-generated-videos" Storage bucket from supabase/migrations/202609090002_ai_video_bucket.sql
 // (OpenRouter's video content endpoint requires the shared API key on every request, so the
 // finished video is downloaded here and re-hosted as a plain public URL for the client).
@@ -51,18 +51,6 @@ async function getCaller(req: Request): Promise<{ id: string; email: string } | 
   return { id: data.user.id, email: data.user.email ?? '' };
 }
 
-async function logGeneration(
-  userId: string,
-  email: string,
-  model: string,
-  category: string,
-  costUsd: number
-): Promise<void> {
-  const { error } = await supabaseAdmin
-    .from('generation_log')
-    .insert({ user_id: userId, email, model, category, cost_usd: costUsd });
-  if (error) console.error('Failed to log generation', error);
-}
 
 // The web build is served from a different origin than *.supabase.co, so every browser call
 // here is cross-origin and triggers a CORS preflight (OPTIONS) first — without these headers
@@ -193,27 +181,103 @@ async function downloadAndStoreVideo(jobId: string): Promise<string> {
   return pub.publicUrl;
 }
 
+// Kept in sync by hand with VIDEO_MODEL_META in src/types.ts — the allowlist for this function.
+const VIDEO_MODEL_LIMITS: Record<string, { minDuration: number; maxDuration: number; resolutions: string[] }> = {
+  'bytedance/seedance-2.0': { minDuration: 1, maxDuration: 15, resolutions: ['480p', '720p'] },
+  'bytedance/seedance-2.5': { minDuration: 4, maxDuration: 30, resolutions: ['480p', '720p', '1080p'] },
+  'kwaivgi/kling-v3-video': { minDuration: 3, maxDuration: 15, resolutions: ['720p', '1080p'] },
+  'google/veo-3.1-fast': { minDuration: 4, maxDuration: 8, resolutions: ['720p', '1080p', '4K'] },
+  'bytedance/seedance-2.0-mini': { minDuration: 4, maxDuration: 15, resolutions: ['480p', '720p'] },
+  'minimax/hailuo-3-max': { minDuration: 5, maxDuration: 15, resolutions: ['480p', '768p'] },
+  'black-forest-labs/flux-3-video': { minDuration: 5, maxDuration: 20, resolutions: ['720p', '1080p'] },
+};
+
+// ---- Spend guard (security audit C-1/M-1). The same block is pasted into every paid function
+// (they deploy as single files, no shared imports). Before a paid provider call the estimated cost
+// is reserved against the caller's monthly allowance — who may spend what is decided in ONE place,
+// supabase/migrations/202610010001_generation_guard.sql. After the call the reservation is settled
+// with the real cost (that writes generation_log, once) or released if the call failed.
+class GuardError extends Error {
+  constructor(readonly status: number, readonly code: string, message: string) {
+    super(message);
+  }
+}
+const GUARD_ERRORS: Record<string, [number, string]> = {
+  email_not_confirmed: [403, 'Подтвердите email, чтобы пользоваться генерацией.'],
+  quota_exceeded: [402, 'Лимит генераций на этот месяц исчерпан.'],
+  too_many_jobs: [429, 'Слишком много генераций одновременно — дождитесь завершения.'],
+  job_too_expensive: [400, 'Запрос слишком дорогой для одной генерации.'],
+};
+const badRequest = (message: string) => new GuardError(400, 'bad_request', message);
+
+async function reserveSpend(userId: string, model: string, category: string, amountUsd: number): Promise<string> {
+  const { data, error } = await supabaseAdmin.rpc('reserve_generation', {
+    p_user: userId,
+    p_model: model,
+    p_category: category,
+    p_amount: Math.max(0, Number(amountUsd) || 0),
+  });
+  if (error) {
+    const code = Object.keys(GUARD_ERRORS).find((k) => (error.message ?? '').includes(k));
+    if (code) throw new GuardError(GUARD_ERRORS[code][0], code, GUARD_ERRORS[code][1]);
+    throw error;
+  }
+  return data as string;
+}
+
+async function settleSpend(reservation: string | null, email: string, costUsd: number): Promise<void> {
+  if (!reservation) return;
+  const { error } = await supabaseAdmin.rpc('settle_generation', { p_reservation: reservation, p_email: email, p_cost: costUsd });
+  if (error) console.error('settle_generation failed', error);
+}
+
+// Releases an unsettled reservation and turns any error into a response without internal details
+// (audit L-2) — the details go to the function's logs instead.
+async function failResponse(err: unknown, reservation: string | null, message: string): Promise<Response> {
+  if (reservation) {
+    const { error } = await supabaseAdmin.rpc('release_generation', { p_reservation: reservation });
+    if (error) console.error('release_generation failed', error);
+  }
+  if (err instanceof GuardError) return jsonResponse({ error: err.message, code: err.code }, err.status);
+  console.error(err);
+  return jsonResponse({ error: message }, 500);
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
+
+// Reference images: https URLs or image data URLs only, bounded in size.
+const MAX_IMAGE_REF_CHARS = 12_000_000;
+const isImageRef = (v: unknown): v is string =>
+  typeof v === 'string' && v.length <= MAX_IMAGE_REF_CHARS && (v.startsWith('https://') || v.startsWith('data:image/'));
+const clipText = (v: unknown, max: number): string => (typeof v === 'string' ? v.slice(0, max) : '');
+const validRatio = (v: unknown, fallback: string): string => (typeof v === 'string' && /^\d{1,2}:\d{1,2}$/.test(v) ? v : fallback);
+// ---- end of spend guard
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
+  let reservation: string | null = null;
   try {
     const caller = await getCaller(req);
-    if (!caller) {
-      return new Response(JSON.stringify({ error: 'Not authenticated.' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const callerId = caller.id;
+    if (!caller) return jsonResponse({ error: 'Not authenticated.' }, 401);
+    const params = await req.json().catch(() => null);
+    if (!params || typeof params !== 'object') throw badRequest('Bad request.');
 
-    const params = await req.json();
-    const { model, prompt, image, aspectRatio, resolution } = params;
-    // A stale client (old saved project predating this field, or a bad request) can send a
-    // missing/non-numeric duration — Math.round(undefined) is NaN, which JSON.stringify turns
-    // into null on the way to OpenRouter, and its schema rejects null outright with a 400.
-    const duration = Number.isFinite(params.duration) && params.duration > 0 ? params.duration : 5;
+    // Audit H-1: only the models the app offers, with that model's own durations/resolutions.
+    const { model } = params;
+    const aspectRatio = validRatio(params.aspectRatio, '16:9');
+    const meta = typeof model === 'string' ? VIDEO_MODEL_LIMITS[model] : undefined;
+    if (!meta) throw badRequest('Unknown model.');
+    const resolution = meta.resolutions.includes(params.resolution) ? params.resolution : meta.resolutions[0];
+    const requested = Number.isFinite(params.duration) && params.duration > 0 ? params.duration : 5;
+    const duration = Math.min(meta.maxDuration, Math.max(meta.minDuration, Math.round(requested)));
+    const prompt = clipText(params.prompt, 4000);
+    const image = isImageRef(params.image) ? params.image : undefined;
 
     const costUsd = estimateVideoCost(model, resolution, duration);
+    reservation = await reserveSpend(caller.id, model, 'video', costUsd);
 
     const input = buildVideoInput(model, prompt, image, aspectRatio, duration, resolution);
     const job = await submitOpenRouterVideoJob(input);
@@ -221,15 +285,10 @@ Deno.serve(async (req) => {
     const url = await downloadAndStoreVideo(completed.id ?? job.id);
     const realCostUsd = typeof completed.usage?.cost === 'number' ? completed.usage.cost : null;
 
-    void logGeneration(callerId, caller.email, model, 'video', realCostUsd ?? costUsd);
-
-    return new Response(JSON.stringify([url]), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    await settleSpend(reservation, caller.email, realCostUsd ?? costUsd);
+    reservation = null;
+    return jsonResponse([url]);
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return failResponse(err, reservation, 'Не удалось сгенерировать видео. Попробуйте ещё раз.');
   }
 });

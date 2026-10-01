@@ -57,7 +57,8 @@ Deno.serve(async (req) => {
     }
 
     const allowedEmails = new Set<string>([callerEmail]);
-    if (isColleague(callerEmail)) {
+    // Audit M-2: the @mechta.kz shortcut trusts the address, so the address must be proven.
+    if (isColleague(callerEmail) && caller?.email_confirmed_at) {
       for (let page = 1; page <= MAX_PAGES; page++) {
         const { data, error } = await admin.auth.admin.listUsers({ page, perPage: USERS_PER_PAGE });
         if (error) throw error;
@@ -105,7 +106,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
+    console.error(err);  // audit L-2: details stay in the function logs
+    return new Response(JSON.stringify({ error: 'Внутренняя ошибка. Попробуйте ещё раз.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

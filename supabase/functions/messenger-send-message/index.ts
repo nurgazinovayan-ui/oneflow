@@ -100,6 +100,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err) {
-    return jsonError(String(err), 500);
+    console.error(err);  // audit L-2: details stay in the function logs
+    return jsonError('Внутренняя ошибка. Попробуйте ещё раз.', 500);
   }
 });

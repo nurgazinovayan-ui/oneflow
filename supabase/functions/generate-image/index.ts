@@ -14,9 +14,10 @@
 //   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY — usually already set automatically for every
 //   Edge Function in this project; only add them by hand if they're missing.
 //
-// No per-user billing here — every generation is funded by the single shared
-// OPENROUTER_API_KEY, topped up directly at openrouter.ai. Requires the generation_log table
-// — see the SQL comment in admin-list-generations/index.ts — for admin usage history only.
+// Every call is funded by the single shared OPENROUTER_API_KEY, but each user may only spend their
+// own monthly allowance: the spend guard below reserves the cost before the provider call and
+// settles it into generation_log afterwards. Requires supabase/migrations/
+// 202610010001_generation_guard.sql (and the generation_log table — see admin-list-generations).
 
 import Replicate from 'npm:replicate';
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -83,18 +84,6 @@ async function getCaller(req: Request): Promise<{ id: string; email: string } | 
   return { id: data.user.id, email: data.user.email ?? '' };
 }
 
-async function logGeneration(
-  userId: string,
-  email: string,
-  model: string,
-  category: string,
-  costUsd: number
-): Promise<void> {
-  const { error } = await supabaseAdmin
-    .from('generation_log')
-    .insert({ user_id: userId, email, model, category, cost_usd: costUsd });
-  if (error) console.error('Failed to log generation', error);
-}
 
 // The web build is served from a different origin than *.supabase.co (e.g. a Vercel/Netlify
 // domain), so every browser call here is cross-origin. A POST with a JSON body and an
@@ -269,7 +258,7 @@ function buildOpenRouterImageInput(
 
 // Returns both the generated URLs and, when OpenRouter reports it, the ACTUAL dollar amount
 // charged for this specific call (data.usage.cost) — the real per-provider price, not our
-// hand-maintained IMAGE_PRICE_USD estimate. logGeneration below prefers this over the estimate
+// hand-maintained IMAGE_PRICE_USD estimate. settleSpend below prefers this over the estimate
 // whenever it's present, since the estimate table can drift from OpenRouter's real rates.
 async function callOpenRouterImage(
   input: Record<string, unknown>
@@ -331,23 +320,94 @@ function normalizeOutput(output: unknown): string[] {
   return [toUrl(output)];
 }
 
+// Replicate utility tools (Инструменты → Удалить фон / Апскейлер): flat estimates for the budget.
+const UTILITY_PRICE_USD: Record<string, number> = { '851-labs/background-remover': 0.01, 'nightmareai/real-esrgan': 0.01 };
+
+// ---- Spend guard (security audit C-1/M-1). The same block is pasted into every paid function
+// (they deploy as single files, no shared imports). Before a paid provider call the estimated cost
+// is reserved against the caller's monthly allowance — who may spend what is decided in ONE place,
+// supabase/migrations/202610010001_generation_guard.sql. After the call the reservation is settled
+// with the real cost (that writes generation_log, once) or released if the call failed.
+class GuardError extends Error {
+  constructor(readonly status: number, readonly code: string, message: string) {
+    super(message);
+  }
+}
+const GUARD_ERRORS: Record<string, [number, string]> = {
+  email_not_confirmed: [403, 'Подтвердите email, чтобы пользоваться генерацией.'],
+  quota_exceeded: [402, 'Лимит генераций на этот месяц исчерпан.'],
+  too_many_jobs: [429, 'Слишком много генераций одновременно — дождитесь завершения.'],
+  job_too_expensive: [400, 'Запрос слишком дорогой для одной генерации.'],
+};
+const badRequest = (message: string) => new GuardError(400, 'bad_request', message);
+
+async function reserveSpend(userId: string, model: string, category: string, amountUsd: number): Promise<string> {
+  const { data, error } = await supabaseAdmin.rpc('reserve_generation', {
+    p_user: userId,
+    p_model: model,
+    p_category: category,
+    p_amount: Math.max(0, Number(amountUsd) || 0),
+  });
+  if (error) {
+    const code = Object.keys(GUARD_ERRORS).find((k) => (error.message ?? '').includes(k));
+    if (code) throw new GuardError(GUARD_ERRORS[code][0], code, GUARD_ERRORS[code][1]);
+    throw error;
+  }
+  return data as string;
+}
+
+async function settleSpend(reservation: string | null, email: string, costUsd: number): Promise<void> {
+  if (!reservation) return;
+  const { error } = await supabaseAdmin.rpc('settle_generation', { p_reservation: reservation, p_email: email, p_cost: costUsd });
+  if (error) console.error('settle_generation failed', error);
+}
+
+// Releases an unsettled reservation and turns any error into a response without internal details
+// (audit L-2) — the details go to the function's logs instead.
+async function failResponse(err: unknown, reservation: string | null, message: string): Promise<Response> {
+  if (reservation) {
+    const { error } = await supabaseAdmin.rpc('release_generation', { p_reservation: reservation });
+    if (error) console.error('release_generation failed', error);
+  }
+  if (err instanceof GuardError) return jsonResponse({ error: err.message, code: err.code }, err.status);
+  console.error(err);
+  return jsonResponse({ error: message }, 500);
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
+
+// Reference images: https URLs or image data URLs only, bounded in size.
+const MAX_IMAGE_REF_CHARS = 12_000_000;
+const isImageRef = (v: unknown): v is string =>
+  typeof v === 'string' && v.length <= MAX_IMAGE_REF_CHARS && (v.startsWith('https://') || v.startsWith('data:image/'));
+const clipText = (v: unknown, max: number): string => (typeof v === 'string' ? v.slice(0, max) : '');
+// ---- end of spend guard
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
+  let reservation: string | null = null;
   try {
     const caller = await getCaller(req);
-    if (!caller) {
-      return new Response(JSON.stringify({ error: 'Not authenticated.' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const callerId = caller.id;
+    if (!caller) return jsonResponse({ error: 'Not authenticated.' }, 401);
+    const params = await req.json().catch(() => null);
+    if (!params || typeof params !== 'object') throw badRequest('Bad request.');
 
-    const params = await req.json();
-    const { model, prompt, aspectRatio, resolution, image, images, width, height } = params;
+    // Audit H-1: only the models the app offers (the price table) plus the two utility tools.
+    const { model, resolution } = params;
+    const aspectRatio = typeof params.aspectRatio === 'string' && /^\d{1,2}:\d{1,2}$/.test(params.aspectRatio) ? params.aspectRatio : '1:1';
+    if (typeof model !== 'string' || !(model in IMAGE_PRICE_USD || model in UTILITY_PRICE_USD)) throw badRequest('Unknown model.');
+    const prompt = clipText(params.prompt, 4000);
+    const image = isImageRef(params.image) ? params.image : undefined;
+    const images = Array.isArray(params.images) ? params.images.filter(isImageRef).slice(0, 8) : undefined;
+    const size = (v: unknown) => (Number.isFinite(v) ? Math.min(4096, Math.max(16, Number(v))) : undefined);
+    const width = size(params.width);
+    const height = size(params.height);
 
-    const costUsd = estimateImageCost(model, resolution);
+    const costUsd = UTILITY_PRICE_USD[model] ?? estimateImageCost(model, resolution);
+    reservation = await reserveSpend(caller.id, model, 'image', costUsd);
 
     let urls: string[];
     let realCostUsd: number | null = null;
@@ -363,15 +423,10 @@ Deno.serve(async (req) => {
       realCostUsd = result.realCostUsd;
     }
 
-    void logGeneration(callerId, caller.email, model, 'image', realCostUsd ?? costUsd);
-
-    return new Response(JSON.stringify(urls), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    await settleSpend(reservation, caller.email, realCostUsd ?? costUsd);
+    reservation = null;
+    return jsonResponse(urls);
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return failResponse(err, reservation, 'Не удалось сгенерировать изображение. Попробуйте ещё раз.');
   }
 });
