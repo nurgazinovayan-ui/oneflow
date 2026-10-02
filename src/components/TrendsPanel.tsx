@@ -136,6 +136,8 @@ export default function TrendsPanel({ active, authEmail, onCreateScenario, onSen
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Phones show list *or* detail (see .tw-body.show-detail in App.css); wider screens ignore it.
+  const [mobileDetail, setMobileDetail] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState(false);
@@ -383,7 +385,7 @@ export default function TrendsPanel({ active, authEmail, onCreateScenario, onSen
         </div>
       </div>
 
-      <div className="tw-body">
+      <div className={`tw-body${mobileDetail ? ' show-detail' : ''}`}>
         <div className="tw-list" aria-busy={loading}>
           {loading ? (
             <p className="tw-state" role="status">
@@ -401,7 +403,14 @@ export default function TrendsPanel({ active, authEmail, onCreateScenario, onSen
               const isSelected = selected?.id === item.id;
               return (
                 <div key={item.id} className={`tw-row ${isSelected ? 'selected' : ''}`}>
-                  <button className="tw-row-main" onClick={() => setSelectedId(item.id)} aria-current={isSelected}>
+                  <button
+                    className="tw-row-main"
+                    onClick={() => {
+                      setSelectedId(item.id);
+                      setMobileDetail(true);
+                    }}
+                    aria-current={isSelected}
+                  >
                     <Thumb item={item} className="tw-row-thumb" />
                     <span className="tw-row-body">
                       <span className="tw-row-platform">
@@ -434,6 +443,9 @@ export default function TrendsPanel({ active, authEmail, onCreateScenario, onSen
         </div>
 
         <div className="tw-detail">
+          <button type="button" className="tw-back" onClick={() => setMobileDetail(false)}>
+            ← {t.backToList}
+          </button>
           {!selected ? (
             <p className="tw-state">{t.selectHint}</p>
           ) : (

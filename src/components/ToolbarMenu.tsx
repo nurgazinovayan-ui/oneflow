@@ -49,9 +49,11 @@ export default function ToolbarMenu({ label, icon: Icon, items, isOpen, onOpen, 
       <button
         type="button"
         className="toolbar-label-btn"
+        aria-label={label}
+        title={label}
         onClick={() => (isOpen ? onClose() : onOpen())}
       >
-        <Icon size={13} /> {label}
+        <Icon size={13} /> <span className="toolbar-label-text">{label}</span>
         <span className={`toolbar-menu-chevron${isOpen ? ' open' : ''}`}>
           <IconChevronDown size={13} />
         </span>

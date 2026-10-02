@@ -97,14 +97,12 @@ export default function StartScreen({
           <IconClose size={14} />
         </button>
         <div className="start-screen-video-panel">
-          <video
-            className="start-screen-video"
-            src="/start-screen-video.mp4"
-            autoPlay
-            loop
-            muted
-            playsInline
-          />
+          {/* WebM first (half the size, and plays in Chromium builds without H.264); poster so the
+              panel is never a black box while the clip loads. */}
+          <video className="start-screen-video" poster="/start-screen-poster.webp" autoPlay loop muted playsInline>
+            <source src="/start-screen-video.webm" type="video/webm" />
+            <source src="/start-screen-video.mp4" type="video/mp4" />
+          </video>
         </div>
         <div className="start-screen-main">
           <h1 className="start-screen-title">{t.startScreen.greeting}</h1>

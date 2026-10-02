@@ -367,6 +367,7 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
               title={t.oneLaunch.addPhotoTooltip}
             >
               <IconPlus size={20} />
+              <span className="onelaunch-photo-cta">{t.ux.productPhotoCta}</span>
             </button>
           )}
         </div>
@@ -375,6 +376,7 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
           <div className="onelaunch-step-header">
             <span className={`onelaunch-step-badge ${step2Done ? 'done' : ''}`}>2</span>
             <span className="onelaunch-step-title">{t.oneLaunch.step2Title}</span>
+            {!step1Done && <span className="onelaunch-step-lock">{t.ux.unlocksAfter(1)}</span>}
           </div>
           <fieldset className="onelaunch-step-body" disabled={!step1Done}>
             <input
@@ -408,6 +410,7 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
           <div className="onelaunch-step-header">
             <span className={`onelaunch-step-badge ${step3Done ? 'done' : ''}`}>3</span>
             <span className="onelaunch-step-title">{t.oneLaunch.step3Title}</span>
+            {!step2Done && <span className="onelaunch-step-lock">{t.ux.unlocksAfter(2)}</span>}
           </div>
           <fieldset className="onelaunch-step-body" disabled={!step2Done}>
             <div className="onelaunch-style-tabs">
@@ -460,6 +463,7 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
           <div className="onelaunch-step-header">
             <span className={`onelaunch-step-badge ${step4Done ? 'done' : ''}`}>4</span>
             <span className="onelaunch-step-title">{t.oneLaunch.step4Title}</span>
+            {!step3Done && <span className="onelaunch-step-lock">{t.ux.unlocksAfter(3)}</span>}
           </div>
           {usingTemplate ? (
             <div className="onelaunch-step-body onelaunch-template-note">{t.oneLaunch.templateFormatNote}</div>
@@ -483,6 +487,7 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
           <div className="onelaunch-step-header">
             <span className={`onelaunch-step-badge ${step5Done ? 'done' : ''}`}>5</span>
             <span className="onelaunch-step-title">{t.oneLaunch.step5Title}</span>
+            {!step4Done && <span className="onelaunch-step-lock">{t.ux.unlocksAfter(4)}</span>}
           </div>
           {usingTemplate ? (
             <div className="onelaunch-step-body onelaunch-template-note">{t.oneLaunch.templatePaletteNote}</div>
@@ -536,14 +541,22 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
           )}
         </div>
 
-        <button
-          className="generate-btn evaluation-evaluate-btn onelaunch-launch-btn"
-          onClick={handleLaunch}
-          disabled={status === 'running' || !step5Done}
-        >
-          <IconRocket size={14} />
-          {status === 'running' ? t.oneLaunch.launchingBtn : t.oneLaunch.launchBtn}
-        </button>
+        {/* Pinned to the bottom of the scrolling panel so the launch is always one click away. */}
+        <div className="onelaunch-launch-bar">
+          <button
+            className="generate-btn evaluation-evaluate-btn onelaunch-launch-btn"
+            onClick={handleLaunch}
+            disabled={status === 'running' || !step5Done}
+          >
+            <IconRocket size={14} />
+            {status === 'running' ? t.oneLaunch.launchingBtn : t.oneLaunch.launchBtn}
+          </button>
+          {!step5Done && status !== 'running' && (
+            <p className="ux-missing-hint">
+              {!step1Done ? t.ux.launchNeedPhoto : !step2Done ? t.ux.launchNeedName : t.ux.launchNeedSetup}
+            </p>
+          )}
+        </div>
 
         {status === 'running' && (
           <div className="onelaunch-loading">

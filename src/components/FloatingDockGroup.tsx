@@ -81,6 +81,7 @@ function DockIcon({
       <motion.button
         ref={ref}
         type="button"
+        aria-label={label}
         onClick={onClick}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}

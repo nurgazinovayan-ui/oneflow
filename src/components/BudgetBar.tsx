@@ -52,7 +52,8 @@ export default function BudgetBar() {
   return (
     <div className="budget-bar" title={t.budget.tooltip(fmt(costUsd), fmt(limit))}>
       <span className="budget-bar-label">
-        {fmt(costUsd)}/{fmt(limit)}
+        {fmt(costUsd)}
+        <span className="budget-bar-limit">/{fmt(limit)}</span>
       </span>
       <div className="budget-bar-track">
         <div

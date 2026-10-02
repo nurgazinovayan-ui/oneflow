@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { IconPlus, IconClose, IconTarget, IconCheck } from './Icons';
+import { IconPlus, IconClose, IconTarget, IconCheck, IconCreditCard, IconUser, IconEye } from './Icons';
 import type { StrategyGoal } from '../strategyTypes';
 import { STRATEGY_GOAL_LABELS } from '../strategyTypes';
 import { useT, useLanguageStore } from '../i18n';
@@ -11,6 +11,7 @@ import { formatGenerationError } from '../errorMessages';
 type Phase = 'brief' | 'understanding' | 'confirming' | 'pipeline' | 'error';
 
 const GOALS: StrategyGoal[] = ['sales', 'leads', 'awareness'];
+const GOAL_ICONS: Record<StrategyGoal, typeof IconTarget> = { sales: IconCreditCard, leads: IconUser, awareness: IconEye };
 
 // Compact centered card, not a full landing page. Owns the whole v4 pipeline orchestration
 // itself (spec §5/§6/§58/§84): Business Understanding first with an explicit confirmation step,
@@ -223,7 +224,14 @@ export default function StrategyOnboarding() {
                 onClick={() => setGoal(g)}
               >
                 {goal === g && <span className="strategy-selection-check" />}
-                {STRATEGY_GOAL_LABELS[g][language]}
+                <span className="strategy-selection-icon">
+                  {(() => {
+                    const GoalIcon = GOAL_ICONS[g];
+                    return <GoalIcon size={18} />;
+                  })()}
+                </span>
+                <span className="strategy-selection-title">{STRATEGY_GOAL_LABELS[g][language]}</span>
+                <span className="strategy-selection-desc">{t.ux.goalDesc[g]}</span>
               </button>
             ))}
           </div>
@@ -320,6 +328,7 @@ export default function StrategyOnboarding() {
         {error && <div className="error-text">{error}</div>}
 
         <div className="modal-actions strategy-onboarding-actions">
+          {!canContinue && step === 0 && <span className="ux-missing-hint strategy-missing-hint">{t.ux.pickGoal}</span>}
           {step > 0 && (
             <button type="button" className="secondary-btn" onClick={() => setStep((s) => s - 1)}>
               {t.strategy.onboardBack}

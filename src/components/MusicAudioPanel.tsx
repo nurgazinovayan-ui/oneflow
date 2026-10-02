@@ -309,7 +309,27 @@ export default function MusicAudioPanel({ active }: MusicAudioPanelProps) {
             </div>
           )}
 
-          {status === 'idle' && !result && <div className="connected-hint musicaudio-empty-hint">{t.musicAudio.subtitle}</div>}
+          {status === 'idle' && !result && (
+            <div className="musicaudio-empty">
+              <span className="musicaudio-empty-icon">
+                {mode === 'music' ? <IconMusic size={22} /> : <IconMic size={22} />}
+              </span>
+              <h3 className="musicaudio-empty-title">
+                {mode === 'music' ? t.ux.musicEmptyTitle : t.ux.speechEmptyTitle}
+              </h3>
+              <p className="musicaudio-empty-text">{t.musicAudio.subtitle}</p>
+              {mode === 'music' && (
+                <div className="ux-example-chips">
+                  <span className="ux-example-label">{t.ux.tryExample}</span>
+                  {t.ux.musicExamples.map((ex) => (
+                    <button key={ex} type="button" className="ux-example-chip" onClick={() => setMusicPrompt(ex)}>
+                      {ex}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
       <audio ref={previewAudioRef} />

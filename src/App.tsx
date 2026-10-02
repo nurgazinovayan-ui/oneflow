@@ -1074,9 +1074,15 @@ function Canvas() {
               { title: t.tools.photoEditorLabel, description: t.toolbarMenu.photoEditorDesc, icon: IconImage, onClick: () => setPhotoEditorOpen(true) },
             ]}
           />
+          <BudgetBar />
           {import.meta.env.VITE_WEB_MODE === '1' && (
-            <button className="toolbar-label-btn assets-btn" onClick={() => setMainView('assets')}>
-              <IconAssetsFolder size={15} /> {t.assets.buttonLabel}
+            <button
+              className="toolbar-label-btn assets-btn"
+              aria-label={t.assets.buttonLabel}
+              title={t.assets.buttonLabel}
+              onClick={() => setMainView('assets')}
+            >
+              <IconAssetsFolder size={15} /> <span className="toolbar-label-text">{t.assets.buttonLabel}</span>
             </button>
           )}
           {showSubscriptionButton && (
@@ -1202,16 +1208,24 @@ function Canvas() {
               ].filter(Boolean) as GlowMenuItem[]
             }
           />
-          <div className="topbar-right">
-            <BudgetBar />
-          </div>
           </div>
           <div className="canvas-toolbar vertical">
             <FloatingDockGroup
               orientation="vertical"
               items={SIDEBAR_ADD_NODE_OPTIONS.map((opt) => {
                 const Icon = opt.icon;
-                return { key: opt.type, label: opt.label, icon: <Icon />, onClick: () => addNode(opt.type) };
+                // The two video nodes share an icon; the Pro one carries a small badge so they can be
+                // told apart without hovering.
+                const icon =
+                  opt.type === 'videoGenPro' ? (
+                    <span className="dock-icon-pro">
+                      <Icon />
+                      <b>PRO</b>
+                    </span>
+                  ) : (
+                    <Icon />
+                  );
+                return { key: opt.type, label: opt.label, icon, onClick: () => addNode(opt.type) };
               })}
             />
             <div className="toolbar-divider" />
@@ -1229,6 +1243,25 @@ function Canvas() {
               }))}
             />
           </div>
+          {mainView === 'canvas' && nodes.length === 0 && !showStartScreen && (
+            <div className="canvas-empty-hint">
+              <h2>{t.ux.canvasEmptyTitle}</h2>
+              <p>{t.ux.canvasEmptyText}</p>
+              <div className="canvas-empty-actions">
+                {(
+                  [
+                    ['photoGen', IconSparkles, t.startScreen.photoGen],
+                    ['photoAdapt', IconCrop, t.startScreen.photoAdapt],
+                    ['videoGen', IconVideo, t.startScreen.videoGen],
+                  ] as const
+                ).map(([choice, Icon, label]) => (
+                  <button key={choice} type="button" onClick={() => handleStartScreenChoice(choice)}>
+                    <Icon size={15} /> {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <FlokoDockButton
             name={t.nodeLabels.flokoName}
             status={t.nodeLabels.flokoStatus}

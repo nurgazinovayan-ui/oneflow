@@ -1,7 +1,7 @@
 export const trendsRu = {
   // heading is the label of the toolbar tab; pageTitle is the H1 inside the panel. They are
   // deliberately different — the nav keeps the product name, the page reads as plain Russian.
-  heading: 'TRENDSWATCHING',
+  heading: 'Trendswatching',
   pageTitle: 'Тренды',
   subtitle: 'От находки — к идее для вашего бренда',
   demoBadge: 'Демо-данные',
@@ -48,6 +48,7 @@ export const trendsRu = {
   createScenario: 'Создать сценарий',
   toNodes: 'В ноды',
   selectHint: 'Выберите тренд слева, чтобы посмотреть детали.',
+  backToList: 'Все тренды',
   refreshBtn: 'Обновить',
   refreshingBtn: 'Обновляем…',
   refreshError: 'Не удалось обновить — попробуйте ещё раз чуть позже.',
@@ -55,7 +56,7 @@ export const trendsRu = {
 };
 
 export const trendsEn: typeof trendsRu = {
-  heading: 'TRENDSWATCHING',
+  heading: 'Trendswatching',
   pageTitle: 'Trends',
   subtitle: 'From a find to an idea for your brand',
   demoBadge: 'Demo data',
@@ -99,6 +100,7 @@ export const trendsEn: typeof trendsRu = {
   createScenario: 'Create a scenario',
   toNodes: 'To canvas',
   selectHint: 'Pick a trend on the left to see the details.',
+  backToList: 'All trends',
   refreshBtn: 'Refresh',
   refreshingBtn: 'Refreshing…',
   refreshError: 'Could not refresh — try again shortly.',

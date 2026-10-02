@@ -1,4 +1,4 @@
-import { forwardRef, type FC } from 'react';
+import { forwardRef, useEffect, useRef, type FC } from 'react';
 import { motion } from 'framer-motion';
 
 // Ported from a shadcn/Tailwind "tubelight-navbar" reference into ONEFLOW's own stack: no
@@ -25,9 +25,19 @@ interface GlowMenuBarProps {
 
 export const GlowMenuBar = forwardRef<HTMLElement, GlowMenuBarProps>(
   ({ className, items, activeValue, onSelect }, ref) => {
+    // On narrow screens the list scrolls sideways — keep the active mode in view (scrolling the
+    // list itself, not scrollIntoView, so the page never jumps vertically).
+    const listRef = useRef<HTMLUListElement>(null);
+    useEffect(() => {
+      const list = listRef.current;
+      const btn = list?.querySelector<HTMLElement>('.glow-menu-item-btn.active');
+      if (!list || !btn || list.scrollWidth <= list.clientWidth) return;
+      const left = btn.offsetLeft - (list.clientWidth - btn.offsetWidth) / 2;
+      list.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+    }, [activeValue]);
     return (
       <nav ref={ref} className={`glow-menu ${className ?? ''}`}>
-        <ul className="glow-menu-list">
+        <ul className="glow-menu-list" ref={listRef}>
           {items.map((item) => {
             const Icon = item.icon;
             const isActive = item.value === activeValue;
@@ -36,6 +46,7 @@ export const GlowMenuBar = forwardRef<HTMLElement, GlowMenuBarProps>(
                 <button
                   type="button"
                   className={`glow-menu-item-btn${isActive ? ' active' : ''}`}
+                  aria-current={isActive ? 'page' : undefined}
                   onClick={() => onSelect?.(item.value)}
                 >
                   <span className="glow-menu-icon">

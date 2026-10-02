@@ -393,6 +393,13 @@ export default function QuickGenPanel({
         ))}
       </div>
 
+      {!hasStarted && (
+        <div className="quick-gen-intro">
+          <h2 className="quick-gen-intro-title">{t.ux.genIntroTitle}</h2>
+          <p className="quick-gen-intro-text">{t.ux.genIntroText}</p>
+        </div>
+      )}
+
       <div
         className={`quick-gen-composer ${hasStarted ? 'docked' : ''}`}
         onDragOver={handleComposerDragOver}
@@ -405,6 +412,7 @@ export default function QuickGenPanel({
             title={t.quickGen.attachRefImages}
           >
             <IconPlus size={15} />
+            <span>{t.ux.attachReference}</span>
           </button>
           {attachMenuOpen && kind === 'video' && (
             <DropdownMenu
@@ -487,6 +495,17 @@ export default function QuickGenPanel({
             </button>
           )}
         </div>
+
+        {!hasStarted && !prompt && (
+          <div className="ux-example-chips">
+            <span className="ux-example-label">{t.ux.tryExample}</span>
+            {(kind === 'image' ? t.ux.imageExamples : t.ux.videoExamples).map((ex) => (
+              <button key={ex} type="button" className="ux-example-chip" onClick={() => setPrompt(ex)}>
+                {ex}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="quick-gen-controls-row">
           <div className="quick-gen-kind-toggle">

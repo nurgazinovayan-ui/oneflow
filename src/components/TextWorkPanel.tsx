@@ -72,9 +72,6 @@ export default function TextWorkPanel({
   active,
   storageScope,
   email,
-  subscriptionLabel,
-  onProfile,
-  onSubscription,
   seed,
 }: TextWorkPanelProps) {
   const t = useT();
@@ -413,8 +410,6 @@ export default function TextWorkPanel({
     .sort((a, b) => b.updatedAt - a.updatedAt);
   const empty = thread.messages.length === 0;
   const fileBaseName = thread.title.replace(/[^\p{L}\p{N}\s_-]/gu, '').trim().slice(0, 64) || 'oneflow-chat';
-  const emailName = email?.split('@')[0];
-  const avatarInitial = (emailName || 'O')[0]?.toUpperCase() ?? 'O';
 
   return (
     <div
@@ -521,18 +516,8 @@ export default function TextWorkPanel({
             <IconArchive size={14} /> <span>{l.archiveSection}</span>
           </button>
         </div>
-        <div className="cw-profile">
-          <button className="cw-avatar-mini" onClick={onProfile} title={l.profileLabel}>
-            {avatarInitial}
-          </button>
-          <button className="cw-profile-name" onClick={onProfile}>
-            <span className="cw-profile-email">{emailName || 'ONEFLOW'}</span>
-            <span className="cw-profile-plan-hint">{subscriptionLabel || 'ONEFLOW'}</span>
-          </button>
-          <button className="cw-plan" onClick={onSubscription}>
-            {l.planLabel}
-          </button>
-        </div>
+        {/* The account chip + «Подписка» that used to sit here duplicated the avatar and the
+            subscription button in the app's top toolbar, so it was dropped (UX pass). */}
       </aside>
 
       <div className="cw-stage">

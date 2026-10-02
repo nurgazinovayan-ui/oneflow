@@ -919,6 +919,30 @@ export interface Translations {
     durationSeconds: (n: number) => string;
     promptLabel: string;
   };
+  /** Empty states, hints and helper copy added in the UX pass. */
+  ux: {
+    attachReference: string;
+    tryExample: string;
+    genIntroTitle: string;
+    genIntroText: string;
+    imageExamples: string[];
+    videoExamples: string[];
+    musicEmptyTitle: string;
+    speechEmptyTitle: string;
+    musicExamples: string[];
+    evalDropTitle: string;
+    evalDropHint: string;
+    evalNeedImage: string;
+    unlocksAfter: (step: number) => string;
+    productPhotoCta: string;
+    launchNeedPhoto: string;
+    launchNeedName: string;
+    launchNeedSetup: string;
+    goalDesc: { sales: string; leads: string; awareness: string };
+    pickGoal: string;
+    canvasEmptyTitle: string;
+    canvasEmptyText: string;
+  };
   errors: {
     imageLoadFailed: string;
     canvasUnavailable: string;
@@ -2070,6 +2094,41 @@ export const ru: Translations = {
     download: 'Скачать',
     durationSeconds: (n) => `${n} сек`,
     promptLabel: 'Промпт',
+  },
+  ux: {
+    attachReference: 'Референс',
+    tryExample: 'Например:',
+    genIntroTitle: 'Что создадим?',
+    genIntroText: 'Опишите картинку или видео словами — выберите модель, формат и нажмите «Сгенерировать».',
+    imageExamples: [
+      'Флакон духов на мокром чёрном камне, студийный свет',
+      'Кофе с собой на подоконнике, утреннее солнце, плёнка',
+      'Кроссовки в воздухе на пастельном фоне, 3D',
+    ],
+    videoExamples: [
+      'Медленный облёт банки газировки в каплях воды',
+      'Пар над чашкой кофе, макро, мягкий свет',
+      'Смартфон вращается на подиуме, неоновая подсветка',
+    ],
+    musicEmptyTitle: 'Здесь появится трек',
+    speechEmptyTitle: 'Здесь появится озвучка',
+    musicExamples: ['Энергичный поп-рок для рекламы кроссовок', 'Спокойный lo-fi для кофейни', 'Эпичный оркестр для трейлера'],
+    evalDropTitle: 'Перетащите до 3 вариантов креатива',
+    evalDropHint: 'или нажмите, чтобы выбрать файлы · PNG, JPG',
+    evalNeedImage: 'Добавьте хотя бы один вариант, чтобы получить оценку',
+    unlocksAfter: (step) => `Откроется после шага ${step}`,
+    productPhotoCta: 'Загрузите фото товара',
+    launchNeedPhoto: 'Чтобы запустить, загрузите фото товара (шаг 1)',
+    launchNeedName: 'Осталось указать название товара (шаг 2)',
+    launchNeedSetup: 'Выберите форматы и цветовую гамму (шаги 4–5)',
+    goalDesc: {
+      sales: 'Покупки и выручка: оффер, цена, путь до оплаты',
+      leads: 'Заявки и контакты: формы, звонки, сообщения',
+      awareness: 'Охват и запоминаемость бренда',
+    },
+    pickGoal: 'Выберите цель, чтобы продолжить',
+    canvasEmptyTitle: 'Холст пока пуст',
+    canvasEmptyText: 'Добавьте ноду на панели слева или начните с готовой схемы:',
   },
   errors: {
     imageLoadFailed: 'Не удалось загрузить изображение',
@@ -3224,6 +3283,41 @@ export const en: Translations = {
     download: 'Download',
     durationSeconds: (n) => `${n}s`,
     promptLabel: 'Prompt',
+  },
+  ux: {
+    attachReference: 'Reference',
+    tryExample: 'Try:',
+    genIntroTitle: 'What shall we create?',
+    genIntroText: 'Describe an image or a video in words, pick a model and format, then hit Generate.',
+    imageExamples: [
+      'Perfume bottle on wet black stone, studio light',
+      'Takeaway coffee on a windowsill, morning sun, film look',
+      'Sneakers floating on a pastel background, 3D',
+    ],
+    videoExamples: [
+      'Slow orbit around a soda can covered in droplets',
+      'Steam rising from a coffee cup, macro, soft light',
+      'Smartphone spinning on a podium, neon rim light',
+    ],
+    musicEmptyTitle: 'Your track will appear here',
+    speechEmptyTitle: 'Your voiceover will appear here',
+    musicExamples: ['Energetic pop-rock for a sneaker ad', 'Chill lo-fi for a coffee shop', 'Epic orchestral trailer'],
+    evalDropTitle: 'Drop up to 3 creative variants',
+    evalDropHint: 'or click to choose files · PNG, JPG',
+    evalNeedImage: 'Add at least one variant to get a score',
+    unlocksAfter: (step) => `Unlocks after step ${step}`,
+    productPhotoCta: 'Upload a product photo',
+    launchNeedPhoto: 'Upload a product photo to launch (step 1)',
+    launchNeedName: 'Add the product name (step 2)',
+    launchNeedSetup: 'Pick formats and a colour palette (steps 4–5)',
+    goalDesc: {
+      sales: 'Purchases and revenue: offer, price, path to checkout',
+      leads: 'Requests and contacts: forms, calls, messages',
+      awareness: 'Reach and brand recall',
+    },
+    pickGoal: 'Pick a goal to continue',
+    canvasEmptyTitle: 'The canvas is empty',
+    canvasEmptyText: 'Add a node from the left panel or start from a ready-made scheme:',
   },
   errors: {
     imageLoadFailed: 'Could not load the image',

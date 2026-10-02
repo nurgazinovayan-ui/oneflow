@@ -43,6 +43,37 @@ export default function EvaluationPanel({ active }: EvaluationPanelProps) {
     if (dataUrl) setImages((prev) => [...prev, dataUrl]);
   };
 
+  const [dragOver, setDragOver] = useState(false);
+  const platformOptions = ADAPT_PRESETS.map((preset) => {
+    const label = preset.key === 'RSYA' ? t.nodes.modelMeta.yandexNetwork : preset.label;
+    return { value: label, label };
+  });
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  // Same data-URL shape window.api.pickImageFile returns, so dropped files go down the same path.
+  const onDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+    const room = MAX_IMAGES - images.length;
+    const urls = await Promise.all(
+      files.slice(0, Math.max(0, room)).map(
+        (f) =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(f);
+          })
+      )
+    );
+    if (urls.length) setImages((prev) => [...prev, ...urls].slice(0, MAX_IMAGES));
+  };
+
   const removeImage = (i: number) => {
     setImages((prev) => prev.filter((_, idx) => idx !== i));
     setResult(null);
@@ -80,49 +111,76 @@ export default function EvaluationPanel({ active }: EvaluationPanelProps) {
           </div>
 
           <div className="evaluation-section">
-            <div className="evaluation-section-label">{t.evaluation.uploadSectionLabel}</div>
-            <div className="evaluation-slots">
-              {images.map((src, i) => (
-                <div className="evaluation-slot filled" key={i}>
-                  <img src={src} alt="" />
-                  <button
-                    className="evaluation-slot-remove"
-                    onClick={() => removeImage(i)}
-                    title={t.evaluation.removeImageTooltip}
-                  >
-                    <IconClose size={12} />
-                  </button>
-                </div>
-              ))}
-              {images.length < MAX_IMAGES && (
+            <div className="evaluation-section-label">{t.evaluation.platformLabel}</div>
+            <div className="evaluation-platform-chips" role="radiogroup" aria-label={t.evaluation.platformLabel}>
+              {[{ value: '', label: t.evaluation.platformAny }, ...platformOptions].map((opt) => (
                 <button
-                  className="evaluation-slot empty"
-                  onClick={addImage}
-                  title={t.evaluation.addImageTooltip}
+                  key={opt.value || 'any'}
+                  type="button"
+                  role="radio"
+                  aria-checked={platform === opt.value}
+                  className={`evaluation-platform-chip${platform === opt.value ? ' active' : ''}`}
+                  onClick={() => setPlatform(opt.value)}
                 >
-                  <IconPlus size={18} />
+                  {opt.label}
                 </button>
-              )}
+              ))}
             </div>
-            <p className="evaluation-hint">{t.evaluation.maxImagesHint}</p>
+          </div>
+
+          <div className="evaluation-section">
+            <div className="evaluation-section-label">
+              {t.evaluation.uploadSectionLabel}
+              <span className="evaluation-count">{images.length}/{MAX_IMAGES}</span>
+            </div>
+            {images.length === 0 ? (
+              <button
+                type="button"
+                className={`evaluation-dropzone${dragOver ? ' over' : ''}`}
+                onClick={addImage}
+                onDragOver={onDragOver}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => void onDrop(e)}
+              >
+                <span className="evaluation-dropzone-icon"><IconPlus size={20} /></span>
+                <span className="evaluation-dropzone-title">{t.ux.evalDropTitle}</span>
+                <span className="evaluation-dropzone-hint">{t.ux.evalDropHint}</span>
+              </button>
+            ) : (
+              <div
+                className={`evaluation-slots${dragOver ? ' over' : ''}`}
+                onDragOver={onDragOver}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => void onDrop(e)}
+              >
+                {images.map((src, i) => (
+                  <div className="evaluation-slot filled" key={i}>
+                    <img src={src} alt="" />
+                    <span className="evaluation-slot-index">{i + 1}</span>
+                    <button
+                      className="evaluation-slot-remove"
+                      onClick={() => removeImage(i)}
+                      title={t.evaluation.removeImageTooltip}
+                    >
+                      <IconClose size={12} />
+                    </button>
+                  </div>
+                ))}
+                {images.length < MAX_IMAGES && (
+                  <button
+                    className="evaluation-slot empty"
+                    onClick={addImage}
+                    title={t.evaluation.addImageTooltip}
+                  >
+                    <IconPlus size={18} />
+                    <span>{t.evaluation.addImageTooltip}</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="evaluation-section evaluation-actions-row">
-            <select
-              className="node-select evaluation-platform-select"
-              value={platform}
-              onChange={(e) => setPlatform(e.target.value)}
-            >
-              <option value="">{t.evaluation.platformAny}</option>
-              {ADAPT_PRESETS.map((preset) => (
-                <option
-                  key={preset.key}
-                  value={preset.key === 'RSYA' ? t.nodes.modelMeta.yandexNetwork : preset.label}
-                >
-                  {preset.key === 'RSYA' ? t.nodes.modelMeta.yandexNetwork : preset.label}
-                </option>
-              ))}
-            </select>
             <button
               className="generate-btn evaluation-evaluate-btn"
               onClick={handleEvaluate}
@@ -131,6 +189,7 @@ export default function EvaluationPanel({ active }: EvaluationPanelProps) {
               <IconGauge size={14} />
               {status === 'loading' ? t.evaluation.evaluatingBtn : t.evaluation.evaluateBtn}
             </button>
+            {images.length === 0 && <p className="ux-missing-hint">{t.ux.evalNeedImage}</p>}
           </div>
 
           {status === 'error' && <div className="error-text">{error}</div>}
