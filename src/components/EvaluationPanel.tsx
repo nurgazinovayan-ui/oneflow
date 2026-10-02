@@ -98,173 +98,178 @@ export default function EvaluationPanel({ active }: EvaluationPanelProps) {
     }
   };
 
-  return (
-    <div className={`evaluation-panel ${active ? '' : 'evaluation-hidden'}`}>
-      <div className="evaluation-top">
-        <div className="evaluation-composer">
-          <div className="evaluation-header">
-            <div className="evaluation-header-icon">
-              <IconGauge size={20} />
-            </div>
-            <div className="evaluation-title">{t.evaluation.title}</div>
-            <p className="evaluation-subtitle">{t.evaluation.subtitle}</p>
-          </div>
-
-          <div className="evaluation-section">
-            <div className="evaluation-section-label">{t.evaluation.platformLabel}</div>
-            <div className="evaluation-platform-chips" role="radiogroup" aria-label={t.evaluation.platformLabel}>
-              {[{ value: '', label: t.evaluation.platformAny }, ...platformOptions].map((opt) => (
-                <button
-                  key={opt.value || 'any'}
-                  type="button"
-                  role="radio"
-                  aria-checked={platform === opt.value}
-                  className={`evaluation-platform-chip${platform === opt.value ? ' active' : ''}`}
-                  onClick={() => setPlatform(opt.value)}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="evaluation-section">
-            <div className="evaluation-section-label">
-              {t.evaluation.uploadSectionLabel}
-              <span className="evaluation-count">{images.length}/{MAX_IMAGES}</span>
-            </div>
-            {images.length === 0 ? (
-              <button
-                type="button"
-                className={`evaluation-dropzone${dragOver ? ' over' : ''}`}
-                onClick={addImage}
-                onDragOver={onDragOver}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => void onDrop(e)}
-              >
-                <span className="evaluation-dropzone-icon"><IconPlus size={20} /></span>
-                <span className="evaluation-dropzone-title">{t.ux.evalDropTitle}</span>
-                <span className="evaluation-dropzone-hint">{t.ux.evalDropHint}</span>
-              </button>
-            ) : (
-              <div
-                className={`evaluation-slots${dragOver ? ' over' : ''}`}
-                onDragOver={onDragOver}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => void onDrop(e)}
-              >
-                {images.map((src, i) => (
-                  <div className="evaluation-slot filled" key={i}>
-                    <img src={src} alt="" />
-                    <span className="evaluation-slot-index">{i + 1}</span>
-                    <button
-                      className="evaluation-slot-remove"
-                      onClick={() => removeImage(i)}
-                      title={t.evaluation.removeImageTooltip}
-                    >
-                      <IconClose size={12} />
-                    </button>
-                  </div>
-                ))}
-                {images.length < MAX_IMAGES && (
-                  <button
-                    className="evaluation-slot empty"
-                    onClick={addImage}
-                    title={t.evaluation.addImageTooltip}
-                  >
-                    <IconPlus size={18} />
-                    <span>{t.evaluation.addImageTooltip}</span>
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="evaluation-section evaluation-actions-row">
-            <button
-              className="generate-btn evaluation-evaluate-btn"
-              onClick={handleEvaluate}
-              disabled={status === 'loading' || images.length === 0}
-            >
-              <IconGauge size={14} />
-              {status === 'loading' ? t.evaluation.evaluatingBtn : t.evaluation.evaluateBtn}
-            </button>
-            {images.length === 0 && <p className="ux-missing-hint">{t.ux.evalNeedImage}</p>}
-          </div>
-
-          {status === 'error' && <div className="error-text">{error}</div>}
-        </div>
+  const dropProps = {
+    onDragOver,
+    onDragLeave: () => setDragOver(false),
+    onDrop: (e: React.DragEvent) => void onDrop(e),
+  };
+  const howto = (
+    <>
+      <div className="v2-lab">
+        <span>{t.evaluation.noteHowLabel}</span>
       </div>
+      <ol className="v2-numlist">
+        {t.evaluation.noteHowItems.map((item, i) => (
+          <li key={i}>{item}</li>
+        ))}
+      </ol>
+    </>
+  );
 
-      <div className="evaluation-results">
-        {status === 'loading' && (
-          <div className="evaluation-variant-grid">
-            {images.map((src, i) => (
-              <div className="evaluation-variant-card loading" key={i}>
-                <div className="evaluation-variant-thumb">
-                  <img src={src} alt="" />
-                  <span className="evaluation-loading-badge">
-                    <IconRefresh size={11} />
-                    {t.evaluation.loadingMessages[loadingMessageIndex]}
-                  </span>
-                </div>
-                <div className="evaluation-skeleton-line wide" />
-                <div className="evaluation-skeleton-line" />
-                <div className="evaluation-skeleton-line short" />
-              </div>
-            ))}
-          </div>
-        )}
-        {status !== 'loading' && result && (
-          <>
-            {result.verdict && (
-              <div className="evaluation-verdict">
-                <span className="evaluation-verdict-label">{t.evaluation.verdictLabel}</span>
-                {result.verdict}
-              </div>
-            )}
-            <div className="evaluation-variant-grid">
-              {result.variants.map((variant, i) => (
-                <div
-                  key={i}
-                  className={`evaluation-variant-card ${result.winnerIndex === i ? 'winner' : ''}`}
-                >
-                  {images[i] && (
-                    <div className="evaluation-variant-thumb">
-                      <img src={images[i]} alt="" />
-                      {result.winnerIndex === i && (
-                        <span className="evaluation-winner-badge">{t.evaluation.winnerBadge}</span>
+  return (
+    <div className={`evaluation-panel v2-mode v2-pred ${active ? '' : 'evaluation-hidden'}`}>
+      <div className="v2-toolbar">
+        <span className="v2-lab v2-lab-inline">{t.evaluation.platformLabel}</span>
+        <div className="v2-chips" role="radiogroup" aria-label={t.evaluation.platformLabel}>
+          {[{ value: '', label: t.evaluation.platformAny }, ...platformOptions].map((opt) => (
+            <button
+              key={opt.value || 'any'}
+              type="button"
+              role="radio"
+              aria-checked={platform === opt.value}
+              className={`v2-chip${platform === opt.value ? ' on' : ''}`}
+              onClick={() => setPlatform(opt.value)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <span className="v2-toolbar-spacer" />
+        <span className="v2-pill">
+          {t.evaluation.uploadSectionLabel} {images.length}/{MAX_IMAGES}
+        </span>
+        <button type="button" className="v2-btn2" onClick={addImage} disabled={images.length >= MAX_IMAGES || status === 'loading'}>
+          <IconPlus size={14} />
+          {t.evaluation.addImageTooltip}
+        </button>
+        <button type="button" className="v2-cta v2-cta-sm" onClick={handleEvaluate} disabled={status === 'loading' || images.length === 0}>
+          <IconGauge size={14} />
+          {status === 'loading' ? t.evaluation.evaluatingBtn : t.evaluation.evaluateBtn}
+        </button>
+      </div>
+      {status === 'error' && <div className="error-text v2-error">{error}</div>}
+
+      <div className="v2-pred-body">
+        <section className={`v2-card v2-pred-main${dragOver ? ' over' : ''}`} {...dropProps}>
+          {images.length === 0 ? (
+            <button type="button" className="v2-pred-drop" onClick={addImage}>
+              <span className="v2-empty-icon">
+                <IconPlus size={22} />
+              </span>
+              <h2>{t.ux.evalDropTitle}</h2>
+              <p>{t.ux.evalDropHint}</p>
+              <p className="v2-hint">{t.ux.evalNeedImage}</p>
+              <span className="v2-ghosts" aria-hidden="true">
+                {[1, 2, 3].map((n) => (
+                  <span key={n}>{t.ux.variantN(n)}</span>
+                ))}
+              </span>
+            </button>
+          ) : (
+            <div className="v2-pred-grid">
+              {images.map((src, i) => {
+                const variant = status !== 'loading' ? result?.variants[i] : undefined;
+                const winner = !!variant && result?.winnerIndex === i;
+                return (
+                  <div key={i} className={`v2-pred-card${winner ? ' winner' : ''}${status === 'loading' ? ' loading' : ''}`}>
+                    <div className="v2-pred-thumb">
+                      <img src={src} alt="" />
+                      <span className="v2-pred-index">{i + 1}</span>
+                      {status !== 'loading' && (
+                        <button
+                          type="button"
+                          className="v2-icon-btn v2-pred-remove"
+                          onClick={() => removeImage(i)}
+                          title={t.evaluation.removeImageTooltip}
+                          aria-label={t.evaluation.removeImageTooltip}
+                        >
+                          <IconClose size={12} />
+                        </button>
+                      )}
+                      {status === 'loading' && (
+                        <span className="v2-pred-loading">
+                          <IconRefresh size={11} />
+                          {t.evaluation.loadingMessages[loadingMessageIndex]}
+                        </span>
                       )}
                     </div>
-                  )}
-                  <div className="evaluation-score">
-                    {variant.score}
-                    <span className="evaluation-score-suffix">{t.evaluation.scoreOutOf}</span>
+                    {variant && (
+                      <>
+                        <div className="v2-pred-score">
+                          <b>{variant.score}</b>
+                          <span>{t.evaluation.scoreOutOf}</span>
+                          {winner && <span className="v2-pill v2-pill-accent">{t.evaluation.winnerBadge}</span>}
+                        </div>
+                        {variant.strengths.length > 0 && (
+                          <>
+                            <div className="v2-lab">
+                              <span>{t.evaluation.strengthsLabel}</span>
+                            </div>
+                            <ul className="v2-plus">
+                              {variant.strengths.map((x, si) => (
+                                <li key={si}>{x}</li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+                        {variant.weaknesses.length > 0 && (
+                          <>
+                            <div className="v2-lab">
+                              <span>{t.evaluation.weaknessesLabel}</span>
+                            </div>
+                            <ul className="v2-minus">
+                              {variant.weaknesses.map((x, wi) => (
+                                <li key={wi}>{x}</li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+                      </>
+                    )}
+                    {status === 'loading' && (
+                      <>
+                        <div className="evaluation-skeleton-line wide" />
+                        <div className="evaluation-skeleton-line" />
+                        <div className="evaluation-skeleton-line short" />
+                      </>
+                    )}
                   </div>
-                  {variant.strengths.length > 0 && (
-                    <div className="evaluation-feedback-group">
-                      <div className="evaluation-feedback-label">{t.evaluation.strengthsLabel}</div>
-                      <ul className="evaluation-strengths">
-                        {variant.strengths.map((s, si) => (
-                          <li key={si}>{s}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {variant.weaknesses.length > 0 && (
-                    <div className="evaluation-feedback-group">
-                      <div className="evaluation-feedback-label">{t.evaluation.weaknessesLabel}</div>
-                      <ul className="evaluation-weaknesses">
-                        {variant.weaknesses.map((w, wi) => (
-                          <li key={wi}>{w}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
+              {images.length < MAX_IMAGES && status !== 'loading' && (
+                <button type="button" className="v2-pred-add" onClick={addImage}>
+                  <IconPlus size={18} />
+                  <span>{t.evaluation.addImageTooltip}</span>
+                </button>
+              )}
             </div>
-          </>
+          )}
+        </section>
+
+        {status !== 'loading' && result?.verdict ? (
+          <section className="v2-card v2-pred-side v2-pred-verdict">
+            <div className="v2-card-head">
+              <b>{t.evaluation.verdictLabel}</b>
+            </div>
+            <p className="v2-pred-verdict-text">{result.verdict}</p>
+            <div className="v2-pred-verdict-how">
+              <b>{t.evaluation.noteTitle}</b>
+              <p>{t.evaluation.noteHowItems.join(' · ')}</p>
+            </div>
+          </section>
+        ) : (
+          <section className="v2-card v2-pred-side">
+            <div className="v2-card-head">
+              <b>{t.evaluation.noteTitle}</b>
+            </div>
+            <p className="v2-text">{t.evaluation.subtitle}</p>
+            {howto}
+            <div className="v2-lab">
+              <span>{t.evaluation.noteTipLabel}</span>
+            </div>
+            <p className="v2-note">{t.evaluation.noteTip}</p>
+            <p className="v2-hint">{t.evaluation.noteAccuracy}</p>
+          </section>
         )}
       </div>
     </div>

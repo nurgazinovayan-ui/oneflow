@@ -37,6 +37,10 @@ import OneLaunchPanel from './components/OneLaunchPanel';
 import MusicAudioPanel from './components/MusicAudioPanel';
 import MotionEnginePanel from './components/MotionEnginePanel';
 import StrategyPanel from './components/StrategyPanel';
+import AppSidebar from './components/AppSidebar';
+import HomePanel from './components/HomePanel';
+import ModeSearch from './components/ModeSearch';
+import { buildModes, type AppView } from './modes';
 import { GlowMenuBar, type GlowMenuItem } from './components/GlowMenuBar';
 import AssetsPanel from './components/AssetsPanel';
 import BackgroundRemoverModal from './components/BackgroundRemoverModal';
@@ -76,7 +80,6 @@ import {
   IconTool,
   IconMusic,
   IconTarget,
-  IconAssetsFolder,
   IconCreditCard,
 } from './components/Icons';
 import {
@@ -97,6 +100,7 @@ import { useThemeStore } from './theme';
 import { saveProjectToYandexDisk } from './webApi';
 import { formatGenerationError } from './errorMessages';
 import './App.css';
+import './ModesV2.css';
 
 // Modes whose panel is a flat surface (see .topbar-flat/.topbar-black in App.css) — the topbar
 // row above them matches so there's no seam. Canvas/Strategy/Assets keep the gray canvas-
@@ -373,6 +377,18 @@ function makeBlankProject(name: string): Project {
 }
 
 const SHOW_TOOLBAR_MENUS = false;
+const IS_WEB = import.meta.env.VITE_WEB_MODE === '1';
+const LAST_VIEW_KEY = 'oneflow-last-view';
+const RESUMABLE_VIEWS = new Set<AppView>(['canvas', 'generate', 'text', 'trends', 'evaluate', 'onelaunch', 'musicaudio', 'motion', 'strategy']);
+
+function readLastView(): AppView | null {
+  try {
+    const v = localStorage.getItem(LAST_VIEW_KEY) as AppView | null;
+    return v && RESUMABLE_VIEWS.has(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
 
 function Canvas() {
   const t = useT();
@@ -397,9 +413,11 @@ function Canvas() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
-  const [mainView, setMainView] = useState<
-    'canvas' | 'text' | 'generate' | 'evaluate' | 'onelaunch' | 'musicaudio' | 'motion' | 'strategy' | 'assets' | 'trends'
-  >('canvas');
+  // Web opens on the home screen; desktop keeps opening straight onto the node canvas.
+  const [mainView, setMainView] = useState<AppView>(IS_WEB ? 'home' : 'canvas');
+  // Read once per session, so the home screen offers the mode from the *previous* visit.
+  const [lastView] = useState<AppView | null>(() => (IS_WEB ? readLastView() : null));
+  const startShownRef = useRef(!IS_WEB);
   const [copywriteAuthReady, setCopywriteAuthReady] = useState(false);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -412,7 +430,7 @@ function Canvas() {
   const [bgRemoverOpen, setBgRemoverOpen] = useState(false);
   const [upscalerOpen, setUpscalerOpen] = useState(false);
   const [photoEditorOpen, setPhotoEditorOpen] = useState(false);
-  const [showStartScreen, setShowStartScreen] = useState(true);
+  const [showStartScreen, setShowStartScreen] = useState(!IS_WEB);
   const [recentProjects, setRecentProjects] = useState<StoredProject[]>([]);
   const [textSeed, setTextSeed] = useState<{ text: string; n: number }>();
   const [subscriptionActive, setSubscriptionActive] = useState(true);
@@ -516,6 +534,28 @@ function Canvas() {
   // who could plausibly subscribe: demo visitors, anyone not registered yet, or a registered
   // user without an active subscription. A registered user who already has one never sees it.
   const showSubscriptionButton = isDemoMode || !authEmail || !hasActiveSubscription;
+
+  const modes = buildModes(t, IS_WEB);
+
+  // Web opens on the home screen, so the project start screen moves to the first visit of
+  // «Ноды» in a session (and only when the canvas is still empty).
+  useEffect(() => {
+    if (!IS_WEB || mainView !== 'canvas' || startShownRef.current) return;
+    startShownRef.current = true;
+    if (nodes.length === 0) setShowStartScreen(true);
+  }, [mainView, nodes.length]);
+  const viewTitle =
+    mainView === 'home' ? t.home.navLabel : mainView === 'assets' ? t.home.assets : modes.find((m) => m.value === mainView)?.label ?? '';
+
+  // Remember the last mode worked in (for the home screen's «продолжим?» line next visit).
+  useEffect(() => {
+    if (!IS_WEB || !RESUMABLE_VIEWS.has(mainView)) return;
+    try {
+      localStorage.setItem(LAST_VIEW_KEY, mainView);
+    } catch {
+      /* private mode / storage off — the resume hint is optional */
+    }
+  }, [mainView]);
 
   const refreshSubscriptionStatus = useCallback(async (): Promise<boolean> => {
     const status = await window.api.getSubscriptionStatus();
@@ -1019,11 +1059,21 @@ function Canvas() {
   );
 
   return (
-    <div className={`app-shell${import.meta.env.VITE_WEB_MODE === '1' ? ' web-mode' : ''}`}>
+    <div className={`app-shell${IS_WEB ? ' web-mode' : ''}`}>
+      {IS_WEB && (
+        <AppSidebar modes={modes} active={mainView} onSelect={setMainView} onProfile={() => setProfileOpen(true)} />
+      )}
       <div className="top-toolbar">
-        <div className="toolbar-brand">
-          <Logo className="toolbar-logo" />
-        </div>
+        {IS_WEB ? (
+          <div className="toolbar-brand app-header-title">
+            <h1>{viewTitle}</h1>
+            <ModeSearch modes={modes} onSelect={setMainView} />
+          </div>
+        ) : (
+          <div className="toolbar-brand">
+            <Logo className="toolbar-logo" />
+          </div>
+        )}
         <div className="toolbar-group toolbar-right">
           {/* Файл / Шаблоны / Инструменты are hidden for now (by request) — flip the flag to bring
               them back; the handlers they call are still wired up. */}
@@ -1083,16 +1133,6 @@ function Canvas() {
             </>
           )}
           <BudgetBar />
-          {import.meta.env.VITE_WEB_MODE === '1' && (
-            <button
-              className="toolbar-label-btn assets-btn"
-              aria-label={t.assets.buttonLabel}
-              title={t.assets.buttonLabel}
-              onClick={() => setMainView('assets')}
-            >
-              <IconAssetsFolder size={15} /> <span className="toolbar-label-text">{t.assets.buttonLabel}</span>
-            </button>
-          )}
           {showSubscriptionButton && (
             <button className="toolbar-subscription-btn" onClick={requestPayment}>
               {t.toolbar.subscriptionButtonLabel}
@@ -1127,6 +1167,7 @@ function Canvas() {
               transparent in canvas/strategy/assets modes so the real gray canvas continues
               behind it uninterrupted; gets a flat white fill (.topbar-flat) in the modes whose
               own panel is already flat white, so there's no seam between the two. */}
+          {!IS_WEB && (
           <div className={`topbar${WHITE_TOPBAR_VIEWS.has(mainView) ? ' topbar-flat topbar-black' : ''}`}>
           <GlowMenuBar
             className="mode-switch-pill"
@@ -1167,6 +1208,7 @@ function Canvas() {
             }
           />
           </div>
+          )}
           <div className="canvas-toolbar vertical">
             <FloatingDockGroup
               orientation="vertical"
@@ -1306,6 +1348,15 @@ function Canvas() {
             />
           )}
           {import.meta.env.VITE_WEB_MODE === '1' && <AssetsPanel active={mainView === 'assets'} />}
+          {IS_WEB && (
+            <HomePanel
+              active={mainView === 'home'}
+              modes={modes}
+              lastView={lastView}
+              planLabel={hasActiveSubscription ? 'Pro' : 'Free'}
+              onOpen={setMainView}
+            />
+          )}
         </div>
       </div>
       {/* Every signed-in web account: @mechta.kz colleagues see each other automatically, everyone

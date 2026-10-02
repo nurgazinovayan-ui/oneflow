@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import {
   IconPlus,
-  IconChevronRight,
   IconChevronDown,
+  IconSparkles,
   IconDownload,
   IconRefresh,
   IconClose,
@@ -359,224 +359,228 @@ export default function QuickGenPanel({
   // .quick-gen-composer / .quick-gen-composer.docked in App.css for the actual transition.
   const hasStarted = entries.length > 0;
 
+  const examples = kind === 'image' ? t.ux.imageExamples : t.ux.videoExamples;
+
   return (
-    <div className={`quick-gen-panel ${active ? '' : 'quick-gen-hidden'}`}>
-      <div className="quick-gen-results">
-        {entries.map((entry) => (
-          <button
-            key={entry.id}
-            className={`quick-gen-tile ${entry.status}`}
-            style={{ aspectRatio: toCssAspectRatio(entry.aspectRatio) }}
-            onClick={() => {
-              if (entry.status !== 'done') return;
-              setPromptCopied(false);
-              setOpenEntry(entry);
-            }}
-            disabled={entry.status !== 'done'}
-            title={entry.prompt}
-          >
-            {entry.status === 'loading' && (
-              <GenerationLoader className="quick-gen-tile-loader" size={44} />
-            )}
-            {entry.status === 'done' && (
-              <>
-                {entry.kind === 'image' ? (
-                  <img src={entry.outputs[0]} alt="" className="quick-gen-tile-thumb" />
-                ) : (
-                  <video src={entry.outputs[0]} className="quick-gen-tile-thumb" muted />
-                )}
-                <span className="media-resolution-badge">{resolutionTierFromModelValue(entry.resolution)}</span>
-              </>
-            )}
-            {entry.status === 'error' && <div className="quick-gen-tile-error">!</div>}
-          </button>
-        ))}
-      </div>
-
-      {!hasStarted && (
-        <div className="quick-gen-intro">
-          <h2 className="quick-gen-intro-title">{t.ux.genIntroTitle}</h2>
-          <p className="quick-gen-intro-text">{t.ux.genIntroText}</p>
-        </div>
-      )}
-
-      <div
-        className={`quick-gen-composer ${hasStarted ? 'docked' : ''}`}
+    <div className={`quick-gen-panel v2-mode v2-split ${active ? '' : 'quick-gen-hidden'}`}>
+      <section
+        className="v2-card v2-gen-composer"
         onDragOver={handleComposerDragOver}
         onDrop={(e) => void handleComposerDrop(e)}
       >
-        <div className="quick-gen-attach-row">
-          <button
-            className="quick-gen-attach-btn"
-            onClick={handleAttachClick}
-            title={t.quickGen.attachRefImages}
-          >
-            <IconPlus size={15} />
-            <span>{t.ux.attachReference}</span>
+        <div className="v2-card-head">
+          <b>{t.ux.genIntroTitle}</b>
+        </div>
+        <div className="v2-chips" role="tablist">
+          <button type="button" role="tab" aria-selected={kind === 'image'} className={`v2-chip${kind === 'image' ? ' on' : ''}`} onClick={() => handleKindChange('image')}>
+            {t.quickGen.photoTab}
           </button>
-          {attachMenuOpen && kind === 'video' && (
-            <DropdownMenu
-              align="left"
-              onClose={() => setAttachMenuOpen(false)}
-              items={[
-                {
-                  label: t.quickGen.attachStartEnd,
-                  onClick: () => setAttachMode('startEnd'),
-                },
-                {
-                  label: t.quickGen.attachRefImages,
-                  onClick: () => setAttachMode('refImages'),
-                },
-                ...(showVideoRefOption
-                  ? [{ label: t.quickGen.attachVideoRef, onClick: () => setAttachMode('videoRef') }]
-                  : []),
-              ]}
-            />
-          )}
-
-          {attachMode === 'startEnd' && (
-            <div className="quick-gen-attach-chips">
-              <button className="quick-gen-attach-chip" onClick={() => pickAndSet(setStartFrame)}>
-                {startFrame ? <img src={startFrame} alt="" /> : <IconImage size={14} />}
-                <span>{t.quickGen.startFrameLabel}</span>
-              </button>
-              <button className="quick-gen-attach-chip" onClick={() => pickAndSet(setEndFrame)}>
-                {endFrame ? <img src={endFrame} alt="" /> : <IconImage size={14} />}
-                <span>{t.quickGen.endFrameLabel}</span>
-              </button>
-              <button className="quick-gen-attach-close" onClick={resetAttachments}>
-                <IconClose size={12} />
-              </button>
-            </div>
-          )}
-          {attachMode === 'refImages' && (
-            <div className="quick-gen-attach-chips">
-              {referenceImages.map((url, i) => (
-                <button
-                  key={i}
-                  className="quick-gen-attach-chip"
-                  onClick={() => setReferenceImages((prev) => prev.filter((_, idx) => idx !== i))}
-                >
-                  <img src={url} alt="" />
-                </button>
-              ))}
-              <button className="quick-gen-attach-chip" onClick={addReferenceImage}>
-                <IconPlus size={14} />
-              </button>
-              <button className="quick-gen-attach-close" onClick={resetAttachments}>
-                <IconClose size={12} />
-              </button>
-            </div>
-          )}
-          {attachMode === 'videoRef' && (
-            <div className="quick-gen-attach-chips">
-              <button className="quick-gen-attach-chip" onClick={pickVideoRef}>
-                {videoRef ? <IconVideo size={14} /> : <IconVideo size={14} />}
-                <span>{t.quickGen.attachVideoRef}</span>
-              </button>
-              <button className="quick-gen-attach-close" onClick={resetAttachments}>
-                <IconClose size={12} />
-              </button>
-            </div>
-          )}
+          <button type="button" role="tab" aria-selected={kind === 'video'} className={`v2-chip${kind === 'video' ? ' on' : ''}`} onClick={() => handleKindChange('video')}>
+            {t.quickGen.videoTab}
+          </button>
         </div>
 
-        <div className="quick-gen-input-row">
-          <textarea
-            className="quick-gen-input"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder={t.quickGen.promptPlaceholder}
-            onKeyDown={(e) => e.stopPropagation()}
-          />
+        <div className="v2-lab">
+          <span>{t.quickGen.promptLabel}</span>
           {prompt && (
-            <button className="quick-gen-clear-btn" onClick={() => setPrompt('')} title={t.nodes.common.remove}>
+            <button type="button" className="v2-lab-action" onClick={() => setPrompt('')}>
+              {t.nodes.common.remove}
+            </button>
+          )}
+        </div>
+        <textarea
+          className="v2-field v2-gen-prompt"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder={t.quickGen.promptPlaceholder}
+          onKeyDown={(e) => e.stopPropagation()}
+        />
+
+        <div className="v2-lab">
+          <span>{t.ux.attachReference}</span>
+          <span className="v2-lab-note">{t.ux.optional}</span>
+        </div>
+        <div className="v2-gen-refs">
+          {attachMode === 'startEnd' && (
+            <>
+              <button type="button" className="v2-ref-slot" onClick={() => pickAndSet(setStartFrame)}>
+                {startFrame ? <img src={startFrame} alt="" /> : <IconImage size={16} />}
+                <span>{t.quickGen.startFrameLabel}</span>
+              </button>
+              <button type="button" className="v2-ref-slot" onClick={() => pickAndSet(setEndFrame)}>
+                {endFrame ? <img src={endFrame} alt="" /> : <IconImage size={16} />}
+                <span>{t.quickGen.endFrameLabel}</span>
+              </button>
+            </>
+          )}
+          {attachMode === 'refImages' &&
+            referenceImages.map((url, i) => (
+              <button
+                key={i}
+                type="button"
+                className="v2-ref-slot filled"
+                title={t.nodes.common.remove}
+                onClick={() => setReferenceImages((prev) => prev.filter((_, idx) => idx !== i))}
+              >
+                <img src={url} alt="" />
+                <span className="v2-ref-x">
+                  <IconClose size={10} />
+                </span>
+              </button>
+            ))}
+          {attachMode === 'videoRef' && (
+            <button type="button" className="v2-ref-slot" onClick={pickVideoRef}>
+              <IconVideo size={16} />
+              <span>{videoRef ? '✓' : t.quickGen.attachVideoRef}</span>
+            </button>
+          )}
+          <div className="v2-ref-add-wrap">
+            <button
+              type="button"
+              className="v2-btn2 v2-ref-add"
+              onClick={attachMode === 'refImages' ? addReferenceImage : handleAttachClick}
+              title={t.quickGen.attachRefImages}
+            >
+              <IconPlus size={14} />
+              {t.ux.attachReference}
+            </button>
+            {attachMenuOpen && kind === 'video' && (
+              <DropdownMenu
+                align="left"
+                onClose={() => setAttachMenuOpen(false)}
+                items={[
+                  { label: t.quickGen.attachStartEnd, onClick: () => setAttachMode('startEnd') },
+                  { label: t.quickGen.attachRefImages, onClick: () => setAttachMode('refImages') },
+                  ...(showVideoRefOption ? [{ label: t.quickGen.attachVideoRef, onClick: () => setAttachMode('videoRef') }] : []),
+                ]}
+              />
+            )}
+          </div>
+          {attachMode !== 'none' && (
+            <button type="button" className="v2-icon-btn" onClick={resetAttachments} title={t.nodes.common.remove} aria-label={t.nodes.common.remove}>
               <IconClose size={12} />
             </button>
           )}
         </div>
+        <p className="v2-hint">{kind === 'image' ? t.ux.genRefHintImage : t.ux.genRefHintVideo}</p>
 
-        {!hasStarted && !prompt && (
-          <div className="ux-example-chips">
-            <span className="ux-example-label">{t.ux.tryExample}</span>
-            {(kind === 'image' ? t.ux.imageExamples : t.ux.videoExamples).map((ex) => (
-              <button key={ex} type="button" className="ux-example-chip" onClick={() => setPrompt(ex)}>
-                {ex}
-              </button>
+        <div className="v2-lab">
+          <span>{t.nodes.common.model}</span>
+        </div>
+        <div className="v2-select">
+          <select value={model} onChange={(e) => handleModelChange(e.target.value)} aria-label={t.nodes.common.model}>
+            {modelOptions.map((m) => (
+              <option key={m.value} value={m.value}>
+                {modelShortName(m.label)}
+              </option>
             ))}
+          </select>
+          <IconChevronDown size={13} />
+        </div>
+
+        <div className="v2-lab">
+          <span>{t.ux.formatLabel}</span>
+        </div>
+        <div className="v2-chips">
+          {ASPECT_RATIOS.map((r) => (
+            <button key={r} type="button" className={`v2-chip${aspectRatio === r ? ' on' : ''}`} onClick={() => setAspectRatio(r)}>
+              {r}
+            </button>
+          ))}
+        </div>
+
+        <div className="v2-lab">
+          <span>{t.nodes.common.resolution}</span>
+        </div>
+        <div className="v2-chips">
+          {resolutionOptions.map((r) => (
+            <button key={r.value} type="button" className={`v2-chip${resolution === r.value ? ' on' : ''}`} onClick={() => setResolution(r.value)}>
+              {QUALITY_LABEL_KEYS[r.value] ? t.nodes.modelMeta[QUALITY_LABEL_KEYS[r.value]] : r.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="v2-card-foot">
+          <button type="button" className="v2-cta" onClick={() => void handleGenerate()} disabled={generating || !prompt.trim()}>
+            <IconSparkles size={15} />
+            {generating ? t.nodes.common.generating : t.nodes.common.generate}
+          </button>
+          {!prompt.trim() && !generating && <p className="v2-hint v2-center">{t.ux.genNeedPrompt}</p>}
+        </div>
+      </section>
+
+      <section className="v2-card v2-gen-results">
+        {hasStarted ? (
+          <>
+            <div className="v2-card-head">
+              <b>{t.ux.resultsTitle}</b>
+              <span>{t.ux.genResultsHint}</span>
+            </div>
+            <div className="v2-tile-grid">
+              {entries.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  className={`v2-tile ${entry.status}`}
+                  style={{ aspectRatio: toCssAspectRatio(entry.aspectRatio) }}
+                  onClick={() => {
+                    if (entry.status !== 'done') return;
+                    setPromptCopied(false);
+                    setOpenEntry(entry);
+                  }}
+                  disabled={entry.status !== 'done'}
+                  title={entry.prompt}
+                >
+                  {entry.status === 'loading' && (
+                    <span className="v2-tile-loading">
+                      <GenerationLoader className="quick-gen-tile-loader" size={40} />
+                      <span>{entryModelLabel(entry)} · {t.nodes.common.generating}</span>
+                    </span>
+                  )}
+                  {entry.status === 'done' && (
+                    <>
+                      {entry.kind === 'image' ? (
+                        <img src={entry.outputs[0]} alt="" className="v2-tile-media" />
+                      ) : (
+                        <video src={entry.outputs[0]} className="v2-tile-media" muted />
+                      )}
+                      <span className="v2-tile-res">{resolutionTierFromModelValue(entry.resolution)}</span>
+                      <span className="v2-tile-tag">{entryModelLabel(entry)}</span>
+                    </>
+                  )}
+                  {entry.status === 'error' && (
+                    <span className="v2-tile-error" title={entry.error}>
+                      <b>!</b>
+                      <span>{entry.error}</span>
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="v2-empty">
+            <span className="v2-empty-icon">
+              <IconSparkles size={22} />
+            </span>
+            <h2>{t.ux.genIntroTitle}</h2>
+            <p>{t.ux.genIntroText}</p>
+            <ol className="v2-steps">
+              {t.ux.genSteps.map((s) => (
+                <li key={s}>{s}</li>
+              ))}
+            </ol>
+            <div className="v2-examples">
+              <span>{t.ux.tryExample}</span>
+              {examples.map((ex) => (
+                <button key={ex} type="button" className="v2-example" onClick={() => setPrompt(ex)}>
+                  {ex}
+                </button>
+              ))}
+            </div>
           </div>
         )}
-
-        <div className="quick-gen-controls-row">
-          <div className="quick-gen-kind-toggle">
-            <button
-              className={kind === 'image' ? 'active' : ''}
-              onClick={() => handleKindChange('image')}
-            >
-              {t.quickGen.photoTab}
-            </button>
-            <button
-              className={kind === 'video' ? 'active' : ''}
-              onClick={() => handleKindChange('video')}
-            >
-              {t.quickGen.videoTab}
-            </button>
-          </div>
-          <span className="quick-gen-dot" />
-          <div className="quick-gen-pill-select-wrap">
-            <select
-              className="quick-gen-pill-select"
-              value={model}
-              onChange={(e) => handleModelChange(e.target.value)}
-            >
-              {modelOptions.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {modelShortName(m.label)}
-                </option>
-              ))}
-            </select>
-            <IconChevronDown size={12} />
-          </div>
-          <span className="quick-gen-dot" />
-          <div className="quick-gen-pill-select-wrap">
-            <select
-              className="quick-gen-pill-select"
-              value={aspectRatio}
-              onChange={(e) => setAspectRatio(e.target.value)}
-            >
-              {ASPECT_RATIOS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-            <IconChevronDown size={12} />
-          </div>
-          <div className="quick-gen-pill-select-wrap">
-            <select
-              className="quick-gen-pill-select"
-              value={resolution}
-              onChange={(e) => setResolution(e.target.value)}
-            >
-              {resolutionOptions.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {QUALITY_LABEL_KEYS[r.value] ? t.nodes.modelMeta[QUALITY_LABEL_KEYS[r.value]] : r.label}
-                </option>
-              ))}
-            </select>
-            <IconChevronDown size={12} />
-          </div>
-          <div className="quick-gen-controls-spacer" />
-          <button
-            className="quick-gen-generate-btn"
-            onClick={() => void handleGenerate()}
-            disabled={generating || !prompt.trim()}
-          >
-            {generating ? t.nodes.common.generating : t.nodes.common.generate}
-            <IconChevronRight size={14} />
-          </button>
-        </div>
-      </div>
+      </section>
 
       {openEntry && (
         <div className="modal-overlay" onClick={() => setOpenEntry(null)}>

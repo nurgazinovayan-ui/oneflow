@@ -920,6 +920,48 @@ export interface Translations {
     promptLabel: string;
   };
   /** Empty states, hints and helper copy added in the UX pass. */
+  /** Home screen (web), side menu and header search. */
+  home: {
+    navLabel: string;
+    greetingMorning: string;
+    greetingDay: string;
+    greetingEvening: string;
+    greetingNight: string;
+    greetingAccentMorning: string;
+    greetingAccentDay: string;
+    greetingAccentEvening: string;
+    greetingAccentNight: string;
+    welcomeNew: string;
+    resume: (mode: string) => string;
+    resumeBtn: string;
+    budgetLeft: string;
+    planLabel: string;
+    modesTitle: string;
+    modesHint: string;
+    badgeNew: string;
+    badgeBeta: string;
+    more: string;
+    prevSlide: string;
+    nextSlide: string;
+    slideN: (n: number) => string;
+    video: string;
+    slides: { tag: string; title: string; text: string }[];
+    searchPlaceholder: string;
+    searchEmpty: string;
+    assets: string;
+    profile: string;
+    modeDescriptions: {
+      canvas: string;
+      generate: string;
+      text: string;
+      trends: string;
+      evaluate: string;
+      onelaunch: string;
+      musicaudio: string;
+      motion: string;
+      strategy: string;
+    };
+  };
   ux: {
     attachReference: string;
     tryExample: string;
@@ -942,6 +984,28 @@ export interface Translations {
     pickGoal: string;
     canvasEmptyTitle: string;
     canvasEmptyText: string;
+    launchEmptyTitle: string;
+    launchEmptyText: string;
+    optional: string;
+    formatLabel: string;
+    resultsTitle: string;
+    genRefHintImage: string;
+    genRefHintVideo: string;
+    genNeedPrompt: string;
+    genResultsHint: string;
+    genSteps: string[];
+    variantN: (n: number) => string;
+    stepDone: string;
+    replace: string;
+    productPhotoHint: string;
+    postN: (n: number) => string;
+    campaignTitle: string;
+    strategyEmptyTitle: string;
+    strategyEmptyText: string;
+    strategySections: string[];
+    motionEmptyTitle: string;
+    motionEmptyText: string;
+    motionSteps: string[];
   };
   errors: {
     imageLoadFailed: string;
@@ -2095,6 +2159,51 @@ export const ru: Translations = {
     durationSeconds: (n) => `${n} сек`,
     promptLabel: 'Промпт',
   },
+  home: {
+    navLabel: 'Главная',
+    greetingMorning: 'Доброе утро! ☕ Кофе есть —',
+    greetingDay: 'Добрый день! Самое время',
+    greetingEvening: 'Добрый вечер! Пара креативов',
+    greetingNight: 'Не спится? 🌙 Тогда',
+    greetingAccentMorning: 'идеи тоже будут',
+    greetingAccentDay: 'что-нибудь запустить 🚀',
+    greetingAccentEvening: 'перед сном? ✨',
+    greetingAccentNight: 'творим в тишине',
+    welcomeNew: 'С чего начнём? Выберите режим ниже — подскажем на каждом шаге.',
+    resume: (mode) => `С возвращением. В прошлый раз вы работали в «${mode}» — продолжим?`,
+    resumeBtn: 'Продолжить',
+    budgetLeft: 'осталось в бюджете',
+    planLabel: 'тариф',
+    modesTitle: 'Все режимы',
+    modesHint: 'выберите, с чего начать',
+    badgeNew: 'Новое',
+    badgeBeta: 'Beta',
+    more: 'Подробнее',
+    prevSlide: 'Предыдущий слайд',
+    nextSlide: 'Следующий слайд',
+    slideN: (n) => `Слайд ${n}`,
+    video: 'Видео',
+    slides: [
+      { tag: 'Новое · Motion Engine', title: 'Ролик из ваших фото за пару минут', text: 'Загрузите фото товара и бриф — ONEFLOW предложит раскадровки, а вы выберете лучшую и отправите в рендер.' },
+      { tag: 'One Launch', title: 'Одно фото — целая кампания', text: 'Карточки под все форматы и тексты постов из одной фотографии товара.' },
+      { tag: 'Creative Predictor', title: 'Узнайте, какой креатив сильнее — до запуска', text: 'Загрузите до 3 вариантов и получите оценку и советы, что улучшить.' },
+    ],
+    searchPlaceholder: 'Поиск по режимам',
+    searchEmpty: 'Ничего не нашлось',
+    assets: 'Ассеты',
+    profile: 'Профиль',
+    modeDescriptions: {
+      canvas: 'Собирайте цепочки из нод и адаптируйте креатив под все форматы',
+      generate: 'Фото и видео по описанию — лучшие модели в одном окне',
+      text: 'Тексты для постов, баннеров и карточек в стиле бренда',
+      trends: 'Свежие тренды соцсетей и идеи, как применить их к бренду',
+      evaluate: 'Оценит до 3 креативов до запуска и подскажет, что улучшить',
+      onelaunch: 'Фото товара → готовая кампания: карточки под форматы и тексты',
+      musicaudio: 'Трек по описанию или озвучка фразы голосом на выбор',
+      motion: 'Видео-ролик из ваших фото: бриф → раскадровки → рендер',
+      strategy: 'Маркетинговая стратегия под вашу цель: продажи, заявки, охват',
+    },
+  },
   ux: {
     attachReference: 'Референс',
     tryExample: 'Например:',
@@ -2129,6 +2238,37 @@ export const ru: Translations = {
     pickGoal: 'Выберите цель, чтобы продолжить',
     canvasEmptyTitle: 'Холст пока пуст',
     canvasEmptyText: 'Добавьте ноду на панели слева или начните с готовой схемы:',
+    launchEmptyTitle: 'Здесь появится ваша кампания',
+    launchEmptyText: 'Пройдите 5 шагов слева — получите карточки под выбранные форматы и тексты постов.',
+    optional: 'необязательно',
+    formatLabel: 'Формат',
+    resultsTitle: 'Результаты',
+    genRefHintImage: 'Фото-референс: товар, стиль или композиция — модель будет на него опираться.',
+    genRefHintVideo: 'Для видео: начальный и конечный кадр, референс-изображения или видео-референс.',
+    genNeedPrompt: 'Напишите промпт, чтобы начать',
+    genResultsHint: 'нажмите на карточку — промпт, модель, «Перегенерировать», «Скачать»',
+    genSteps: [
+      'Опишите идею: товар, фон, настроение, текст на картинке',
+      'Выберите модель, формат и качество — или оставьте как есть',
+      'Нажмите «Сгенерировать» — готовые варианты появятся здесь',
+    ],
+    variantN: (n) => `Вариант ${n}`,
+    stepDone: 'готово',
+    replace: 'Заменить',
+    productPhotoHint: 'PNG или JPG, лучше на однотонном фоне',
+    postN: (n) => `Пост ${n}`,
+    campaignTitle: 'Готовая кампания',
+    strategyEmptyTitle: 'Здесь появится ваш план',
+    strategyEmptyText:
+      'Ответьте на 2 вопроса — ONEFLOW разберёт бизнес и соберёт маркетинговую стратегию: аудитория, оффер, сообщение, каналы и креативы. Потом её можно одной кнопкой превратить в схему в нодах.',
+    strategySections: ['Ваш бизнес', 'Кому продавать', 'Что предложить', 'Что говорить', 'Где продвигаться', 'Что создавать'],
+    motionEmptyTitle: 'Здесь появятся раскадровки',
+    motionEmptyText: 'Заполните бриф слева и нажмите «Сделать раскадровку» — ONEFLOW предложит варианты ролика. Лучший отправьте в рендер.',
+    motionSteps: [
+      'Загрузите фото товара и опишите задачу',
+      'Получите раскадровки — откройте и посмотрите превью',
+      'Перетащите лучшую в «Рендер» и скачайте MP4',
+    ],
   },
   errors: {
     imageLoadFailed: 'Не удалось загрузить изображение',
@@ -3284,6 +3424,51 @@ export const en: Translations = {
     durationSeconds: (n) => `${n}s`,
     promptLabel: 'Prompt',
   },
+  home: {
+    navLabel: 'Home',
+    greetingMorning: 'Good morning! ☕ Coffee’s ready —',
+    greetingDay: 'Good afternoon! Perfect time',
+    greetingEvening: 'Good evening! A couple of creatives',
+    greetingNight: 'Can’t sleep? 🌙 Then',
+    greetingAccentMorning: 'ideas will be too',
+    greetingAccentDay: 'to launch something 🚀',
+    greetingAccentEvening: 'before bed? ✨',
+    greetingAccentNight: 'let’s create in peace',
+    welcomeNew: 'Where shall we start? Pick a mode below — we’ll guide you at every step.',
+    resume: (mode) => `Welcome back. Last time you were working in “${mode}” — continue?`,
+    resumeBtn: 'Continue',
+    budgetLeft: 'left in budget',
+    planLabel: 'plan',
+    modesTitle: 'All modes',
+    modesHint: 'pick where to start',
+    badgeNew: 'New',
+    badgeBeta: 'Beta',
+    more: 'Learn more',
+    prevSlide: 'Previous slide',
+    nextSlide: 'Next slide',
+    slideN: (n) => `Slide ${n}`,
+    video: 'Video',
+    slides: [
+      { tag: 'New · Motion Engine', title: 'A video from your photos in minutes', text: 'Upload product photos and a brief — ONEFLOW proposes storyboards, you pick the best and send it to render.' },
+      { tag: 'One Launch', title: 'One photo — a whole campaign', text: 'Cards for every format and post copy from a single product photo.' },
+      { tag: 'Creative Predictor', title: 'Know which creative wins — before launch', text: 'Upload up to 3 variants and get a score plus tips on what to improve.' },
+    ],
+    searchPlaceholder: 'Search modes',
+    searchEmpty: 'Nothing found',
+    assets: 'Assets',
+    profile: 'Profile',
+    modeDescriptions: {
+      canvas: 'Build node chains and adapt a creative to every format',
+      generate: 'Photo and video from a description — top models in one place',
+      text: 'Copy for posts, banners and product cards in your brand voice',
+      trends: 'Fresh social trends and ideas on how to use them for your brand',
+      evaluate: 'Scores up to 3 creatives before launch and tells you what to fix',
+      onelaunch: 'Product photo → ready campaign: cards per format plus copy',
+      musicaudio: 'A track from a description, or a voiceover in a voice you pick',
+      motion: 'A video from your photos: brief → storyboards → render',
+      strategy: 'A marketing strategy for your goal: sales, leads or reach',
+    },
+  },
   ux: {
     attachReference: 'Reference',
     tryExample: 'Try:',
@@ -3318,6 +3503,37 @@ export const en: Translations = {
     pickGoal: 'Pick a goal to continue',
     canvasEmptyTitle: 'The canvas is empty',
     canvasEmptyText: 'Add a node from the left panel or start from a ready-made scheme:',
+    launchEmptyTitle: 'Your campaign will appear here',
+    launchEmptyText: 'Go through the 5 steps on the left to get cards for the chosen formats and post copy.',
+    optional: 'optional',
+    formatLabel: 'Format',
+    resultsTitle: 'Results',
+    genRefHintImage: 'Photo reference: product, style or composition — the model will build on it.',
+    genRefHintVideo: 'For video: start and end frames, reference images or a reference video.',
+    genNeedPrompt: 'Write a prompt to start',
+    genResultsHint: 'click a card — prompt, model, “Regenerate”, “Download”',
+    genSteps: [
+      'Describe the idea: product, background, mood, on-image text',
+      'Pick a model, format and quality — or keep the defaults',
+      'Hit “Generate” — the results will show up here',
+    ],
+    variantN: (n) => `Variant ${n}`,
+    stepDone: 'done',
+    replace: 'Replace',
+    productPhotoHint: 'PNG or JPG, ideally on a plain background',
+    postN: (n) => `Post ${n}`,
+    campaignTitle: 'Your campaign',
+    strategyEmptyTitle: 'Your plan will appear here',
+    strategyEmptyText:
+      'Answer 2 questions — ONEFLOW will break down the business and build a marketing strategy: audience, offer, message, channels and creatives. Then turn it into a node flow in one click.',
+    strategySections: ['Your business', 'Who to sell to', 'What to offer', 'What to say', 'Where to promote', 'What to create'],
+    motionEmptyTitle: 'Storyboards will appear here',
+    motionEmptyText: 'Fill in the brief on the left and press “Make storyboard” — ONEFLOW will suggest video variants. Send the best one to render.',
+    motionSteps: [
+      'Upload product photos and describe the task',
+      'Get storyboards — open one to watch the preview',
+      'Drag the best one to “Render” and download the MP4',
+    ],
   },
   errors: {
     imageLoadFailed: 'Could not load the image',

@@ -433,16 +433,23 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
 
   const renderLabel = custom ? `${size.width}×${size.height}` : `${state.renderAspect} · ${size.width}×${size.height}`;
 
+  // Numbered brief label: "① МАТЕРИАЛЫ".
+  const lab = (n: number, text: string) => (
+    <div className="v2-lab">
+      <span>
+        <span className="v2-num">{n}</span>
+        {text}
+      </span>
+    </div>
+  );
+
   return (
-    <div className={`motion-panel ${active ? '' : 'motion-hidden'}`}>
+    <div className={`motion-panel v2-mode ${active ? '' : 'motion-hidden'}`}>
       <div className="mk-board">
         {/* ---------------------------------------------------------------- Бриф */}
-        <section className="mk-col">
-          <header className="mk-col-head">
-            <b>{tm.colBrief}</b>
-          </header>
-          <div className="mk-card">
-            <span className="mk-label">{tm.materials}</span>
+        <section className="mk-col v2-card mk-brief-col">
+          <div className="v2-scroll">
+            {lab(1, tm.materials)}
             <div
               className="motion-assets"
               onDragOver={(e) => e.preventDefault()}
@@ -474,10 +481,10 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
             </div>
             <span className="motion-hint">{tm.materialsHint}</span>
 
-            <span className="mk-label">{tm.brief}</span>
+            {lab(2, tm.brief)}
             <textarea className="node-textarea motion-brief" value={state.brief} onChange={(e) => update({ brief: e.target.value })} placeholder={tm.briefPlaceholder} maxLength={4000} />
 
-            <span className="mk-label">{tm.duration}</span>
+            {lab(3, tm.duration)}
             <div className="mk-range">
               <input
                 type="range"
@@ -499,7 +506,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
               ))}
             </div>
 
-            <span className="mk-label">{tm.aspect}</span>
+            {lab(4, tm.aspect)}
             <div className="mk-chips">
               {MOTION_ASPECTS.map((a) => (
                 <button key={a} type="button" className={`mk-chip ${state.aspect === a ? 'on' : ''}`} onClick={() => update({ aspect: a })}>
@@ -508,7 +515,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
               ))}
             </div>
 
-            <span className="mk-label">{tm.quality}</span>
+            {lab(5, tm.quality)}
             <div className="mk-chips">
               {MOTION_QUALITIES.map((q) => (
                 <button
@@ -569,10 +576,8 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
               ))}
             </div>
             <span className="mk-size">{tm.willRender(size.width, size.height, state.fps)}</span>
-          </div>
 
-          <div className="mk-card">
-            <span className="mk-label">{tm.reference}</span>
+            {lab(6, tm.reference)}
             {state.reference ? (
               <div className="mk-ref">
                 <div className="mk-ref-frames">
@@ -625,10 +630,8 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
                 e.target.value = '';
               }}
             />
-          </div>
 
-          <div className="mk-card">
-            <span className="mk-label">{tm.styleLabel}</span>
+            {lab(7, tm.styleLabel)}
             <button type="button" className={`mk-style-row ${!state.style ? 'on' : ''}`} onClick={() => update({ style: null })}>
               <span className="mk-style-auto">
                 <IconSparkles size={12} />
@@ -655,20 +658,35 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
             </button>
           </div>
 
-          <button className="generate-btn mk-wide" onClick={generate} disabled={generating || !loaded}>
-            {generating ? tm.generating(fmtTime(elapsed)) : state.variants.length ? tm.moreVariant : tm.makeBoard}
-          </button>
-          <span className="motion-hint">{tm.costHint}</span>
-          {error && <div className="error-text">{error}</div>}
+          <div className="v2-card-foot">
+            <button type="button" className="v2-cta" onClick={generate} disabled={generating || !loaded}>
+              {generating ? tm.generating(fmtTime(elapsed)) : state.variants.length ? tm.moreVariant : tm.makeBoard}
+            </button>
+            <span className="v2-hint v2-center">{tm.costHint}</span>
+            {error && <div className="error-text">{error}</div>}
+          </div>
         </section>
 
         {/* ---------------------------------------------------------------- Раскадровки */}
-        <section className="mk-col">
+        <section className="mk-col v2-card mk-boards-col">
           <header className="mk-col-head">
             <b>{tm.colBoards}</b>
             <i>{state.variants.length}</i>
           </header>
-          {!state.variants.length && !generating && <div className="mk-empty">{tm.emptyBoards}</div>}
+          {!state.variants.length && !generating && (
+            <div className="v2-empty">
+              <span className="v2-empty-icon">
+                <IconVideo size={22} />
+              </span>
+              <h2>{t.ux.motionEmptyTitle}</h2>
+              <p>{t.ux.motionEmptyText}</p>
+              <ol className="v2-steps">
+                {t.ux.motionSteps.map((x) => (
+                  <li key={x}>{x}</li>
+                ))}
+              </ol>
+            </div>
+          )}
           {[...state.variants].reverse().map((v) => {
             const i = state.variants.indexOf(v);
             const queuedCount = jobs.filter((j) => j.variantId === v.id).length;
@@ -743,7 +761,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
 
         {/* ---------------------------------------------------------------- Рендер */}
         <section
-          className={`mk-col mk-render-col ${dropActive ? 'drop' : ''}`}
+          className={`mk-col v2-card mk-render-col ${dropActive ? 'drop' : ''}`}
           onDragOver={(e) => {
             if (e.dataTransfer.types.includes(DRAG_TYPE)) {
               e.preventDefault();
@@ -766,9 +784,10 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
             <b>{tm.colRender}</b>
             <i>{jobs.length + renders.length}</i>
           </header>
-          <div className="mk-card">
-            <span className="mk-label">{tm.renderSettings}</span>
-            <span className="mk-sublabel">{tm.renderAspect}</span>
+          <div className="mk-render-settings">
+            <div className="v2-lab">
+              <span>{tm.renderAspect}</span>
+            </div>
             <div className="mk-chips">
               {MOTION_ASPECTS.map((a) => (
                 <button key={a} type="button" className={`mk-chip ${!custom && state.renderAspect === a ? 'on' : ''}`} onClick={() => update({ renderAspect: a, ...(custom ? { quality: '1080' } : {}) })}>

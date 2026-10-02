@@ -12,6 +12,7 @@ import {
   IconSliders,
   IconThreads,
   IconTikTok,
+  IconTrend,
 } from './Icons';
 import { DEMO_TRENDS } from '../trends/demoData';
 import { REGION_RANKS, type TrendPlatform, type TrendRegion, type TrendWatchItem } from '../trends/types';
@@ -244,36 +245,7 @@ export default function TrendsPanel({ active, authEmail, onCreateScenario, onSen
   const today = formatDate(new Date().toISOString(), locale);
 
   return (
-    <section className="tw-panel" hidden={!active} aria-label={t.heading}>
-      <header className="tw-head">
-        <div className="tw-head-main">
-          <div className="tw-head-title">
-            <h1>{t.pageTitle}</h1>
-            {isDemo && (
-              <span className="tw-demo-badge" title={t.demoHint}>
-                <span className="tw-demo-dot" aria-hidden="true" />
-                {t.demoBadge}
-              </span>
-            )}
-          </div>
-          <p className="tw-subtitle">{t.subtitle}</p>
-        </div>
-        <div className="tw-head-side">
-          {isAdmin && (
-            <button
-              className="tw-refresh"
-              type="button"
-              onClick={triggerRefresh}
-              disabled={refreshing}
-              aria-busy={refreshing}
-            >
-              <IconRefresh size={14} /> {refreshing ? t.refreshingBtn : t.refreshBtn}
-            </button>
-          )}
-          <span className="tw-date">{today}</span>
-        </div>
-      </header>
-
+    <section className="tw-panel v2-mode" hidden={!active} aria-label={t.heading}>
       {refreshError && (
         <p className="tw-alert" role="alert">
           {t.refreshError}
@@ -386,7 +358,32 @@ export default function TrendsPanel({ active, authEmail, onCreateScenario, onSen
       </div>
 
       <div className={`tw-body${mobileDetail ? ' show-detail' : ''}`}>
-        <div className="tw-list" aria-busy={loading}>
+        <div className="tw-list v2-card" aria-busy={loading}>
+          <div className="v2-card-head tw-list-head">
+            <b>
+              {t.pageTitle}
+              {isDemo && (
+                <span className="tw-demo-badge" title={t.demoHint}>
+                  <span className="tw-demo-dot" aria-hidden="true" />
+                  {t.demoBadge}
+                </span>
+              )}
+            </b>
+            <span className="tw-head-side">
+              {isAdmin && (
+                <button
+                  className="tw-refresh"
+                  type="button"
+                  onClick={triggerRefresh}
+                  disabled={refreshing}
+                  aria-busy={refreshing}
+                >
+                  <IconRefresh size={14} /> {refreshing ? t.refreshingBtn : t.refreshBtn}
+                </button>
+              )}
+              <span className="tw-date">{today}</span>
+            </span>
+          </div>
           {loading ? (
             <p className="tw-state" role="status">
               {t.loading}
@@ -442,12 +439,23 @@ export default function TrendsPanel({ active, authEmail, onCreateScenario, onSen
           )}
         </div>
 
-        <div className="tw-detail">
+        <div className="tw-detail v2-card">
           <button type="button" className="tw-back" onClick={() => setMobileDetail(false)}>
             ← {t.backToList}
           </button>
           {!selected ? (
-            <p className="tw-state">{t.selectHint}</p>
+            <div className="v2-empty">
+              <span className="v2-empty-icon">
+                <IconTrend size={22} />
+              </span>
+              <h2>{t.emptyDetailTitle}</h2>
+              <p>{t.emptyDetailText}</p>
+              <ol className="v2-steps">
+                {t.emptyDetailSteps.map((x) => (
+                  <li key={x}>{x}</li>
+                ))}
+              </ol>
+            </div>
           ) : (
             <>
               <div className="tw-detail-media">

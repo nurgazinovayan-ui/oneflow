@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { IconClose, IconDownload, IconPlus, IconRocket, IconSparkles } from './Icons';
+import { IconCheck, IconClose, IconCopy, IconDownload, IconPlus, IconRocket, IconSparkles } from './Icons';
 import { PRODUCT_PALETTES, type ProductPalette } from '../palettes';
 import { generatePaletteFromColor } from '../colorUtils';
 import { ONELAUNCH_TEMPLATE_SECTIONS, ONELAUNCH_TEMPLATES } from '../onelaunchTemplates';
@@ -335,67 +335,83 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
     void window.api.saveFile(r.image, `${name.trim() || 'product'}-${r.key}.png`);
   };
 
-  return (
-    <div className={`onelaunch-panel ${active ? '' : 'onelaunch-hidden'}`}>
-      <div className="onelaunch-composer">
-        <div className="onelaunch-hero">
-          <span className="onelaunch-beta-tag">Beta</span>
-          <div className="onelaunch-hero-title">{t.oneLaunch.title}</div>
-          <p className="onelaunch-hero-subtitle">{t.oneLaunch.subtitle}</p>
-        </div>
+  const [copiedCaption, setCopiedCaption] = useState<number | null>(null);
+  const captionBlocks = captions
+    .split(/\n\s*\n/)
+    .map((c) => c.trim())
+    .filter(Boolean);
+  const copyCaption = async (i: number, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedCaption(i);
+      setTimeout(() => setCopiedCaption((cur) => (cur === i ? null : cur)), 1200);
+    } catch {
+      // Clipboard can be blocked (permissions / insecure context) — the text stays selectable.
+    }
+  };
 
-        <div className="onelaunch-step">
-          <div className="onelaunch-step-header">
-            <span className={`onelaunch-step-badge ${step1Done ? 'done' : ''}`}>1</span>
-            <span className="onelaunch-step-title">{t.oneLaunch.step1Title}</span>
-          </div>
+  // One numbered step label: "① ШАГ N. …" on the left, «готово» / «откроется после шага N» on
+  // the right.
+  const stepLab = (n: number, title: string, done: boolean, unlocked: boolean) => (
+    <div className={`v2-lab v2-step-lab${unlocked ? '' : ' locked'}`}>
+      <span>
+        <span className={`v2-num${done ? ' done' : ''}`}>{done ? <IconCheck size={10} /> : n}</span>
+        {title}
+      </span>
+      <span className="v2-lab-note">{done ? t.ux.stepDone : unlocked ? '' : t.ux.unlocksAfter(n - 1)}</span>
+    </div>
+  );
+
+  return (
+    <div className={`onelaunch-panel v2-mode v2-split v2-launch ${active ? '' : 'onelaunch-hidden'}`}>
+      <section className="v2-card v2-launch-form">
+        <div className="v2-scroll">
+          {stepLab(1, t.oneLaunch.step1Title, step1Done, true)}
           {photo ? (
-            <div className="evaluation-slot filled onelaunch-photo-slot">
+            <div className="v2-launch-photo">
               <img src={photo} alt="" />
+              <button type="button" className="v2-btn2" onClick={addPhoto}>
+                {t.ux.replace}
+              </button>
               <button
-                className="evaluation-slot-remove"
+                type="button"
+                className="v2-icon-btn"
                 onClick={() => setPhoto(null)}
                 title={t.oneLaunch.removePhotoTooltip}
+                aria-label={t.oneLaunch.removePhotoTooltip}
               >
                 <IconClose size={12} />
               </button>
             </div>
           ) : (
-            <button
-              className="evaluation-slot empty onelaunch-photo-slot"
-              onClick={addPhoto}
-              title={t.oneLaunch.addPhotoTooltip}
-            >
-              <IconPlus size={20} />
-              <span className="onelaunch-photo-cta">{t.ux.productPhotoCta}</span>
+            <button type="button" className="v2-drop" onClick={addPhoto} title={t.oneLaunch.addPhotoTooltip}>
+              <b>
+                <IconPlus size={14} /> {t.ux.productPhotoCta}
+              </b>
+              <span>{t.ux.productPhotoHint}</span>
             </button>
           )}
-        </div>
 
-        <div className={`onelaunch-step ${step1Done ? '' : 'locked'}`}>
-          <div className="onelaunch-step-header">
-            <span className={`onelaunch-step-badge ${step2Done ? 'done' : ''}`}>2</span>
-            <span className="onelaunch-step-title">{t.oneLaunch.step2Title}</span>
-            {!step1Done && <span className="onelaunch-step-lock">{t.ux.unlocksAfter(1)}</span>}
-          </div>
-          <fieldset className="onelaunch-step-body" disabled={!step1Done}>
+          {stepLab(2, t.oneLaunch.step2Title, step2Done, step1Done)}
+          <fieldset className="v2-fieldset" disabled={!step1Done}>
             <input
-              className="node-select onelaunch-name-input"
+              className="v2-field"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t.oneLaunch.namePlaceholder}
             />
-            <div className="onelaunch-advantages-row">
+            <div className="v2-row">
               <textarea
-                className="node-textarea onelaunch-advantages-input"
+                className="v2-field v2-grow"
+                rows={3}
                 value={advantagesText}
                 onChange={(e) => setAdvantagesText(e.target.value)}
                 placeholder={t.oneLaunch.advantagesPlaceholder}
               />
               <button
                 type="button"
-                className="secondary-btn onelaunch-improve-btn"
+                className="v2-btn2 v2-btn-tall"
                 onClick={handleImproveAdvantages}
                 disabled={improving || !advantagesText.trim()}
               >
@@ -404,31 +420,25 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
               </button>
             </div>
           </fieldset>
-        </div>
 
-        <div className={`onelaunch-step ${step2Done ? '' : 'locked'}`}>
-          <div className="onelaunch-step-header">
-            <span className={`onelaunch-step-badge ${step3Done ? 'done' : ''}`}>3</span>
-            <span className="onelaunch-step-title">{t.oneLaunch.step3Title}</span>
-            {!step2Done && <span className="onelaunch-step-lock">{t.ux.unlocksAfter(2)}</span>}
-          </div>
-          <fieldset className="onelaunch-step-body" disabled={!step2Done}>
-            <div className="onelaunch-style-tabs">
+          {stepLab(3, t.oneLaunch.step3Title, step3Done, step2Done)}
+          <fieldset className="v2-fieldset" disabled={!step2Done}>
+            <div className="v2-chips">
               {ONELAUNCH_TEMPLATE_SECTIONS.map((section) => (
                 <button
                   key={section.key}
                   type="button"
-                  className={`onelaunch-style-tab ${layoutSection === section.key ? 'active' : ''}`}
+                  className={`v2-chip${layoutSection === section.key ? ' on' : ''}`}
                   onClick={() => setLayoutSection(section.key)}
                 >
                   {section.label}
                 </button>
               ))}
             </div>
-            <div className="onelaunch-style-grid">
+            <div className="v2-launch-templates">
               <button
                 type="button"
-                className={`onelaunch-style-tile onelaunch-style-tile-none ${!selectedTemplateId ? 'selected' : ''}`}
+                className={`v2-launch-tpl v2-launch-tpl-none${!selectedTemplateId ? ' on' : ''}`}
                 onClick={() => setSelectedTemplateId(null)}
                 title={t.oneLaunch.templateUniqueHint}
               >
@@ -439,7 +449,7 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
                 <button
                   key={tpl.id}
                   type="button"
-                  className={`onelaunch-style-tile ${selectedTemplateId === tpl.id ? 'selected' : ''}`}
+                  className={`v2-launch-tpl${selectedTemplateId === tpl.id ? ' on' : ''}`}
                   onClick={() => setSelectedTemplateId(tpl.id)}
                   title={tpl.name}
                 >
@@ -449,7 +459,7 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
             </div>
             {selectedTemplate?.hasDiscountBadge && (
               <input
-                className="node-select onelaunch-discount-input"
+                className="v2-field"
                 type="text"
                 value={discountText}
                 onChange={(e) => setDiscountText(e.target.value)}
@@ -457,176 +467,189 @@ export default function OneLaunchPanel({ active }: OneLaunchPanelProps) {
               />
             )}
           </fieldset>
-        </div>
 
-        <div className={`onelaunch-step ${step3Done ? '' : 'locked'}`}>
-          <div className="onelaunch-step-header">
-            <span className={`onelaunch-step-badge ${step4Done ? 'done' : ''}`}>4</span>
-            <span className="onelaunch-step-title">{t.oneLaunch.step4Title}</span>
-            {!step3Done && <span className="onelaunch-step-lock">{t.ux.unlocksAfter(3)}</span>}
-          </div>
+          {stepLab(4, t.oneLaunch.step4Title, step4Done, step3Done)}
           {usingTemplate ? (
-            <div className="onelaunch-step-body onelaunch-template-note">{t.oneLaunch.templateFormatNote}</div>
+            <p className="v2-hint">{t.oneLaunch.templateFormatNote}</p>
           ) : (
-            <fieldset className="onelaunch-step-body onelaunch-formats-row" disabled={!step3Done}>
+            <fieldset className="v2-fieldset v2-chips" disabled={!step3Done}>
               {FORMATS.map((f) => (
-                <label key={f.key} className="onelaunch-format-check">
-                  <input
-                    type="checkbox"
-                    checked={selectedFormats[f.key]}
-                    onChange={() => toggleFormat(f.key)}
-                  />
+                <label key={f.key} className={`v2-chip v2-check${selectedFormats[f.key] ? ' on' : ''}`}>
+                  <input type="checkbox" checked={selectedFormats[f.key]} onChange={() => toggleFormat(f.key)} />
                   {formatLabel(f.key)}
                 </label>
               ))}
             </fieldset>
           )}
-        </div>
 
-        <div className={`onelaunch-step ${step4Done ? '' : 'locked'}`}>
-          <div className="onelaunch-step-header">
-            <span className={`onelaunch-step-badge ${step5Done ? 'done' : ''}`}>5</span>
-            <span className="onelaunch-step-title">{t.oneLaunch.step5Title}</span>
-            {!step4Done && <span className="onelaunch-step-lock">{t.ux.unlocksAfter(4)}</span>}
-          </div>
+          {stepLab(5, t.oneLaunch.step5Title, step5Done, step4Done)}
           {usingTemplate ? (
-            <div className="onelaunch-step-body onelaunch-template-note">{t.oneLaunch.templatePaletteNote}</div>
+            <p className="v2-hint">{t.oneLaunch.templatePaletteNote}</p>
           ) : (
-          <fieldset className="onelaunch-step-body" disabled={!step4Done}>
-            <div className="onelaunch-palette-grid">
-              {palettes.map((p) => (
-                <button
-                  key={p.key}
-                  type="button"
-                  className={`onelaunch-swatch ${selectedPaletteKey === p.key ? 'selected' : ''}`}
-                  onClick={() => setSelectedPaletteKey(p.key)}
-                  title={p.name}
+            <fieldset className="v2-fieldset" disabled={!step4Done}>
+              <div className="v2-palettes">
+                {palettes.map((p) => (
+                  <button
+                    key={p.key}
+                    type="button"
+                    className={`v2-palette${selectedPaletteKey === p.key ? ' on' : ''}`}
+                    onClick={() => setSelectedPaletteKey(p.key)}
+                    title={p.name}
+                  >
+                    <span className="v2-palette-colors">
+                      {p.colors.slice(0, 4).map((c, i) => (
+                        <span key={i} style={{ background: c }} />
+                      ))}
+                    </span>
+                    <span className="v2-palette-name">{p.name}</span>
+                    {recommendedPaletteKey === p.key && <span className="v2-palette-badge">{t.oneLaunch.recommendedBadge}</span>}
+                  </button>
+                ))}
+                <label
+                  className={`v2-palette custom${selectedPaletteKey === CUSTOM_PALETTE_KEY ? ' on' : ''}`}
+                  title={t.oneLaunch.customPaletteHint}
                 >
-                  <span className="onelaunch-swatch-colors">
-                    {p.colors.slice(0, 4).map((c, i) => (
-                      <span key={i} style={{ background: c }} />
-                    ))}
-                  </span>
-                  <span className="onelaunch-swatch-name">{p.name}</span>
-                  {recommendedPaletteKey === p.key && (
-                    <span className="onelaunch-swatch-badge">{t.oneLaunch.recommendedBadge}</span>
+                  <input
+                    type="color"
+                    className="onelaunch-color-input"
+                    value={customPalette?.accent ?? '#e5157e'}
+                    onChange={(e) => handleCustomColor(e.target.value)}
+                  />
+                  {customPalette ? (
+                    <span className="v2-palette-colors">
+                      {customPalette.colors.map((c, i) => (
+                        <span key={i} style={{ background: c }} />
+                      ))}
+                    </span>
+                  ) : (
+                    <span className="v2-palette-colors v2-palette-plus">
+                      <IconPlus size={14} />
+                    </span>
                   )}
-                </button>
-              ))}
-              <label
-                className={`onelaunch-swatch custom ${selectedPaletteKey === CUSTOM_PALETTE_KEY ? 'selected' : ''}`}
-                title={t.oneLaunch.customPaletteHint}
-              >
-                <input
-                  type="color"
-                  className="onelaunch-color-input"
-                  value={customPalette?.accent ?? '#e5157e'}
-                  onChange={(e) => handleCustomColor(e.target.value)}
-                />
-                {customPalette ? (
-                  <span className="onelaunch-swatch-colors">
-                    {customPalette.colors.map((c, i) => (
-                      <span key={i} style={{ background: c }} />
-                    ))}
-                  </span>
-                ) : (
-                  <span className="onelaunch-swatch-colors onelaunch-swatch-colors-placeholder">
-                    <IconPlus size={16} />
-                  </span>
-                )}
-                <span className="onelaunch-swatch-name">{t.oneLaunch.customPaletteLabel}</span>
-              </label>
-            </div>
-          </fieldset>
+                  <span className="v2-palette-name">{t.oneLaunch.customPaletteLabel}</span>
+                </label>
+              </div>
+            </fieldset>
           )}
         </div>
 
-        {/* Pinned to the bottom of the scrolling panel so the launch is always one click away. */}
-        <div className="onelaunch-launch-bar">
-          <button
-            className="generate-btn evaluation-evaluate-btn onelaunch-launch-btn"
-            onClick={handleLaunch}
-            disabled={status === 'running' || !step5Done}
-          >
-            <IconRocket size={14} />
+        <div className="v2-card-foot">
+          <button type="button" className="v2-cta" onClick={handleLaunch} disabled={status === 'running' || !step5Done}>
+            <IconRocket size={15} />
             {status === 'running' ? t.oneLaunch.launchingBtn : t.oneLaunch.launchBtn}
           </button>
           {!step5Done && status !== 'running' && (
-            <p className="ux-missing-hint">
+            <p className="v2-hint v2-center">
               {!step1Done ? t.ux.launchNeedPhoto : !step2Done ? t.ux.launchNeedName : t.ux.launchNeedSetup}
             </p>
           )}
+          {status === 'error' && <div className="error-text">{error}</div>}
         </div>
+      </section>
 
-        {status === 'running' && (
-          <div className="onelaunch-loading">
-            <div className="onelaunch-loading-orbs">
-              <span />
-              <span />
-              <span />
+      <section className="v2-card v2-launch-results">
+        {results.length === 0 && status !== 'running' ? (
+          <div className="v2-empty">
+            <span className="v2-empty-icon">
+              <IconRocket size={22} />
+            </span>
+            <h2>{t.ux.launchEmptyTitle}</h2>
+            <p>{t.ux.launchEmptyText}</p>
+            <div className="v2-ghosts v2-ghosts-formats" aria-hidden="true">
+              <span className="r11">1:1</span>
+              <span className="r916">9:16</span>
+              <span className="r32">3:2</span>
             </div>
-            <div className="onelaunch-loading-text">{statusMessage}</div>
+            <div className="v2-ghosts v2-ghosts-posts" aria-hidden="true">
+              {[1, 2, 3].map((n) => (
+                <span key={n}>{t.ux.postN(n)}</span>
+              ))}
+            </div>
           </div>
-        )}
-
-        {status === 'error' && <div className="error-text">{error}</div>}
-      </div>
-
-      <div className="evaluation-results">
-        {results.length > 0 && (
-          <div className="evaluation-variant-grid">
-            {results.map((r) => (
-              <div key={r.key} className="evaluation-variant-card">
-                <div className="evaluation-variant-thumb">
-                  <img src={r.image} alt="" />
-                </div>
-                <div className="onelaunch-card-top-row">
-                  {r.evaluation && (
-                    <div className="evaluation-score">
-                      {r.evaluation.score}
-                      <span className="evaluation-score-suffix">{t.evaluation.scoreOutOf}</span>
-                    </div>
-                  )}
-                  <button
-                    className="evaluation-slot-remove onelaunch-download-btn"
-                    onClick={() => downloadResult(r)}
-                    title={t.oneLaunch.downloadTooltip}
-                  >
-                    <IconDownload size={13} />
-                  </button>
-                </div>
-                {r.evaluation && r.evaluation.strengths.length > 0 && (
-                  <div className="evaluation-feedback-group">
-                    <div className="evaluation-feedback-label">{t.evaluation.strengthsLabel}</div>
-                    <ul className="evaluation-strengths">
-                      {r.evaluation.strengths.map((s, i) => (
-                        <li key={i}>{s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {r.evaluation && r.evaluation.weaknesses.length > 0 && (
-                  <div className="evaluation-feedback-group">
-                    <div className="evaluation-feedback-label">{t.evaluation.weaknessesLabel}</div>
-                    <ul className="evaluation-weaknesses">
-                      {r.evaluation.weaknesses.map((w, i) => (
-                        <li key={i}>{w}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+        ) : (
+          <>
+            <div className="v2-card-head">
+              <b>
+                {t.ux.campaignTitle}
+                {name.trim() ? ` · ${name.trim()}` : ''}
+              </b>
+              <span className="v2-pill v2-pill-warn">Beta</span>
+            </div>
+            {status === 'running' && (
+              <div className="v2-progress-note" role="status">
+                <span className="v2-spinner" aria-hidden="true" />
+                {statusMessage}
               </div>
-            ))}
-          </div>
+            )}
+            {results.length > 0 && (
+              <div className="v2-launch-grid">
+                {results.map((r) => (
+                  <div key={r.key} className="v2-launch-card">
+                    <div className="v2-launch-media">
+                      <img src={r.image} alt="" />
+                      <span className="v2-tile-tag">{r.label}</span>
+                      <button
+                        type="button"
+                        className="v2-icon-btn v2-launch-dl"
+                        onClick={() => downloadResult(r)}
+                        title={t.oneLaunch.downloadTooltip}
+                        aria-label={t.oneLaunch.downloadTooltip}
+                      >
+                        <IconDownload size={13} />
+                      </button>
+                    </div>
+                    {r.evaluation && (
+                      <div className="v2-launch-eval">
+                        <div className="v2-pred-score">
+                          <b>{r.evaluation.score}</b>
+                          <span>{t.evaluation.scoreOutOf}</span>
+                        </div>
+                        {r.evaluation.strengths.length > 0 && (
+                          <ul className="v2-plus">
+                            {r.evaluation.strengths.map((x, i) => (
+                              <li key={i}>{x}</li>
+                            ))}
+                          </ul>
+                        )}
+                        {r.evaluation.weaknesses.length > 0 && (
+                          <ul className="v2-minus">
+                            {r.evaluation.weaknesses.map((x, i) => (
+                              <li key={i}>{x}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {captionBlocks.length > 0 && (
+              <>
+                <div className="v2-lab">
+                  <span>{t.oneLaunch.captionsTitle}</span>
+                </div>
+                <div className="v2-captions">
+                  {captionBlocks.map((c, i) => (
+                    <div key={i} className="v2-caption">
+                      <p>{c}</p>
+                      <button
+                        type="button"
+                        className="v2-icon-btn"
+                        onClick={() => void copyCaption(i, c)}
+                        title={t.aiAssistant.copyTooltip}
+                        aria-label={t.aiAssistant.copyTooltip}
+                      >
+                        {copiedCaption === i ? <IconCheck size={12} /> : <IconCopy size={12} />}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
         )}
-
-        {captions && (
-          <div className="onelaunch-captions">
-            <div className="onelaunch-captions-title">{t.oneLaunch.captionsTitle}</div>
-            <pre className="onelaunch-captions-text">{captions}</pre>
-          </div>
-        )}
-      </div>
+      </section>
     </div>
   );
 }

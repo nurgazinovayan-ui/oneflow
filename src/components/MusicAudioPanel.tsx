@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  IconChevronDown,
   IconDownload,
   IconMic,
   IconMusic,
@@ -10,13 +11,15 @@ import {
 import { AUDIO_FORMATS, MUSIC_GENRES, TTS_LANGUAGES, TTS_VOICES, type AudioMode } from '../types';
 import { formatGenerationError } from '../errorMessages';
 import { useT } from '../i18n';
-import { handleDockMouseMove, handleDockMouseLeave } from '../dockHover';
 
 interface MusicAudioPanelProps {
   active: boolean;
 }
 
 const LOADING_MESSAGE_INTERVAL_MS = 1400;
+// Decorative waveform for the player: fixed pseudo-random bar heights (no audio decoding), the
+// played part is tinted with the accent.
+const WAVE_BARS = Array.from({ length: 72 }, (_, i) => 18 + Math.round(Math.abs(Math.sin(i * 1.7) * Math.cos(i * 0.45)) * 82));
 const PREVIEW_PHRASES: Record<string, string> = {
   'ru-RU': 'Привет, это пример голоса.',
   'en-US': 'Hello, this is a voice sample.',
@@ -145,97 +148,110 @@ export default function MusicAudioPanel({ active }: MusicAudioPanelProps) {
     if (result) void window.api.saveFile(result.url, `${result.mode === 'music' ? 'track' : 'speech'}.${format}`);
   };
 
+  const progress = duration > 0 ? currentTime / duration : 0;
+  const wave = (played: number) => (
+    <div className="v2-wave" aria-hidden="true">
+      {WAVE_BARS.map((h, i) => (
+        <i key={i} style={{ height: `${h}%` }} className={i / WAVE_BARS.length < played ? 'on' : ''} />
+      ))}
+    </div>
+  );
+
   return (
-    <div className={`musicaudio-panel ${active ? '' : 'musicaudio-hidden'}`}>
-      <div
-        className="musicaudio-mode-toolbar"
-        onMouseMove={handleDockMouseMove}
-        onMouseLeave={handleDockMouseLeave}
-      >
-        <button
-          className={`toolbar-label-btn ${mode === 'music' ? 'active' : ''}`}
-          onClick={() => switchMode('music')}
-          data-dock-item
-        >
-          <IconMusic size={13} /> {t.musicAudio.modeToggleMusic}
-        </button>
-        <button
-          className={`toolbar-label-btn ${mode === 'speech' ? 'active' : ''}`}
-          onClick={() => switchMode('speech')}
-          data-dock-item
-        >
-          <IconMic size={13} /> {t.musicAudio.modeToggleSpeech}
-        </button>
-      </div>
-      <div className="musicaudio-layout">
-        <div className="musicaudio-side">
+    <div className={`musicaudio-panel v2-mode v2-split v2-music ${active ? '' : 'musicaudio-hidden'}`}>
+      <section className="v2-card v2-music-form">
+        <div className="v2-chips" role="tablist">
+          <button type="button" role="tab" aria-selected={mode === 'music'} className={`v2-chip${mode === 'music' ? ' on' : ''}`} onClick={() => switchMode('music')}>
+            <IconMusic size={13} /> {t.musicAudio.modeToggleMusic}
+          </button>
+          <button type="button" role="tab" aria-selected={mode === 'speech'} className={`v2-chip${mode === 'speech' ? ' on' : ''}`} onClick={() => switchMode('speech')}>
+            <IconMic size={13} /> {t.musicAudio.modeToggleSpeech}
+          </button>
+        </div>
+        <div className="v2-scroll">
           {mode === 'music' ? (
             <>
-              <span className="field-label">{t.musicAudio.musicPromptLabel}</span>
+              <div className="v2-lab">
+                <span>{t.musicAudio.musicPromptLabel}</span>
+              </div>
               <textarea
-                className="node-textarea musicaudio-textarea"
+                className="v2-field"
+                rows={3}
                 value={musicPrompt}
                 onChange={(e) => setMusicPrompt(e.target.value)}
                 placeholder={t.musicAudio.musicPromptPlaceholder}
               />
-              <span className="field-label">{t.musicAudio.genreLabel}</span>
-              <div className="musicaudio-genre-grid">
+              <div className="v2-lab">
+                <span>{t.musicAudio.genreLabel}</span>
+              </div>
+              <div className="v2-chips">
                 {MUSIC_GENRES.map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    className={`musicaudio-genre-btn ${genre === g ? 'active' : ''}`}
-                    onClick={() => setGenre(genre === g ? null : g)}
-                  >
+                  <button key={g} type="button" className={`v2-chip${genre === g ? ' on' : ''}`} onClick={() => setGenre(genre === g ? null : g)}>
                     {g}
                   </button>
                 ))}
               </div>
-              <span className="field-label">{t.musicAudio.lyricsLabel}</span>
+              <div className="v2-lab">
+                <span>{t.musicAudio.lyricsLabel}</span>
+              </div>
               <textarea
-                className="node-textarea musicaudio-textarea musicaudio-lyrics"
+                className="v2-field"
+                rows={4}
                 value={lyrics}
                 onChange={(e) => setLyrics(e.target.value)}
                 placeholder={t.musicAudio.lyricsPlaceholder}
               />
-              <span className="field-label">{t.musicAudio.formatLabel}</span>
-              <select className="node-select" value={format} onChange={(e) => setFormat(e.target.value)}>
-                {AUDIO_FORMATS.map((f) => (
-                  <option key={f} value={f}>
-                    {f.toUpperCase()}
-                  </option>
-                ))}
-              </select>
+              <div className="v2-lab">
+                <span>{t.musicAudio.formatLabel}</span>
+              </div>
+              <div className="v2-select">
+                <select value={format} onChange={(e) => setFormat(e.target.value)} aria-label={t.musicAudio.formatLabel}>
+                  {AUDIO_FORMATS.map((f) => (
+                    <option key={f} value={f}>
+                      {f.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+                <IconChevronDown size={13} />
+              </div>
             </>
           ) : (
             <>
-              <span className="field-label">{t.musicAudio.phraseLabel}</span>
+              <div className="v2-lab">
+                <span>{t.musicAudio.phraseLabel}</span>
+              </div>
               <textarea
-                className="node-textarea musicaudio-textarea"
+                className="v2-field"
+                rows={3}
                 value={phrase}
                 onChange={(e) => setPhrase(e.target.value)}
                 placeholder={t.musicAudio.phrasePlaceholder}
               />
-              <span className="field-label">{t.musicAudio.speechPromptLabel}</span>
+              <div className="v2-lab">
+                <span>{t.musicAudio.speechPromptLabel}</span>
+              </div>
               <textarea
-                className="node-textarea musicaudio-textarea"
+                className="v2-field"
+                rows={2}
                 value={speechPrompt}
                 onChange={(e) => setSpeechPrompt(e.target.value)}
                 placeholder={t.musicAudio.speechPromptPlaceholder}
               />
-              <span className="field-label">{t.musicAudio.voiceLabel}</span>
-              <div className="musicaudio-voice-list">
+              <div className="v2-lab">
+                <span>{t.musicAudio.voiceLabel}</span>
+              </div>
+              <div className="v2-list" role="radiogroup" aria-label={t.musicAudio.voiceLabel}>
                 {TTS_VOICES.map((v) => (
-                  <div key={v} className={`musicaudio-voice-row ${voice === v ? 'selected' : ''}`} onClick={() => setVoice(v)}>
-                    <span>{v}</span>
+                  <div key={v} className={`v2-row${voice === v ? ' on' : ''}`}>
+                    <button type="button" role="radio" aria-checked={voice === v} className="v2-row-main" onClick={() => setVoice(v)}>
+                      {v}
+                    </button>
                     <button
                       type="button"
-                      className="musicaudio-voice-preview-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handlePreviewVoice(v);
-                      }}
+                      className="v2-icon-btn"
+                      onClick={() => void handlePreviewVoice(v)}
                       title={t.musicAudio.previewTooltip}
+                      aria-label={`${t.musicAudio.previewTooltip}: ${v}`}
                       disabled={previewingVoice === v}
                     >
                       {previewingVoice === v ? <IconRefresh size={11} /> : <IconPlay size={10} />}
@@ -243,95 +259,120 @@ export default function MusicAudioPanel({ active }: MusicAudioPanelProps) {
                   </div>
                 ))}
               </div>
-              <span className="field-label">{t.musicAudio.languageLabel}</span>
-              <select className="node-select" value={language} onChange={(e) => setLanguage(e.target.value)}>
-                {TTS_LANGUAGES.map((l) => (
-                  <option key={l.code} value={l.code}>
-                    {l.label}
-                  </option>
-                ))}
-              </select>
+              <div className="v2-lab">
+                <span>{t.musicAudio.languageLabel}</span>
+              </div>
+              <div className="v2-select">
+                <select value={language} onChange={(e) => setLanguage(e.target.value)} aria-label={t.musicAudio.languageLabel}>
+                  {TTS_LANGUAGES.map((l) => (
+                    <option key={l.code} value={l.code}>
+                      {l.label}
+                    </option>
+                  ))}
+                </select>
+                <IconChevronDown size={13} />
+              </div>
             </>
           )}
-
-          <button
-            className="generate-btn musicaudio-generate-btn"
-            onClick={handleGenerate}
-            disabled={status === 'loading'}
-          >
+        </div>
+        <div className="v2-card-foot">
+          <button type="button" className="v2-cta" onClick={handleGenerate} disabled={status === 'loading'}>
+            {mode === 'music' ? <IconMusic size={15} /> : <IconMic size={15} />}
             {status === 'loading' ? t.musicAudio.generatingBtn : t.musicAudio.generateBtn}
           </button>
           {status === 'error' && <div className="error-text">{error}</div>}
         </div>
+      </section>
 
-        <div className="musicaudio-result-area">
-          {status === 'loading' && (
-            <div className="musicaudio-loading-bar">
-              <span className="musicaudio-loading-corner">{loadingMessages[loadingMessageIndex]}</span>
-            </div>
-          )}
-
-          {status !== 'loading' && result && (
-            <div className="musicaudio-player">
-              <div className="musicaudio-player-top">
-                <span className="musicaudio-player-type-icon">
-                  {result.mode === 'music' ? <IconMusic size={14} /> : <IconMic size={14} />}
-                </span>
-                <button className="musicaudio-download-btn" onClick={download} title={t.musicAudio.downloadTooltip}>
-                  <IconDownload size={13} />
-                </button>
+      <section className="v2-card v2-music-result">
+        {status === 'idle' && !result ? (
+          <div className="v2-empty">
+            <span className="v2-empty-icon">{mode === 'music' ? <IconMusic size={22} /> : <IconMic size={22} />}</span>
+            <h2>{mode === 'music' ? t.ux.musicEmptyTitle : t.ux.speechEmptyTitle}</h2>
+            <p>{t.musicAudio.subtitle}</p>
+            {mode === 'music' && (
+              <div className="v2-examples">
+                <span>{t.ux.tryExample}</span>
+                {t.ux.musicExamples.map((ex) => (
+                  <button key={ex} type="button" className="v2-example" onClick={() => setMusicPrompt(ex)}>
+                    {ex}
+                  </button>
+                ))}
               </div>
-              <div className="musicaudio-player-controls">
-                <button className="musicaudio-play-btn" onClick={togglePlay}>
-                  {playing ? <IconPause size={14} /> : <IconPlay size={14} />}
-                </button>
-                <input
-                  type="range"
-                  className="musicaudio-scrubber"
-                  min={0}
-                  max={duration || 0}
-                  value={currentTime}
-                  onChange={(e) => seek(Number(e.target.value))}
-                />
-                <span className="musicaudio-time">
-                  {formatTime(currentTime)} / {formatTime(duration)}
-                </span>
-              </div>
-              <audio
-                ref={audioRef}
-                src={result.url}
-                onPlay={() => setPlaying(true)}
-                onPause={() => setPlaying(false)}
-                onEnded={() => setPlaying(false)}
-                onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-              />
-            </div>
-          )}
-
-          {status === 'idle' && !result && (
-            <div className="musicaudio-empty">
-              <span className="musicaudio-empty-icon">
-                {mode === 'music' ? <IconMusic size={22} /> : <IconMic size={22} />}
+            )}
+            <div className="v2-player ghost" aria-hidden="true">
+              <span className="v2-play">
+                <IconPlay size={13} />
               </span>
-              <h3 className="musicaudio-empty-title">
-                {mode === 'music' ? t.ux.musicEmptyTitle : t.ux.speechEmptyTitle}
-              </h3>
-              <p className="musicaudio-empty-text">{t.musicAudio.subtitle}</p>
-              {mode === 'music' && (
-                <div className="ux-example-chips">
-                  <span className="ux-example-label">{t.ux.tryExample}</span>
-                  {t.ux.musicExamples.map((ex) => (
-                    <button key={ex} type="button" className="ux-example-chip" onClick={() => setMusicPrompt(ex)}>
-                      {ex}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <span className="v2-track" />
+              <span className="v2-time">0:00 / 0:00</span>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        ) : (
+          <>
+            <div className="v2-card-head">
+              <b>{t.ux.resultsTitle}</b>
+              <span>
+                {mode === 'music' ? [genre, format.toUpperCase()].filter(Boolean).join(' · ') : voice}
+              </span>
+            </div>
+            {status === 'loading' && (
+              <div className="v2-audio-box loading" role="status">
+                {wave(0)}
+                <div className="v2-progress-note">
+                  <span className="v2-spinner" aria-hidden="true" />
+                  {loadingMessages[loadingMessageIndex]}
+                </div>
+              </div>
+            )}
+            {status === 'error' && !result && <div className="v2-hint">{error}</div>}
+            {status !== 'loading' && result && (
+              <div className="v2-audio-box">
+                <div className="v2-audio-top">
+                  <span className="v2-icon-tile">{result.mode === 'music' ? <IconMusic size={15} /> : <IconMic size={15} />}</span>
+                  <button
+                    type="button"
+                    className="v2-icon-btn"
+                    onClick={download}
+                    title={t.musicAudio.downloadTooltip}
+                    aria-label={t.musicAudio.downloadTooltip}
+                  >
+                    <IconDownload size={14} />
+                  </button>
+                </div>
+                {wave(progress)}
+                <div className="v2-player">
+                  <button type="button" className="v2-play" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}>
+                    {playing ? <IconPause size={14} /> : <IconPlay size={14} />}
+                  </button>
+                  <input
+                    type="range"
+                    className="v2-range"
+                    min={0}
+                    max={duration || 0}
+                    step="any"
+                    value={currentTime}
+                    onChange={(e) => seek(Number(e.target.value))}
+                    style={{ ['--p' as string]: `${progress * 100}%` }}
+                  />
+                  <span className="v2-time">
+                    {formatTime(currentTime)} / {formatTime(duration)}
+                  </span>
+                </div>
+                <audio
+                  ref={audioRef}
+                  src={result.url}
+                  onPlay={() => setPlaying(true)}
+                  onPause={() => setPlaying(false)}
+                  onEnded={() => setPlaying(false)}
+                  onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                  onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                />
+              </div>
+            )}
+          </>
+        )}
+      </section>
       <audio ref={previewAudioRef} />
     </div>
   );

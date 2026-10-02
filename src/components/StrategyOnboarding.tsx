@@ -124,12 +124,31 @@ export default function StrategyOnboarding() {
     }
   };
 
+  // Right-hand card: what the finished plan will contain, as empty outlines (filled once the
+  // pipeline finishes and StrategyPanel swaps onboarding for the plan view).
+  const preview = (
+    <section className="v2-card v2-strategy-preview">
+      <div className="v2-empty">
+        <span className="v2-empty-icon">
+          <IconTarget size={22} />
+        </span>
+        <h2>{t.ux.strategyEmptyTitle}</h2>
+        <p>{t.ux.strategyEmptyText}</p>
+        <div className="v2-ghost-grid" aria-hidden="true">
+          {t.ux.strategySections.map((x) => (
+            <span key={x}>{x}</span>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+
   if (phase === 'understanding' || phase === 'pipeline') {
     const label = phase === 'understanding' ? t.strategy.loadingUnderstandBusiness : LOADING_LABELS[pipelineStage];
     const doneIndex = phase === 'understanding' ? -1 : stageIndex;
     return (
-      <div className="strategy-onboarding-wrap">
-        <div className="modal strategy-onboarding-modal strategy-loading-modal">
+      <div className="strategy-onboarding-wrap v2-mode v2-split v2-strategy">
+        <div className="v2-card strategy-onboarding-modal strategy-loading-modal">
           <div className="strategy-onboarding-eyebrow">
             <IconTarget size={14} /> {t.strategy.title}
           </div>
@@ -155,6 +174,7 @@ export default function StrategyOnboarding() {
           </div>
           <div className="strategy-loading-current">{label}</div>
         </div>
+        {preview}
       </div>
     );
   }
@@ -162,8 +182,8 @@ export default function StrategyOnboarding() {
   if (phase === 'confirming' && draftStrategy?.businessUnderstanding) {
     const bu = draftStrategy.businessUnderstanding;
     return (
-      <div className="strategy-onboarding-wrap">
-        <div className="modal strategy-onboarding-modal strategy-confirm-modal">
+      <div className="strategy-onboarding-wrap v2-mode v2-split v2-strategy">
+        <div className="v2-card strategy-onboarding-modal strategy-confirm-modal">
           <div className="strategy-onboarding-eyebrow">
             <IconTarget size={14} /> {t.strategy.title}
           </div>
@@ -196,13 +216,14 @@ export default function StrategyOnboarding() {
             </button>
           </div>
         </div>
+        {preview}
       </div>
     );
   }
 
   return (
-    <div className="strategy-onboarding-wrap">
-      <div className="modal strategy-onboarding-modal">
+    <div className="strategy-onboarding-wrap v2-mode v2-split v2-strategy">
+      <div className="v2-card strategy-onboarding-modal">
         <div className="strategy-onboarding-progress">
           <div className="strategy-onboarding-progress-fill" style={{ width: `${((step + 1) / steps.length) * 100}%` }} />
         </div>
@@ -345,6 +366,7 @@ export default function StrategyOnboarding() {
           )}
         </div>
       </div>
+      {preview}
     </div>
   );
 }

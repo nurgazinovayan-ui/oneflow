@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { IconDownload, IconImage, IconVideo } from './Icons';
+import { IconAssetsFolder, IconDownload, IconImage, IconVideo } from './Icons';
 import type { YandexAsset } from '../types';
 import { resolutionTierFromPixels, type ResolutionTier } from '../resolutionBadge';
 import { useT } from '../i18n';
@@ -123,7 +123,13 @@ export default function AssetsPanel({ active }: AssetsPanelProps) {
           )}
 
           {assets !== null && !error && visible.length === 0 && (
-            <div className="connected-hint assets-hint">{t.assets.emptyHint}</div>
+            <div className="v2-empty">
+              <span className="v2-empty-icon">
+                <IconAssetsFolder size={22} />
+              </span>
+              <h2>{t.home.assets}</h2>
+              <p>{t.assets.emptyHint}</p>
+            </div>
           )}
 
           {visible.length > 0 && (
