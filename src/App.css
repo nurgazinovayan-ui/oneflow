@@ -483,7 +483,7 @@
 .toolbar-dsp-btn:hover {
   background: var(--c-pink);
   border-color: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
   box-shadow: 0 4px 18px color-mix(in srgb, var(--c-pink) 35%, transparent);
   transform: translateY(-1px);
 }
@@ -7724,7 +7724,7 @@
 
 .assets-sort-btn.active {
   background: var(--c-pink);
-  color: #fff;
+  color: var(--c-pink-text);
 }
 
 .assets-grid-area {
@@ -13312,27 +13312,32 @@ h5.md-heading {
 }
 
 /* =============================================================================================
-   STYLE V2 (by request: dark dashboard, violet accent, icon side menu + home screen). Flat — no
+   STYLE V2 (by request: dark dashboard, landing-blue accent, icon side menu + home screen). Flat — no
    gradients, no glows. Dark theme gets the full palette; light theme keeps its own surfaces but
-   shares the layout and the violet accent.
+   shares the layout and the blue accent.
    ============================================================================================= */
 :root {
-  --v2-accent: #7c5ce6;
-  --v2-accent-ink: #ffffff;
-  --v2-accent-soft: rgba(124, 92, 230, 0.12);
+  /* Accent = the landing's button blue (oneflow.art .btn.p: #9be8ff on #04141b ink). Fills use
+     --v2-accent in both themes; text, icons and outlines use --v2-accent-strong, which is the same
+     hue darkened for the light theme so it stays readable on white. */
+  --v2-accent: #9be8ff;
+  --v2-accent-ink: #04141b;
+  --v2-accent-strong: #1590ba;
+  --v2-accent-soft: rgba(21, 144, 186, 0.1);
   --v2-shell: #eceef2;
   --v2-surface: #f6f7f9;
   --v2-card: #ffffff;
   --v2-field: #eef0f4;
   --v2-line: rgba(0, 0, 0, 0.08);
   --home-track: #dcdde3;
-  --home-accent: var(--v2-accent);
+  --home-accent: var(--v2-accent-strong);
 }
 
 :root:not([data-theme='light']) {
-  --v2-accent: #a98bf5;
-  --v2-accent-ink: #14101f;
-  --v2-accent-soft: #2a2140;
+  --v2-accent: #9be8ff;
+  --v2-accent-ink: #04141b;
+  --v2-accent-strong: #9be8ff;
+  --v2-accent-soft: rgba(155, 232, 255, 0.12);
   --v2-shell: #0b0b0d;
   --v2-surface: #151517;
   --v2-card: #1d1d20;
@@ -13347,12 +13352,12 @@ h5.md-heading {
   --c-panel-2: #26262a;
   --c-panel-3: #303036;
   --c-divider: #2c2c31;
-  --c-pink: #a98bf5;
-  --c-pink-hover: #bba2f8;
-  --c-pink-dim: rgba(169, 139, 245, 0.45);
-  --c-pink-text: #14101f;
-  --glow-gradient: #a98bf5;
-  --glow-text: #14101f;
+  --c-pink: #9be8ff;
+  --c-pink-hover: #c2f1ff;
+  --c-pink-dim: rgba(155, 232, 255, 0.45);
+  --c-pink-text: #04141b;
+  --glow-gradient: #9be8ff;
+  --glow-text: #04141b;
 }
 
 /* ---- shell: icon rail | header / content ---------------------------------------------------- */
@@ -13386,7 +13391,7 @@ h5.md-heading {
   border-radius: 12px;
   border: none;
   background: var(--c-bg);
-  color: var(--v2-accent);
+  color: var(--v2-accent-strong);
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -13578,7 +13583,7 @@ h5.md-heading {
 }
 
 .mode-search:focus-within {
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
 }
 
 .mode-search-list {
@@ -13619,7 +13624,7 @@ h5.md-heading {
   height: 34px;
   border-radius: 10px;
   background: var(--c-bg);
-  color: var(--v2-accent);
+  color: var(--v2-accent-strong);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13710,7 +13715,7 @@ h5.md-heading {
 
 .home-hello h1 em {
   font-style: normal;
-  color: var(--v2-accent);
+  color: var(--v2-accent-strong);
 }
 
 .home-hello p {
@@ -13726,7 +13731,7 @@ h5.md-heading {
 .home-resume {
   border: none;
   background: var(--v2-accent-soft);
-  color: var(--v2-accent);
+  color: var(--v2-accent-strong);
   border-radius: 999px;
   padding: 5px 12px;
   font: inherit;
@@ -13758,34 +13763,60 @@ h5.md-heading {
   color: var(--c-text);
 }
 
+/* Banner: the slide's photo/video fills the whole banner; the text sits on the left over a dark
+   scrim so it stays readable on any picture (both themes — the scrim is always dark, the text
+   always light). */
 .home-banner {
-  display: grid;
-  grid-template-columns: 40% 60%;
-  grid-template-rows: 100%;
-  height: clamp(240px, 34vh, 320px);
+  position: relative;
+  height: clamp(260px, 36vh, 340px);
   flex-shrink: 0;
   border-radius: 22px;
   overflow: hidden;
-  background: var(--v2-card);
+  background: #0b0b0d;
   border: 1px solid var(--v2-line);
+  isolation: isolate;
 }
 
-:root:not([data-theme='light']) .home-banner {
-  background: #0e0e14;
-  border-color: #3a2f5c;
+.home-banner-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.home-banner-media img,
+.home-banner-media video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease);
+}
+
+.home-banner-media .on {
+  opacity: 1;
 }
 
 .home-banner-text {
-  padding: 24px 28px;
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  width: min(560px, 62%);
+  padding: 26px 30px;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  color: #fff;
+  background: linear-gradient(90deg, rgba(5, 8, 12, 0.82) 0%, rgba(5, 8, 12, 0.66) 62%, rgba(5, 8, 12, 0) 100%);
 }
 
 .home-tag {
   align-self: flex-start;
-  background: var(--v2-accent-soft);
-  color: var(--v2-accent);
+  background: rgba(155, 232, 255, 0.16);
+  color: #9be8ff;
   border-radius: 6px;
   padding: 4px 9px;
   font-size: 11.5px;
@@ -13795,34 +13826,43 @@ h5.md-heading {
 .home-banner-text h2 {
   margin: 14px 0 10px;
   font-size: clamp(24px, 2.4vw, 34px);
-  font-weight: 550;
+  font-weight: 600;
   line-height: 1.15;
   letter-spacing: -0.02em;
+  color: #fff;
+  max-width: 460px;
 }
 
 .home-banner-text p {
   margin: 0;
   font-size: 14px;
   line-height: 1.5;
-  color: var(--c-text-muted);
+  color: rgba(255, 255, 255, 0.82);
+  max-width: 420px;
 }
 
 .home-more {
   margin-top: auto;
   align-self: flex-start;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
   border: none;
   background: none;
   padding: 0;
-  color: var(--v2-accent);
+  color: #9be8ff;
   font: inherit;
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  text-decoration: none;
   cursor: pointer;
+}
+
+.home-more:hover {
+  text-decoration: none;
+  color: #c2f1ff;
 }
 
 .home-more-icon {
@@ -13836,31 +13876,10 @@ h5.md-heading {
   justify-content: center;
 }
 
-.home-banner-media {
-  position: relative;
-  overflow: hidden;
-  min-width: 0;
-}
-
-.home-banner-media img,
-.home-banner-media video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 60% 40%;
-  opacity: 0;
-  transition: opacity 0.5s var(--ease);
-}
-
-.home-banner-media .on {
-  opacity: 1;
-}
-
 .home-video-badge {
   position: absolute;
-  left: 14px;
+  z-index: 2;
+  right: 96px;
   top: 14px;
   display: flex;
   align-items: center;
@@ -13882,6 +13901,7 @@ h5.md-heading {
 
 .home-arrows {
   position: absolute;
+  z-index: 2;
   right: 14px;
   top: 14px;
   display: flex;
@@ -13901,6 +13921,7 @@ h5.md-heading {
 
 .home-dots {
   position: absolute;
+  z-index: 2;
   right: 16px;
   bottom: 14px;
   display: flex;
@@ -13967,7 +13988,7 @@ h5.md-heading {
 }
 
 .home-tile:hover {
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
 }
 
 .home-tile-icon {
@@ -13975,7 +13996,7 @@ h5.md-heading {
   height: 52px;
   border-radius: 14px;
   background: var(--c-bg);
-  color: var(--v2-accent);
+  color: var(--v2-accent-strong);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14010,7 +14031,7 @@ h5.md-heading {
 
 .home-tile.hi {
   background: var(--v2-accent);
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
   color: var(--v2-accent-ink);
 }
 
@@ -14057,9 +14078,18 @@ h5.md-heading {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .home-banner {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 180px;
     height: auto;
+    min-height: 320px;
+  }
+  .home-banner-text {
+    width: 100%;
+    min-height: 320px;
+    padding: 20px;
+    justify-content: flex-end;
+    background: linear-gradient(0deg, rgba(5, 8, 12, 0.88) 0%, rgba(5, 8, 12, 0.6) 55%, rgba(5, 8, 12, 0.1) 100%);
+  }
+  .home-more {
+    margin-top: 16px;
   }
 }
 

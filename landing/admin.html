@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src https://ayxmfihtrsacfdhszsri.supabase.co; frame-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob: https://ayxmfihtrsacfdhszsri.supabase.co; media-src 'self' blob: https://ayxmfihtrsacfdhszsri.supabase.co; font-src 'self' data:; connect-src https://ayxmfihtrsacfdhszsri.supabase.co; frame-src 'self'; base-uri 'none'; form-action 'none'">
 <title>ONEFLOW Admin</title>
 <style>
 :root { --bg: #f5f5f7; --surface: #fff; --ink: #111114; --ink2: #3c3c46; --muted: #80808c; --line: #e6e6ec; --soft: #f0f0f4; --acc: #3b5cff; --acc-soft: #eef1ff;
@@ -91,6 +91,22 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
 .ci textarea { min-height: 40px; } .ci .acts { display: grid; gap: 6px; } .ci.changed { background: var(--acc-soft); }
 .tag { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 5px; background: var(--acc); color: #fff; font: 600 10.5px var(--f); vertical-align: 1px; }
 .tag.old { background: var(--warn); }
+/* app banners editor */
+.bn { display: grid; grid-template-columns: minmax(260px, 380px) minmax(0, 1fr); gap: 18px; }
+.bn-prev { position: relative; aspect-ratio: 16 / 7; border-radius: 12px; overflow: hidden; background: #0b0b0d; }
+.bn-prev img, .bn-prev video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.bn-prev .ov { position: absolute; inset: 0 40% 0 0; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; color: #fff; background: linear-gradient(90deg, rgba(5,8,12,.82), rgba(5,8,12,.6) 62%, rgba(5,8,12,0)); }
+.bn-prev .ov small { align-self: flex-start; padding: 1px 6px; border-radius: 5px; background: rgba(155,232,255,.18); color: #9be8ff; font-size: 10px; font-weight: 700; }
+.bn-prev .ov b { font-size: 14px; line-height: 1.2; } .bn-prev .ov span { font-size: 11px; opacity: .8; line-height: 1.35; } .bn-prev .ov i { margin-top: auto; font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #9be8ff; }
+.bn-prev .none { position: absolute; inset: 0; display: grid; place-items: center; color: #8b8b98; font-size: 13px; }
+.bn-num { position: absolute; right: 8px; top: 8px; padding: 2px 8px; border-radius: 6px; background: rgba(0,0,0,.65); color: #fff; font-size: 11px; font-weight: 700; }
+.bn-langs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.bn-langs h5 { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.bn-langs .field { margin-bottom: 8px; } .bn-langs textarea.in { min-height: 60px; }
+.bn-link { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 8px; }
+.upl { position: relative; overflow: hidden; } .upl input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.note { padding: 12px 14px; border-radius: 12px; background: var(--acc-soft); color: var(--ink2); margin-bottom: 14px; font-size: 13px; }
+@media (max-width: 1100px) { .bn { grid-template-columns: 1fr; } .bn-langs { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .app { grid-template-columns: 1fr; }
   .side { z-index: 5; height: auto; flex-direction: row; align-items: center; gap: 2px; padding: 8px 12px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); scrollbar-width: none; }
   .side::-webkit-scrollbar { display: none; } .side .brand { padding: 4px 8px 4px 0; } .brand small, .side .foot > :not(#out) { display: none; }
@@ -121,6 +137,7 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
     <button class="nav" data-v="gens">Генерации</button>
     <button class="nav" data-v="support">Поддержка <span class="cnt hide" id="tcnt"></span></button>
     <button class="nav" data-v="content">Тексты сайта</button>
+    <button class="nav" data-v="banners">Баннеры приложения</button>
     <div class="foot"><span id="who"></span><a href="/" target="_blank" rel="noopener">Открыть сайт ↗</a><button class="btn s" id="out" type="button">Выйти</button></div>
   </aside>
   <main class="main">
@@ -130,6 +147,7 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
     <section id="v-gens" class="hide"></section>
     <section id="v-support" class="hide"></section>
     <section id="v-content" class="hide"></section>
+    <section id="v-banners" class="hide"></section>
   </main>
 </div>
 <div class="shade hide" id="shade"></div><aside class="drawer hide" id="drawer" role="dialog" aria-modal="true"></aside>
@@ -174,7 +192,9 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
   // ---------------------------------------------------------------- data
   let D = null, view = 'overview';
   const api = DEMO ? demoApi() : { overview: () => call('admin-api', { action: 'overview' }), ticket: (b) => call('admin-api', { action: 'ticket-update', ...b }),
-    content: (b) => call('admin-api', { action: 'content-save', ...b }), send: (emails, message) => call('admin-send-message', { mode: 'selected', emails, message }) };
+    content: (b) => call('admin-api', { action: 'content-save', ...b }), send: (emails, message) => call('admin-send-message', { mode: 'selected', emails, message }),
+    banners: (slides) => call('admin-api', { action: 'banners-save', slides }), mediaUrl: (b) => call('admin-api', { action: 'media-upload-url', ...b }),
+    mediaDelete: (path) => call('admin-api', { action: 'media-delete', path }) };
   const load = async () => {
     $('#rf').disabled = true;
     try { D = await api.overview(); $('#upd').textContent = 'обновлено ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); render(); }
@@ -183,11 +203,11 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
   };
 
   // ---------------------------------------------------------------- views
-  const TITLES = { overview: 'Обзор', users: 'Пользователи', gens: 'Генерации', support: 'Поддержка', content: 'Тексты сайта' };
+  const TITLES = { overview: 'Обзор', users: 'Пользователи', gens: 'Генерации', support: 'Поддержка', content: 'Тексты сайта', banners: 'Баннеры приложения' };
   const go = (v) => { view = v; $$('.nav').forEach((b) => b.classList.toggle('on', b.dataset.v === v)); Object.keys(TITLES).forEach((k) => $('#v-' + k).classList.toggle('hide', k !== v)); $('#title').textContent = TITLES[v]; render(); };
   $$('.nav').forEach((b) => b.addEventListener('click', () => go(b.dataset.v)));
   const render = () => { if (!D) return; const n = D.tickets.filter((t) => t.status === 'new').length; $('#tcnt').textContent = n; $('#tcnt').classList.toggle('hide', !n);
-    ({ overview: vOverview, users: vUsers, gens: vGens, support: vSupport, content: vContent })[view](); };
+    ({ overview: vOverview, users: vUsers, gens: vGens, support: vSupport, content: vContent, banners: vBanners })[view](); };
 
   const days = () => { const out = [], m = new Map(D.stats.byDay.map((d) => [d.day, d])); for (let i = D.stats.days - 1; i >= 0; i--) { const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10); out.push(m.get(d) || { day: d, count: 0, spend: 0 }); } return out; };
 
@@ -324,6 +344,114 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
       })); });
   }
 
+  // app banners: the slides of the banner on the app's home screen (oneflow.art/app → Главная). Stored as one JSON row
+  // ('app.home.banners') in site_content; files go to the public 'site-media' bucket via one-time signed upload URLs.
+  // admin-api validates everything again on save; the app validates once more before showing it.
+  const BANNERS_KEY = 'app.home.banners', MEDIA_PREFIX = SB + '/storage/v1/object/public/site-media/';
+  const MODES = [['canvas', 'Ноды и адаптация'], ['generate', 'Генерация'], ['text', 'Copywrite'], ['trends', 'Trendswatching'], ['evaluate', 'Creative Predictor'],
+    ['onelaunch', 'One Launch'], ['musicaudio', 'Музыка и аудио'], ['motion', 'Motion Engine'], ['strategy', 'Стратегия']];
+  const TYPES = { 'image/jpeg': 10, 'image/png': 10, 'image/webp': 10, 'image/gif': 10, 'video/mp4': 50, 'video/webm': 50 };  // max MB
+  const DEFAULT_BANNERS = [
+    { type: 'video', media: '/oneflow-hero.mp4', poster: '/home-banner-poster.webp', link: 'mode:motion',
+      ru: { tag: 'Новое · Motion Engine', title: 'Ролик из ваших фото за пару минут', text: 'Загрузите фото товара и бриф — ONEFLOW предложит раскадровки, а вы выберете лучшую и отправите в рендер.', button: 'Подробнее' },
+      en: { tag: 'New · Motion Engine', title: 'A video from your photos in minutes', text: 'Upload product photos and a brief — ONEFLOW proposes storyboards, you pick the best and send it to render.', button: 'Learn more' } },
+    { type: 'image', media: '/onelaunch-templates/electronics/02.jpg', link: 'mode:onelaunch',
+      ru: { tag: 'One Launch', title: 'Одно фото — целая кампания', text: 'Карточки под все форматы и тексты постов из одной фотографии товара.', button: 'Подробнее' },
+      en: { tag: 'One Launch', title: 'One photo — a whole campaign', text: 'Cards for every format and post copy from a single product photo.', button: 'Learn more' } },
+    { type: 'image', media: '/onelaunch-templates/premium/04-pyramid.jpg', link: 'mode:evaluate',
+      ru: { tag: 'Creative Predictor', title: 'Узнайте, какой креатив сильнее — до запуска', text: 'Загрузите до 3 вариантов и получите оценку и советы, что улучшить.', button: 'Подробнее' },
+      en: { tag: 'Creative Predictor', title: 'Find the stronger creative before launch', text: 'Upload up to 3 variants and get a score and tips on what to improve.', button: 'Learn more' } }];
+  const emptyLang = () => ({ tag: '', title: '', text: '', button: '' });
+  const pathOf = (url) => (typeof url === 'string' && url.startsWith(MEDIA_PREFIX) ? url.slice(MEDIA_PREFIX.length) : null);
+  const slidePaths = (list) => list.flatMap((x) => [pathOf(x.media), pathOf(x.poster)]).filter(Boolean);
+  let bn = null;  // { slides, saved: paths referenced by the published version, uploaded: paths uploaded in this session, dirty, busy, msg }
+  const bnLoad = () => {
+    const row = D.content.find((c) => c.key === BANNERS_KEY);
+    let slides = [];
+    try { slides = row ? (JSON.parse(row.value).slides || []) : []; } catch { slides = []; }
+    slides = slides.map((x) => ({ id: x.id || crypto.randomUUID(), type: x.type === 'video' ? 'video' : 'image', media: x.media || '', poster: x.poster || '', link: x.link || '',
+      ru: { ...emptyLang(), ...(x.ru || {}) }, en: { ...emptyLang(), ...(x.en || {}) } }));
+    bn = { slides, published: !!row, saved: slidePaths(slides), uploaded: [], dirty: false, busy: false, msg: '' };
+  };
+  const bnUpload = async (file) => {
+    const max = TYPES[file.type];
+    if (!max) throw new Error('Поддерживаются JPG, PNG, WebP, GIF, MP4 и WebM.');
+    if (file.size > max * 1024 * 1024) throw new Error(`Файл слишком большой: максимум ${max} МБ.`);
+    const u = await api.mediaUrl({ name: file.name, type: file.type, size: file.size });
+    if (DEMO) return URL.createObjectURL(file);
+    const fd = new FormData(); fd.append('cacheControl', '31536000'); fd.append('', file);
+    const r = await fetch(u.signedUrl, { method: 'PUT', headers: { apikey: KEY, Authorization: 'Bearer ' + await token(), 'x-upsert': 'false' }, body: fd });
+    if (!r.ok) throw new Error('Не удалось загрузить файл (' + r.status + ').');
+    bn.uploaded.push(u.path);
+    return u.publicUrl;
+  };
+  function vBanners() {
+    if (!bn) bnLoad();
+    const el = $('#v-banners');
+    const linkSel = (x) => { const v = x.link || '', isUrl = v && !v.startsWith('mode:');
+      return `<div class="bn-link"><select class="in" data-k="linkType" aria-label="Куда ведёт кнопка"><option value="">Без кнопки</option>${MODES.map(([m, l]) => `<option value="mode:${m}" ${v === 'mode:' + m ? 'selected' : ''}>Режим: ${esc(l)}</option>`).join('')}<option value="url" ${isUrl ? 'selected' : ''}>Внешняя ссылка…</option></select>
+        <input class="in ${isUrl ? '' : 'hide'}" data-k="url" type="url" inputmode="url" placeholder="https://…" value="${esc(isUrl ? v : '')}" aria-label="Адрес ссылки"></div>`; };
+    const langBlock = (x, l, title) => `<div><h5>${title}</h5>
+      <label class="field">Метка<input class="in" data-l="${l}" data-k="tag" maxlength="60" value="${esc(x[l].tag)}" placeholder="${l === 'ru' ? 'Новое · Motion Engine' : 'New · Motion Engine'}"></label>
+      <label class="field">Заголовок${l === 'ru' ? ' *' : ''}<input class="in" data-l="${l}" data-k="title" maxlength="140" value="${esc(x[l].title)}"></label>
+      <label class="field">Текст<textarea class="in" data-l="${l}" data-k="text" maxlength="400">${esc(x[l].text)}</textarea></label>
+      <label class="field">Текст кнопки<input class="in" data-l="${l}" data-k="button" maxlength="40" value="${esc(x[l].button)}" placeholder="${l === 'ru' ? 'Подробнее' : 'Learn more'}"></label></div>`;
+    const prev = (x, i) => { const m = x.media ? (x.type === 'video' ? `<video src="${esc(x.media)}" ${x.poster ? `poster="${esc(x.poster)}"` : ''} muted loop playsinline autoplay></video>` : `<img src="${esc(x.media)}" alt="">`) : '<div class="none">Нет файла</div>';
+      const t = x.ru.title || x.en.title, tag = x.ru.tag || x.en.tag, tx = x.ru.text || x.en.text, b = x.link ? (x.ru.button || x.en.button || 'Подробнее') : '';
+      return `<div class="bn-prev">${m}<div class="ov">${tag ? `<small>${esc(tag)}</small>` : ''}<b>${esc(t || 'Заголовок')}</b><span>${esc(tx)}</span>${b ? `<i>▸ ${esc(b)}</i>` : ''}</div><span class="bn-num">${i + 1}</span></div>`; };
+    el.innerHTML = `<div class="tools"><button class="btn a" id="bsave" type="button" ${bn.dirty && !bn.busy ? '' : 'disabled'}>Сохранить и опубликовать</button>
+        <button class="btn s" id="badd" type="button" ${bn.slides.length >= 12 ? 'disabled' : ''}>+ Добавить баннер</button>
+        ${bn.slides.length ? '' : '<button class="btn s" id="bdef" type="button">Взять стандартные для правки</button>'}
+        <span class="${/Ошибка|Не удалось|должн|Недопуст|слишком|Поддерживаются|Ссылка/.test(bn.msg) ? 'err' : 'ok'}" id="bmsg" role="status">${esc(bn.msg)}</span>
+        <a class="btn s" href="/app" target="_blank" rel="noopener" style="margin-left:auto">Открыть приложение ↗</a></div>
+      <div class="note">${bn.published ? 'В приложении показываются эти баннеры.' : 'Сейчас в приложении стандартные баннеры. Добавьте свои — после сохранения они заменят стандартные.'}
+        Фото до 10 МБ (JPG, PNG, WebP, GIF), видео до 50 МБ (MP4, WebM). Картинка растягивается на весь баннер, текст — слева на затемнении. Английский текст необязателен: если его нет, показывается русский.</div>
+      ${bn.slides.map((x, i) => `<div class="card" data-i="${i}"><div class="bn"><div>${prev(x, i)}
+          <div class="row"><label class="btn s upl">${x.media ? 'Заменить фото / видео' : 'Загрузить фото / видео'}<input type="file" data-f="media" accept="${Object.keys(TYPES).join(',')}"></label>
+          ${x.type === 'video' ? `<label class="btn s upl">${x.poster ? 'Заменить обложку' : 'Обложка видео'}<input type="file" data-f="poster" accept="image/jpeg,image/png,image/webp"></label>${x.poster ? '<button class="btn s" data-a="unposter" type="button">Убрать обложку</button>' : ''}` : ''}</div>
+          <div class="row"><button class="btn s" data-a="up" type="button" ${i ? '' : 'disabled'} aria-label="Выше">↑</button><button class="btn s" data-a="down" type="button" ${i < bn.slides.length - 1 ? '' : 'disabled'} aria-label="Ниже">↓</button><button class="btn s" data-a="del" type="button" style="color:var(--bad)">Удалить баннер</button></div></div>
+        <div><div class="bn-langs">${langBlock(x, 'ru', 'Русский')}${langBlock(x, 'en', 'English')}</div>
+          <div class="field">Кнопка ведёт${linkSel(x)}</div></div></div></div>`).join('') || '<p class="empty">Своих баннеров пока нет.</p>'}`;
+    const touch = (msg = '') => { bn.dirty = true; bn.msg = msg; const b = $('#bsave'); if (b) b.disabled = bn.busy; const m = $('#bmsg'); if (m) { m.textContent = msg; m.className = 'ok'; } };
+    $('#badd')?.addEventListener('click', () => { bn.slides.push({ id: crypto.randomUUID(), type: 'image', media: '', poster: '', link: '', ru: emptyLang(), en: emptyLang() }); touch(); vBanners(); });
+    $('#bdef')?.addEventListener('click', () => { bn.slides = DEFAULT_BANNERS.map((x) => ({ id: crypto.randomUUID(), poster: '', ...JSON.parse(JSON.stringify(x)) })); touch(); vBanners(); });
+    $$('#v-banners .card').forEach((card) => { const i = Number(card.dataset.i), x = bn.slides[i];
+      $$('[data-l]', card).forEach((inp) => inp.addEventListener('input', () => { x[inp.dataset.l][inp.dataset.k] = inp.value; touch();
+        const p = $('.bn-prev', card); if (p) p.outerHTML = prev(x, i); }));
+      const sel = $('[data-k=linkType]', card), url = $('[data-k=url]', card);
+      sel.addEventListener('change', () => { url.classList.toggle('hide', sel.value !== 'url'); x.link = sel.value === 'url' ? url.value.trim() : sel.value; touch(); $('.bn-prev', card).outerHTML = prev(x, i); if (sel.value === 'url') url.focus(); });
+      url.addEventListener('input', () => { x.link = url.value.trim(); touch(); });
+      $$('input[type=file]', card).forEach((f) => f.addEventListener('change', async () => {
+        const file = f.files[0]; f.value = ''; if (!file) return;
+        bn.busy = true; bn.msg = 'Загружаю ' + file.name + '…'; vBanners();
+        try { const u = await bnUpload(file);
+          if (f.dataset.f === 'media') { x.media = u; x.type = file.type.startsWith('video/') ? 'video' : 'image'; if (x.type === 'image') x.poster = ''; } else x.poster = u;
+          bn.busy = false; touch('Файл загружен. Не забудьте сохранить.'); }
+        catch (e) { bn.busy = false; bn.msg = e.message; }
+        vBanners(); }));
+      $$('[data-a]', card).forEach((b) => b.addEventListener('click', () => { const a = b.dataset.a;
+        if (a === 'up' || a === 'down') { const j = a === 'up' ? i - 1 : i + 1; [bn.slides[i], bn.slides[j]] = [bn.slides[j], bn.slides[i]]; }
+        if (a === 'del') { if (!confirm('Удалить этот баннер?')) return; bn.slides.splice(i, 1); }
+        if (a === 'unposter') x.poster = '';
+        touch(); vBanners(); })); });
+    $('#bsave')?.addEventListener('click', async () => {
+      const bad = bn.slides.findIndex((x) => !x.media || !(x.ru.title.trim() || x.en.title.trim()));
+      if (bad >= 0) { bn.msg = `Баннер ${bad + 1}: должны быть файл и заголовок.`; return vBanners(); }
+      const badUrl = bn.slides.findIndex((x) => x.link && !x.link.startsWith('mode:') && !/^https:\/\/[^\s]+$/i.test(x.link));
+      if (badUrl >= 0) { bn.msg = `Баннер ${badUrl + 1}: Ссылка должна начинаться с https://`; return vBanners(); }
+      bn.busy = true; bn.msg = 'Сохраняю…'; vBanners();
+      try {
+        const r = await api.banners(bn.slides);
+        D.content = D.content.filter((c) => c.key !== BANNERS_KEY);
+        if (!r.reset) D.content.push({ key: BANNERS_KEY, value: r.value || JSON.stringify({ v: 1, slides: bn.slides }), updated_at: new Date().toISOString() });
+        // files no longer used by the published version (replaced or deleted banners) are removed from storage
+        const keep = new Set(slidePaths(bn.slides)), unused = [...new Set([...bn.saved, ...bn.uploaded])].filter((p) => !keep.has(p));
+        await Promise.all(unused.map((p) => api.mediaDelete(p).catch(() => {})));
+        bnLoad(); bn.msg = r.reset ? 'Сохранено: в приложении снова стандартные баннеры.' : 'Сохранено и опубликовано.';
+      } catch (e) { bn.busy = false; bn.msg = e.message; }
+      vBanners(); });
+  }
+
   // ---------------------------------------------------------------- drawer, auth wiring
   const openDrawer = (html) => { $('#drawer').innerHTML = '<button class="btn s x" type="button" aria-label="Закрыть">✕</button>' + html; $('#drawer').classList.remove('hide'); $('#shade').classList.remove('hide'); $('.drawer .x').addEventListener('click', closeDrawer); };
   const closeDrawer = () => { $('#drawer').classList.add('hide'); $('#shade').classList.add('hide'); };
@@ -356,7 +484,8 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
       { id: 't3', name: 'Дана', contact: 'dana.brand@gmail.com', message: 'Подскажите, остаток бюджета точно переносится?', status: 'closed', reply: 'Да, неизрасходованный бюджет переходит на следующий месяц.', replied_at: iso(now - 20 * 3600000), created_at: iso(now - 26 * 3600000) }];
     const D0 = { generatedAt: iso(now), users, recent: recent.slice(0, 300), tickets, content: [], stats: { days: 30, totalGenerations: 1843, byDay: [...byDayM.entries()].map(([day, v]) => ({ day, ...v })), byModel: [...byModel.values()].sort((a, b) => b.count - a.count) } };
     const wait = (v) => new Promise((r) => setTimeout(() => r(v), 250));
-    return { overview: () => wait(JSON.parse(JSON.stringify(D0))), ticket: (b) => wait({ ok: true, deliveredInApp: true }), content: () => wait({ ok: true }), send: () => wait({ ok: true }) };
+    return { overview: () => wait(JSON.parse(JSON.stringify(D0))), ticket: (b) => wait({ ok: true, deliveredInApp: true }), content: () => wait({ ok: true }), send: () => wait({ ok: true }),
+      banners: (slides) => wait(slides.length ? { ok: true, value: JSON.stringify({ v: 1, slides }) } : { ok: true, reset: true }), mediaUrl: () => wait({ path: null, signedUrl: null, publicUrl: null }), mediaDelete: () => wait({ ok: true }) };
   }
 })();
 </script>

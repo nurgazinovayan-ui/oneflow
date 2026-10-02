@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { IconArrowUp, IconPlay } from './Icons';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { IconArrowUp, IconExternal, IconPlay } from './Icons';
 import type { AppView, ModeDef } from '../modes';
 import type { BudgetUsage } from '../types';
-import { useT } from '../i18n';
+import { useLanguageStore, useT } from '../i18n';
+import { fetchBanners, parseBanners, readCachedBanners, type BannerSlide } from '../homeBanners';
 
 interface HomePanelProps {
   active: boolean;
@@ -14,10 +15,10 @@ interface HomePanelProps {
 
 const SLIDE_MS = 7000;
 
-// Banner slides: one media + the mode «Подробнее» opens. Text comes from i18n (t.home.slides) in
-// the same order.
-const SLIDE_MEDIA: { view: AppView; video?: boolean; src: string }[] = [
-  { view: 'motion', video: true, src: '/oneflow-hero' },
+// Built-in banner slides, shown until the admin panel has saved its own (see homeBanners.ts). Text
+// comes from i18n (t.home.slides) in the same order.
+const DEFAULT_MEDIA: { view: AppView; video?: boolean; src: string; poster?: string }[] = [
+  { view: 'motion', video: true, src: '/oneflow-hero.mp4', poster: '/home-banner-poster.webp' },
   { view: 'onelaunch', src: '/onelaunch-templates/electronics/02.jpg' },
   { view: 'evaluate', src: '/onelaunch-templates/premium/04-pyramid.jpg' },
 ];
@@ -34,10 +35,46 @@ function greetingKey(h: number): 'Morning' | 'Day' | 'Evening' | 'Night' {
 export default function HomePanel({ active, modes, lastView, planLabel, onOpen }: HomePanelProps) {
   const t = useT();
   const [usage, setUsage] = useState<BudgetUsage | null>(null);
+  const language = useLanguageStore((s) => s.language);
+  const views = useMemo(() => modes.map((m) => m.value), [modes]);
+  const [stored, setStored] = useState<string | null>(() => readCachedBanners());
   const [slide, setSlide] = useState(0);
   const [paused, setPaused] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const reduceMotion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+  // Banners saved in the admin panel; refreshed every time the home screen is opened.
+  useEffect(() => {
+    if (!active) return;
+    const ctrl = new AbortController();
+    void fetchBanners(ctrl.signal).then((raw) => {
+      if (raw !== null) setStored(raw);
+    });
+    return () => ctrl.abort();
+  }, [active]);
+
+  const slides: BannerSlide[] = useMemo(() => {
+    const custom = stored ? parseBanners(stored, language === 'en' ? 'en' : 'ru', views) : [];
+    if (custom.length) return custom;
+    return DEFAULT_MEDIA.map((m, i) => ({
+      id: `default-${i}`,
+      mediaType: m.video ? 'video' : 'image',
+      media: m.src,
+      poster: m.poster,
+      tag: t.home.slides[i]?.tag ?? '',
+      title: t.home.slides[i]?.title ?? '',
+      text: t.home.slides[i]?.text ?? '',
+      button: t.home.more,
+      link: { kind: 'mode', view: m.view },
+    }));
+  }, [stored, language, views, t]);
+
+  const count = slides.length;
+  const current = Math.min(slide, Math.max(0, count - 1));
+
+  useEffect(() => {
+    if (slide >= count) setSlide(0);
+  }, [slide, count]);
 
   useEffect(() => {
     if (!active) return;
@@ -51,19 +88,22 @@ export default function HomePanel({ active, modes, lastView, planLabel, onOpen }
     };
   }, [active]);
 
+  // Autoplay: the timer restarts on every slide change, so a manual switch (arrows/dots) always
+  // gets the full SLIDE_MS before the next automatic one.
   useEffect(() => {
-    if (!active || paused || reduceMotion) return;
-    const id = setInterval(() => setSlide((s) => (s + 1) % SLIDE_MEDIA.length), SLIDE_MS);
-    return () => clearInterval(id);
-  }, [active, paused, reduceMotion]);
+    if (!active || paused || reduceMotion || count < 2) return;
+    const id = setTimeout(() => setSlide((s) => (s + 1) % count), SLIDE_MS);
+    return () => clearTimeout(id);
+  }, [active, paused, reduceMotion, count, current]);
 
-  // The banner video only plays while the home screen is visible and its slide is shown.
+  // Only the visible slide's video plays, and only while the home screen is shown.
   useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (active && slide === 0 && !reduceMotion) void v.play().catch(() => undefined);
-    else v.pause();
-  }, [active, slide, reduceMotion]);
+    videoRefs.current.forEach((v, i) => {
+      if (!v) return;
+      if (active && i === current && !reduceMotion) void v.play().catch(() => undefined);
+      else v.pause();
+    });
+  }, [active, current, reduceMotion, slides]);
 
   const g = greetingKey(new Date().getHours());
   const last = lastView ? modes.find((m) => m.value === lastView) : undefined;
@@ -71,8 +111,7 @@ export default function HomePanel({ active, modes, lastView, planLabel, onOpen }
   const pct = usage && usage.limit > 0 ? Math.min(1, left! / usage.limit) : 0;
   const R = 11;
   const C = 2 * Math.PI * R;
-  const media = SLIDE_MEDIA[slide];
-  const text = t.home.slides[slide];
+  const cur = slides[current];
 
   return (
     <section className="home-panel" hidden={!active} aria-label={t.home.navLabel}>
@@ -115,67 +154,83 @@ export default function HomePanel({ active, modes, lastView, planLabel, onOpen }
           </div>
         </div>
 
-        <div
-          className="home-banner"
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
-          onFocus={() => setPaused(true)}
-          onBlur={() => setPaused(false)}
-        >
-          <div className="home-banner-text">
-            <span className="home-tag">{text.tag}</span>
-            <h2>{text.title}</h2>
-            <p>{text.text}</p>
-            <button type="button" className="home-more" onClick={() => onOpen(media.view)}>
-              <span className="home-more-icon">
-                <IconPlay size={13} />
-              </span>
-              {t.home.more}
-            </button>
-          </div>
-          <div className="home-banner-media">
-            {SLIDE_MEDIA.map((m, i) =>
-              m.video ? (
-                <video
-                  key={m.src}
-                  ref={videoRef}
-                  className={i === slide ? 'on' : ''}
-                  poster="/home-banner-poster.webp"
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                  aria-hidden="true"
-                  tabIndex={-1}
-                >
-                  <source src={`${m.src}.webm`} type="video/webm" />
-                  <source src={`${m.src}.mp4`} type="video/mp4" />
-                </video>
-              ) : (
-                <img key={m.src} src={m.src} alt="" className={i === slide ? 'on' : ''} loading="lazy" />
-              ),
-            )}
-            {media.video && (
+        {cur && (
+          <div
+            className="home-banner"
+            onMouseEnter={() => setPaused(true)}
+            onMouseLeave={() => setPaused(false)}
+            onFocus={() => setPaused(true)}
+            onBlur={() => setPaused(false)}
+          >
+            <div className="home-banner-media" aria-hidden="true">
+              {slides.map((m, i) =>
+                m.mediaType === 'video' ? (
+                  <video
+                    key={m.id}
+                    ref={(el) => {
+                      videoRefs.current[i] = el;
+                    }}
+                    className={i === current ? 'on' : ''}
+                    src={m.media}
+                    poster={m.poster}
+                    muted
+                    loop
+                    playsInline
+                    preload={i === current ? 'metadata' : 'none'}
+                    tabIndex={-1}
+                  />
+                ) : (
+                  <img key={m.id} src={m.media} alt="" className={i === current ? 'on' : ''} loading={i === 0 ? 'eager' : 'lazy'} />
+                ),
+              )}
+            </div>
+            <div className="home-banner-text">
+              {cur.tag && <span className="home-tag">{cur.tag}</span>}
+              {cur.title && <h2>{cur.title}</h2>}
+              {cur.text && <p>{cur.text}</p>}
+              {cur.link && (cur.button || cur.link.kind === 'mode') && (
+                cur.link.kind === 'mode' ? (
+                  <button type="button" className="home-more" onClick={() => cur.link?.kind === 'mode' && onOpen(cur.link.view)}>
+                    <span className="home-more-icon">
+                      <IconPlay size={13} />
+                    </span>
+                    {cur.button || t.home.more}
+                  </button>
+                ) : (
+                  <a className="home-more" href={cur.link.href} target="_blank" rel="noopener noreferrer">
+                    <span className="home-more-icon">
+                      <IconExternal size={13} />
+                    </span>
+                    {cur.button || t.home.more}
+                  </a>
+                )
+              )}
+            </div>
+            {cur.mediaType === 'video' && (
               <span className="home-video-badge">
                 <i />
                 {t.home.video}
               </span>
             )}
-            <span className="home-arrows">
-              <button type="button" aria-label={t.home.prevSlide} onClick={() => setSlide((s) => (s + SLIDE_MEDIA.length - 1) % SLIDE_MEDIA.length)}>
-                ‹
-              </button>
-              <button type="button" aria-label={t.home.nextSlide} onClick={() => setSlide((s) => (s + 1) % SLIDE_MEDIA.length)}>
-                ›
-              </button>
-            </span>
-            <span className="home-dots">
-              {SLIDE_MEDIA.map((_, i) => (
-                <button key={i} type="button" className={i === slide ? 'on' : ''} aria-label={t.home.slideN(i + 1)} aria-current={i === slide} onClick={() => setSlide(i)} />
-              ))}
-            </span>
+            {count > 1 && (
+              <>
+                <span className="home-arrows">
+                  <button type="button" aria-label={t.home.prevSlide} onClick={() => setSlide((x) => (x + count - 1) % count)}>
+                    ‹
+                  </button>
+                  <button type="button" aria-label={t.home.nextSlide} onClick={() => setSlide((x) => (x + 1) % count)}>
+                    ›
+                  </button>
+                </span>
+                <span className="home-dots">
+                  {slides.map((m, i) => (
+                    <button key={m.id} type="button" className={i === current ? 'on' : ''} aria-label={t.home.slideN(i + 1)} aria-current={i === current} onClick={() => setSlide(i)} />
+                  ))}
+                </span>
+              </>
+            )}
           </div>
-        </div>
+        )}
 
         <div className="home-sec">
           <h3>{t.home.modesTitle}</h3>

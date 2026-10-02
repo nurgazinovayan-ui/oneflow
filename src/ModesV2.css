@@ -1,7 +1,7 @@
 /* =============================================================================================
    STYLE V2 — mode interiors (Генерация, Copywrite, Trendswatching, Creative Predictor, One Launch,
    Музыка и аудио, Motion Engine, Стратегия, Ноды). Every mode is laid out from the same parts:
-   flat cards on the mode surface, uppercase field labels, chip rows, a single violet CTA pinned to
+   flat cards on the mode surface, uppercase field labels, chip rows, a single blue CTA pinned to
    the bottom of the form card and a centred empty state with numbered steps. No gradients, no
    glows. Colours come from the --v2-* tokens in App.css (dark + light).
    ============================================================================================= */
@@ -251,7 +251,7 @@
 
 .v2-field:focus,
 .v2-select:focus-within {
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
 }
 
 .v2-field + .v2-field,
@@ -464,7 +464,7 @@ textarea.v2-field {
   height: 34px;
   border-radius: 10px;
   background: var(--v2-surface);
-  color: var(--v2-accent);
+  color: var(--v2-accent-strong);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -484,7 +484,7 @@ textarea.v2-field {
 
 .v2-pill-accent {
   background: var(--v2-accent-soft);
-  color: var(--v2-accent);
+  color: var(--v2-accent-strong);
 }
 
 .v2-pill-warn {
@@ -497,7 +497,7 @@ textarea.v2-field {
   height: 14px;
   border-radius: 50%;
   border: 2px solid var(--v2-field);
-  border-top-color: var(--v2-accent);
+  border-top-color: var(--v2-accent-strong);
   animation: v2-spin 0.9s linear infinite;
   flex-shrink: 0;
 }
@@ -539,7 +539,7 @@ textarea.v2-field {
 }
 
 .v2-list .v2-row.on {
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
 }
 
 .v2-row-main {
@@ -594,7 +594,7 @@ textarea.v2-field {
   height: 20px;
   border-radius: 50%;
   background: var(--v2-accent-soft);
-  color: var(--v2-accent);
+  color: var(--v2-accent-strong);
   font-size: 10.5px;
   font-weight: 800;
   display: inline-flex;
@@ -650,7 +650,7 @@ textarea.v2-field {
   border-radius: 16px;
   background: var(--v2-surface);
   border: 1px solid var(--v2-line);
-  color: var(--v2-accent);
+  color: var(--v2-accent-strong);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -740,7 +740,7 @@ textarea.v2-field {
 
 .v2-example:hover {
   background: var(--v2-accent-soft);
-  color: var(--v2-accent);
+  color: var(--v2-accent-strong);
 }
 
 .v2-ghosts {
@@ -828,7 +828,7 @@ textarea.v2-field {
 }
 
 .v2-drop:hover {
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
 }
 
 /* ---- toolbar row (above the cards) ----------------------------------------------------------- */
@@ -1047,7 +1047,7 @@ textarea.v2-field {
 }
 
 .v2-pred-main.over {
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
 }
 
 .v2-pred-drop {
@@ -1068,7 +1068,7 @@ textarea.v2-field {
 }
 
 .v2-pred-drop:hover {
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
 }
 
 .v2-pred-drop h2 {
@@ -1109,7 +1109,7 @@ textarea.v2-field {
 }
 
 .v2-pred-card.winner {
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
 }
 
 .v2-pred-card .v2-lab {
@@ -1212,7 +1212,7 @@ textarea.v2-field {
 }
 
 .v2-pred-add:hover {
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
   color: var(--v2-text);
 }
 
@@ -1222,7 +1222,7 @@ textarea.v2-field {
 
 .v2-pred-verdict {
   background: var(--v2-accent);
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
   color: var(--v2-accent-ink);
 }
 
@@ -1300,7 +1300,7 @@ textarea.v2-field {
 }
 
 .v2-launch-tpl.on {
-  outline-color: var(--v2-accent);
+  outline-color: var(--v2-accent-strong);
 }
 
 .v2-launch-tpl-none {
@@ -1317,7 +1317,7 @@ textarea.v2-field {
 }
 
 .v2-launch-tpl-none svg {
-  color: var(--v2-accent);
+  color: var(--v2-accent-strong);
 }
 
 .v2-palettes {
@@ -1345,7 +1345,7 @@ textarea.v2-field {
 }
 
 .v2-palette.on {
-  outline-color: var(--v2-accent);
+  outline-color: var(--v2-accent-strong);
 }
 
 .v2-palette-colors {
@@ -1687,7 +1687,7 @@ textarea.v2-field {
 }
 
 .tw-panel.v2-mode .tw-row.selected {
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
   background: var(--v2-field);
 }
 
@@ -1854,7 +1854,7 @@ textarea.v2-field {
 }
 
 .motion-panel.v2-mode .mk-card.open {
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
 }
 
 .motion-panel.v2-mode :is(.motion-brief, .mk-custom input) {
@@ -1882,7 +1882,7 @@ textarea.v2-field {
 }
 
 .motion-panel.v2-mode .mk-render-col.drop .mk-drop {
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
   color: var(--v2-text);
 }
 
@@ -1893,7 +1893,7 @@ textarea.v2-field {
 }
 
 .motion-panel.v2-mode .mk-style-row.on {
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
 }
 
 .motion-panel.v2-mode :is(.motion-secondary, .mk-add) {
@@ -1925,7 +1925,7 @@ textarea.v2-field {
 }
 
 .motion-panel.v2-mode .mk-range input[type='range'] {
-  accent-color: var(--v2-accent);
+  accent-color: var(--v2-accent-strong);
 }
 
 .motion-panel.v2-mode .mk-size {
@@ -1989,7 +1989,7 @@ textarea.v2-field {
 }
 
 .v2-strategy .strategy-onboarding-eyebrow {
-  color: var(--v2-accent);
+  color: var(--v2-accent-strong);
   font-size: 12px;
   font-weight: 700;
 }
@@ -2014,13 +2014,13 @@ textarea.v2-field {
 }
 
 .v2-strategy .strategy-selection-card.selected {
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
   background: var(--v2-field);
 }
 
 .v2-strategy .strategy-selection-icon {
   background: var(--v2-card);
-  color: var(--v2-accent);
+  color: var(--v2-accent-strong);
 }
 
 .v2-strategy :is(.node-select, .node-textarea) {
@@ -2032,7 +2032,7 @@ textarea.v2-field {
 }
 
 .v2-strategy :is(.node-select, .node-textarea):focus {
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
 }
 
 .v2-strategy .strategy-field-label {
@@ -2115,7 +2115,7 @@ textarea.v2-field {
 }
 
 .web-mode .react-flow__node.selected > .node {
-  border-color: var(--v2-accent);
+  border-color: var(--v2-accent-strong);
 }
 
 .web-mode .react-flow__node :is(.node-option-btn:not(.active), .node-select, .node-number) {
@@ -2316,15 +2316,15 @@ textarea.v2-field {
   border-radius: 9px;
 }
 
-/* Light theme on the web: the shared accent tokens follow the violet v2 accent too (they are
+/* Light theme on the web: the shared accent tokens follow the blue v2 accent too (they are
    grey in the desktop light theme), so node chips/buttons match the rest of the modes. */
 :root[data-theme='light'] .web-mode {
   --c-pink: var(--v2-accent);
-  --c-pink-hover: #6a4bd6;
-  --c-pink-dim: rgba(124, 92, 230, 0.45);
-  --c-pink-text: #ffffff;
+  --c-pink-hover: #c2f1ff;
+  --c-pink-dim: rgba(21, 144, 186, 0.35);
+  --c-pink-text: #04141b;
   --glow-gradient: var(--v2-accent);
-  --glow-text: #ffffff;
+  --glow-text: #04141b;
 }
 
 /* =============================================================================================
