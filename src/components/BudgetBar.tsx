@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import type { BudgetUsage } from '../types';
-import { useT } from '../i18n';
+import { useEffect, useState } from "react";
+import type { BudgetUsage } from "../types";
+import { useT } from "../i18n";
 
 const POLL_INTERVAL_MS = 8000;
 
@@ -42,25 +42,35 @@ export default function BudgetBar() {
   // Defensive: guards against stale/malformed persisted usage data (e.g. from an older
   // count-based build) so a bad shape can't crash the whole app on startup.
   const costUsd = Number.isFinite(usage.costUsd) ? usage.costUsd : 0;
-  const limit = Number.isFinite(usage.limit) && usage.limit > 0 ? usage.limit : 50;
-  const percent = Math.min(100, Math.round((costUsd / Math.max(0.01, limit)) * 100));
-  // Remaining-budget bar, not a spent-budget one: full-width and green when fresh, shrinking and
-  // sliding toward raspberry as the limit approaches, rather than filling up.
-  const remainingPercent = 100 - percent;
+  const limit =
+    Number.isFinite(usage.limit) && usage.limit > 0 ? usage.limit : 50;
+  const percent = Math.min(
+    100,
+    Math.round((costUsd / Math.max(0.01, limit)) * 100),
+  );
   const fmt = (n: number) => `$${n.toFixed(2)}`;
+  const label = t.budget.tooltip(fmt(costUsd), fmt(limit));
+  // A ring that fills up (and slides from green toward raspberry) as the month's spend
+  // approaches the limit. The numbers live in the tooltip / aria-label.
+  const R = 9;
+  const C = 2 * Math.PI * R;
+  const filled = percent > 0 ? Math.max(0.04, percent / 100) : 0;
 
   return (
-    <div className="budget-bar" title={t.budget.tooltip(fmt(costUsd), fmt(limit))}>
-      <span className="budget-bar-label">
-        {fmt(costUsd)}
-        <span className="budget-bar-limit">/{fmt(limit)}</span>
-      </span>
-      <div className="budget-bar-track">
-        <div
-          className="budget-bar-fill"
-          style={{ width: `${remainingPercent}%`, background: budgetBarColor(percent) }}
-        />
-      </div>
+    <div className="budget-ring" title={label} role="img" aria-label={label}>
+      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+        <circle className="budget-ring-track" cx="12" cy="12" r={R} />
+        {filled > 0 && (
+          <circle
+            className="budget-ring-fill"
+            cx="12"
+            cy="12"
+            r={R}
+            stroke={budgetBarColor(percent)}
+            strokeDasharray={`${filled * C} ${C}`}
+          />
+        )}
+      </svg>
     </div>
   );
 }

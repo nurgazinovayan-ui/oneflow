@@ -372,6 +372,8 @@ function makeBlankProject(name: string): Project {
   };
 }
 
+const SHOW_TOOLBAR_MENUS = false;
+
 function Canvas() {
   const t = useT();
   const theme = useThemeStore((s) => s.theme);
@@ -1023,57 +1025,63 @@ function Canvas() {
           <Logo className="toolbar-logo" />
         </div>
         <div className="toolbar-group toolbar-right">
-          <ToolbarMenu
-            label={t.toolbar.file}
-            icon={IconSave}
-            isOpen={openToolbarMenu === 'file'}
-            onOpen={() => setOpenToolbarMenu('file')}
-            onClose={() => setOpenToolbarMenu((v) => (v === 'file' ? null : v))}
-            items={[
-              { title: t.toolbar.saveProject, description: t.toolbarMenu.saveProjectDesc, icon: IconSave, onClick: handleSaveProject },
-              { title: t.toolbar.openProject, description: t.toolbarMenu.openProjectDesc, icon: IconFolderOpen, onClick: handleOpenProject },
-              { title: t.toolbar.saveWorkspace, description: t.toolbarMenu.saveWorkspaceDesc, icon: IconSave, onClick: handleSaveWorkspace },
-              { title: t.toolbar.openWorkspace, description: t.toolbarMenu.openWorkspaceDesc, icon: IconFolderOpen, onClick: handleOpenWorkspace },
-            ]}
-          />
-          <ToolbarMenu
-            label={t.toolbar.templates}
-            icon={IconFlow}
-            wide
-            isOpen={openToolbarMenu === 'templates'}
-            onOpen={() => setOpenToolbarMenu('templates')}
-            onClose={() => setOpenToolbarMenu((v) => (v === 'templates' ? null : v))}
-            items={[
-              { type: 'header', label: t.toolbar.templatesBusinessSection },
-              ...(
-                [
-                  { key: 'horeca', icon: IconImage, desc: t.toolbarMenu.horecaDesc },
-                  { key: 'auto', icon: IconVideo, desc: t.toolbarMenu.autoDesc },
-                  { key: 'apartment', icon: IconDocument, desc: t.toolbarMenu.apartmentDesc },
-                  { key: 'furniture', icon: IconCrop, desc: t.toolbarMenu.furnitureDesc },
-                  { key: 'electronics', icon: IconGauge, desc: t.toolbarMenu.electronicsDesc },
-                ] as { key: BusinessPresetKey; icon: typeof IconImage; desc: string }[]
-              ).map(({ key, icon, desc }) => ({
-                title: businessTileLabels[key],
-                description: desc,
-                icon,
-                onClick: () => handleStartScreenBusinessChoice(BUSINESS_PRESET_PROMPTS[key]),
-              })),
-              { type: 'header', label: t.toolbar.templatesMarketplacesSection },
-            ]}
-          />
-          <ToolbarMenu
-            label={t.tools.menuLabel}
-            icon={IconTool}
-            isOpen={openToolbarMenu === 'tools'}
-            onOpen={() => setOpenToolbarMenu('tools')}
-            onClose={() => setOpenToolbarMenu((v) => (v === 'tools' ? null : v))}
-            items={[
-              { title: t.tools.bgRemoverLabel, description: t.toolbarMenu.bgRemoverDesc, icon: IconCrop, onClick: () => setBgRemoverOpen(true) },
-              { title: t.tools.upscalerLabel, description: t.toolbarMenu.upscalerDesc, icon: IconVector, onClick: () => setUpscalerOpen(true) },
-              { title: t.tools.photoEditorLabel, description: t.toolbarMenu.photoEditorDesc, icon: IconImage, onClick: () => setPhotoEditorOpen(true) },
-            ]}
-          />
+          {/* Файл / Шаблоны / Инструменты are hidden for now (by request) — flip the flag to bring
+              them back; the handlers they call are still wired up. */}
+          {SHOW_TOOLBAR_MENUS && (
+            <>
+            <ToolbarMenu
+              label={t.toolbar.file}
+              icon={IconSave}
+              isOpen={openToolbarMenu === 'file'}
+              onOpen={() => setOpenToolbarMenu('file')}
+              onClose={() => setOpenToolbarMenu((v) => (v === 'file' ? null : v))}
+              items={[
+                { title: t.toolbar.saveProject, description: t.toolbarMenu.saveProjectDesc, icon: IconSave, onClick: handleSaveProject },
+                { title: t.toolbar.openProject, description: t.toolbarMenu.openProjectDesc, icon: IconFolderOpen, onClick: handleOpenProject },
+                { title: t.toolbar.saveWorkspace, description: t.toolbarMenu.saveWorkspaceDesc, icon: IconSave, onClick: handleSaveWorkspace },
+                { title: t.toolbar.openWorkspace, description: t.toolbarMenu.openWorkspaceDesc, icon: IconFolderOpen, onClick: handleOpenWorkspace },
+              ]}
+            />
+            <ToolbarMenu
+              label={t.toolbar.templates}
+              icon={IconFlow}
+              wide
+              isOpen={openToolbarMenu === 'templates'}
+              onOpen={() => setOpenToolbarMenu('templates')}
+              onClose={() => setOpenToolbarMenu((v) => (v === 'templates' ? null : v))}
+              items={[
+                { type: 'header', label: t.toolbar.templatesBusinessSection },
+                ...(
+                  [
+                    { key: 'horeca', icon: IconImage, desc: t.toolbarMenu.horecaDesc },
+                    { key: 'auto', icon: IconVideo, desc: t.toolbarMenu.autoDesc },
+                    { key: 'apartment', icon: IconDocument, desc: t.toolbarMenu.apartmentDesc },
+                    { key: 'furniture', icon: IconCrop, desc: t.toolbarMenu.furnitureDesc },
+                    { key: 'electronics', icon: IconGauge, desc: t.toolbarMenu.electronicsDesc },
+                  ] as { key: BusinessPresetKey; icon: typeof IconImage; desc: string }[]
+                ).map(({ key, icon, desc }) => ({
+                  title: businessTileLabels[key],
+                  description: desc,
+                  icon,
+                  onClick: () => handleStartScreenBusinessChoice(BUSINESS_PRESET_PROMPTS[key]),
+                })),
+                { type: 'header', label: t.toolbar.templatesMarketplacesSection },
+              ]}
+            />
+            <ToolbarMenu
+              label={t.tools.menuLabel}
+              icon={IconTool}
+              isOpen={openToolbarMenu === 'tools'}
+              onOpen={() => setOpenToolbarMenu('tools')}
+              onClose={() => setOpenToolbarMenu((v) => (v === 'tools' ? null : v))}
+              items={[
+                { title: t.tools.bgRemoverLabel, description: t.toolbarMenu.bgRemoverDesc, icon: IconCrop, onClick: () => setBgRemoverOpen(true) },
+                { title: t.tools.upscalerLabel, description: t.toolbarMenu.upscalerDesc, icon: IconVector, onClick: () => setUpscalerOpen(true) },
+                { title: t.tools.photoEditorLabel, description: t.toolbarMenu.photoEditorDesc, icon: IconImage, onClick: () => setPhotoEditorOpen(true) },
+              ]}
+            />
+            </>
+          )}
           <BudgetBar />
           {import.meta.env.VITE_WEB_MODE === '1' && (
             <button
@@ -1120,56 +1128,6 @@ function Canvas() {
               behind it uninterrupted; gets a flat white fill (.topbar-flat) in the modes whose
               own panel is already flat white, so there's no seam between the two. */}
           <div className={`topbar${WHITE_TOPBAR_VIEWS.has(mainView) ? ' topbar-flat topbar-black' : ''}`}>
-          {mainView === 'canvas' && (
-          <div className="project-tabs">
-            {projects.map((p) => (
-              <div
-                key={p.id}
-                className={`project-tab ${p.id === activeProjectId ? 'active' : ''}`}
-                onClick={() => switchProject(p.id)}
-                onDoubleClick={() => setEditingTabId(p.id)}
-              >
-                {editingTabId === p.id ? (
-                  <input
-                    className="project-tab-input"
-                    autoFocus
-                    defaultValue={p.name}
-                    onClick={(e) => e.stopPropagation()}
-                    onBlur={(e) => {
-                      renameProject(p.id, e.target.value.trim() || p.name);
-                      setEditingTabId(null);
-                    }}
-                    onKeyDown={(e) => {
-                      e.stopPropagation();
-                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                    }}
-                  />
-                ) : (
-                  <span className="project-tab-label">{p.name}</span>
-                )}
-                {projects.length > 1 && (
-                  <button
-                    className="project-tab-close"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeProjectTab(p.id);
-                    }}
-                    title={t.toolbar.closeProjectTooltip}
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
-            <button
-              className="project-tab-add"
-              onClick={addProjectTab}
-              title={t.toolbar.newProjectTooltip}
-            >
-              +
-            </button>
-          </div>
-          )}
           <GlowMenuBar
             className="mode-switch-pill"
             activeValue={mainView}

@@ -12510,9 +12510,6 @@ h5.md-heading {
   outline: 2px solid var(--c-text);
   outline-offset: -2px;
 }
-.top-toolbar .budget-bar {
-  padding: 6px 8px;
-}
 
 /* B2: disabled primary buttons used to fade to ~35% and read as "broken". Keep them legible, just
    clearly inactive — dashed outline, no pointer. */
@@ -12550,18 +12547,6 @@ h5.md-heading {
   }
   .top-toolbar .toolbar-label-btn {
     padding: 0 8px;
-  }
-  .top-toolbar .budget-bar {
-    padding: 4px;
-  }
-  .top-toolbar .budget-bar-track {
-    display: none;
-  }
-  .top-toolbar .budget-bar-label {
-    font-size: 10px;
-  }
-  .top-toolbar .budget-bar-limit {
-    display: none;
   }
   .toolbar-subscription-btn {
     padding: 0 10px;
@@ -13285,4 +13270,43 @@ h5.md-heading {
 }
 .app-shell:has(.messenger-facepile) .floko-dock {
   bottom: 84px;
+}
+
+/* Budget as a filling ring (by request) instead of the label + bar. */
+.budget-ring {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: default;
+  -webkit-app-region: no-drag;
+  transition: background 0.15s var(--ease);
+}
+.budget-ring:hover {
+  background: var(--c-panel-2);
+}
+.budget-ring svg {
+  transform: rotate(-90deg);
+}
+.budget-ring-track {
+  fill: none;
+  stroke: var(--c-panel-3);
+  stroke-width: 3;
+}
+:root:not([data-theme='light']) .budget-ring-track {
+  stroke: rgba(255, 255, 255, 0.14);
+}
+.budget-ring-fill {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.4s ease, stroke 0.4s ease;
+}
+
+/* Motion Engine: three columns now — «Готово» merged into «Рендер» (by request). */
+.mk-board {
+  grid-template-columns: minmax(300px, 340px) minmax(320px, 1fr) minmax(300px, 400px);
 }

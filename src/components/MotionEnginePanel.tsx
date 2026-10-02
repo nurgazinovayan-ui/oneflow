@@ -507,6 +507,68 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
                 </button>
               ))}
             </div>
+
+            <span className="mk-label">{tm.quality}</span>
+            <div className="mk-chips">
+              {MOTION_QUALITIES.map((q) => (
+                <button
+                  key={q.id}
+                  type="button"
+                  className={`mk-chip ${state.quality === q.id ? 'on' : ''}`}
+                  onClick={() => update({ quality: q.id })}
+                  disabled={!qualityOk(q.id, state.fps)}
+                  title={qualityOk(q.id, state.fps) ? '' : tm.notSupported}
+                >
+                  {q.label}
+                </button>
+              ))}
+              <button type="button" className={`mk-chip ${custom ? 'on' : ''}`} onClick={() => update({ quality: 'custom' })}>
+                {tm.customSize}
+              </button>
+            </div>
+            {custom && (
+              <div className="mk-custom">
+                <label>
+                  <small>{tm.width}</small>
+                  <input
+                    type="number"
+                    className="node-number"
+                    min={MOTION_CUSTOM_MIN}
+                    max={MOTION_CUSTOM_MAX}
+                    step={2}
+                    value={state.customW}
+                    onChange={(e) => update({ customW: Number(e.target.value) })}
+                    onBlur={() => update({ customW: evenClamp(state.customW) })}
+                  />
+                </label>
+                <span>×</span>
+                <label>
+                  <small>{tm.height}</small>
+                  <input
+                    type="number"
+                    className="node-number"
+                    min={MOTION_CUSTOM_MIN}
+                    max={MOTION_CUSTOM_MAX}
+                    step={2}
+                    value={state.customH}
+                    onChange={(e) => update({ customH: Number(e.target.value) })}
+                    onBlur={() => update({ customH: evenClamp(state.customH) })}
+                  />
+                </label>
+                <span className="motion-hint mk-custom-hint">
+                  {customOk ? tm.customHint(MOTION_CUSTOM_MIN, MOTION_CUSTOM_MAX) : tm.notSupported}
+                </span>
+              </div>
+            )}
+            <span className="mk-sublabel">{tm.fps}</span>
+            <div className="mk-chips">
+              {MOTION_FPS.map((f) => (
+                <button key={f} type="button" className={`mk-chip ${state.fps === f ? 'on' : ''}`} onClick={() => update({ fps: f })}>
+                  {f}
+                </button>
+              ))}
+            </div>
+            <span className="mk-size">{tm.willRender(size.width, size.height, state.fps)}</span>
           </div>
 
           <div className="mk-card">
@@ -702,7 +764,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
         >
           <header className="mk-col-head">
             <b>{tm.colRender}</b>
-            <i>{jobs.length}</i>
+            <i>{jobs.length + renders.length}</i>
           </header>
           <div className="mk-card">
             <span className="mk-label">{tm.renderSettings}</span>
@@ -714,67 +776,6 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
                 </button>
               ))}
             </div>
-            <span className="mk-sublabel">{tm.quality}</span>
-            <div className="mk-chips">
-              {MOTION_QUALITIES.map((q) => (
-                <button
-                  key={q.id}
-                  type="button"
-                  className={`mk-chip ${state.quality === q.id ? 'on' : ''}`}
-                  onClick={() => update({ quality: q.id })}
-                  disabled={!qualityOk(q.id, state.fps)}
-                  title={qualityOk(q.id, state.fps) ? '' : tm.notSupported}
-                >
-                  {q.label}
-                </button>
-              ))}
-              <button type="button" className={`mk-chip ${custom ? 'on' : ''}`} onClick={() => update({ quality: 'custom' })}>
-                {tm.customSize}
-              </button>
-            </div>
-            {custom && (
-              <div className="mk-custom">
-                <label>
-                  <small>{tm.width}</small>
-                  <input
-                    type="number"
-                    className="node-number"
-                    min={MOTION_CUSTOM_MIN}
-                    max={MOTION_CUSTOM_MAX}
-                    step={2}
-                    value={state.customW}
-                    onChange={(e) => update({ customW: Number(e.target.value) })}
-                    onBlur={() => update({ customW: evenClamp(state.customW) })}
-                  />
-                </label>
-                <span>×</span>
-                <label>
-                  <small>{tm.height}</small>
-                  <input
-                    type="number"
-                    className="node-number"
-                    min={MOTION_CUSTOM_MIN}
-                    max={MOTION_CUSTOM_MAX}
-                    step={2}
-                    value={state.customH}
-                    onChange={(e) => update({ customH: Number(e.target.value) })}
-                    onBlur={() => update({ customH: evenClamp(state.customH) })}
-                  />
-                </label>
-                <span className="motion-hint mk-custom-hint">
-                  {customOk ? tm.customHint(MOTION_CUSTOM_MIN, MOTION_CUSTOM_MAX) : tm.notSupported}
-                </span>
-              </div>
-            )}
-            <span className="mk-sublabel">{tm.fps}</span>
-            <div className="mk-chips">
-              {MOTION_FPS.map((f) => (
-                <button key={f} type="button" className={`mk-chip ${state.fps === f ? 'on' : ''}`} onClick={() => update({ fps: f })}>
-                  {f}
-                </button>
-              ))}
-            </div>
-            <span className="mk-size">{tm.willRender(size.width, size.height, state.fps)}</span>
           </div>
 
           {jobs.map((j) => (
@@ -798,16 +799,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
               </button>
             </div>
           ))}
-          <div className="mk-drop">{tm.dropHere}</div>
-        </section>
-
-        {/* ---------------------------------------------------------------- Готово */}
-        <section className="mk-col">
-          <header className="mk-col-head">
-            <b>{tm.colDone}</b>
-            <i>{renders.length}</i>
-          </header>
-          {!renders.length && <div className="mk-empty">{tm.emptyDone}</div>}
+          {/* Finished videos live here too now — there is no separate «Готово» column. */}
           {renders.map((r) => (
             <div key={r.id} className="mk-card mk-done">
               <video src={r.url} controls playsInline style={{ aspectRatio: `${r.width} / ${r.height}` }} />
@@ -826,8 +818,9 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
               </div>
             </div>
           ))}
-          {renders.length > 0 && <span className="motion-hint">{tm.doneHint}</span>}
+          <div className="mk-drop">{tm.dropHere}</div>
         </section>
+
       </div>
 
       {opened && (
