@@ -15,12 +15,10 @@ interface HomePanelProps {
 
 const SLIDE_MS = 7000;
 
-// Built-in banner slides, shown until the admin panel has saved its own (see homeBanners.ts). Text
+// Built-in banner (one slide, by request), shown until the admin panel has saved its own (see homeBanners.ts). Text
 // comes from i18n (t.home.slides) in the same order.
 const DEFAULT_MEDIA: { view: AppView; video?: boolean; src: string; poster?: string }[] = [
   { view: 'motion', video: true, src: '/oneflow-hero.mp4', poster: '/home-banner-poster.webp' },
-  { view: 'onelaunch', src: '/onelaunch-templates/electronics/02.jpg' },
-  { view: 'evaluate', src: '/onelaunch-templates/premium/04-pyramid.jpg' },
 ];
 
 function greetingKey(h: number): 'Morning' | 'Day' | 'Evening' | 'Night' {

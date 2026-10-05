@@ -1,0 +1,486 @@
+/* =============================================================================================
+   Light theme «Soft» (by request, from a reference): light-grey page, soft light cards with a faint
+   shadow, black pills for the active item and the main action, a lime accent with a soft glow,
+   thin large headings, round icon buttons and more air. Web only (:has(.web-mode)); the dark
+   theme is untouched.
+   ============================================================================================= */
+:root[data-theme='light']:has(.web-mode) {
+  --soft-page: #e5e5e5;
+  --soft-card: #f1f1f1;
+  --soft-raised: #f7f7f7;
+  --soft-field: #e7e7e7;
+  --soft-ink: #2b2b2b;
+  --soft-text: #2d2d2d;
+  --soft-muted: #9a9a9a;
+  --soft-lime: #cdf158;
+  --soft-lime-glow: rgba(205, 241, 88, 0.55);
+  --soft-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 22px 44px -30px rgba(0, 0, 0, 0.22);
+  --soft-shadow-sm: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 8px 18px -12px rgba(0, 0, 0, 0.22);
+
+  --v2-shell: var(--soft-page);
+  --v2-surface: var(--soft-page);
+  --v2-card: var(--soft-card);
+  --v2-field: var(--soft-field);
+  --v2-line: transparent;
+  --v2-ghost: rgba(0, 0, 0, 0.035);
+  --v2-accent: var(--soft-lime);
+  --v2-accent-ink: #1d2405;
+  --v2-accent-strong: var(--soft-ink);
+  --v2-accent-soft: rgba(205, 241, 88, 0.35);
+  --v2-sep: rgba(0, 0, 0, 0.08);
+  --home-track: #d9d9d9;
+  --home-accent: var(--soft-ink);
+
+  --c-bg: var(--soft-page);
+  --c-text: var(--soft-text);
+  --c-text-muted: var(--soft-muted);
+  --c-text-dim: #b5b5b5;
+  --c-panel: var(--soft-card);
+  --c-panel-2: var(--soft-field);
+  --c-panel-3: #dedede;
+  --c-card: var(--soft-card);
+  --c-divider: rgba(0, 0, 0, 0.06);
+  --c-pink: var(--soft-lime);
+  --c-pink-hover: #d8f57a;
+  --c-pink-dim: rgba(205, 241, 88, 0.45);
+  --c-pink-text: #1d2405;
+  --glow-gradient: var(--soft-ink);
+  --glow-text: #ffffff;
+}
+
+/* ---- more air ------------------------------------------------------------------------------- */
+:root[data-theme='light'] .web-mode :is(.v2-split, .evaluation-panel.v2-pred, .tw-panel.v2-mode) {
+  gap: 20px;
+  padding: 20px 24px 24px;
+}
+
+@media (min-width: 768px) {
+  :root[data-theme='light'] .web-mode.app-shell {
+    grid-template-columns: 88px minmax(0, 1fr);
+    grid-template-rows: 76px minmax(0, 1fr);
+  }
+
+  :root[data-theme='light'] .web-mode .app-rail {
+    margin: 18px 0 18px 18px;
+  }
+}
+
+:root[data-theme='light'] .web-mode .main-area,
+:root[data-theme='light'] .web-mode .canvas-area {
+  background: var(--soft-page);
+  border-radius: 0;
+}
+
+/* ---- cards ------------------------------------------------------------------------------------ */
+:root[data-theme='light'] .web-mode :is(.v2-card, .mk-col.v2-card, .tw-list.v2-card, .tw-detail.v2-card, .cw-sidebar, .cw-stage, .assets-sidebar, .assets-grid-area, .strategy-shell > :first-child, .strategy-main, .home-kpi) {
+  background: var(--soft-card);
+  border-color: transparent;
+  border-radius: 28px;
+  box-shadow: var(--soft-shadow);
+}
+
+:root[data-theme='light'] .web-mode :is(.v2-card, .mk-col.v2-card) {
+  padding: 24px 26px;
+}
+
+:root[data-theme='light'] .web-mode .motion-panel.v2-mode .mk-board {
+  gap: 20px;
+  padding: 20px 24px 24px;
+}
+
+:root[data-theme='light'] .web-mode .v2-card-head > b {
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* ---- labels: sentence case, quiet ---------------------------------------------------------- */
+:root[data-theme='light'] .web-mode .v2-lab,
+:root[data-theme='light'] .web-mode .v2-strategy .strategy-field-label,
+:root[data-theme='light'] .web-mode .cw-panel :is(.cw-group-label, .cw-projects-heading) {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--soft-muted);
+}
+
+:root[data-theme='light'] .web-mode .v2-lab {
+  margin: 20px 0 9px;
+}
+
+/* ---- fields ---------------------------------------------------------------------------------- */
+:root[data-theme='light'] .web-mode :is(.v2-field, .v2-select, .v2-strategy .node-select, .v2-strategy .node-textarea, .motion-brief, .tw-search, .tw-select > button, .tw-select select) {
+  background: var(--soft-field);
+  border-color: transparent;
+  border-radius: 18px;
+}
+
+:root[data-theme='light'] .web-mode :is(.v2-field, .v2-select):focus-within,
+:root[data-theme='light'] .web-mode .v2-field:focus {
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--soft-ink);
+}
+
+/* ---- pills: chips, secondary buttons -------------------------------------------------------- */
+:root[data-theme='light'] .web-mode :is(.v2-chip, .v2-example, .v2-btn2, .motion-panel.v2-mode .mk-chip, .text-work-quickprompt-chip, .tw-settings-btn, .secondary-btn, .motion-secondary, .mk-add, .canvas-empty-actions button) {
+  border-radius: 999px;
+  background: var(--soft-raised);
+  color: var(--soft-text);
+  font-weight: 500;
+  opacity: 1;
+  box-shadow: var(--soft-shadow-sm);
+  border-color: transparent;
+}
+
+:root[data-theme='light'] .web-mode :is(.v2-chip, .v2-btn2, .v2-example):hover:not(:disabled) {
+  background: #ffffff;
+}
+
+/* selected = lime with a soft glow (like the highlighted nodes in the reference) */
+:root[data-theme='light'] .web-mode :is(.v2-chip.on, .motion-panel.v2-mode .mk-chip.on, .react-flow__node .node-option-btn.active, .assets-sort-btn.active) {
+  background: var(--soft-lime);
+  color: #1d2405;
+  box-shadow: 0 0 22px var(--soft-lime-glow);
+}
+
+/* ---- main action: black pill ------------------------------------------------------------------ */
+:root[data-theme='light'] .web-mode :is(.v2-cta, .tw-cta:not(.secondary), .mk-to-render, .mk-download, .v2-strategy .strategy-onboarding-actions .generate-btn, .react-flow__node .generate-btn) {
+  background: var(--soft-ink);
+  color: #ffffff;
+  border-radius: 999px;
+  font-weight: 500;
+  box-shadow: 0 14px 28px -16px rgba(0, 0, 0, 0.55);
+}
+
+:root[data-theme='light'] .web-mode :is(.v2-cta, .tw-cta, .v2-strategy .strategy-onboarding-actions .generate-btn):disabled {
+  background: #dadada;
+  color: #9a9a9a;
+  box-shadow: none;
+}
+
+:root[data-theme='light'] .web-mode .tw-cta.secondary {
+  background: var(--soft-raised);
+  color: var(--soft-text);
+  border-radius: 999px;
+  box-shadow: var(--soft-shadow-sm);
+}
+
+/* ---- round icon buttons ---------------------------------------------------------------------- */
+:root[data-theme='light'] .web-mode :is(.v2-icon-btn, .toolbar-avatar-btn, .budget-ring, .home-arrows button) {
+  background: var(--soft-raised);
+  color: var(--soft-text);
+  box-shadow: var(--soft-shadow-sm);
+}
+
+/* ---- left rail: round buttons, the active one is a black circle ----------------------------- */
+:root[data-theme='light'] .web-mode .app-rail {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  gap: 10px;
+}
+
+:root[data-theme='light'] .web-mode .app-rail-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--soft-raised);
+  color: var(--soft-text);
+  box-shadow: var(--soft-shadow-sm);
+}
+
+:root[data-theme='light'] .web-mode .app-rail-btn:hover {
+  background: #ffffff;
+}
+
+:root[data-theme='light'] .web-mode .app-rail-btn.active {
+  background: var(--soft-ink);
+  color: #ffffff;
+}
+
+:root[data-theme='light'] .web-mode .app-rail-btn.active::before {
+  display: none;
+}
+
+:root[data-theme='light'] .web-mode .app-rail-group {
+  gap: 10px;
+}
+
+:root[data-theme='light'] .web-mode .app-rail-logo {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--soft-ink);
+}
+
+/* ---- header: thin large title, white pills ------------------------------------------------- */
+:root[data-theme='light'] .web-mode .app-header-title h1 {
+  font-size: 30px;
+  font-weight: 200;
+  letter-spacing: -0.02em;
+}
+
+:root[data-theme='light'] .web-mode .mode-search {
+  background: var(--soft-raised);
+  border-radius: 999px;
+  box-shadow: var(--soft-shadow-sm);
+}
+
+:root[data-theme='light'] .web-mode .toolbar-subscription-btn {
+  background: var(--soft-ink);
+  color: #ffffff;
+  border-radius: 999px;
+}
+
+/* ---- home ------------------------------------------------------------------------------------- */
+:root[data-theme='light'] .web-mode .home-inner {
+  gap: 26px;
+  padding: 12px 28px 36px 8px;
+}
+
+:root[data-theme='light'] .web-mode .home-hello h1 {
+  font-size: 46px;
+  font-weight: 200;
+  letter-spacing: -0.03em;
+  color: var(--soft-text);
+}
+
+:root[data-theme='light'] .web-mode .home-hello h1 em {
+  color: var(--soft-text);
+  background: linear-gradient(transparent 62%, var(--soft-lime) 62%, var(--soft-lime) 92%, transparent 92%);
+  padding: 0 4px;
+}
+
+:root[data-theme='light'] .web-mode .home-banner {
+  border-radius: 32px;
+  box-shadow: none;
+}
+
+:root[data-theme='light'] .web-mode .home-tag {
+  background: var(--soft-lime);
+  color: #1d2405;
+  border-radius: 999px;
+  padding: 4px 11px;
+}
+
+:root[data-theme='light'] .web-mode .home-more {
+  color: #ffffff;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+:root[data-theme='light'] .web-mode .home-more-icon {
+  background: var(--soft-lime);
+  color: #1d2405;
+}
+
+:root[data-theme='light'] .web-mode .home-tiles {
+  gap: 14px;
+}
+
+:root[data-theme='light'] .web-mode .home-tile {
+  border-radius: 28px;
+  padding: 20px 20px;
+}
+
+:root[data-theme='light'] .web-mode .home-tile:hover,
+:root[data-theme='light'] .web-mode .home-tile:focus-visible {
+  background: var(--soft-card);
+  border-color: transparent;
+  box-shadow: var(--soft-shadow);
+}
+
+:root[data-theme='light'] .web-mode .home-tile-icon {
+  color: var(--soft-ink);
+}
+
+:root[data-theme='light'] .web-mode .home-tile-text b {
+  font-weight: 500;
+}
+
+:root[data-theme='light'] .web-mode .home-tile-go {
+  background: var(--soft-ink);
+  color: #ffffff;
+}
+
+:root[data-theme='light'] .web-mode .home-chip.new {
+  background: var(--soft-lime);
+  color: #1d2405;
+  border-radius: 999px;
+}
+
+:root[data-theme='light'] .web-mode .home-kpi {
+  border-radius: 999px;
+  padding: 8px 16px 8px 10px;
+}
+
+/* ---- empty states ---------------------------------------------------------------------------- */
+:root[data-theme='light'] .web-mode .v2-empty-icon {
+  border-radius: 50%;
+  background: var(--soft-raised);
+  color: var(--soft-ink);
+  box-shadow: var(--soft-shadow-sm);
+}
+
+:root[data-theme='light'] .web-mode .v2-empty h2 {
+  font-size: 32px;
+}
+
+:root[data-theme='light'] .web-mode .v2-steps li {
+  background: var(--soft-raised);
+  border-radius: 22px;
+  box-shadow: var(--soft-shadow-sm);
+}
+
+:root[data-theme='light'] .web-mode :is(.v2-steps li::before, .v2-num.done, .v2-numlist li::before) {
+  background: var(--soft-lime);
+  color: #1d2405;
+}
+
+:root[data-theme='light'] .web-mode .v2-num {
+  background: var(--soft-raised);
+}
+
+/* ---- lists, rows, tiles ------------------------------------------------------------------------ */
+:root[data-theme='light'] .web-mode :is(.tw-row, .v2-list .v2-row, .v2-numlist li, .v2-caption, .v2-note, .v2-audio-box, .v2-progress-note) {
+  background: var(--soft-raised);
+  border-radius: 20px;
+}
+
+:root[data-theme='light'] .web-mode .tw-row.selected {
+  border-color: transparent;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px var(--soft-ink);
+}
+
+:root[data-theme='light'] .web-mode .tw-metric-value {
+  color: var(--soft-text);
+  font-weight: 300;
+}
+
+:root[data-theme='light'] .web-mode :is(.v2-tile, .v2-pred-card, .v2-launch-card, .v2-pred-thumb, .v2-launch-media) {
+  border-radius: 22px;
+}
+
+:root[data-theme='light'] .web-mode .v2-pred-card.winner {
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--soft-ink), 0 0 30px var(--soft-lime-glow);
+}
+
+:root[data-theme='light'] .web-mode .v2-pred-verdict {
+  background: var(--soft-lime);
+  color: #1d2405;
+}
+
+:root[data-theme='light'] .web-mode .v2-pred-score b {
+  font-weight: 200;
+  font-size: 40px;
+}
+
+:root[data-theme='light'] .web-mode .v2-pill-accent {
+  background: var(--soft-lime);
+  color: #1d2405;
+}
+
+:root[data-theme='light'] .web-mode .v2-wave i.on {
+  background: var(--soft-ink);
+}
+
+:root[data-theme='light'] .web-mode .v2-play {
+  background: var(--soft-ink);
+  color: #ffffff;
+}
+
+/* ---- nodes canvas: light dotted page, soft round nodes, lime glow on selection --------------- */
+:root[data-theme='light'] .web-mode .react-flow {
+  background: var(--soft-page);
+}
+
+:root[data-theme='light'] .web-mode .react-flow__node > .node {
+  background: var(--soft-card);
+  border-color: transparent;
+  border-radius: 26px;
+  box-shadow: var(--soft-shadow);
+}
+
+:root[data-theme='light'] .web-mode .react-flow__node.selected > .node {
+  box-shadow: 0 0 0 2px var(--soft-ink), 0 0 40px var(--soft-lime-glow);
+}
+
+:root[data-theme='light'] .web-mode .canvas-toolbar {
+  background: var(--soft-card);
+  border-radius: 999px;
+  box-shadow: var(--soft-shadow);
+}
+
+:root[data-theme='light'] .web-mode .canvas-toolbar .toolbar-dock-icon-btn {
+  border-radius: 50%;
+  background: var(--soft-raised);
+}
+
+/* logo: crop to the mark only */
+:root[data-theme='light'] .web-mode .app-rail-logo {
+  width: 40px;
+  height: 40px;
+}
+
+/* column / step titles in the same light weight as the card titles */
+:root[data-theme='light'] .web-mode .motion-panel.v2-mode .mk-col-head b {
+  font-size: 19px;
+  font-weight: 400;
+}
+
+:root[data-theme='light'] .web-mode .v2-strategy .strategy-onboarding-modal h2 {
+  font-size: 28px;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+}
+
+:root[data-theme='light'] .web-mode .v2-strategy .strategy-selection-card {
+  background: var(--soft-raised);
+  border-radius: 24px;
+  box-shadow: var(--soft-shadow-sm);
+}
+
+:root[data-theme='light'] .web-mode .v2-strategy .strategy-selection-card.selected {
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--soft-ink), 0 0 30px var(--soft-lime-glow);
+}
+
+:root[data-theme='light'] .web-mode .v2-strategy .strategy-onboarding-progress-fill {
+  background: var(--soft-ink);
+}
+
+:root[data-theme='light'] .web-mode .motion-panel.v2-mode .mk-range input[type='range'] {
+  accent-color: var(--soft-ink);
+}
+
+/* phones: the horizontal rail keeps its own size; headings scale down */
+@media (max-width: 767px) {
+  :root[data-theme='light'] .web-mode .app-rail-btn {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+
+  :root[data-theme='light'] .web-mode .app-header-title h1 {
+    font-size: 22px;
+  }
+
+  :root[data-theme='light'] .web-mode .home-hello h1 {
+    font-size: 30px;
+  }
+
+  :root[data-theme='light'] .web-mode .home-inner {
+    padding: 8px 12px 24px;
+  }
+
+  :root[data-theme='light'] .web-mode :is(.v2-split, .evaluation-panel.v2-pred, .tw-panel.v2-mode, .motion-panel.v2-mode .mk-board) {
+    padding: 10px;
+    gap: 12px;
+  }
+}

@@ -13772,8 +13772,10 @@ h5.md-heading {
   flex-shrink: 0;
   border-radius: 22px;
   overflow: hidden;
+  /* no frame: the media fills the banner edge to edge (the dark fill only shows while it loads) */
   background: #0b0b0d;
-  border: 1px solid var(--v2-line);
+  border: 0;
+  background-clip: padding-box;
   isolation: isolate;
 }
 
