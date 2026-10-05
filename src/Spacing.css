@@ -1,0 +1,129 @@
+/* =============================================================================================
+   Spacing pass (by request: «больше воздуха», especially on the home screen). Loaded last so it
+   wins over the theme files; `html:root:root` only lifts specificity above them. Desktop/tablet only — phones
+   keep their compact layout.
+   ============================================================================================= */
+@media (min-width: 768px) {
+  /* ---- home ------------------------------------------------------------------------------- */
+  html:root:root .web-mode .home-inner {
+    max-width: 1360px;
+    padding: 44px 56px 64px;
+    gap: 44px;
+  }
+
+  html:root:root .web-mode .home-hello {
+    align-items: center;
+    gap: 32px;
+  }
+
+  html:root:root .web-mode .home-hello h1 {
+    line-height: 1.12;
+  }
+
+  html:root:root .web-mode .home-kpis {
+    gap: 12px;
+  }
+
+  html:root:root .web-mode .home-banner {
+    height: clamp(300px, 40vh, 420px);
+  }
+
+  html:root:root .web-mode .home-banner-text {
+    padding: 40px 44px;
+    width: min(600px, 60%);
+  }
+
+  html:root:root .web-mode .home-banner-text h2 {
+    margin: 22px 0 16px;
+    line-height: 1.12;
+  }
+
+  html:root:root .web-mode .home-banner-text p {
+    line-height: 1.6;
+  }
+
+  html:root:root .web-mode .home-tiles {
+    margin-top: 0;
+    gap: 22px 36px;
+  }
+
+  html:root:root .web-mode .home-tile {
+    padding: 22px 22px;
+    gap: 18px;
+  }
+
+  html:root:root .web-mode .home-tile-text > span {
+    margin-top: 6px;
+    line-height: 1.55;
+  }
+
+  /* ---- modes: more room between and inside the cards -------------------------------------- */
+  html:root:root .web-mode :is(.v2-split, .evaluation-panel.v2-pred, .tw-panel.v2-mode) {
+    gap: 24px;
+    padding: 24px 28px 28px;
+  }
+
+  html:root:root .web-mode .motion-panel.v2-mode .mk-board {
+    gap: 24px;
+    padding: 24px 28px 28px;
+  }
+
+  html:root:root .web-mode :is(.v2-card, .motion-panel.v2-mode .mk-col.v2-card) {
+    padding: 28px 30px;
+  }
+
+  html:root:root .web-mode .v2-card-head {
+    margin-bottom: 18px;
+  }
+
+  html:root:root .web-mode .v2-lab {
+    margin: 22px 0 10px;
+  }
+
+  html:root:root .web-mode :is(.v2-scroll, .v2-card) > .v2-lab:first-child {
+    margin-top: 2px;
+  }
+
+  html:root:root .web-mode .v2-chips {
+    gap: 8px;
+  }
+
+  html:root:root .web-mode .v2-card-foot {
+    padding-top: 20px;
+    gap: 10px;
+  }
+
+  html:root:root .web-mode .v2-pred-body {
+    gap: 24px;
+  }
+
+  html:root:root .web-mode .v2-pred-grid,
+  html:root:root .web-mode .v2-tile-grid,
+  html:root:root .web-mode .v2-launch-grid {
+    gap: 16px;
+  }
+
+  html:root:root .web-mode .tw-panel.v2-mode .tw-body {
+    gap: 24px;
+    margin-top: 20px;
+  }
+
+  html:root:root .web-mode .tw-panel.v2-mode .tw-list.v2-card {
+    gap: 10px;
+  }
+
+  html:root:root .web-mode .v2-empty > p {
+    margin-top: 10px;
+    line-height: 1.6;
+  }
+
+  html:root:root .web-mode .v2-steps {
+    gap: 14px;
+    margin-top: 28px;
+  }
+
+  html:root:root .web-mode .v2-examples {
+    margin-top: 24px;
+    gap: 8px;
+  }
+}

@@ -102,6 +102,8 @@ import { formatGenerationError } from './errorMessages';
 import './App.css';
 import './ModesV2.css';
 import './ThemeSoft.css';
+import './RailGlass.css';
+import './Spacing.css';
 
 // Modes whose panel is a flat surface (see .topbar-flat/.topbar-black in App.css) — the topbar
 // row above them matches so there's no seam. Canvas/Strategy/Assets keep the gray canvas-

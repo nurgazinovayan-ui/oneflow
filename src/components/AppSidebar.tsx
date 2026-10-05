@@ -15,11 +15,11 @@ interface AppSidebarProps {
 // aria-label and in a hover tooltip, so the rail stays narrow.
 export default function AppSidebar({ modes, active, onSelect, onProfile }: AppSidebarProps) {
   const t = useT();
-  const item = (view: AppView, label: string, Icon: ModeDef['icon']) => (
+  const item = (view: AppView, label: string, Icon: ModeDef['icon'], extraClass = '') => (
     <button
       key={view}
       type="button"
-      className={`app-rail-btn${active === view ? ' active' : ''}`}
+      className={`app-rail-btn${extraClass}${active === view ? ' active' : ''}`}
       onClick={() => onSelect(view)}
       aria-label={label}
       aria-current={active === view ? 'page' : undefined}
@@ -34,7 +34,7 @@ export default function AppSidebar({ modes, active, onSelect, onProfile }: AppSi
         <Logo className="app-rail-logo-img" />
       </button>
       <div className="app-rail-group">
-        {item('home', t.home.navLabel, IconHome)}
+        {item('home', t.home.navLabel, IconHome, ' app-rail-home')}
         <span className="app-rail-sep" aria-hidden="true" />
         {modes.map((m) => item(m.value, m.label, m.icon))}
       </div>

@@ -8,6 +8,7 @@ import { fetchBanners, parseBanners, readCachedBanners, type BannerSlide } from 
 interface HomePanelProps {
   active: boolean;
   modes: ModeDef[];
+  /** no longer shown on the home screen (the «continue» line was removed by request) */
   lastView: AppView | null;
   planLabel: string;
   onOpen: (view: AppView) => void;
@@ -28,9 +29,9 @@ function greetingKey(h: number): 'Morning' | 'Day' | 'Evening' | 'Night' {
   return 'Night';
 }
 
-// Web home screen after sign-in: greeting, resume-last-mode line, budget, a banner carousel and
+// Web home screen after sign-in: greeting, budget, a banner carousel and
 // every mode as a tile with a one-line explanation.
-export default function HomePanel({ active, modes, lastView, planLabel, onOpen }: HomePanelProps) {
+export default function HomePanel({ active, modes, planLabel, onOpen }: HomePanelProps) {
   const t = useT();
   const [usage, setUsage] = useState<BudgetUsage | null>(null);
   const language = useLanguageStore((s) => s.language);
@@ -104,7 +105,6 @@ export default function HomePanel({ active, modes, lastView, planLabel, onOpen }
   }, [active, current, reduceMotion, slides]);
 
   const g = greetingKey(new Date().getHours());
-  const last = lastView ? modes.find((m) => m.value === lastView) : undefined;
   const left = usage ? Math.max(0, usage.limit - usage.costUsd) : null;
   const pct = usage && usage.limit > 0 ? Math.min(1, left! / usage.limit) : 0;
   const R = 11;
@@ -119,14 +119,6 @@ export default function HomePanel({ active, modes, lastView, planLabel, onOpen }
             <h1>
               {t.home[`greeting${g}`]} <em>{t.home[`greetingAccent${g}`]}</em>
             </h1>
-            {last && (
-              <p>
-                {t.home.resume(last.label)}
-                <button type="button" className="home-resume" onClick={() => onOpen(last.value)}>
-                  {t.home.resumeBtn} →
-                </button>
-              </p>
-            )}
           </div>
           <div className="home-kpis">
             {left !== null && (
