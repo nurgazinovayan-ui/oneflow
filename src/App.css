@@ -13423,7 +13423,7 @@ h5.md-heading {
 .app-rail-sep {
   width: 22px;
   height: 1px;
-  background: var(--v2-line);
+  background: var(--v2-sep);
   margin: 4px 0;
 }
 
@@ -13944,42 +13944,25 @@ h5.md-heading {
   background: #fff;
 }
 
-.home-sec {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+/* tiles sit right under the banner (no section heading any more) at their natural height */
+.home-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px 10px;
   margin-top: 4px;
 }
 
-.home-sec h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 650;
-}
-
-.home-sec span {
-  font-size: 12.5px;
-  color: var(--c-text-muted);
-  font-weight: 600;
-}
-
-.home-tiles {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-auto-rows: minmax(88px, 1fr);
-  gap: 10px;
-}
-
+/* Mode tiles: just the icon and the text at rest; the card fill, the outline and the arrow show
+   up on hover / keyboard focus only (by request — no borders or highlight in the resting state). */
 .home-tile {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) auto;
-  align-items: center;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: start;
   gap: 14px;
-  padding: 12px 14px;
+  padding: 16px 16px;
   border-radius: 18px;
-  border: 1px solid var(--v2-line);
-  background: var(--v2-card);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--c-text);
   text-align: left;
   font: inherit;
@@ -13987,15 +13970,18 @@ h5.md-heading {
   transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
 }
 
-.home-tile:hover {
+.home-tile:hover,
+.home-tile:focus-visible {
+  background: var(--v2-card);
   border-color: var(--v2-accent-strong);
+  outline: none;
 }
 
+/* bare icon (no square behind it), a bit larger, lined up with the mode name */
 .home-tile-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  background: var(--c-bg);
+  width: 34px;
+  height: 34px;
+  margin-top: -3px;
   color: var(--v2-accent-strong);
   display: flex;
   align-items: center;
@@ -14019,35 +14005,31 @@ h5.md-heading {
 }
 
 .home-tile-go {
+  align-self: center;
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: var(--v2-field);
+  background: var(--v2-accent);
+  color: var(--v2-accent-ink);
   display: flex;
   align-items: center;
   justify-content: center;
   transform: rotate(90deg);
+  opacity: 0;
+  transition: opacity 0.15s var(--ease);
 }
 
-.home-tile.hi {
-  background: var(--v2-accent);
-  border-color: var(--v2-accent-strong);
-  color: var(--v2-accent-ink);
+.home-tile:hover .home-tile-go,
+.home-tile:focus-visible .home-tile-go {
+  opacity: 1;
 }
 
-.home-tile.hi .home-tile-text > span {
-  color: inherit;
-  opacity: 0.75;
-}
-
-.home-tile.hi .home-tile-icon {
-  background: var(--v2-accent-ink);
-  color: var(--v2-accent);
-}
-
-.home-tile.hi .home-tile-go {
-  background: var(--v2-accent-ink);
-  color: var(--v2-accent);
+@media (hover: none) {
+  .home-tile-go {
+    opacity: 1;
+    background: var(--v2-field);
+    color: var(--c-text);
+  }
 }
 
 .home-chip {
@@ -14059,9 +14041,9 @@ h5.md-heading {
   color: var(--c-text-muted);
 }
 
-.home-tile.hi .home-chip {
-  background: var(--v2-accent-ink);
-  color: var(--v2-accent);
+.home-chip.new {
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent-strong);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -14154,6 +14136,10 @@ h5.md-heading {
   }
   .home-tiles {
     grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+  .home-tile {
+    padding: 12px 10px;
   }
 }
 

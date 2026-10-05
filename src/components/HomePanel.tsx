@@ -121,14 +121,14 @@ export default function HomePanel({ active, modes, lastView, planLabel, onOpen }
             <h1>
               {t.home[`greeting${g}`]} <em>{t.home[`greetingAccent${g}`]}</em>
             </h1>
-            <p>
-              {last ? t.home.resume(last.label) : t.home.welcomeNew}
-              {last && (
+            {last && (
+              <p>
+                {t.home.resume(last.label)}
                 <button type="button" className="home-resume" onClick={() => onOpen(last.value)}>
                   {t.home.resumeBtn} →
                 </button>
-              )}
-            </p>
+              </p>
+            )}
           </div>
           <div className="home-kpis">
             {left !== null && (
@@ -232,19 +232,13 @@ export default function HomePanel({ active, modes, lastView, planLabel, onOpen }
           </div>
         )}
 
-        <div className="home-sec">
-          <h3>{t.home.modesTitle}</h3>
-          <span>
-            {modes.length} · {t.home.modesHint}
-          </span>
-        </div>
         <div className="home-tiles">
           {modes.map((m) => {
             const Icon = m.icon;
             return (
-              <button key={m.value} type="button" className={`home-tile${m.badge === 'new' ? ' hi' : ''}`} onClick={() => onOpen(m.value)}>
+              <button key={m.value} type="button" className="home-tile" onClick={() => onOpen(m.value)}>
                 <span className="home-tile-icon">
-                  <Icon size={22} />
+                  <Icon size={28} />
                 </span>
                 <span className="home-tile-text">
                   <b>

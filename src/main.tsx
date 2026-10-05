@@ -9,6 +9,9 @@ import ConsentBanner from './components/ConsentBanner';
 import { initAnalytics } from './analytics';
 // Self-hosted (not Google Fonts CDN) so the desktop build works fully offline — includes the
 // cyrillic subset since the app's primary audience is Russian-speaking.
+import '@fontsource-variable/geist';
+// Inter stays loaded only for Motion Engine: its storyboard/video renderer (src/motion/render.ts)
+// draws captions with it, so changing the UI font must not change rendered videos.
 import '@fontsource-variable/inter/wght.css';
 import './index.css';
 

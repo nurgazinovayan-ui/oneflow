@@ -10,11 +10,11 @@ body,
 }
 
 body {
-  /* Inter Variable — self-hosted via @fontsource-variable/inter (imported in main.tsx), same
-     face framer.com uses for body text. Falls back to the OS UI font while it loads/if it
-     somehow fails, rather than to a generic sans-serif. */
+  /* Geist Variable — self-hosted via @fontsource-variable/geist (imported in main.tsx). Large
+     headings use its thin weight (see «Typography» at the end of ModesV2.css). Falls back to the
+     OS UI font while it loads / if it somehow fails, rather than to a generic sans-serif. */
   font-family:
-    'Inter Variable',
+    'Geist Variable',
     'Segoe UI Variable Text',
     'Segoe UI',
     -apple-system,

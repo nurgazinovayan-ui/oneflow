@@ -1772,7 +1772,7 @@ textarea.v2-field {
 
 .web-mode .cw-panel .cw-history-row.cw-selected {
   background: var(--v2-field);
-  box-shadow: inset 0 0 0 1.5px var(--v2-accent);
+  box-shadow: inset 0 0 0 1.5px var(--v2-accent-strong);
   border-radius: 10px;
 }
 
@@ -2383,5 +2383,252 @@ textarea.v2-field {
     width: auto;
     flex-direction: row;
     padding: 6px;
+  }
+}
+
+/* =============================================================================================
+   Borderless (by request): containers — rail, header search, mode areas, cards, banner, rows,
+   nodes — are told apart by their fill alone. Outlines remain only where they carry meaning:
+   hover on clickable tiles, keyboard focus, the selected item and a file being dragged over a
+   drop zone. Empty-state placeholders and drop zones are soft fills instead of dashed frames.
+   ============================================================================================= */
+:root {
+  --v2-line: transparent;
+  --v2-sep: rgba(0, 0, 0, 0.1);
+  --v2-ghost: rgba(0, 0, 0, 0.045);
+  /* light theme: a touch more contrast between the shell, the surfaces and the white cards now
+     that there are no borders to separate them */
+  --v2-shell: #e7e9ed;
+  --v2-surface: #f0f2f5;
+}
+
+:root:not([data-theme='light']) {
+  --v2-line: transparent;
+  --v2-sep: #2c2c31;
+  --v2-ghost: rgba(255, 255, 255, 0.035);
+}
+
+.v2-ghosts span,
+.v2-ghost-grid span {
+  border: 0;
+  background: var(--v2-ghost);
+}
+
+.v2-drop,
+.v2-pred-drop,
+.v2-pred-add,
+.motion-panel.v2-mode :is(.motion-asset-add, .mk-ref-drop, .mk-drop) {
+  border: 1.5px solid transparent;
+  background: var(--v2-ghost);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.v2-drop:hover,
+.v2-pred-drop:hover,
+.v2-pred-add:hover,
+.motion-panel.v2-mode :is(.motion-asset-add, .mk-ref-drop):hover {
+  border-color: transparent;
+  background: var(--v2-field);
+  color: var(--v2-text);
+}
+
+/* a file is being dragged over the zone: the only time it gets a frame */
+.v2-pred-main.over .v2-pred-drop,
+.motion-panel.v2-mode .mk-render-col.drop .mk-drop {
+  border: 1.5px dashed var(--v2-accent-strong);
+}
+
+.v2-pred-main.over {
+  border-color: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--v2-accent-strong);
+}
+
+.v2-tile.loading,
+.v2-tile.error {
+  border: 0;
+  background: var(--v2-ghost);
+}
+
+.v2-palette-plus {
+  border: 0;
+  background: var(--v2-ghost);
+}
+
+.v2-pred-card {
+  border-color: transparent;
+}
+
+.v2-pred-card.winner {
+  border-color: var(--v2-accent-strong);
+}
+
+/* older mode parts that still draw their own frames */
+.web-mode :is(.tw-search, .tw-select > button, .tw-select select, .tw-settings-btn, .tw-settings-pop),
+.web-mode .cw-panel :is(.cw-composer, .cw-input-box, .cw-sidebar, .cw-stage),
+.web-mode .mode-search,
+.web-mode .canvas-toolbar,
+.web-mode .react-flow__node > .node,
+.web-mode .react-flow__controls,
+.web-mode .flk,
+.web-mode .strategy-panel :is(.strategy-shell > :first-child, .strategy-main) {
+  border-color: transparent;
+}
+
+.motion-panel.v2-mode .mk-col.v2-card {
+  background: var(--v2-card);
+  box-shadow: none;
+}
+
+.motion-panel.v2-mode :is(.mk-add, .motion-secondary) {
+  border: 0;
+}
+
+.web-mode .v2-strategy .strategy-selection-card {
+  border: 1.5px solid transparent;
+}
+
+.web-mode .v2-strategy .strategy-selection-card:hover {
+  border-color: transparent;
+  background: var(--c-panel-3, var(--v2-field));
+}
+
+.web-mode .v2-strategy .strategy-selection-card.selected {
+  border-color: var(--v2-accent-strong);
+}
+
+.web-mode .v2-strategy .strategy-onboarding-modal {
+  box-shadow: none;
+}
+
+.web-mode :is(.secondary-btn, .v2-strategy .secondary-btn) {
+  border-color: transparent;
+  background: var(--v2-field);
+}
+
+.web-mode .cw-panel .cw-composer,
+.web-mode .cw-panel .cw-composer:focus-within {
+  border-color: transparent;
+  background: var(--v2-field);
+}
+
+.web-mode .budget-ring {
+  border-color: transparent;
+}
+
+/* Avatar: the subscription state used to be a green/red ring; now it is a small dot. */
+.web-mode .toolbar-avatar-btn {
+  position: relative;
+  border-color: transparent;
+  background: var(--v2-card);
+}
+
+.web-mode .toolbar-avatar-btn::after {
+  content: '';
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--v2-shell);
+  background: transparent;
+}
+
+.web-mode .toolbar-avatar-btn.avatar-sub-active::after {
+  background: #2dd485;
+}
+
+.web-mode .toolbar-avatar-btn.avatar-sub-inactive::after {
+  background: #e0246b;
+}
+
+.web-mode .text-work-quickprompt-chip {
+  border-color: transparent;
+  background: var(--v2-field);
+  border-radius: 9px;
+}
+
+/* the old dark-theme «raised» ring (:root:not(light) :is(... .strategy-onboarding-modal ...)) is
+   more specific than the rules above, so it is cleared with a matching selector */
+:root .web-mode .v2-strategy .strategy-onboarding-modal.v2-card,
+:root .web-mode .v2-strategy .strategy-onboarding-actions :is(.generate-btn, .secondary-btn) {
+  box-shadow: none;
+}
+
+:root .web-mode .canvas-toolbar,
+:root:not([data-theme='light']) .web-mode .canvas-toolbar {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+:root .web-mode .canvas-toolbar .toolbar-dock-icon-btn {
+  box-shadow: none;
+}
+
+:root .web-mode .toolbar-avatar-btn {
+  box-shadow: none;
+}
+
+:root .web-mode .canvas-empty-actions button,
+:root:not([data-theme='light']) .web-mode .canvas-empty-actions button {
+  border-color: transparent;
+  background: var(--v2-field);
+}
+
+:root .web-mode .canvas-empty-actions button:hover {
+  border-color: transparent;
+  background: var(--c-panel-3, var(--v2-field));
+}
+
+.web-mode .tw-panel .tw-detail-byline {
+  border-bottom-color: transparent;
+}
+
+.web-mode .tw-panel .tw-cta.secondary {
+  box-shadow: none;
+}
+
+:root .web-mode .assets-sidebar,
+:root:not([data-theme='light']) .web-mode .assets-sidebar {
+  border-right-color: transparent;
+}
+
+/* =============================================================================================
+   Typography (by request): Geist everywhere, large headings in Geist Thin. Thin weights are used
+   only from ~20px up — smaller text keeps its regular/semibold weight so it stays readable.
+   ============================================================================================= */
+:is(.home-hello h1, .home-banner-text h2, .app-header-title h1, .v2-empty h2, .tw-detail-title) {
+  font-weight: 200;
+  letter-spacing: -0.01em;
+}
+
+.home-hello h1 {
+  font-size: 30px;
+}
+
+.home-banner-text h2 {
+  font-size: clamp(28px, 2.8vw, 38px);
+}
+
+.v2-empty h2 {
+  font-size: 26px;
+}
+
+.app-header-title h1 {
+  font-size: 20px;
+}
+
+/* the accent words inside the greeting stay thin too */
+.home-hello h1 em {
+  font-weight: inherit;
+}
+
+@media (max-width: 767px) {
+  .home-hello h1 {
+    font-size: 24px;
+  }
+
+  .home-banner-text h2 {
+    font-size: 26px;
   }
 }

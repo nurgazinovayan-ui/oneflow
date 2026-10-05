@@ -931,13 +931,10 @@ export interface Translations {
     greetingAccentDay: string;
     greetingAccentEvening: string;
     greetingAccentNight: string;
-    welcomeNew: string;
     resume: (mode: string) => string;
     resumeBtn: string;
     budgetLeft: string;
     planLabel: string;
-    modesTitle: string;
-    modesHint: string;
     badgeNew: string;
     badgeBeta: string;
     more: string;
@@ -2169,13 +2166,10 @@ export const ru: Translations = {
     greetingAccentDay: 'что-нибудь запустить 🚀',
     greetingAccentEvening: 'перед сном? ✨',
     greetingAccentNight: 'творим в тишине',
-    welcomeNew: 'С чего начнём? Выберите режим ниже — подскажем на каждом шаге.',
     resume: (mode) => `С возвращением. В прошлый раз вы работали в «${mode}» — продолжим?`,
     resumeBtn: 'Продолжить',
     budgetLeft: 'осталось в бюджете',
     planLabel: 'тариф',
-    modesTitle: 'Все режимы',
-    modesHint: 'выберите, с чего начать',
     badgeNew: 'Новое',
     badgeBeta: 'Beta',
     more: 'Подробнее',
@@ -3434,13 +3428,10 @@ export const en: Translations = {
     greetingAccentDay: 'to launch something 🚀',
     greetingAccentEvening: 'before bed? ✨',
     greetingAccentNight: 'let’s create in peace',
-    welcomeNew: 'Where shall we start? Pick a mode below — we’ll guide you at every step.',
     resume: (mode) => `Welcome back. Last time you were working in “${mode}” — continue?`,
     resumeBtn: 'Continue',
     budgetLeft: 'left in budget',
     planLabel: 'plan',
-    modesTitle: 'All modes',
-    modesHint: 'pick where to start',
     badgeNew: 'New',
     badgeBeta: 'Beta',
     more: 'Learn more',
