@@ -4,11 +4,12 @@
    keep their compact layout.
    ============================================================================================= */
 @media (min-width: 768px) {
-  /* ---- home ------------------------------------------------------------------------------- */
+  /* ---- home: airy but the whole screen (greeting, banner, all 9 mode tiles) fits without
+     scrolling on a laptop screen ------------------------------------------------------------ */
   html:root:root .web-mode .home-inner {
     max-width: 1360px;
-    padding: 44px 56px 64px;
-    gap: 44px;
+    padding: 28px 56px 28px;
+    gap: 28px;
   }
 
   html:root:root .web-mode .home-hello {
@@ -25,36 +26,64 @@
   }
 
   html:root:root .web-mode .home-banner {
-    height: clamp(300px, 40vh, 420px);
+    height: clamp(250px, 36vh, 400px);
   }
 
   html:root:root .web-mode .home-banner-text {
-    padding: 40px 44px;
+    padding: 34px 40px;
     width: min(600px, 60%);
   }
 
   html:root:root .web-mode .home-banner-text h2 {
-    margin: 22px 0 16px;
+    margin: 18px 0 12px;
     line-height: 1.12;
   }
 
   html:root:root .web-mode .home-banner-text p {
-    line-height: 1.6;
+    line-height: 1.55;
   }
 
+  /* compact mode tiles */
   html:root:root .web-mode .home-tiles {
     margin-top: 0;
-    gap: 22px 36px;
+    gap: 4px 28px;
   }
 
   html:root:root .web-mode .home-tile {
-    padding: 22px 22px;
-    gap: 18px;
+    grid-template-columns: 26px minmax(0, 1fr) auto;
+    padding: 11px 14px;
+    gap: 14px;
+    border-radius: 18px;
+  }
+
+  html:root:root .web-mode .home-tile-icon {
+    width: 26px;
+    height: 26px;
+    margin-top: -2px;
+  }
+
+  html:root:root .web-mode .home-tile-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  html:root:root .web-mode .home-tile-text b {
+    font-size: 14.5px;
   }
 
   html:root:root .web-mode .home-tile-text > span {
-    margin-top: 6px;
-    line-height: 1.55;
+    margin-top: 3px;
+    font-size: 12.5px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  html:root:root .web-mode .home-tile-go {
+    width: 30px;
+    height: 30px;
   }
 
   /* ---- modes: more room between and inside the cards -------------------------------------- */
@@ -125,5 +154,81 @@
   html:root:root .web-mode .v2-examples {
     margin-top: 24px;
     gap: 8px;
+  }
+}
+
+/* ---- header: the search dropdown must sit above every mode panel ------------------------------ */
+html:root:root .web-mode .top-toolbar {
+  z-index: 50;
+}
+
+/* ---- home: no page title, the search sits in the middle of the header ----------------------- */
+html:root:root .web-mode .top-toolbar.is-home .app-header-title h1 {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  html:root:root .web-mode .top-toolbar.is-home .mode-search {
+    position: absolute;
+    left: 50%;
+    /* vertically centred in the header's content box (same top padding as RailGlass.css) */
+    top: 14px;
+    bottom: 0;
+    margin: auto 0;
+    transform: translateX(-50%);
+    width: min(520px, 40vw);
+  }
+
+  html:root:root[data-theme='light'] .web-mode .top-toolbar.is-home .mode-search {
+    top: 12px;
+  }
+
+  html:root:root .web-mode .top-toolbar.is-home .mode-search-list {
+    width: 100%;
+  }
+}
+
+/* short laptop screens (≈768–820px tall): tighter home so all the tiles still fit */
+@media (min-width: 768px) and (max-height: 820px) {
+  html:root:root .web-mode .home-inner {
+    padding: 16px 48px 16px;
+    gap: 18px;
+  }
+
+  html:root:root .web-mode .home-banner {
+    height: clamp(220px, 30vh, 300px);
+  }
+
+  html:root:root .web-mode .home-banner-text {
+    padding: 22px 30px;
+  }
+
+  html:root:root .web-mode .home-banner-text h2 {
+    font-size: 28px;
+    margin: 12px 0 8px;
+  }
+
+  html:root:root .web-mode .home-banner-text p {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  /* side menu: smaller buttons so all of them fit the height */
+  html:root:root .web-mode .app-rail-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  html:root:root .web-mode .app-rail-group,
+  html:root:root .web-mode .app-rail {
+    gap: 5px;
+  }
+
+  html:root:root .web-mode .home-hello h1 {
+    font-size: 34px;
+  }
+
+  html:root:root .web-mode .home-tile {
+    padding: 9px 14px;
   }
 }

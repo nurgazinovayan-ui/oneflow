@@ -1066,7 +1066,7 @@ function Canvas() {
       {IS_WEB && (
         <AppSidebar modes={modes} active={mainView} onSelect={setMainView} onProfile={() => setProfileOpen(true)} />
       )}
-      <div className="top-toolbar">
+      <div className={`top-toolbar${IS_WEB && mainView === 'home' ? ' is-home' : ''}`}>
         {IS_WEB ? (
           <div className="toolbar-brand app-header-title">
             <h1>{viewTitle}</h1>
