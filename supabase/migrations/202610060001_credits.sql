@@ -9,7 +9,7 @@
 --     lives credit_pack_months (12) from the day it was added; spending always takes the pack that
 --     expires first.
 --   * reserve_generation keeps its signature, so no Edge Function changes are needed: before a paid
---     call it checks that the user's unexpired credits minus what is already reserved cover the
+--     call it checks that the unexpired credits of the user minus what is already reserved cover the
 --     estimate; settle_generation logs the real cost and takes it out of the packs.
 --   * Accounts listed in generation_overrides (the owner, a company domain) keep the old monthly
 --     USD cap and never touch packs.
@@ -19,11 +19,11 @@
 insert into public.app_settings (key, value) values
   ('topup_min_usd', 10),
   ('topup_max_usd', 500),
-  ('credits_per_usd', 50),          -- $10–49
+  ('credits_per_usd', 50),          -- 10–49 USD
   ('topup_tier2_from_usd', 50),
-  ('credits_per_usd_tier2', 55),    -- $50–199 (+10%)
+  ('credits_per_usd_tier2', 55),    -- 50–199 USD (+10%)
   ('topup_tier3_from_usd', 200),
-  ('credits_per_usd_tier3', 60),    -- $200+ (+20%)
+  ('credits_per_usd_tier3', 60),    -- 200+ USD (+20%)
   ('free_credits', 50),             -- one-off starter pack for every confirmed account
   ('credit_pack_months', 12)
 on conflict (key) do nothing;
@@ -46,16 +46,16 @@ create unique index if not exists credit_packs_one_free on public.credit_packs (
 
 -- usd → credits (always rounds up: a 3.4¢ call costs 4 credits)
 create or replace function public.usd_to_credits(p_usd numeric) returns integer
-language sql immutable as $$ select greatest(0, ceil(coalesce(p_usd, 0) * 100 - 1e-9))::integer $$;
+language sql immutable as $fn$ select greatest(0, ceil(coalesce(p_usd, 0) * 100 - 1e-9))::integer $fn$;
 
 create or replace function public.setting(p_key text) returns numeric
-language sql stable security definer set search_path = public as $$
+language sql stable security definer set search_path = public as $fn$
   select value from public.app_settings where key = p_key
-$$;
+$fn$;
 
 -- How many credits a top-up of p_usd buys (tiered). Null when outside the allowed range.
 create or replace function public.credits_for_topup(p_usd numeric) returns integer
-language plpgsql stable security definer set search_path = public as $$
+language plpgsql stable security definer set search_path = public as $fn$
 declare v_rate numeric;
 begin
   if p_usd is null or p_usd < setting('topup_min_usd') or p_usd > setting('topup_max_usd') then return null; end if;
@@ -64,21 +64,21 @@ begin
     when p_usd >= setting('topup_tier2_from_usd') then setting('credits_per_usd_tier2')
     else setting('credits_per_usd') end;
   return floor(p_usd * v_rate)::integer;
-end $$;
+end $fn$;
 
 -- True when the account is on the old monthly USD cap (generation_overrides).
 create or replace function public.generation_has_override(p_user uuid) returns boolean
-language sql stable security definer set search_path = public as $$
+language sql stable security definer set search_path = public as $fn$
   select exists (
     select 1 from public.generation_overrides o, auth.users u
      where u.id = p_user and (o.match = lower(u.email) or (o.match like '@%' and lower(u.email) like '%' || o.match))
   )
-$$;
+$fn$;
 
 -- Adds a pack. Idempotent on p_external_id (a payment id), so a retried webhook credits once.
 create or replace function public.grant_credits(p_user uuid, p_source text, p_credits integer, p_amount_usd numeric, p_note text, p_external_id text)
 returns uuid
-language plpgsql volatile security definer set search_path = public as $$
+language plpgsql volatile security definer set search_path = public as $fn$
 declare v_id uuid;
 begin
   if p_credits is null or p_credits <= 0 then raise exception 'bad_amount'; end if;
@@ -91,11 +91,11 @@ begin
           now() + make_interval(months => setting('credit_pack_months')::int))
   returning id into v_id;
   return v_id;
-end $$;
+end $fn$;
 
 -- The one-off starter pack, given the first time a confirmed account is checked.
 create or replace function public.ensure_free_credits(p_user uuid) returns void
-language plpgsql volatile security definer set search_path = public as $$
+language plpgsql volatile security definer set search_path = public as $fn$
 begin
   if not exists (select 1 from auth.users where id = p_user and email_confirmed_at is not null) then return; end if;
   if coalesce(setting('free_credits'), 0) <= 0 then return; end if;
@@ -103,13 +103,13 @@ begin
   values (p_user, 'free', setting('free_credits')::int, setting('free_credits')::int, 'Стартовые кредиты',
           now() + make_interval(months => setting('credit_pack_months')::int))
   on conflict do nothing;
-end $$;
+end $fn$;
 
 drop function if exists public.credit_balance(uuid);  -- the return shape changed during development
 -- What the user sees: unexpired credits, credits held by running generations, and the soonest expiry.
 create or replace function public.credit_balance(p_user uuid)
 returns table (available integer, reserved integer, active_total integer, next_expiry_at timestamptz, next_expiry_credits integer, unlimited boolean)
-language plpgsql volatile security definer set search_path = public as $$
+language plpgsql volatile security definer set search_path = public as $fn$
 begin
   perform public.ensure_free_credits(p_user);
   return query
@@ -127,12 +127,12 @@ begin
     (select expires_at from soon),
     (select c from soon),
     public.generation_has_override(p_user);
-end $$;
+end $fn$;
 
 -- Same signature as before; credits instead of the monthly cap unless the account has an override.
 create or replace function public.reserve_generation(p_user uuid, p_model text, p_category text, p_amount numeric)
 returns uuid
-language plpgsql volatile security definer set search_path = public as $$
+language plpgsql volatile security definer set search_path = public as $fn$
 declare
   v_spent numeric;
   v_pending numeric;
@@ -147,7 +147,7 @@ begin
   if p_amount > setting('max_single_job_usd') then
     raise exception 'job_too_expensive';
   end if;
-  perform pg_advisory_xact_lock(hashtextextended(p_user::text, 0));  -- serialises this user's reservations
+  perform pg_advisory_xact_lock(hashtextextended(p_user::text, 0));  -- serialises reservations of one user
   -- a crashed function must not keep budget locked forever
   update public.generation_reservations set status = 'released', settled_at = now()
    where user_id = p_user and status = 'pending' and created_at < now() - interval '20 minutes';
@@ -176,13 +176,13 @@ begin
   insert into public.generation_reservations (user_id, model, category, amount_usd)
   values (p_user, p_model, p_category, p_amount) returning id into v_id;
   return v_id;
-end $$;
+end $fn$;
 
 -- Success: log the real cost once, then take it out of the packs that expire first. If the real
 -- cost came out a little above what was left, the packs just reach zero (the overshoot is ours).
 create or replace function public.settle_generation(p_reservation uuid, p_email text, p_cost numeric)
 returns void
-language plpgsql volatile security definer set search_path = public as $$
+language plpgsql volatile security definer set search_path = public as $fn$
 declare
   r public.generation_reservations;
   v_cost numeric;
@@ -210,7 +210,7 @@ begin
     update public.credit_packs set credits_left = credits_left - v_take where id = p.id;
     v_need := v_need - v_take;
   end loop;
-end $$;
+end $fn$;
 
 revoke all on function public.setting(text) from public, anon, authenticated;
 revoke all on function public.credits_for_topup(numeric) from public, anon, authenticated;
