@@ -194,7 +194,7 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
   const api = DEMO ? demoApi() : { overview: () => call('admin-api', { action: 'overview' }), ticket: (b) => call('admin-api', { action: 'ticket-update', ...b }),
     content: (b) => call('admin-api', { action: 'content-save', ...b }), send: (emails, message) => call('admin-send-message', { mode: 'selected', emails, message }),
     banners: (slides) => call('admin-api', { action: 'banners-save', slides }), mediaUrl: (b) => call('admin-api', { action: 'media-upload-url', ...b }),
-    mediaDelete: (path) => call('admin-api', { action: 'media-delete', path }) };
+    mediaDelete: (path) => call('admin-api', { action: 'media-delete', path }), grant: (b) => call('admin-api', { action: 'credits-grant', ...b }) };
   const load = async () => {
     $('#rf').disabled = true;
     try { D = await api.overview(); $('#upd').textContent = 'обновлено ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); render(); }
@@ -244,13 +244,13 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
   // users
   let uq = '', uf = 'all', us = { k: 'createdAt', d: -1 };
   function vUsers() {
-    const cols = [['email', 'Email'], ['createdAt', 'Регистрация'], ['lastSignIn', 'Последний вход'], ['online', 'Статус'], ['generations', 'Генераций'], ['generations30', 'За 30 дней'], ['spendUsd', 'Расход']];
+    const cols = [['email', 'Email'], ['createdAt', 'Регистрация'], ['lastSignIn', 'Последний вход'], ['online', 'Статус'], ['generations', 'Генераций'], ['generations30', 'За 30 дней'], ['spendUsd', 'Расход'], ['credits', 'Кредиты']];
     let rows = D.users.filter((x) => (!uq || x.email.includes(uq.toLowerCase())) && (uf === 'all' || (uf === 'online' ? x.online : uf === 'active' ? x.generations > 0 : !x.confirmed)));
     rows.sort((a, b) => { const va = a[us.k] ?? '', vb = b[us.k] ?? ''; return (va > vb ? 1 : va < vb ? -1 : 0) * us.d; });
     $('#v-users').innerHTML = `<div class="tools"><input class="in" id="uq" type="search" placeholder="Поиск по email" value="${esc(uq)}"><div class="seg" id="uf">${[['all', 'Все'], ['online', 'Онлайн'], ['active', 'С генерациями'], ['unconf', 'Без подтверждения']].map(([k, t]) => `<button class="${uf === k ? 'on' : ''}" data-f="${k}">${t}</button>`).join('')}</div><span class="dim">${fmtN(rows.length)} из ${fmtN(D.users.length)}</span></div>
-      <div class="tw"><table><thead><tr>${cols.map(([k, t]) => `<th class="s ${['generations', 'generations30', 'spendUsd'].includes(k) ? 'num' : ''}" data-k="${k}">${t}${us.k === k ? `<span class="ar">${us.d > 0 ? '↑' : '↓'}</span>` : ''}</th>`).join('')}</tr></thead><tbody>
+      <div class="tw"><table><thead><tr>${cols.map(([k, t]) => `<th class="s ${['generations', 'generations30', 'spendUsd', 'credits'].includes(k) ? 'num' : ''}" data-k="${k}">${t}${us.k === k ? `<span class="ar">${us.d > 0 ? '↑' : '↓'}</span>` : ''}</th>`).join('')}</tr></thead><tbody>
       ${rows.map((x) => `<tr class="cl" data-id="${x.id}"><td>${esc(x.email)}${x.confirmed ? '' : ' <span class="dim">· не подтверждён</span>'}</td><td>${fmtD(x.createdAt, false)}</td><td>${ago(x.lastSignIn)}</td>
-        <td>${x.online ? '<span class="dot good">онлайн</span>' : `<span class="dot">был ${ago(x.lastSeen || x.lastSignIn)}</span>`}</td><td class="num">${fmtN(x.generations)}</td><td class="num">${fmtN(x.generations30)}</td><td class="num">${fmt$(x.spendUsd)}</td></tr>`).join('') || `<tr><td colspan="7" class="empty">Никого не нашлось</td></tr>`}</tbody></table></div>`;
+        <td>${x.online ? '<span class="dot good">онлайн</span>' : `<span class="dot">был ${ago(x.lastSeen || x.lastSignIn)}</span>`}</td><td class="num">${fmtN(x.generations)}</td><td class="num">${fmtN(x.generations30)}</td><td class="num">${fmt$(x.spendUsd)}</td><td class="num">${fmtN(x.credits ?? 0)}</td></tr>`).join('') || `<tr><td colspan="8" class="empty">Никого не нашлось</td></tr>`}</tbody></table></div>`;
     $('#uq').addEventListener('input', (e) => { uq = e.target.value; const p = e.target.selectionStart; vUsers(); const i = $('#uq'); i.focus(); i.setSelectionRange(p, p); });
     $$('#uf button').forEach((b) => b.addEventListener('click', () => { uf = b.dataset.f; vUsers(); }));
     $$('#v-users th.s').forEach((th) => th.addEventListener('click', () => { us = { k: th.dataset.k, d: us.k === th.dataset.k ? -us.d : -1 }; vUsers(); }));
@@ -260,10 +260,17 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
     const mine = D.recent.filter((r) => r.email === x.email).slice(0, 30);
     openDrawer(`<h3>${esc(x.email)}</h3><span class="${x.online ? 'dot good' : 'dot'}">${x.online ? 'онлайн' : 'не в сети'}</span>
       <dl class="kv"><dt>Регистрация</dt><dd>${fmtD(x.createdAt)}</dd><dt>Вход через</dt><dd>${esc(x.provider)}</dd><dt>Последний вход</dt><dd>${fmtD(x.lastSignIn)}</dd><dt>Активность</dt><dd>${fmtD(x.lastSeen)}</dd>
-      <dt>Генераций</dt><dd>${fmtN(x.generations)} · за 30 дней ${fmtN(x.generations30)}</dd><dt>Расход</dt><dd>${fmt$(x.spendUsd)}</dd><dt>Последняя генерация</dt><dd>${fmtD(x.lastGenerationAt)}</dd></dl>
+      <dt>Генераций</dt><dd>${fmtN(x.generations)} · за 30 дней ${fmtN(x.generations30)}</dd><dt>Расход</dt><dd>${fmt$(x.spendUsd)}</dd><dt>Последняя генерация</dt><dd>${fmtD(x.lastGenerationAt)}</dd><dt>Кредиты</dt><dd id="ucr">${fmtN(x.credits ?? 0)}</dd></dl>
+      <h4 style="margin:18px 0 8px">Начислить кредиты</h4><div class="row"><input class="in" id="gc" type="number" min="1" max="1000000" step="1" placeholder="Кредитов" style="max-width:140px"><input class="in" id="gn" type="text" maxlength="200" placeholder="Комментарий (необязательно)"></div>
+      <div class="row"><button class="btn a" id="gb">Начислить</button><span id="gr" class="ok" role="status"></span></div>
+      <p class="dim" style="margin:6px 0 0">1 кредит = 1 цент себестоимости. Кредиты действуют 12 месяцев.</p>
       <h4 style="margin:18px 0 8px">Сообщение в приложение</h4><textarea class="in" id="um" placeholder="Появится у пользователя всплывающим уведомлением"></textarea>
       <div class="row"><button class="btn a" id="us">Отправить</button><a class="btn s" href="mailto:${esc(x.email)}">Написать на почту</a><span id="ur" class="ok" role="status"></span></div>
       <h4 style="margin:22px 0 8px">Последние генерации</h4>${mine.length ? `<table><tbody>${mine.map((r) => `<tr><td>${fmtD(r.createdAt)}</td><td>${esc(r.model)}</td><td class="num">${fmt$(r.costUsd)}</td></tr>`).join('')}</tbody></table>` : '<p class="dim">Нет в последних 300 генерациях</p>'}`);
+    $('#gb').addEventListener('click', async () => { const n = Math.round(Number($('#gc').value)); if (!(n >= 1 && n <= 1000000)) { $('#gr').textContent = 'Укажите от 1 до 1 000 000'; $('#gr').className = 'err'; return; }
+      $('#gb').disabled = true;
+      try { const r = await api.grant({ userId: x.id, credits: n, note: $('#gn').value.trim() }); x.credits = r.credits; $('#ucr').textContent = fmtN(r.credits); $('#gr').textContent = `Начислено ${fmtN(n)}`; $('#gr').className = 'ok'; $('#gc').value = ''; $('#gn').value = ''; }
+      catch (e) { $('#gr').textContent = e.message; $('#gr').className = 'err'; } finally { $('#gb').disabled = false; } });
     $('#us').addEventListener('click', async () => { const m = $('#um').value.trim(); if (!m) return; $('#us').disabled = true;
       try { await api.send([x.email], m); $('#ur').textContent = 'Отправлено'; $('#um').value = ''; } catch (e) { $('#ur').textContent = e.message; $('#ur').className = 'err'; } finally { $('#us').disabled = false; } });
   }
@@ -478,13 +485,13 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
     for (let k = 0; k < 420; k++) { const [m, c, p] = rnd(models), t = now - Math.floor(Math.pow(Math.random(), 1.4) * 30 * 86400000), u = rnd(users); recent.push({ email: u.email, model: m, category: c, costUsd: p, createdAt: iso(t) });
       const d = iso(t).slice(0, 10), x = byDayM.get(d) || { count: 0, spend: 0 }; x.count++; x.spend += p; byDayM.set(d, x); const y = byModel.get(m) || { model: m, category: c, count: 0, spend: 0 }; y.count++; y.spend += p; byModel.set(m, y); }
     recent.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    users.forEach((u) => { const g = recent.filter((r) => r.email === u.email); u.generations = g.length; u.generations30 = g.length; u.spendUsd = Math.round(g.reduce((a, r) => a + r.costUsd, 0) * 100) / 100; u.lastGenerationAt = g[0]?.createdAt || null; });
+    users.forEach((u, i) => { u.credits = [1250, 340, 50, 0, 5500, 50, 0, 980][i] ?? 0; const g = recent.filter((r) => r.email === u.email); u.generations = g.length; u.generations30 = g.length; u.spendUsd = Math.round(g.reduce((a, r) => a + r.costUsd, 0) * 100) / 100; u.lastGenerationAt = g[0]?.createdAt || null; });
     const tickets = [{ id: 't1', name: 'Тимур', contact: 'timur.shop@gmail.com', message: 'Здравствуйте! Не получается адаптировать карточку под Kaspi 1125×330 — картинка обрезается сверху. Что делать?', status: 'new', created_at: iso(now - 3600000) },
       { id: 't2', name: 'Айгерим', contact: '+7 701 555 12 34', message: 'Можно оплатить по счёту для ТОО?', status: 'new', created_at: iso(now - 5 * 3600000) },
       { id: 't3', name: 'Дана', contact: 'dana.brand@gmail.com', message: 'Подскажите, остаток бюджета точно переносится?', status: 'closed', reply: 'Да, неизрасходованный бюджет переходит на следующий месяц.', replied_at: iso(now - 20 * 3600000), created_at: iso(now - 26 * 3600000) }];
     const D0 = { generatedAt: iso(now), users, recent: recent.slice(0, 300), tickets, content: [], stats: { days: 30, totalGenerations: 1843, byDay: [...byDayM.entries()].map(([day, v]) => ({ day, ...v })), byModel: [...byModel.values()].sort((a, b) => b.count - a.count) } };
     const wait = (v) => new Promise((r) => setTimeout(() => r(v), 250));
-    return { overview: () => wait(JSON.parse(JSON.stringify(D0))), ticket: (b) => wait({ ok: true, deliveredInApp: true }), content: () => wait({ ok: true }), send: () => wait({ ok: true }),
+    return { overview: () => wait(JSON.parse(JSON.stringify(D0))), grant: (b) => wait({ ok: true, credits: (D0.users.find((u) => u.id === b.userId)?.credits || 0) + b.credits }), ticket: (b) => wait({ ok: true, deliveredInApp: true }), content: () => wait({ ok: true }), send: () => wait({ ok: true }),
       banners: (slides) => wait(slides.length ? { ok: true, value: JSON.stringify({ v: 1, slides }) } : { ok: true, reset: true }), mediaUrl: () => wait({ path: null, signedUrl: null, publicUrl: null }), mediaDelete: () => wait({ ok: true }) };
   }
 })();
