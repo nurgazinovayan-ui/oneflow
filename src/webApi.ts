@@ -13,11 +13,13 @@ import type {
   AudioGenParams,
   YandexAsset,
   MarketingAIResponse,
+  CreditBalance,
 } from './types';
 import { estimateImageCost, estimateVideoCost, DSP_URL } from './types';
 import { getWebSession, setWebSession, type WebSession } from './webAuthSession';
 import { useLanguageStore, ru, en } from './i18n';
 import { capture } from './analytics';
+import { useCredits } from './credits';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -124,6 +126,7 @@ async function callFunction<T>(name: string, body: unknown): Promise<T> {
       throw new Error(byCode[data?.code] || data?.error || t().errors.generationError);
     }
     if (kind) capture(`${kind}_succeeded`, { fn: name, model, ms: Date.now() - startedAt });
+    if (kind) void useCredits.getState().refresh(); // a paid call just settled: show the new balance
     return data as T;
   } catch (err) {
     // The reason is what makes this worth recording: a spike of one failure text is how a
@@ -478,23 +481,11 @@ export function installWebApi(): void {
       }
     },
 
-    // Pulls the actual OpenRouter account wallet (total credits ever topped up, total spent
-    // to date) via the get-openrouter-balance Edge Function, rather than any per-user total
-    // this app itself tracks — there's one shared OpenRouter key funding every generation, so
-    // "budget" means that shared wallet, not a per-account figure. "month" is unused here (this
-    // is an all-time balance, not a monthly one) but kept for BudgetUsage's shape.
-    getUsage: async () => {
-      const month = new Date().toISOString().slice(0, 7);
-      try {
-        const balance = await callFunction<{ totalCredits: number; totalUsage: number }>(
-          'get-openrouter-balance',
-          {}
-        );
-        return { costUsd: balance.totalUsage, limit: balance.totalCredits, month };
-      } catch {
-        return { costUsd: 0, limit: 0, month };
-      }
-    },
+    // The web build gates generation by credits (get-credits / credit_packs), not by a monthly
+    // dollar limit, and users must not see the shared provider wallet any more — getUsage only
+    // keeps BudgetUsage's shape for code shared with the desktop build.
+    getUsage: async () => ({ costUsd: 0, limit: 0, month: new Date().toISOString().slice(0, 7) }),
+    getCredits: () => callFunction<CreditBalance>('get-credits', {}),
     setGenerationLimit: async (limit) => {
       localStorage.setItem('web-usage-limit', String(limit));
       return true;

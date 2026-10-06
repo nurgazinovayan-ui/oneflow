@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { IconArrowUp, IconExternal, IconPlay } from './Icons';
 import type { AppView, ModeDef } from '../modes';
-import type { BudgetUsage } from '../types';
+import { subscribeCredits, useCredits } from '../credits';
 import { useLanguageStore, useT } from '../i18n';
 import { fetchBanners, parseBanners, readCachedBanners, type BannerSlide } from '../homeBanners';
 
@@ -33,7 +33,8 @@ function greetingKey(h: number): 'Morning' | 'Day' | 'Evening' | 'Night' {
 // every mode as a tile with a one-line explanation.
 export default function HomePanel({ active, modes, planLabel, onOpen }: HomePanelProps) {
   const t = useT();
-  const [usage, setUsage] = useState<BudgetUsage | null>(null);
+  const credits = useCredits((s) => s.balance);
+  const openTopUp = useCredits((s) => s.openTopUp);
   const language = useLanguageStore((s) => s.language);
   const views = useMemo(() => modes.map((m) => m.value), [modes]);
   const [stored, setStored] = useState<string | null>(() => readCachedBanners());
@@ -75,16 +76,10 @@ export default function HomePanel({ active, modes, planLabel, onOpen }: HomePane
     if (slide >= count) setSlide(0);
   }, [slide, count]);
 
+  // Credit balance (shared store; polled while the home screen is open).
   useEffect(() => {
     if (!active) return;
-    let cancelled = false;
-    window.api
-      .getUsage()
-      .then((u) => !cancelled && setUsage(u))
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
+    return subscribeCredits();
   }, [active]);
 
   // Autoplay: the timer restarts on every slide change, so a manual switch (arrows/dots) always
@@ -105,8 +100,8 @@ export default function HomePanel({ active, modes, planLabel, onOpen }: HomePane
   }, [active, current, reduceMotion, slides]);
 
   const g = greetingKey(new Date().getHours());
-  const left = usage ? Math.max(0, usage.limit - usage.costUsd) : null;
-  const pct = usage && usage.limit > 0 ? Math.min(1, left! / usage.limit) : 0;
+  const left = credits ? Math.max(0, credits.available - credits.reserved) : null;
+  const pct = credits ? (credits.unlimited ? 1 : credits.activeTotal > 0 ? Math.min(1, left! / credits.activeTotal) : 0) : 0;
   const R = 11;
   const C = 2 * Math.PI * R;
   const cur = slides[current];
@@ -121,8 +116,8 @@ export default function HomePanel({ active, modes, planLabel, onOpen }: HomePane
             </h1>
           </div>
           <div className="home-kpis">
-            {left !== null && (
-              <div className="home-kpi">
+            {left !== null && credits && (
+              <div className="home-kpi home-kpi-credits">
                 <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" style={{ transform: 'rotate(-90deg)' }}>
                   <circle cx="14" cy="14" r={R} fill="none" stroke="var(--home-track)" strokeWidth="4" />
                   {pct > 0 && (
@@ -130,9 +125,12 @@ export default function HomePanel({ active, modes, planLabel, onOpen }: HomePane
                   )}
                 </svg>
                 <div>
-                  <b>${left.toFixed(2)}</b>
-                  {t.home.budgetLeft}
+                  <b>{credits.unlimited ? t.credits.unlimited : t.credits.count(left)}</b>
+                  {t.credits.onBalance}
                 </div>
+                <button className="home-topup-btn" onClick={openTopUp}>
+                  {t.credits.topUp}
+                </button>
               </div>
             )}
             <div className="home-kpi">

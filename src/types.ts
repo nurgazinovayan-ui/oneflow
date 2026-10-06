@@ -203,6 +203,17 @@ export interface MarketingAIResponse {
   mock?: boolean;
 }
 
+// Credit balance (web): 1 credit = 1 cent of provider cost; packs live 12 months (get-credits).
+export interface CreditBalance {
+  available: number;
+  reserved: number;
+  activeTotal: number;
+  nextExpiryAt: string | null;
+  nextExpiryCredits: number | null;
+  unlimited: boolean;
+  topup: { minUsd: number; maxUsd: number; tiers: { fromUsd: number; perUsd: number }[] };
+}
+
 export interface BudgetUsage {
   costUsd: number;
   limit: number;
@@ -398,6 +409,8 @@ export interface NodeApi {
   // code paths.
   marketingAI: (task: MarketingAITask, context: Record<string, unknown>, mock?: boolean) => Promise<MarketingAIResponse>;
   getUsage: () => Promise<BudgetUsage>;
+  // Web only: the caller's credit balance; absent on desktop, which keeps its local usage limit.
+  getCredits?: () => Promise<CreditBalance>;
   setGenerationLimit: (limit: number) => Promise<boolean>;
   listArchive: (projectId: string) => Promise<ArchiveEntry[]>;
   openArchiveFolder: (projectId: string) => Promise<boolean>;

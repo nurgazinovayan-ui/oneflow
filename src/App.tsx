@@ -29,6 +29,7 @@ import TextWorkPanel from './components/TextWorkPanel';
 import AdminMessageToast from './components/AdminMessageToast';
 import AdminPanel from './components/AdminPanel';
 import BudgetBar from './components/BudgetBar';
+import TopUpModal from './components/TopUpModal';
 import Logo from './components/Logo';
 import PaymentModal from './components/PaymentModal';
 import QuickGenPanel from './components/QuickGenPanel';
@@ -104,6 +105,7 @@ import './ModesV2.css';
 import './ThemeSoft.css';
 import './RailGlass.css';
 import './Spacing.css';
+import './Credits.css';
 
 // Modes whose panel is a flat surface (see .topbar-flat/.topbar-black in App.css) — the topbar
 // row above them matches so there's no seam. Canvas/Strategy/Assets keep the gray canvas-
@@ -1362,6 +1364,7 @@ function Canvas() {
           )}
         </div>
       </div>
+      {IS_WEB && <TopUpModal />}
       {/* Every signed-in web account: @mechta.kz colleagues see each other automatically, everyone
           else adds contacts by invitation (see messenger-contacts). Web-only — messenger/client.ts
           reuses webApi's session handling, which the desktop build doesn't expose. */}

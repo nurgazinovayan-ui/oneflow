@@ -575,6 +575,24 @@ export function installMockApiIfNeeded(): void {
       const limit = Number(localStorage.getItem('mock-usage-limit') ?? '50');
       return { costUsd, limit, month };
     },
+    // Demo balance so the credits ring and the top-up slider can be tried without a backend.
+    getCredits: async () => ({
+      available: 1250,
+      reserved: 0,
+      activeTotal: 1550,
+      nextExpiryAt: new Date(Date.now() + 200 * 86_400_000).toISOString(),
+      nextExpiryCredits: 300,
+      unlimited: false,
+      topup: {
+        minUsd: 10,
+        maxUsd: 500,
+        tiers: [
+          { fromUsd: 10, perUsd: 50 },
+          { fromUsd: 50, perUsd: 55 },
+          { fromUsd: 200, perUsd: 60 },
+        ],
+      },
+    }),
     setGenerationLimit: async (limit: number) => {
       localStorage.setItem('mock-usage-limit', String(limit));
       return true;

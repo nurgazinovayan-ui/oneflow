@@ -114,7 +114,7 @@ class GuardError extends Error {
 }
 const GUARD_ERRORS: Record<string, [number, string]> = {
   email_not_confirmed: [403, 'Подтвердите email, чтобы пользоваться генерацией.'],
-  quota_exceeded: [402, 'Лимит генераций на этот месяц исчерпан.'],
+  quota_exceeded: [402, 'Недостаточно кредитов — пополните баланс.'],
   too_many_jobs: [429, 'Слишком много генераций одновременно — дождитесь завершения.'],
   job_too_expensive: [400, 'Запрос слишком дорогой для одной генерации.'],
 };

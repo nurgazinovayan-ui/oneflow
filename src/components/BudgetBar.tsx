@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { BudgetUsage } from "../types";
-import { useT } from "../i18n";
+import { useT, useLanguageStore } from "../i18n";
+import { subscribeCredits, useCredits } from "../credits";
 
 const POLL_INTERVAL_MS = 8000;
 
@@ -19,6 +20,51 @@ function budgetBarColor(spentPercent: number): string {
 }
 
 export default function BudgetBar() {
+  // Web: the ring shows the credit balance and opens the top-up window. Desktop keeps its local
+  // monthly usage limit (window.api.getCredits is absent there).
+  return window.api.getCredits ? <CreditsRing /> : <UsageRing />;
+}
+
+function CreditsRing() {
+  const t = useT();
+  const language = useLanguageStore((s) => s.language);
+  const balance = useCredits((s) => s.balance);
+  const openTopUp = useCredits((s) => s.openTopUp);
+  useEffect(() => subscribeCredits(), []);
+  if (!balance) return null;
+
+  const locale = language === "en" ? "en-US" : "ru-RU";
+  const left = Math.max(0, balance.available - balance.reserved);
+  const share = balance.unlimited ? 1 : balance.activeTotal > 0 ? left / balance.activeTotal : 0;
+  const expiry =
+    balance.nextExpiryAt && balance.nextExpiryCredits
+      ? t.credits.expires(t.credits.count(balance.nextExpiryCredits), new Date(balance.nextExpiryAt).toLocaleDateString(locale))
+      : "";
+  const label = balance.unlimited ? t.credits.unlimited : t.credits.tooltip(t.credits.count(left), expiry);
+  const R = 9;
+  const C = 2 * Math.PI * R;
+  const filled = share > 0 ? Math.max(0.04, share) : 0;
+
+  return (
+    <button className="budget-ring budget-ring-btn" title={label} aria-label={label} onClick={openTopUp}>
+      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+        <circle className="budget-ring-track" cx="12" cy="12" r={R} />
+        {filled > 0 && (
+          <circle
+            className="budget-ring-fill"
+            cx="12"
+            cy="12"
+            r={R}
+            stroke={budgetBarColor((1 - share) * 100)}
+            strokeDasharray={`${filled * C} ${C}`}
+          />
+        )}
+      </svg>
+    </button>
+  );
+}
+
+function UsageRing() {
   const t = useT();
   const [usage, setUsage] = useState<BudgetUsage | null>(null);
 

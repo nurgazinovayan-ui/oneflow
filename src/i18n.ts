@@ -92,6 +92,28 @@ export interface Translations {
   budget: {
     tooltip: (spent: string, limit: string) => string;
   };
+  credits: {
+    count: (n: number) => string;
+    onBalance: string;
+    tooltip: (count: string, expiry: string) => string;
+    expires: (count: string, date: string) => string;
+    unlimited: string;
+    topUp: string;
+    title: string;
+    subtitle: string;
+    youGet: string;
+    perUsd: (n: number) => string;
+    bonus: (pct: number) => string;
+    approx: string;
+    images: string;
+    videos: string;
+    music: string;
+    balanceNow: (count: string) => string;
+    validity: string;
+    pay: string;
+    payNotReady: string;
+    close: string;
+  };
   settingsModal: {
     title: string;
     account: string;
@@ -1181,6 +1203,33 @@ export const ru: Translations = {
   },
   budget: {
     tooltip: (spent, limit) => `Потрачено в этом месяце (оценка): ${spent} из ${limit}`,
+  },
+  credits: {
+    count: (n) => {
+      const a = Math.abs(n) % 100;
+      const b = a % 10;
+      const w = a > 10 && a < 20 ? 'кредитов' : b === 1 ? 'кредит' : b >= 2 && b <= 4 ? 'кредита' : 'кредитов';
+      return `${n.toLocaleString('ru-RU')} ${w}`;
+    },
+    onBalance: 'на балансе',
+    tooltip: (count, expiry) => `На балансе: ${count}${expiry ? ` · ${expiry}` : ''}. Нажмите, чтобы пополнить`,
+    expires: (count, date) => `${count} сгорят ${date}`,
+    unlimited: 'Без ограничений',
+    topUp: 'Пополнить',
+    title: 'Пополнение баланса',
+    subtitle: 'Выберите сумму — кредиты зачислятся на баланс. Чем больше сумма, тем выгоднее.',
+    youGet: 'Вы получите',
+    perUsd: (n) => `${n} кредитов за $1`,
+    bonus: (pct) => `+${pct}% бонус`,
+    approx: 'Этого хватит примерно на',
+    images: 'картинок',
+    videos: 'видео по 5 с',
+    music: 'музыкальных треков',
+    balanceNow: (count) => `Сейчас на балансе: ${count}`,
+    validity: 'Кредиты действуют 12 месяцев с момента пополнения',
+    pay: 'Перейти к оплате',
+    payNotReady: 'Оплата скоро будет подключена — пополнить баланс можно будет прямо здесь.',
+    close: 'Закрыть',
   },
   settingsModal: {
     title: 'Настройки',
@@ -2283,7 +2332,7 @@ export const ru: Translations = {
       'Недостаточно средств на балансе для этой генерации. Пополните баланс, чтобы продолжить.',
     sendFailed: 'Не удалось отправить.',
     userNotFound: 'Пользователь с таким email не найден.',
-    quotaExceeded: 'Лимит генераций на этот месяц исчерпан. Оформите тариф, чтобы продолжить.',
+    quotaExceeded: 'Недостаточно кредитов. Пополните баланс, чтобы продолжить.',
     tooManyJobs: 'Слишком много генераций одновременно — дождитесь завершения текущих.',
     emailNotConfirmed: 'Подтвердите email по ссылке из письма, чтобы пользоваться генерацией.',
     jobTooExpensive: 'Этот запрос слишком дорогой для одной генерации — уменьшите длительность или разрешение.',
@@ -2452,6 +2501,28 @@ export const en: Translations = {
   },
   budget: {
     tooltip: (spent, limit) => `Spent this month (estimate): ${spent} of ${limit}`,
+  },
+  credits: {
+    count: (n) => `${n.toLocaleString('en-US')} ${n === 1 ? 'credit' : 'credits'}`,
+    onBalance: 'on balance',
+    tooltip: (count, expiry) => `Balance: ${count}${expiry ? ` · ${expiry}` : ''}. Click to top up`,
+    expires: (count, date) => `${count} expire on ${date}`,
+    unlimited: 'Unlimited',
+    topUp: 'Top up',
+    title: 'Top up your balance',
+    subtitle: 'Pick an amount — the credits go straight to your balance. The bigger the top-up, the better the rate.',
+    youGet: 'You get',
+    perUsd: (n) => `${n} credits per $1`,
+    bonus: (pct) => `+${pct}% bonus`,
+    approx: 'That is roughly',
+    images: 'images',
+    videos: '5-second videos',
+    music: 'music tracks',
+    balanceNow: (count) => `Current balance: ${count}`,
+    validity: 'Credits stay valid for 12 months from the top-up',
+    pay: 'Continue to payment',
+    payNotReady: 'Payments are being connected — you will be able to top up right here soon.',
+    close: 'Close',
   },
   settingsModal: {
     title: 'Settings',
@@ -3544,7 +3615,7 @@ export const en: Translations = {
     insufficientBalance: 'Insufficient balance for this generation. Top up your balance to continue.',
     sendFailed: 'Could not send.',
     userNotFound: 'No user found with that email.',
-    quotaExceeded: 'You have used up this month’s generation limit. Choose a plan to continue.',
+    quotaExceeded: 'Not enough credits. Top up your balance to continue.',
     tooManyJobs: 'Too many generations at once — wait for the current ones to finish.',
     emailNotConfirmed: 'Confirm your email via the link we sent you to use generation.',
     jobTooExpensive: 'This request is too expensive for a single generation — lower the duration or resolution.',
