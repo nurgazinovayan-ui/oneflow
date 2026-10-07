@@ -411,6 +411,9 @@ export interface NodeApi {
   getUsage: () => Promise<BudgetUsage>;
   // Web only: the caller's credit balance; absent on desktop, which keeps its local usage limit.
   getCredits?: () => Promise<CreditBalance>;
+  // Records acceptance of the Terms of Service + Privacy Policy (ConsentModal) on the server;
+  // rejects with Error('legal_outdated') when the server expects a newer edition.
+  acceptLegal?: (context: 'signup' | 'login' | 'payment', details?: Record<string, unknown>) => Promise<void>;
   setGenerationLimit: (limit: number) => Promise<boolean>;
   listArchive: (projectId: string) => Promise<ArchiveEntry[]>;
   openArchiveFolder: (projectId: string) => Promise<boolean>;

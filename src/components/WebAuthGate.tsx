@@ -1,14 +1,23 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { setWebSession, type WebSession } from '../webAuthSession';
+import { getWebSession, setWebSession, type WebSession } from '../webAuthSession';
 import { capture, identifyUser } from '../analytics';
 import { installMockApiIfNeeded } from '../mockApi';
 import { useT } from '../i18n';
 import DomeGallery from './DomeGallery';
 import AuthAdvantageCards from './AuthAdvantageCards';
 import LegalModal from './LegalModal';
+import ConsentModal from './ConsentModal';
 import type { LegalDoc } from '../legalContent';
 import { IconEye, IconEyeOff } from './Icons';
 import Logo from './Logo';
+import {
+  acceptConsent,
+  acceptedOnThisDevice,
+  getConsentStatus,
+  markPendingSignupConsent,
+  signupConsentMetadata,
+  takePendingSignupConsent,
+} from '../legalConsent';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -19,6 +28,9 @@ interface WebAuthGateProps {
 
 type Stage = 'login' | 'unlocked';
 type PanelMode = 'login' | 'register';
+// Which action the terms/privacy window is holding back: an e-mail sign-up, a Google redirect, or
+// (after a successful login) the app itself for an account without the current edition accepted.
+type ConsentFor = 'register' | 'google' | 'login';
 
 // The landing links straight to a tab of this start window: «Войти» → /?auth=login,
 // «Регистрация» / «Начать бесплатно» → /?auth=register. Pure read — the parameter is dropped from
@@ -72,6 +84,7 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
   const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
+  const [consentFor, setConsentFor] = useState<ConsentFor | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -103,14 +116,13 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
           setError(t.webAuth.connectionError);
           return;
         }
-        setWebSession({
+        await finishLogin({
           accessToken,
           refreshToken,
           userId: user.id,
           email: user.email ?? '',
           expiresAt: Date.now() + expiresIn * 1000,
         });
-        setStage('unlocked');
       } catch {
         setError(t.webAuth.connectionError);
       }
@@ -119,9 +131,68 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleGoogleAuth = () => {
+  // Google signs people in and up in one step, so the window comes before the redirect whenever this
+  // is a sign-up or this device hasn't accepted the current edition yet; the acceptance is recorded
+  // on the server once the redirect comes back with a session (finishLogin).
+  const redirectToGoogle = () => {
     const redirectTo = `${window.location.origin}${window.location.pathname}`;
     window.location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
+  };
+
+  const handleGoogleAuth = () => {
+    if (mode === 'register' || !acceptedOnThisDevice()) {
+      setConsentFor('google');
+      return;
+    }
+    redirectToGoogle();
+  };
+
+  // Every login ends here: the app opens only for an account whose acceptance of the current
+  // edition is on record. Fails closed — if the check can't be made, the window is shown.
+  const finishLogin = async (session: WebSession) => {
+    setWebSession(session);
+    identifyUser(session.userId, session.email);
+    capture('login');
+    let accepted = false;
+    try {
+      accepted = await getConsentStatus(session.accessToken);
+    } catch {
+      accepted = false;
+    }
+    if (!accepted && takePendingSignupConsent()) {
+      try {
+        await acceptConsent(session.accessToken, 'signup');
+        accepted = true;
+      } catch {
+        accepted = false;
+      }
+    }
+    if (accepted) setStage('unlocked');
+    else setConsentFor('login');
+  };
+
+  const acceptConsentWindow = async () => {
+    if (consentFor === 'register') {
+      setConsentFor(null);
+      await submitRegistration();
+    } else if (consentFor === 'google') {
+      markPendingSignupConsent();
+      redirectToGoogle();
+    } else if (consentFor === 'login') {
+      const session = getWebSession();
+      if (!session) throw new Error('legal_error');
+      await acceptConsent(session.accessToken, 'login');
+      setConsentFor(null);
+      setStage('unlocked');
+    }
+  };
+
+  const cancelConsentWindow = () => {
+    if (consentFor === 'login') {
+      setWebSession(null);
+      setPassword('');
+    }
+    setConsentFor(null);
   };
 
   const showToast = (text: string) => {
@@ -150,17 +221,13 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
         setError(data?.error_description || data?.msg || t.webAuth.invalidCredentials);
         return;
       }
-      const session: WebSession = {
+      await finishLogin({
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
         userId: data.user?.id,
         email,
         expiresAt: Date.now() + (data.expires_in ?? 3600) * 1000,
-      };
-      setWebSession(session);
-      identifyUser(session.userId, session.email);
-      capture('login');
-      setStage('unlocked');
+      });
     } catch {
       setError(t.webAuth.connectionError);
     } finally {
@@ -168,7 +235,7 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
     }
   };
 
-  const handleRegister = async (e: FormEvent) => {
+  const handleRegister = (e: FormEvent) => {
     e.preventDefault();
     setError('');
     const rEmail = registerEmail.trim();
@@ -184,12 +251,18 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
       setError(t.webAuth.passwordTooShortError);
       return;
     }
+    // the account is created only after the terms/privacy window is accepted (acceptConsentWindow)
+    setConsentFor('register');
+  };
+
+  const submitRegistration = async () => {
+    const rEmail = registerEmail.trim();
     setLoading(true);
     try {
       const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
-        body: JSON.stringify({ email: rEmail, password: registerPassword }),
+        body: JSON.stringify({ email: rEmail, password: registerPassword, data: signupConsentMetadata() }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -438,6 +511,13 @@ export default function WebAuthGate({ children }: WebAuthGateProps) {
         </button>
       </div>
       {legalDoc && <LegalModal doc={legalDoc} onClose={() => setLegalDoc(null)} />}
+      {consentFor && (
+        <ConsentModal
+          purpose={consentFor === 'login' ? 'required' : consentFor}
+          onAccept={acceptConsentWindow}
+          onCancel={cancelConsentWindow}
+        />
+      )}
     </div>
   );
 }

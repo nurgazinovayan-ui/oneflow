@@ -114,6 +114,29 @@ export interface Translations {
     payNotReady: string;
     close: string;
   };
+  // ConsentModal: terms + privacy acceptance before sign-up, before payment, and once after login
+  // for accounts that haven't accepted the current version yet
+  legalConsent: {
+    title: string;
+    leadRegister: string;
+    leadPayment: string;
+    leadGoogle: string;
+    leadRequired: string;
+    termsTab: string;
+    privacyTab: string;
+    acceptTerms: string;
+    acceptPrivacy: string;
+    refundNote: string;
+    refundLink: string;
+    accept: string;
+    accepting: string;
+    cancel: string;
+    logout: string;
+    mustAccept: string;
+    saveError: string;
+    outdated: string;
+    required: string;
+  };
   settingsModal: {
     title: string;
     account: string;
@@ -1231,6 +1254,27 @@ export const ru: Translations = {
     payNotReady: 'Оплата скоро будет подключена — пополнить баланс можно будет прямо здесь.',
     close: 'Закрыть',
   },
+  legalConsent: {
+    title: 'Соглашение с условиями',
+    leadRegister: 'Чтобы зарегистрироваться, прочитайте и примите Пользовательское соглашение и Политику конфиденциальности.',
+    leadPayment: 'Перед оплатой прочитайте и примите Пользовательское соглашение и Политику конфиденциальности.',
+    leadGoogle: 'Чтобы войти или зарегистрироваться через Google, прочитайте и примите Пользовательское соглашение и Политику конфиденциальности.',
+    leadRequired: 'Чтобы продолжить работу в ONEFLOW, прочитайте и примите актуальные Пользовательское соглашение и Политику конфиденциальности.',
+    termsTab: 'Пользовательское соглашение',
+    privacyTab: 'Политика конфиденциальности',
+    acceptTerms: 'Я прочитал(а) и принимаю Пользовательское соглашение',
+    acceptPrivacy: 'Я ознакомлен(а) с Политикой конфиденциальности и даю согласие на обработку персональных данных',
+    refundNote: 'Условия возврата средств —',
+    refundLink: 'Политика возврата',
+    accept: 'Принять и продолжить',
+    accepting: 'Сохраняем…',
+    cancel: 'Отмена',
+    logout: 'Выйти',
+    mustAccept: 'Отметьте оба пункта, чтобы продолжить.',
+    saveError: 'Не удалось сохранить согласие. Проверьте соединение и попробуйте ещё раз.',
+    outdated: 'Документы обновились — обновите страницу и примите новую редакцию.',
+    required: 'Без согласия с документами регистрация и оплата недоступны.',
+  },
   settingsModal: {
     title: 'Настройки',
     account: 'Аккаунт',
@@ -2122,7 +2166,7 @@ export const ru: Translations = {
   },
   legal: {
     privacyLink: 'Политика конфиденциальности',
-    termsLink: 'Условия использования',
+    termsLink: 'Пользовательское соглашение',
     refundLink: 'Политика возврата',
     helpLink: 'Справка',
   },
@@ -2523,6 +2567,27 @@ export const en: Translations = {
     pay: 'Continue to payment',
     payNotReady: 'Payments are being connected — you will be able to top up right here soon.',
     close: 'Close',
+  },
+  legalConsent: {
+    title: 'Terms and privacy',
+    leadRegister: 'To sign up, please read and accept the Terms of Service and the Privacy Policy.',
+    leadPayment: 'Before paying, please read and accept the Terms of Service and the Privacy Policy.',
+    leadGoogle: 'To sign in or sign up with Google, please read and accept the Terms of Service and the Privacy Policy.',
+    leadRequired: 'To keep using ONEFLOW, please read and accept the current Terms of Service and Privacy Policy.',
+    termsTab: 'Terms of Service',
+    privacyTab: 'Privacy Policy',
+    acceptTerms: 'I have read and accept the Terms of Service',
+    acceptPrivacy: 'I have read the Privacy Policy and consent to the processing of my personal data',
+    refundNote: 'Refund terms —',
+    refundLink: 'Refund Policy',
+    accept: 'Accept and continue',
+    accepting: 'Saving…',
+    cancel: 'Cancel',
+    logout: 'Log out',
+    mustAccept: 'Tick both boxes to continue.',
+    saveError: 'Couldn’t save your consent. Check your connection and try again.',
+    outdated: 'The documents have been updated — reload the page and accept the new version.',
+    required: 'Sign-up and payment aren’t available without accepting the documents.',
   },
   settingsModal: {
     title: 'Settings',

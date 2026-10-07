@@ -1,0 +1,233 @@
+/* Terms + privacy acceptance window (ConsentModal): above the start screen, the top-up window and
+   the pricing modal, so whichever action asked for consent stays underneath it. */
+.modal-overlay.consent-overlay {
+  z-index: 130;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.consent {
+  width: min(620px, 100%);
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 28px 28px 20px;
+  border-radius: 26px;
+  background: var(--v2-card, var(--c-panel));
+  color: var(--c-text);
+  box-shadow: 0 40px 100px -30px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--c-divider);
+}
+:root[data-theme='light'] .consent {
+  background: #fff;
+  box-shadow: 0 40px 90px -40px rgba(0, 0, 0, 0.35);
+}
+
+.consent h2 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+}
+.consent-lead {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--c-text-muted);
+}
+
+.consent-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 18px;
+}
+.consent-tabs button {
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--c-panel-2);
+  color: var(--c-text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.consent-tabs button:hover {
+  color: var(--c-text);
+}
+.consent-tabs button.on {
+  background: var(--v2-accent);
+  color: var(--v2-accent-ink);
+}
+:root[data-theme='light'] .consent-tabs button {
+  background: #efefef;
+  color: #4a4a4a;
+}
+:root[data-theme='light'] .consent-tabs button.on {
+  background: var(--soft-ink, #111);
+  color: #fff;
+}
+
+.consent-doc {
+  flex: 1 1 auto;
+  min-height: 140px;
+  max-height: 38vh;
+  margin-top: 12px;
+  padding: 16px 18px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-radius: 16px;
+  background: var(--c-panel-2);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--c-text-muted);
+}
+:root[data-theme='light'] .consent-doc {
+  background: #f4f4f4;
+  color: #4a4a4a;
+}
+.consent-doc:focus-visible {
+  outline: 2px solid var(--v2-accent);
+  outline-offset: 2px;
+}
+.consent-doc h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+.consent-doc h4 {
+  margin: 14px 0 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+.consent-doc p {
+  margin: 6px 0 0;
+}
+.consent-doc .consent-updated {
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+.consent-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 14px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.consent-check + .consent-check {
+  margin-top: 10px;
+}
+html:root .consent-check input[type='checkbox'] {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  padding: 0;
+  accent-color: var(--v2-accent);
+  cursor: pointer;
+}
+:root[data-theme='light'] .consent-check input[type='checkbox'] {
+  accent-color: var(--soft-ink, #111);
+}
+
+.consent-refund {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--c-text-muted);
+}
+.consent-refund button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--c-text);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.consent-error {
+  margin: 12px 0 0;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: rgba(255, 92, 92, 0.12);
+  color: #ff7a7a;
+  font-size: 13px;
+}
+:root[data-theme='light'] .consent-error {
+  color: #c62828;
+}
+
+.consent-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+.consent-actions button {
+  height: 48px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.consent-cancel {
+  background: var(--c-panel-2);
+  color: var(--c-text);
+}
+:root[data-theme='light'] .consent-cancel {
+  background: #efefef;
+}
+.consent-accept {
+  background: var(--v2-accent);
+  color: var(--v2-accent-ink);
+}
+:root[data-theme='light'] .consent-accept {
+  background: var(--soft-ink, #111);
+  color: #fff;
+}
+.consent-actions button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+.consent-accept:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.consent-foot {
+  margin: 12px 0 0;
+  font-size: 11.5px;
+  color: var(--c-text-muted);
+  text-align: right;
+}
+
+@media (max-width: 560px) {
+  .consent {
+    padding: 22px 18px 16px;
+    border-radius: 22px;
+  }
+  .consent h2 {
+    font-size: 22px;
+  }
+  .consent-doc {
+    max-height: 32vh;
+  }
+  .consent-actions {
+    flex-direction: column-reverse;
+  }
+  .consent-actions button {
+    width: 100%;
+  }
+  .consent-foot {
+    text-align: center;
+  }
+}

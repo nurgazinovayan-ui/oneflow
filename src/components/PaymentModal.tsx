@@ -3,6 +3,7 @@ import { IconCheck, IconClose } from './Icons';
 import { useT } from '../i18n';
 import type { LegalDoc } from '../legalContent';
 import { capture } from '../analytics';
+import ConsentModal from './ConsentModal';
 
 interface PaymentModalProps {
   onClose: () => void;
@@ -38,7 +39,15 @@ export default function PaymentModal({ onClose, onRecheck, onOpenLegal }: Paymen
   const [period, setPeriod] = useState<BillingPeriod>('month');
   const [toastVisible, setToastVisible] = useState(false);
 
-  const handlePay = () => {
+  // Paying starts with the terms/privacy window; only after it's accepted (and recorded on the
+  // server where there is one) does the plan go further.
+  const [consentPlan, setConsentPlan] = useState<string | null>(null);
+
+  const handlePay = (plan: string) => setConsentPlan(plan);
+
+  const acceptPayment = async () => {
+    await window.api.acceptLegal?.('payment', { plan: consentPlan, period });
+    setConsentPlan(null);
     // Deliberately not "checkout_opened": in the web build this still shows the
     // "in development" toast rather than opening LemonSqueezy, and an event named for
     // something that didn't happen is worse than no event.
@@ -92,7 +101,7 @@ export default function PaymentModal({ onClose, onRecheck, onOpenLegal }: Paymen
       includesHeading: t.paymentModal.tierPopularIncludes,
       benefits: popularBenefits,
       buttonLabel: t.paymentModal.selectBtn,
-      onSelect: handlePay,
+      onSelect: () => handlePay('popular'),
     },
     {
       key: 'max',
@@ -104,102 +113,105 @@ export default function PaymentModal({ onClose, onRecheck, onOpenLegal }: Paymen
       includesHeading: t.paymentModal.tierMaxIncludes,
       benefits: [...popularBenefits, t.paymentModal.benefitPrioritySupport],
       buttonLabel: t.paymentModal.selectBtn,
-      onSelect: handlePay,
+      onSelect: () => handlePay('max'),
     },
   ];
 
   return (
-    <div className="modal-overlay pricing-overlay" onClick={onClose}>
-      <div className="pricing-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="pricing-close" onClick={onClose}>
-          <IconClose size={16} />
-        </button>
+    <>
+      <div className="modal-overlay pricing-overlay" onClick={onClose}>
+        <div className="pricing-modal" onClick={(e) => e.stopPropagation()}>
+          <button className="pricing-close" onClick={onClose}>
+            <IconClose size={16} />
+          </button>
 
-        <div className="pricing-header">
-          <div className="pricing-header-text">
-            <h2 className="pricing-heading">{t.paymentModal.heading}</h2>
-            <p className="pricing-subheading">{t.paymentModal.subheading}</p>
+          <div className="pricing-header">
+            <div className="pricing-header-text">
+              <h2 className="pricing-heading">{t.paymentModal.heading}</h2>
+              <p className="pricing-subheading">{t.paymentModal.subheading}</p>
+            </div>
+
+            <div className="pricing-period-toggle">
+              <span className={`pricing-toggle-slider ${period === 'year' ? 'year' : ''}`} />
+              <button
+                className={period === 'month' ? 'active' : ''}
+                onClick={() => setPeriod('month')}
+              >
+                {t.paymentModal.periodMonth}
+              </button>
+              <button className={period === 'year' ? 'active' : ''} onClick={() => setPeriod('year')}>
+                {t.paymentModal.periodYear}
+                <span className="pricing-save-badge">{t.paymentModal.yearlySaveBadge}</span>
+              </button>
+            </div>
           </div>
 
-          <div className="pricing-period-toggle">
-            <span className={`pricing-toggle-slider ${period === 'year' ? 'year' : ''}`} />
-            <button
-              className={period === 'month' ? 'active' : ''}
-              onClick={() => setPeriod('month')}
-            >
-              {t.paymentModal.periodMonth}
+          <div className="pricing-grid">
+            {tiers.map((tier) => {
+              const price = period === 'month' ? tier.priceMonth : tier.priceYear;
+              return (
+                <div key={tier.key} className={`pricing-card ${tier.popular ? 'popular' : ''}`}>
+                  {tier.popular && <span className="pricing-popular-badge">{t.paymentModal.popularBadge}</span>}
+
+                  <div className="pricing-price-row">
+                    <span className="pricing-price">{price}</span>
+                    {tier.onSelect && (
+                      <span className="pricing-price-period">
+                        /{period === 'month' ? t.paymentModal.periodMonth : t.paymentModal.periodYear}
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 className="pricing-card-title">{tier.title}</h3>
+                  <p className="pricing-card-desc">{tier.description}</p>
+
+                  <div className="pricing-includes">
+                    <h4>{tier.includesHeading}</h4>
+                    <ul>
+                      {tier.benefits.map((benefit) => (
+                        <li key={benefit}>
+                          <span className="pricing-check-circle">
+                            <IconCheck size={12} />
+                          </span>
+                          {benefit}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <button
+                    className={`pricing-card-btn ${tier.onSelect ? '' : 'disabled'}`}
+                    onClick={tier.onSelect ?? undefined}
+                    disabled={!tier.onSelect}
+                  >
+                    {tier.buttonLabel}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {notFound && <div className="error-text pricing-error">{t.paymentModal.paymentNotFound}</div>}
+          <button className="pricing-recheck-link" onClick={handleRecheck} disabled={checking}>
+            {checking ? t.paymentModal.checkingBtn : t.paymentModal.recheckLink}
+          </button>
+          <div className="pricing-legal-links">
+            <button className="legal-link" onClick={() => onOpenLegal('privacy')}>
+              {t.legal.privacyLink}
             </button>
-            <button className={period === 'year' ? 'active' : ''} onClick={() => setPeriod('year')}>
-              {t.paymentModal.periodYear}
-              <span className="pricing-save-badge">{t.paymentModal.yearlySaveBadge}</span>
+            <button className="legal-link" onClick={() => onOpenLegal('terms')}>
+              {t.legal.termsLink}
+            </button>
+            <button className="legal-link" onClick={() => onOpenLegal('refund')}>
+              {t.legal.refundLink}
             </button>
           </div>
-        </div>
-
-        <div className="pricing-grid">
-          {tiers.map((tier) => {
-            const price = period === 'month' ? tier.priceMonth : tier.priceYear;
-            return (
-              <div key={tier.key} className={`pricing-card ${tier.popular ? 'popular' : ''}`}>
-                {tier.popular && <span className="pricing-popular-badge">{t.paymentModal.popularBadge}</span>}
-
-                <div className="pricing-price-row">
-                  <span className="pricing-price">{price}</span>
-                  {tier.onSelect && (
-                    <span className="pricing-price-period">
-                      /{period === 'month' ? t.paymentModal.periodMonth : t.paymentModal.periodYear}
-                    </span>
-                  )}
-                </div>
-
-                <h3 className="pricing-card-title">{tier.title}</h3>
-                <p className="pricing-card-desc">{tier.description}</p>
-
-                <div className="pricing-includes">
-                  <h4>{tier.includesHeading}</h4>
-                  <ul>
-                    {tier.benefits.map((benefit) => (
-                      <li key={benefit}>
-                        <span className="pricing-check-circle">
-                          <IconCheck size={12} />
-                        </span>
-                        {benefit}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <button
-                  className={`pricing-card-btn ${tier.onSelect ? '' : 'disabled'}`}
-                  onClick={tier.onSelect ?? undefined}
-                  disabled={!tier.onSelect}
-                >
-                  {tier.buttonLabel}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-
-        {notFound && <div className="error-text pricing-error">{t.paymentModal.paymentNotFound}</div>}
-        <button className="pricing-recheck-link" onClick={handleRecheck} disabled={checking}>
-          {checking ? t.paymentModal.checkingBtn : t.paymentModal.recheckLink}
-        </button>
-        <div className="pricing-legal-links">
-          <button className="legal-link" onClick={() => onOpenLegal('privacy')}>
-            {t.legal.privacyLink}
-          </button>
-          <button className="legal-link" onClick={() => onOpenLegal('terms')}>
-            {t.legal.termsLink}
-          </button>
-          <button className="legal-link" onClick={() => onOpenLegal('refund')}>
-            {t.legal.refundLink}
-          </button>
-        </div>
-        <div className={`pricing-toast ${toastVisible ? 'visible' : ''}`}>
-          {t.paymentModal.paymentInDevelopment}
+          <div className={`pricing-toast ${toastVisible ? 'visible' : ''}`}>
+            {t.paymentModal.paymentInDevelopment}
+          </div>
         </div>
       </div>
-    </div>
+      {consentPlan && <ConsentModal purpose="payment" onAccept={acceptPayment} onCancel={() => setConsentPlan(null)} />}
+    </>
   );
 }

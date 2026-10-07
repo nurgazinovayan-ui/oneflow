@@ -2,6 +2,11 @@ import type { Language } from './i18n';
 
 export type LegalDoc = 'privacy' | 'terms' | 'refund' | 'help';
 
+// Edition of the Terms of Service + Privacy Policy that users accept (YYYYMMDD of their «updated» date). Must equal
+// app_settings.legal_version (supabase/migrations/202610070001_legal_consent.sql): bump both whenever either text
+// changes, and every account is asked to accept the new edition once at its next login.
+export const LEGAL_VERSION = 20260901;
+
 export interface LegalSection {
   heading: string;
   paragraphs: string[];
@@ -110,7 +115,7 @@ export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = 
       ],
     },
     terms: {
-      title: 'Условия использования',
+      title: 'Пользовательское соглашение',
       updated: 'Последнее обновление: 1 сентября 2026 г.',
       intro:
         'Используя ONEFLOW (далее — «Сервис»), вы соглашаетесь с настоящими Условиями. Если вы ' +

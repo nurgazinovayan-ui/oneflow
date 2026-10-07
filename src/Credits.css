@@ -341,3 +341,15 @@ html:root .topup-slider input[type='range'] {
     text-align: left;
   }
 }
+
+/* after the terms were accepted: payment isn't connected yet, so the note is what the button leads to */
+.topup-note.on {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--c-panel-2);
+  color: var(--c-text);
+  text-align: left;
+}
+:root[data-theme='light'] .topup-note.on {
+  background: #f1f1f1;
+}

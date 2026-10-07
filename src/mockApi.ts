@@ -576,6 +576,7 @@ export function installMockApiIfNeeded(): void {
       return { costUsd, limit, month };
     },
     // Demo balance so the credits ring and the top-up slider can be tried without a backend.
+    acceptLegal: async () => {},
     getCredits: async () => ({
       available: 1250,
       reserved: 0,

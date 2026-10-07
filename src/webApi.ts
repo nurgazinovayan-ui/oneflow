@@ -20,6 +20,8 @@ import { getWebSession, setWebSession, type WebSession } from './webAuthSession'
 import { useLanguageStore, ru, en } from './i18n';
 import { capture } from './analytics';
 import { useCredits } from './credits';
+import { LEGAL_VERSION } from './legalContent';
+import { rememberAccepted } from './legalConsent';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -486,6 +488,10 @@ export function installWebApi(): void {
     // keeps BudgetUsage's shape for code shared with the desktop build.
     getUsage: async () => ({ costUsd: 0, limit: 0, month: new Date().toISOString().slice(0, 7) }),
     getCredits: () => callFunction<CreditBalance>('get-credits', {}),
+    acceptLegal: async (context, details) => {
+      await callFunction('legal-consent', { action: 'accept', version: LEGAL_VERSION, context, details });
+      rememberAccepted();
+    },
     setGenerationLimit: async (limit) => {
       localStorage.setItem('web-usage-limit', String(limit));
       return true;
