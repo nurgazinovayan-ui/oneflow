@@ -63,10 +63,11 @@ export function topUpStops(min: number, max: number): number[] {
   return stops;
 }
 
-// What a credit buys, for the "≈ N images" hints — cheapest common choices, from the price tables
-// in the generate-* functions (1 credit = 1 cent).
+// What a credit buys, for the "≈ N images" hints, from the price tables in the generate-* functions
+// (1 credit = 1 cent). The landing's pricing block (v5_ice.TOPUP_EQ) uses the same three, so both
+// show the same numbers.
 export const CREDIT_EXAMPLES = {
-  image: 7, // Nano Banana 2, 1K
-  video5s: 63, // Kling v3, 720p, 5 s
-  music: 8,
+  image: 7, // Nano Banana 2, 1K ($0.067)
+  video5s: 63, // Kling 3.0, 720p, 5 s ($0.126/s)
+  music: 8, // Lyria 3 Pro, one track ($0.08)
 };
