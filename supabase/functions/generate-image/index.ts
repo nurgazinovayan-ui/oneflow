@@ -35,6 +35,8 @@ const OPENROUTER_IMAGE_MODEL_SLUGS: Record<string, string> = {
   // retired the preview slug on 2026-06-25 — use the stable slug, not the preview one.
   'google/nano-banana-pro': 'google/gemini-3-pro-image',
   'google/nano-banana-2': 'google/gemini-3.1-flash-image',
+  // Nano Banana 2.1 (Flash tier, released 2026-10-06) — OpenRouter lists it under its own name
+  'google/nano-banana-2.1': 'google/gemini-nano-banana-2.1',
   'google/nano-banana-2-lite': 'google/gemini-3.1-flash-lite-image',
   'openai/gpt-image-2': 'openai/gpt-image-2',
 };
@@ -58,6 +60,9 @@ const supabaseAdmin = createClient(
 const IMAGE_PRICE_USD: Record<string, Record<string, number> | number> = {
   'google/nano-banana-pro': { '1K': 0.134, '2K': 0.202, '4K': 0.302 },
   'google/nano-banana-2': { '1K': 0.067, '2K': 0.101, '4K': 0.151 },
+  // $30 per 1M image-output tokens (1K ≈ 1120, 2K ≈ 1680, 4K ≈ 2520 tokens); the real per-call
+  // cost from OpenRouter (usage.cost) is still preferred when it comes back
+  'google/nano-banana-2.1': { '1K': 0.0336, '2K': 0.0504, '4K': 0.0756 },
   'google/nano-banana-2-lite': { '1K': 0.034, '2K': 0.051, '4K': 0.076 },
   'openai/gpt-image-2': { auto: 0.03, low: 0.03, medium: 0.05, high: 0.08 },
   'recraft-ai/recraft-v4-svg': 0.08,
@@ -222,6 +227,7 @@ function buildOpenRouterImageInput(
   const supportedRatios: Record<string, string[]> = {
     'google/nano-banana-pro': ['1:1', '3:4', '4:3', '9:16', '16:9'],
     'google/nano-banana-2': ['1:1', '16:9', '9:16'],
+    'google/nano-banana-2.1': ['1:1', '3:4', '4:3', '9:16', '16:9'],
     'openai/gpt-image-2': ['1:1', '3:2', '2:3'],
     'openai/gpt-image-2.5-sunburst': ['1:1', '3:2', '2:3'],
     'openai/gpt-image-2.5-flare': ['1:1', '3:2', '2:3'],

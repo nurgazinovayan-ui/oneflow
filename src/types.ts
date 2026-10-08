@@ -256,6 +256,7 @@ export interface GenerationLogEntry {
 export const IMAGE_PRICE_USD: Record<string, Record<string, number> | number> = {
   'google/nano-banana-pro': { '1K': 0.134, '2K': 0.202, '4K': 0.302 },
   'google/nano-banana-2': { '1K': 0.067, '2K': 0.101, '4K': 0.151 },
+  'google/nano-banana-2.1': { '1K': 0.0336, '2K': 0.0504, '4K': 0.0756 },
   'google/nano-banana-2-lite': { '1K': 0.034, '2K': 0.051, '4K': 0.076 },
   'openai/gpt-image-2': { auto: 0.03, low: 0.03, medium: 0.05, high: 0.08 },
   'recraft-ai/recraft-v4-svg': 0.08,
@@ -480,6 +481,7 @@ export const DSP_URL = 'https://buy.kz.omniboard360.io/#/login';
 // РСЯ/YAN preset) are swapped for a t.nodes.modelMeta.* string at render time.
 export const IMAGE_MODELS = [
   { label: 'Nano Banana Pro (Google, Gemini 3)', value: 'google/nano-banana-pro' },
+  { label: 'Nano Banana 2.1 (Google, new)', value: 'google/nano-banana-2.1' },
   { label: 'Nano Banana 2 (Google, editing)', value: 'google/nano-banana-2' },
   { label: 'Nano Banana 2 Lite (Google, fast)', value: 'google/nano-banana-2-lite' },
   { label: 'GPT Image 2 (OpenAI)', value: 'openai/gpt-image-2' },
@@ -524,6 +526,13 @@ export interface ImageModelMeta {
 // instead, so this stays unchanged rather than forking the shared dropdown per platform.
 export const IMAGE_MODEL_META: Record<string, ImageModelMeta> = {
   'google/nano-banana-pro': {
+    resolutions: [
+      { label: '1K', value: '1K' },
+      { label: '2K', value: '2K' },
+      { label: '4K', value: '4K' },
+    ],
+  },
+  'google/nano-banana-2.1': {
     resolutions: [
       { label: '1K', value: '1K' },
       { label: '2K', value: '2K' },
