@@ -7,6 +7,8 @@ import { installMockApiIfNeeded } from './mockApi';
 import { installWebApi } from './webApi';
 import ConsentBanner from './components/ConsentBanner';
 import { initAnalytics } from './analytics';
+import { useThemeStore } from './theme';
+import { useLanguageStore } from './i18n';
 // Self-hosted (not Google Fonts CDN) so the desktop build works fully offline — includes the
 // cyrillic subset since the app's primary audience is Russian-speaking.
 import '@fontsource-variable/geist';
@@ -16,6 +18,15 @@ import '@fontsource-variable/inter/wght.css';
 import './index.css';
 
 const isWebMode = import.meta.env.VITE_WEB_MODE === '1';
+
+// The theme goes on <html> before the first render, so the login screen and its windows (terms,
+// password reset) already use it; App keeps it in sync after that.
+document.documentElement.dataset.theme = useThemeStore.getState().theme;
+// <html lang> follows the interface language (English unless the user picked Russian).
+document.documentElement.lang = useLanguageStore.getState().language;
+useLanguageStore.subscribe((s) => {
+  document.documentElement.lang = s.language;
+});
 
 if (isWebMode) {
   installWebApi();
