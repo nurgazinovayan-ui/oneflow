@@ -19,3 +19,6 @@ release
 .DS_Store
 Thumbs.db
 __pycache__/
+
+# Origin font (landing headings): its licence forbids public copies; the landing build puts it here for the site zip
+public/fonts/Origin-*

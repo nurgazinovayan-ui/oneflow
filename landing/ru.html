@@ -779,10 +779,17 @@ dialog.doc { background: var(--raised); color: var(--ink); border-radius: 26px; 
 dialog.doc::backdrop { background: rgba(0,0,0,.35); } .sf input, .sf textarea { background: #fff; border-color: transparent; box-shadow: var(--sh-sm); }
 .sf input:focus, .sf textarea:focus { border-color: var(--ink); } .totop { border-radius: 50%; background: var(--ac); color: #fff; } .skip { background: var(--ac); color: #fff; }
 
+/* English headings in Origin Black Display (fonts.css); the Russian page keeps Geist, Origin has no Cyrillic */
+html[lang="en"] .hero h1, html[lang="en"] .sh h2, html[lang="en"] .lt h3, html[lang="en"] .end h2 {
+  font-family: 'Origin', var(--d); font-weight: 900; letter-spacing: 0; word-spacing: .12em; text-wrap: balance; }
+html[lang="en"] .hero h1 { font-size: clamp(36px, 4.4vw, 62px); line-height: 1.02; }
+html[lang="en"] .sh h2 { font-size: clamp(30px, 4vw, 52px); line-height: 1.04; }
+html[lang="en"] .lt h3 { font-size: clamp(28px, 3.2vw, 42px); line-height: 1.05; }
+
 @media (max-width: 760px) {
   .hbg::after { background: linear-gradient(180deg, rgba(229,229,229,.7) 0%, rgba(229,229,229,0) 18%),
     linear-gradient(0deg, rgba(229,229,229,.97) 0%, rgba(229,229,229,.9) 38%, rgba(229,229,229,0) 72%); }
-  .hero { padding-top: 84px; } .hero h1 { font-size: 10.5vw; } .hero .acts { flex-direction: column; align-items: stretch; }
+  .hero { padding-top: 84px; } .hero h1 { font-size: 10.5vw; } html[lang="en"] .hero h1 { font-size: 9vw; } .hero .acts { flex-direction: column; align-items: stretch; }
   .ed { flex-wrap: nowrap; justify-content: flex-start; gap: 8px; } .ed button { padding: 11px 15px; border-radius: 999px; background: var(--raised); box-shadow: var(--sh-sm); color: var(--ink2); }
   .ed button[aria-selected="true"] { background: var(--ac); color: #fff; }
   .mpanel { border-radius: 26px; } .tpc { border-radius: 26px; } .end { border-radius: 28px; }
