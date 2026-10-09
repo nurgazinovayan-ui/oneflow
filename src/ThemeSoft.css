@@ -1,6 +1,6 @@
 /* =============================================================================================
    Light theme «Soft» (by request, from a reference): light-grey page, soft light cards with a faint
-   shadow, black pills for the active item and the main action, a lime accent with a soft glow,
+   shadow, black pills for the active item and the main action, a flat blue accent (#0a6cff),
    thin large headings, round icon buttons and more air. Web only (:has(.web-mode)); the dark
    theme is untouched.
    ============================================================================================= */
@@ -12,8 +12,7 @@
   --soft-ink: #2b2b2b;
   --soft-text: #2d2d2d;
   --soft-muted: #9a9a9a;
-  --soft-lime: #cdf158;
-  --soft-lime-glow: rgba(205, 241, 88, 0.55);
+  --soft-accent: #0a6cff;
   --soft-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 22px 44px -30px rgba(0, 0, 0, 0.22);
   --soft-shadow-sm: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 8px 18px -12px rgba(0, 0, 0, 0.22);
 
@@ -23,10 +22,10 @@
   --v2-field: var(--soft-field);
   --v2-line: transparent;
   --v2-ghost: rgba(0, 0, 0, 0.035);
-  --v2-accent: var(--soft-lime);
-  --v2-accent-ink: #1d2405;
+  --v2-accent: var(--soft-accent);
+  --v2-accent-ink: #ffffff;
   --v2-accent-strong: var(--soft-ink);
-  --v2-accent-soft: rgba(205, 241, 88, 0.35);
+  --v2-accent-soft: rgba(10, 108, 255, 0.14);
   --v2-sep: rgba(0, 0, 0, 0.08);
   --home-track: #d9d9d9;
   --home-accent: var(--soft-ink);
@@ -40,10 +39,10 @@
   --c-panel-3: #dedede;
   --c-card: var(--soft-card);
   --c-divider: rgba(0, 0, 0, 0.06);
-  --c-pink: var(--soft-lime);
-  --c-pink-hover: #d8f57a;
-  --c-pink-dim: rgba(205, 241, 88, 0.45);
-  --c-pink-text: #1d2405;
+  --c-pink: var(--soft-accent);
+  --c-pink-hover: #2a80ff;
+  --c-pink-dim: rgba(10, 108, 255, 0.4);
+  --c-pink-text: #ffffff;
   --glow-gradient: var(--soft-ink);
   --glow-text: #ffffff;
 }
@@ -137,11 +136,11 @@
   background: #ffffff;
 }
 
-/* selected = lime with a soft glow (like the highlighted nodes in the reference) */
+/* selected = flat blue */
 :root[data-theme='light'] .web-mode :is(.v2-chip.on, .motion-panel.v2-mode .mk-chip.on, .react-flow__node .node-option-btn.active, .assets-sort-btn.active) {
-  background: var(--soft-lime);
-  color: #1d2405;
-  box-shadow: 0 0 22px var(--soft-lime-glow);
+  background: var(--soft-accent);
+  color: #ffffff;
+  box-shadow: none;
 }
 
 /* ---- main action: black pill ------------------------------------------------------------------ */
@@ -248,9 +247,9 @@
 }
 
 :root[data-theme='light'] .web-mode .home-hello h1 em {
-  color: var(--soft-text);
-  background: linear-gradient(transparent 62%, var(--soft-lime) 62%, var(--soft-lime) 92%, transparent 92%);
-  padding: 0 4px;
+  color: var(--soft-accent);
+  background: none;
+  padding: 0;
 }
 
 :root[data-theme='light'] .web-mode .home-banner {
@@ -259,8 +258,8 @@
 }
 
 :root[data-theme='light'] .web-mode .home-tag {
-  background: var(--soft-lime);
-  color: #1d2405;
+  background: var(--soft-accent);
+  color: #ffffff;
   border-radius: 999px;
   padding: 4px 11px;
 }
@@ -274,8 +273,8 @@
 }
 
 :root[data-theme='light'] .web-mode .home-more-icon {
-  background: var(--soft-lime);
-  color: #1d2405;
+  background: var(--soft-accent);
+  color: #ffffff;
 }
 
 :root[data-theme='light'] .web-mode .home-tiles {
@@ -308,8 +307,8 @@
 }
 
 :root[data-theme='light'] .web-mode .home-chip.new {
-  background: var(--soft-lime);
-  color: #1d2405;
+  background: var(--soft-accent);
+  color: #ffffff;
   border-radius: 999px;
 }
 
@@ -337,8 +336,8 @@
 }
 
 :root[data-theme='light'] .web-mode :is(.v2-steps li::before, .v2-num.done, .v2-numlist li::before) {
-  background: var(--soft-lime);
-  color: #1d2405;
+  background: var(--soft-accent);
+  color: #ffffff;
 }
 
 :root[data-theme='light'] .web-mode .v2-num {
@@ -368,12 +367,12 @@
 
 :root[data-theme='light'] .web-mode .v2-pred-card.winner {
   border-color: transparent;
-  box-shadow: 0 0 0 2px var(--soft-ink), 0 0 30px var(--soft-lime-glow);
+  box-shadow: 0 0 0 2px var(--soft-ink);
 }
 
 :root[data-theme='light'] .web-mode .v2-pred-verdict {
-  background: var(--soft-lime);
-  color: #1d2405;
+  background: var(--soft-accent);
+  color: #ffffff;
 }
 
 :root[data-theme='light'] .web-mode .v2-pred-score b {
@@ -382,8 +381,8 @@
 }
 
 :root[data-theme='light'] .web-mode .v2-pill-accent {
-  background: var(--soft-lime);
-  color: #1d2405;
+  background: var(--soft-accent);
+  color: #ffffff;
 }
 
 :root[data-theme='light'] .web-mode .v2-wave i.on {
@@ -395,7 +394,7 @@
   color: #ffffff;
 }
 
-/* ---- nodes canvas: light dotted page, soft round nodes, lime glow on selection --------------- */
+/* ---- nodes canvas: light dotted page, soft round nodes, a black ring on selection ----------- */
 :root[data-theme='light'] .web-mode .react-flow {
   background: var(--soft-page);
 }
@@ -408,7 +407,7 @@
 }
 
 :root[data-theme='light'] .web-mode .react-flow__node.selected > .node {
-  box-shadow: 0 0 0 2px var(--soft-ink), 0 0 40px var(--soft-lime-glow);
+  box-shadow: 0 0 0 2px var(--soft-ink);
 }
 
 :root[data-theme='light'] .web-mode .canvas-toolbar {
@@ -448,7 +447,7 @@
 
 :root[data-theme='light'] .web-mode .v2-strategy .strategy-selection-card.selected {
   border-color: transparent;
-  box-shadow: 0 0 0 2px var(--soft-ink), 0 0 30px var(--soft-lime-glow);
+  box-shadow: 0 0 0 2px var(--soft-ink);
 }
 
 :root[data-theme='light'] .web-mode .v2-strategy .strategy-onboarding-progress-fill {

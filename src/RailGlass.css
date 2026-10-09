@@ -3,7 +3,8 @@
    - the «Главная» button in the side menu — the glow drifts inside it on hover (an iridescent
      "flow") with a soft sheen passing over; size and corner radius come from the theme;
    - the nodes dock panel (canvas toolbar) — static matte glass, corner radius unchanged.
-   Other side-menu buttons keep their theme look. Both themes, web only. `html:root` and the
+   Other side-menu buttons keep their theme look. Dark theme, web only; the light theme paints the same
+   three pieces flat blue (below). `html:root` and the
    doubled class only lift specificity above the theme files.
    ============================================================================================= */
 @property --rg-x {
@@ -199,6 +200,52 @@ html:root .web-mode .home-banner .home-tag {
   html:root .web-mode .home-banner .home-tag {
     animation: none;
   }
+}
+
+/* ---- light theme: the same three pieces in flat blue (the light theme's accent) instead of green glass */
+html:root[data-theme='light'] .web-mode .app-rail .app-rail-btn.app-rail-home,
+html:root[data-theme='light'] .web-mode .app-rail .app-rail-btn.app-rail-home.active,
+html:root[data-theme='light'] .web-mode .app-rail .app-rail-btn.app-rail-home:hover,
+html:root[data-theme='light'] .web-mode .app-rail .app-rail-btn.app-rail-home:focus-visible {
+  color: #ffffff;
+  background: #0a6cff;
+  box-shadow: none;
+  animation: none;
+}
+
+html:root[data-theme='light'] .web-mode .app-rail .app-rail-btn.app-rail-home:hover {
+  background: #2a80ff;
+}
+
+html:root[data-theme='light'] .web-mode .app-rail .app-rail-btn.app-rail-home > svg {
+  filter: none;
+}
+
+html:root[data-theme='light'] .web-mode .app-rail .app-rail-btn.app-rail-home:focus-visible {
+  outline-color: #0a6cff;
+}
+
+html:root[data-theme='light'] .web-mode .canvas-toolbar.canvas-toolbar {
+  background: #0a6cff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+html:root[data-theme='light'] .web-mode .canvas-toolbar.canvas-toolbar hr,
+html:root[data-theme='light'] .web-mode .canvas-toolbar.canvas-toolbar .toolbar-divider {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+html:root[data-theme='light'] .web-mode .home-banner .home-tag {
+  color: #ffffff;
+  background: #0a6cff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  text-shadow: none;
+  animation: none;
 }
 
 /* ---- logo lines up with the page title -------------------------------------------------------- */
