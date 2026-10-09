@@ -651,24 +651,29 @@ dialog.doc { background: var(--card); } .sf input, .sf textarea { background: va
 
 /* news: rectangular video/image cards under the top menu */
 .news { margin: 0 0 44px; }
-.nw-row { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 20px; scrollbar-width: none;
+.nw-row { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 20px; scrollbar-width: none;
   padding: 8px 20px 36px; margin: -8px -20px -36px; }
 .nw-row::-webkit-scrollbar { display: none; }
-.nw-card { position: relative; flex: none; width: 300px; aspect-ratio: 16 / 9; border-radius: 20px; overflow: hidden; scroll-snap-align: start; isolation: isolate;
+/* centred while they fit; once the row scrolls, the auto margins collapse and it starts at the left edge */
+.nw-row > :first-child { margin-left: auto; } .nw-row > :last-child { margin-right: auto; }
+.nw-card { position: relative; flex: none; width: 248px; aspect-ratio: 16 / 9; border-radius: 18px; overflow: hidden; scroll-snap-align: start; isolation: isolate;
   background: #cfcfcf; box-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 18px 36px -22px rgba(0,0,0,.45); color: #fff; text-decoration: none;
   transition: transform .3s var(--e), box-shadow .3s; }
 a.nw-card:hover { transform: translateY(-3px); box-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 26px 44px -24px rgba(0,0,0,.55); }
 .nw-media, .nw-card video, .nw-card img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; background: center / cover no-repeat; }
 .nw-card::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(0,0,0,0) 38%, rgba(0,0,0,.72)); }
-.nw-new { position: absolute; left: 12px; top: 12px; display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px 4px 7px; border-radius: 99px;
-  background: #cdf158; color: #1d2405; font: 800 10.5px/1 var(--d); letter-spacing: .08em; box-shadow: 0 0 18px rgba(205,241,88,.55); }
-.nw-new::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #1d2405; animation: nwPulse 1.6s ease-in-out infinite; }
-@keyframes nwPulse { 50% { transform: scale(.55); opacity: .5; } }
+.nw-new { position: absolute; left: 8px; top: 8px; width: 44px; height: 44px; display: grid; place-items: center; isolation: isolate;
+  color: #1d2405; font: 800 9.5px/1 var(--d); letter-spacing: .05em; transform: rotate(-14deg);
+  filter: drop-shadow(0 0 1px rgba(29,36,5,.9)) drop-shadow(0 3px 8px rgba(0,0,0,.35)); }  /* thin dark edge: readable on lime ads too */
+/* a starburst sticker instead of a pill: the jagged lime star turns slowly, the word stays put */
+.nw-new::before { content: ''; position: absolute; inset: 0; z-index: -1; background: #cdf158;
+  clip-path: polygon(50.0% 0.0%, 59.3% 9.1%, 71.7% 5.0%, 76.2% 17.2%, 89.1% 18.8%, 87.8% 31.8%, 98.7% 38.9%, 92.0% 50.0%, 98.7% 61.1%, 87.8% 68.2%, 89.1% 81.2%, 76.2% 82.8%, 71.7% 95.0%, 59.3% 90.9%, 50.0% 100.0%, 40.7% 90.9%, 28.3% 95.0%, 23.8% 82.8%, 10.9% 81.2%, 12.2% 68.2%, 1.3% 61.1%, 8.0% 50.0%, 1.3% 38.9%, 12.2% 31.8%, 10.9% 18.8%, 23.8% 17.2%, 28.3% 5.0%, 40.7% 9.1%); animation: nwSpin 14s linear infinite; }
+@keyframes nwSpin { to { transform: rotate(360deg); } }
 .nw-txt { position: absolute; left: 14px; right: 14px; bottom: 12px; display: grid; gap: 2px; text-shadow: 0 1px 8px rgba(0,0,0,.35); }
-.nw-txt b { font: 600 15px/1.25 var(--d); letter-spacing: -.01em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.nw-txt span { font-size: 12.5px; line-height: 1.35; color: rgba(255,255,255,.82); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nw-txt b { font: 600 14px/1.25 var(--d); letter-spacing: -.01em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.nw-txt span { font-size: 12px; line-height: 1.35; color: rgba(255,255,255,.82); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (prefers-reduced-motion: reduce) { .nw-new::before { animation: none; } }
-@media (max-width: 760px) { .news { margin-bottom: 28px; } .nw-card { width: 72vw; max-width: 300px; } }
+@media (max-width: 760px) { .news { margin-bottom: 28px; } .nw-card { width: 64vw; max-width: 248px; } }
 
 /* ===================== «Soft» — the app's light theme ===================== */
 :root { --bg: #e5e5e5; --ink: #2d2d2d; --ink2: #5b5b5b; --muted: #8f8f8f; --line: rgba(0,0,0,.07); --card: #f1f1f1; --raised: #f7f7f7; --field: #e7e7e7;
@@ -688,7 +693,7 @@ html { color-scheme: light; } body { background: var(--bg); color: var(--ink); }
 .btn.g:hover, .btn.w:hover { background: #fff; }
 
 /* menu */
-.nav .in { background: rgba(229,229,229,.8); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-radius: 999px; }
+.nav .in { background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }  /* no plate under the menu */
 .nav nav a { color: var(--ink2); } .nav nav a:hover { color: var(--ink); } .nav .btn, .mnav .row .in2, .mnav .row a { border-radius: 999px; }
 .lang { background: var(--raised); box-shadow: var(--sh-sm); border-radius: 999px; } .lang a { border-radius: 999px; color: var(--muted); }
 .lang a:hover { color: var(--ink); } .lang a[aria-current] { background: var(--ac); color: #fff; }
