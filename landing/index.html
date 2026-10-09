@@ -16,7 +16,7 @@
 <link rel="alternate" hreflang="x-default" href="https://oneflow.art/">
 <link rel="canonical" href="https://oneflow.art/">
 <meta property="og:url" content="https://oneflow.art/">
-<script>document.documentElement.classList.add('js');try{if(localStorage.getItem('oneflow-theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){};try{if(localStorage.getItem('of-lang')==='ru'&&!/cms-edit/.test(location.search))location.replace('/ru'+location.hash)}catch(e){}</script>
+<script>document.documentElement.classList.add('js');try{if(localStorage.getItem('of-site-theme')!=='light')document.documentElement.dataset.theme='dark'}catch(e){document.documentElement.dataset.theme='dark'};try{if(localStorage.getItem('of-lang')==='ru'&&!/cms-edit/.test(location.search))location.replace('/ru'+location.hash)}catch(e){}</script>
 <link rel="preload" href="/fonts/Origin-BlackDisplay.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face {
@@ -1113,7 +1113,7 @@ html[data-theme="dark"] .mb-strip, html[data-theme="dark"] .nw-card { background
 })();
 </script>
 <script>
-// ☀/☾: light by default; the choice is stored under the app's key so /app opens in the same theme
+// ☀/☾: dark by default; the choice is stored under the site's own key (the app keeps its own theme)
 (() => {
   const root = document.documentElement, meta = document.querySelector('meta[name="theme-color"]');
   const sync = () => { const dark = root.dataset.theme === 'dark';
@@ -1122,7 +1122,7 @@ html[data-theme="dark"] .mb-strip, html[data-theme="dark"] .nw-card { background
   document.querySelectorAll('.thm, .mthm').forEach((b) => b.addEventListener('click', () => {
     const dark = root.dataset.theme !== 'dark';
     if (dark) root.dataset.theme = 'dark'; else delete root.dataset.theme;
-    try { localStorage.setItem('oneflow-theme', dark ? 'dark' : 'light'); } catch (e) {}
+    try { localStorage.setItem('of-site-theme', dark ? 'dark' : 'light'); } catch (e) {}
     sync(); }));
   sync();
 })();
