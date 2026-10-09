@@ -714,16 +714,16 @@ html { color-scheme: light; } body { background: var(--bg); color: var(--ink); }
 .lang a:hover { color: var(--ink); } .lang a[aria-current] { background: var(--ac); color: #fff; }
 .mnav { background: rgba(241,241,241,.97); border-radius: 24px; } .mnav a:hover { background: var(--field); }
 
-/* hero: the video stays the background of the first screen; the headline, text and buttons are centred, over a
-   light haze in the page colour round the middle (and a band at the top for the menu) */
+/* hero: the video stays the background of the first screen; the headline, text and buttons sit on the left, over a
+   light haze in the page colour on that side (and a band at the top for the menu) */
 .hbg { background: #d4d4d4; }
 .hbg::after { background: linear-gradient(180deg, rgba(229,229,229,.75) 0%, rgba(229,229,229,.3) 10%, rgba(229,229,229,0) 22%),
-    radial-gradient(ellipse 46% 64% at 50% 62%, rgba(229,229,229,.92) 0%, rgba(229,229,229,.7) 48%, rgba(229,229,229,0) 100%); }
-.hero .wrap { text-align: center; }
-.hero h1 { max-width: 860px; margin-left: auto; margin-right: auto; font: 200 clamp(40px, 4.9vw, 70px)/1.03 var(--d); letter-spacing: -.045em; color: var(--ink); }
+    radial-gradient(ellipse 58% 72% at 18% 64%, rgba(229,229,229,.92) 0%, rgba(229,229,229,.7) 48%, rgba(229,229,229,0) 100%); }
+.hero .wrap { text-align: left; }
+.hero h1 { max-width: 860px; margin-left: 0; margin-right: 0; font: 200 clamp(40px, 4.9vw, 70px)/1.03 var(--d); letter-spacing: -.045em; color: var(--ink); }
 .hero h1 .gr { color: var(--ink); -webkit-text-fill-color: currentColor; font-weight: 300; background: none; }
-.hero .sub { max-width: 560px; margin-left: auto; margin-right: auto; font-size: 18px; color: var(--ink2); }
-.hero .acts { justify-content: center; }
+.hero .sub { max-width: 560px; margin-left: 0; margin-right: 0; font-size: 18px; color: var(--ink2); }
+.hero .acts { justify-content: flex-start; }
 /* the news card sits right under the menu; the headline block stays at the bottom of the first screen */
 .hero { padding-top: 92px; }
 .hero > .wrap { align-self: stretch; display: flex; flex-direction: column; justify-content: flex-end; }
@@ -790,14 +790,14 @@ dialog.doc::backdrop { background: rgba(0,0,0,.35); } .sf input, .sf textarea { 
 /* English headings in Origin Black Display (fonts.css); the Russian page keeps Geist, Origin has no Cyrillic */
 html[lang="en"] .hero h1, html[lang="en"] .sh h2, html[lang="en"] .lt h3, html[lang="en"] .end h2 {
   font-family: 'Origin', var(--d); font-weight: 900; letter-spacing: 0; word-spacing: .12em; text-wrap: balance; }
-html[lang="en"] .hero h1 { font-size: clamp(36px, 4.4vw, 62px); line-height: 1.02; }
+html[lang="en"] .hero h1 { font-size: clamp(32px, 3.9vw, 54px); line-height: .98; text-transform: uppercase; letter-spacing: .01em; }
 html[lang="en"] .sh h2 { font-size: clamp(30px, 4vw, 52px); line-height: 1.04; }
 html[lang="en"] .lt h3 { font-size: clamp(28px, 3.2vw, 42px); line-height: 1.05; }
 
 @media (max-width: 760px) {
   .hbg::after { background: linear-gradient(180deg, rgba(229,229,229,.7) 0%, rgba(229,229,229,0) 18%),
     linear-gradient(0deg, rgba(229,229,229,.97) 0%, rgba(229,229,229,.9) 38%, rgba(229,229,229,0) 72%); }
-  .hero { padding-top: 84px; } .hero h1 { font-size: 10.5vw; } html[lang="en"] .hero h1 { font-size: 9vw; } .hero .acts { flex-direction: column; align-items: stretch; }
+  .hero { padding-top: 84px; } .hero h1 { font-size: 10.5vw; } html[lang="en"] .hero h1 { font-size: 8vw; } .hero .acts { flex-direction: column; align-items: stretch; }
   .ed { flex-wrap: nowrap; justify-content: flex-start; gap: 8px; } .ed button { padding: 11px 15px; border-radius: 999px; background: var(--raised); box-shadow: var(--sh-sm); color: var(--ink2); }
   .ed button[aria-selected="true"] { background: var(--ac); color: #fff; }
   .mpanel { border-radius: 26px; } .tpc { border-radius: 26px; } .end { border-radius: 28px; }
