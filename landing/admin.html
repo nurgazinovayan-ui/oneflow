@@ -106,6 +106,14 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
 .bn-link { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 8px; }
 .upl { position: relative; overflow: hidden; } .upl input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .note { padding: 12px 14px; border-radius: 12px; background: var(--acc-soft); color: var(--ink2); margin-bottom: 14px; font-size: 13px; }
+/* landing news cards editor */
+.nw-prev { position: relative; aspect-ratio: 16 / 9; max-width: 340px; border-radius: 16px; overflow: hidden; background: #0b0b0d; color: #fff; }
+.nw-prev img, .nw-prev video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.nw-prev::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 38%, rgba(0,0,0,.72)); }
+.nw-prev .nb { position: absolute; z-index: 1; left: 10px; top: 10px; padding: 3px 8px; border-radius: 99px; background: #cdf158; color: #1d2405; font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+.nw-prev .tx { position: absolute; z-index: 1; left: 12px; right: 12px; bottom: 10px; display: grid; gap: 2px; } .nw-prev .tx b { font-size: 14px; line-height: 1.25; } .nw-prev .tx span { font-size: 11.5px; opacity: .82; }
+.nw-prev .none { position: absolute; inset: 0; display: grid; place-items: center; color: #8b8b98; font-size: 13px; z-index: 1; }
+.chk { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; } .chk input { width: 16px; height: 16px; }
 @media (max-width: 1100px) { .bn { grid-template-columns: 1fr; } .bn-langs { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .app { grid-template-columns: 1fr; }
   .side { z-index: 5; height: auto; flex-direction: row; align-items: center; gap: 2px; padding: 8px 12px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); scrollbar-width: none; }
@@ -138,6 +146,7 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
     <button class="nav" data-v="support">Поддержка <span class="cnt hide" id="tcnt"></span></button>
     <button class="nav" data-v="content">Тексты сайта</button>
     <button class="nav" data-v="banners">Баннеры приложения</button>
+    <button class="nav" data-v="news">Новинки на сайте</button>
     <div class="foot"><span id="who"></span><a href="/" target="_blank" rel="noopener">Открыть сайт ↗</a><button class="btn s" id="out" type="button">Выйти</button></div>
   </aside>
   <main class="main">
@@ -148,6 +157,7 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
     <section id="v-support" class="hide"></section>
     <section id="v-content" class="hide"></section>
     <section id="v-banners" class="hide"></section>
+    <section id="v-news" class="hide"></section>
   </main>
 </div>
 <div class="shade hide" id="shade"></div><aside class="drawer hide" id="drawer" role="dialog" aria-modal="true"></aside>
@@ -194,6 +204,7 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
   const api = DEMO ? demoApi() : { overview: () => call('admin-api', { action: 'overview' }), ticket: (b) => call('admin-api', { action: 'ticket-update', ...b }),
     content: (b) => call('admin-api', { action: 'content-save', ...b }), send: (emails, message) => call('admin-send-message', { mode: 'selected', emails, message }),
     banners: (slides) => call('admin-api', { action: 'banners-save', slides }), mediaUrl: (b) => call('admin-api', { action: 'media-upload-url', ...b }),
+    news: (items) => call('admin-api', { action: 'news-save', items }),
     mediaDelete: (path) => call('admin-api', { action: 'media-delete', path }), grant: (b) => call('admin-api', { action: 'credits-grant', ...b }) };
   const load = async () => {
     $('#rf').disabled = true;
@@ -203,11 +214,11 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
   };
 
   // ---------------------------------------------------------------- views
-  const TITLES = { overview: 'Обзор', users: 'Пользователи', gens: 'Генерации', support: 'Поддержка', content: 'Тексты сайта', banners: 'Баннеры приложения' };
+  const TITLES = { overview: 'Обзор', users: 'Пользователи', gens: 'Генерации', support: 'Поддержка', content: 'Тексты сайта', banners: 'Баннеры приложения', news: 'Новинки на сайте' };
   const go = (v) => { view = v; $$('.nav').forEach((b) => b.classList.toggle('on', b.dataset.v === v)); Object.keys(TITLES).forEach((k) => $('#v-' + k).classList.toggle('hide', k !== v)); $('#title').textContent = TITLES[v]; render(); };
   $$('.nav').forEach((b) => b.addEventListener('click', () => go(b.dataset.v)));
   const render = () => { if (!D) return; const n = D.tickets.filter((t) => t.status === 'new').length; $('#tcnt').textContent = n; $('#tcnt').classList.toggle('hide', !n);
-    ({ overview: vOverview, users: vUsers, gens: vGens, support: vSupport, content: vContent, banners: vBanners })[view](); };
+    ({ overview: vOverview, users: vUsers, gens: vGens, support: vSupport, content: vContent, banners: vBanners, news: vNews })[view](); };
 
   const days = () => { const out = [], m = new Map(D.stats.byDay.map((d) => [d.day, d])); for (let i = D.stats.days - 1; i >= 0; i--) { const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10); out.push(m.get(d) || { day: d, count: 0, spend: 0 }); } return out; };
 
@@ -331,7 +342,7 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
     if (!items.length) { el.innerHTML = '<p class="empty">Не удалось прочитать тексты лендинга. Откройте админку на том же домене, что и сайт (oneflow.art/admin).</p>'; return; }
     const ov = new Map(D.content.map((c) => { try { return [c.key, JSON.parse(c.value)]; } catch { return [c.key, null]; } }));
     const groups = new Map(); items.filter((it) => !cq || (it.key + ' ' + it.text + ' ' + (ov.get(it.key)?.t || '')).toLowerCase().includes(cq.toLowerCase())).forEach((it) => { if (!groups.has(it.section)) groups.set(it.section, []); groups.get(it.section).push(it); });
-    const orphan = D.content.filter((c) => (cmsLang === 'en') === c.key.startsWith('en:') && !items.some((it) => it.key === c.key));
+    const orphan = D.content.filter((c) => (cmsLang === 'en') === c.key.startsWith('en:') && c.key !== BANNERS_KEY && c.key !== NEWS_KEY && !items.some((it) => it.key === c.key));
     el.innerHTML = `<div class="tools"><span class="seg" role="group" aria-label="Язык сайта">${['en', 'ru'].map((l) => `<button class="btn s ${cmsLang === l ? 'a' : ''}" data-cl="${l}" type="button">${l === 'en' ? 'English' : 'Русский'}</button>`).join('')}</span><input class="in" id="cq" type="search" placeholder="Найти текст" value="${esc(cq)}"><span class="dim">${fmtN(items.length)} текстов · изменено ${fmtN(D.content.length)}</span><a class="btn s" href="${cmsLang === 'ru' ? '/ru' : '/'}" target="_blank" rel="noopener" style="margin-left:auto">Открыть сайт ↗</a></div>
       <p class="dim" style="margin:-4px 0 14px">Изменения появляются на сайте сразу после сохранения. Пустое поле или «Сбросить» — вернуть исходный текст. Перенос строки = новая строка на сайте.</p>
       ${[...groups.entries()].map(([sec, list]) => `<div class="grp"><h4>${esc(SEC[sec] || sec)}</h4><div class="tw">${list.map((it) => { const o = ov.get(it.key), stale = o && o.o !== it.text, val = o && !stale ? o.t : it.text;
@@ -459,6 +470,91 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
       vBanners(); });
   }
 
+  // landing news: the «new AI models» cards under the top menu of oneflow.art. One JSON row ('landing.news') in
+  // site_content; files go to the same public 'site-media' bucket. admin-api validates on save, the landing again.
+  const NEWS_KEY = 'landing.news';
+  const DEFAULT_NEWS_NOTE = 'Пока ничего не опубликовано, на сайте показываются 3 стандартные карточки (Nano Banana 2.1, Motion Engine, Lyria 3 Pro).';
+  const newsPaths = (list) => list.flatMap((x) => [pathOf(x.media), pathOf(x.poster)]).filter(Boolean);
+  const emptyNewsLang = () => ({ title: '', text: '' });
+  let nw = null;  // { items, published, saved, uploaded, dirty, busy, msg }
+  const nwLoad = () => {
+    const row = D.content.find((c) => c.key === NEWS_KEY);
+    let items = [];
+    try { items = row ? (JSON.parse(row.value).items || []) : []; } catch { items = []; }
+    items = items.map((x) => ({ id: x.id || crypto.randomUUID(), type: x.type === 'video' ? 'video' : 'image', media: x.media || '', poster: x.poster || '', isNew: x.isNew !== false,
+      link: x.link || '', ru: { ...emptyNewsLang(), ...(x.ru || {}) }, en: { ...emptyNewsLang(), ...(x.en || {}) } }));
+    nw = { items, published: !!row, saved: newsPaths(items), uploaded: [], dirty: false, busy: false, msg: '' };
+  };
+  const nwUpload = async (file) => {
+    const max = TYPES[file.type];
+    if (!max) throw new Error('Поддерживаются JPG, PNG, WebP, GIF, MP4 и WebM.');
+    if (file.size > max * 1024 * 1024) throw new Error(`Файл слишком большой: максимум ${max} МБ.`);
+    const u = await api.mediaUrl({ name: file.name, type: file.type, size: file.size });
+    if (DEMO) return URL.createObjectURL(file);
+    const fd = new FormData(); fd.append('cacheControl', '31536000'); fd.append('', file);
+    const r = await fetch(u.signedUrl, { method: 'PUT', headers: { apikey: KEY, Authorization: 'Bearer ' + await token(), 'x-upsert': 'false' }, body: fd });
+    if (!r.ok) throw new Error('Не удалось загрузить файл (' + r.status + ').');
+    nw.uploaded.push(u.path);
+    return u.publicUrl;
+  };
+  function vNews() {
+    if (!nw) nwLoad();
+    const el = $('#v-news');
+    const prev = (x) => { const m = x.media ? (x.type === 'video' ? `<video src="${esc(x.media)}" ${x.poster ? `poster="${esc(x.poster)}"` : ''} muted loop playsinline autoplay></video>` : `<img src="${esc(x.media)}" alt="">`) : '<div class="none">Нет файла</div>';
+      return `<div class="nw-prev">${m}${x.isNew ? '<span class="nb">● NEW</span>' : ''}<div class="tx"><b>${esc(x.en.title || x.ru.title || 'Заголовок')}</b><span>${esc(x.en.text || x.ru.text)}</span></div></div>`; };
+    const langBlock = (x, l, title) => `<div><h5>${title}</h5>
+      <label class="field">Заголовок${l === 'en' ? ' *' : ''}<input class="in" data-l="${l}" data-k="title" maxlength="80" value="${esc(x[l].title)}" placeholder="${l === 'ru' ? 'Nano Banana 2.1 уже в ONEFLOW' : 'Nano Banana 2.1 is now in ONEFLOW'}"></label>
+      <label class="field">Текст (одна строка)<input class="in" data-l="${l}" data-k="text" maxlength="160" value="${esc(x[l].text)}"></label></div>`;
+    el.innerHTML = `<div class="tools"><button class="btn a" id="nsave" type="button" ${nw.dirty && !nw.busy ? '' : 'disabled'}>Сохранить и опубликовать</button>
+        <button class="btn s" id="nadd" type="button" ${nw.items.length >= 6 ? 'disabled' : ''}>+ Добавить карточку</button>
+        <span class="${/Ошибка|Не удалось|должн|Недопуст|слишком|Поддерживаются|Ссылка/.test(nw.msg) ? 'err' : 'ok'}" id="nmsg" role="status">${esc(nw.msg)}</span>
+        <a class="btn s" href="/" target="_blank" rel="noopener" style="margin-left:auto">Открыть сайт ↗</a></div>
+      <div class="note">Карточки под верхним меню сайта, над заголовком: до 6 штук, листаются вбок. ${nw.published ? 'Сейчас на сайте эти карточки.' : esc(DEFAULT_NEWS_NOTE)}
+        Фото до 10 МБ (JPG, PNG, WebP, GIF), видео до 50 МБ (MP4, WebM), лучше горизонтальное 16:9 — видео играет без звука по кругу. Сайт открывается на английском: заполните English; русский показывается на oneflow.art/ru (если его нет — английский).</div>
+      ${nw.items.map((x, i) => `<div class="card" data-i="${i}"><div class="bn"><div>${prev(x)}
+          <div class="row"><label class="btn s upl">${x.media ? 'Заменить фото / видео' : 'Загрузить фото / видео'}<input type="file" data-f="media" accept="${Object.keys(TYPES).join(',')}"></label>
+          ${x.type === 'video' ? `<label class="btn s upl">${x.poster ? 'Заменить обложку' : 'Обложка видео'}<input type="file" data-f="poster" accept="image/jpeg,image/png,image/webp"></label>${x.poster ? '<button class="btn s" data-a="unposter" type="button">Убрать обложку</button>' : ''}` : ''}</div>
+          <div class="row"><label class="chk"><input type="checkbox" data-k="isNew" ${x.isNew ? 'checked' : ''}> Плашка «NEW»</label></div>
+          <div class="row"><button class="btn s" data-a="up" type="button" ${i ? '' : 'disabled'} aria-label="Левее">←</button><button class="btn s" data-a="down" type="button" ${i < nw.items.length - 1 ? '' : 'disabled'} aria-label="Правее">→</button><button class="btn s" data-a="del" type="button" style="color:var(--bad)">Удалить карточку</button></div></div>
+        <div><div class="bn-langs">${langBlock(x, 'en', 'English')}${langBlock(x, 'ru', 'Русский')}</div>
+          <label class="field">Ссылка по клику (необязательно)<input class="in" data-k="link" type="text" inputmode="url" maxlength="1000" placeholder="https://… или /app" value="${esc(x.link)}"></label></div></div></div>`).join('') || '<p class="empty">Своих карточек пока нет.</p>'}`;
+    const touch = (msg = '') => { nw.dirty = true; nw.msg = msg; const b = $('#nsave'); if (b) b.disabled = nw.busy; const m = $('#nmsg'); if (m) { m.textContent = msg; m.className = 'ok'; } };
+    $('#nadd')?.addEventListener('click', () => { nw.items.push({ id: crypto.randomUUID(), type: 'image', media: '', poster: '', isNew: true, link: '', ru: emptyNewsLang(), en: emptyNewsLang() }); touch(); vNews(); });
+    $$('#v-news .card').forEach((card) => { const i = Number(card.dataset.i), x = nw.items[i];
+      $$('[data-l]', card).forEach((inp) => inp.addEventListener('input', () => { x[inp.dataset.l][inp.dataset.k] = inp.value; touch(); const p = $('.nw-prev', card); if (p) p.outerHTML = prev(x); }));
+      $('[data-k=link]', card).addEventListener('input', (e) => { x.link = e.target.value.trim(); touch(); });
+      $('[data-k=isNew]', card).addEventListener('change', (e) => { x.isNew = e.target.checked; touch(); const p = $('.nw-prev', card); if (p) p.outerHTML = prev(x); });
+      $$('input[type=file]', card).forEach((f) => f.addEventListener('change', async () => {
+        const file = f.files[0]; f.value = ''; if (!file) return;
+        nw.busy = true; nw.msg = 'Загружаю ' + file.name + '…'; vNews();
+        try { const u = await nwUpload(file);
+          if (f.dataset.f === 'media') { x.media = u; x.type = file.type.startsWith('video/') ? 'video' : 'image'; if (x.type === 'image') x.poster = ''; } else x.poster = u;
+          nw.busy = false; touch('Файл загружен. Не забудьте сохранить.'); }
+        catch (e) { nw.busy = false; nw.msg = e.message; }
+        vNews(); }));
+      $$('[data-a]', card).forEach((b) => b.addEventListener('click', () => { const a = b.dataset.a;
+        if (a === 'up' || a === 'down') { const j = a === 'up' ? i - 1 : i + 1; [nw.items[i], nw.items[j]] = [nw.items[j], nw.items[i]]; }
+        if (a === 'del') { if (!confirm('Удалить эту карточку?')) return; nw.items.splice(i, 1); }
+        if (a === 'unposter') x.poster = '';
+        touch(); vNews(); })); });
+    $('#nsave')?.addEventListener('click', async () => {
+      const bad = nw.items.findIndex((x) => !x.media || !(x.ru.title.trim() || x.en.title.trim()));
+      if (bad >= 0) { nw.msg = `Карточка ${bad + 1}: должны быть файл и заголовок.`; return vNews(); }
+      const badUrl = nw.items.findIndex((x) => x.link && !/^https:\/\/[^\s]+$/i.test(x.link) && !/^\/[^\s/][^\s]*$|^\/$/.test(x.link));
+      if (badUrl >= 0) { nw.msg = `Карточка ${badUrl + 1}: Ссылка должна начинаться с https:// или / (адрес на сайте).`; return vNews(); }
+      nw.busy = true; nw.msg = 'Сохраняю…'; vNews();
+      try {
+        const r = await api.news(nw.items);
+        D.content = D.content.filter((c) => c.key !== NEWS_KEY);
+        if (!r.reset) D.content.push({ key: NEWS_KEY, value: r.value || JSON.stringify({ v: 1, items: nw.items }), updated_at: new Date().toISOString() });
+        // files no longer used by the published cards are removed from storage
+        const keep = new Set(newsPaths(nw.items)), unused = [...new Set([...nw.saved, ...nw.uploaded])].filter((p) => !keep.has(p));
+        await Promise.all(unused.map((p) => api.mediaDelete(p).catch(() => {})));
+        nwLoad(); nw.msg = r.reset ? 'Сохранено: на сайте снова стандартные карточки.' : 'Сохранено и опубликовано.';
+      } catch (e) { nw.busy = false; nw.msg = e.message; }
+      vNews(); });
+  }
+
   // ---------------------------------------------------------------- drawer, auth wiring
   const openDrawer = (html) => { $('#drawer').innerHTML = '<button class="btn s x" type="button" aria-label="Закрыть">✕</button>' + html; $('#drawer').classList.remove('hide'); $('#shade').classList.remove('hide'); $('.drawer .x').addEventListener('click', closeDrawer); };
   const closeDrawer = () => { $('#drawer').classList.add('hide'); $('#shade').classList.add('hide'); };
@@ -492,7 +588,8 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
     const D0 = { generatedAt: iso(now), users, recent: recent.slice(0, 300), tickets, content: [], stats: { days: 30, totalGenerations: 1843, byDay: [...byDayM.entries()].map(([day, v]) => ({ day, ...v })), byModel: [...byModel.values()].sort((a, b) => b.count - a.count) } };
     const wait = (v) => new Promise((r) => setTimeout(() => r(v), 250));
     return { overview: () => wait(JSON.parse(JSON.stringify(D0))), grant: (b) => wait({ ok: true, credits: (D0.users.find((u) => u.id === b.userId)?.credits || 0) + b.credits }), ticket: (b) => wait({ ok: true, deliveredInApp: true }), content: () => wait({ ok: true }), send: () => wait({ ok: true }),
-      banners: (slides) => wait(slides.length ? { ok: true, value: JSON.stringify({ v: 1, slides }) } : { ok: true, reset: true }), mediaUrl: () => wait({ path: null, signedUrl: null, publicUrl: null }), mediaDelete: () => wait({ ok: true }) };
+      banners: (slides) => wait(slides.length ? { ok: true, value: JSON.stringify({ v: 1, slides }) } : { ok: true, reset: true }), mediaUrl: () => wait({ path: null, signedUrl: null, publicUrl: null }), mediaDelete: () => wait({ ok: true }),
+      news: (items) => wait(items.length ? { ok: true, value: JSON.stringify({ v: 1, items }) } : { ok: true, reset: true }) };
   }
 })();
 </script>
