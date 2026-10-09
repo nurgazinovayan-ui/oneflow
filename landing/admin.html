@@ -504,13 +504,13 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
     const prev = (x) => { const m = x.media ? (x.type === 'video' ? `<video src="${esc(x.media)}" ${x.poster ? `poster="${esc(x.poster)}"` : ''} muted loop playsinline autoplay></video>` : `<img src="${esc(x.media)}" alt="">`) : '<div class="none">Нет файла</div>';
       return `<div class="nw-prev">${m}${x.isNew ? '<span class="nb">NEW</span>' : ''}<div class="tx"><b>${esc(x.en.title || x.ru.title || 'Заголовок')}</b><span>${esc(x.en.text || x.ru.text)}</span></div></div>`; };
     const langBlock = (x, l, title) => `<div><h5>${title}</h5>
-      <label class="field">Заголовок${l === 'en' ? ' *' : ''}<input class="in" data-l="${l}" data-k="title" maxlength="80" value="${esc(x[l].title)}" placeholder="${l === 'ru' ? 'Nano Banana 2.1 уже в ONEFLOW' : 'Nano Banana 2.1 is now in ONEFLOW'}"></label>
+      <label class="field">Заголовок${l === 'en' ? ' *' : ''}<input class="in" data-l="${l}" data-k="title" maxlength="80" value="${esc(x[l].title)}" placeholder="Nano Banana 2.1"></label>
       <label class="field">Текст (одна строка)<input class="in" data-l="${l}" data-k="text" maxlength="160" value="${esc(x[l].text)}"></label></div>`;
     el.innerHTML = `<div class="tools"><button class="btn a" id="nsave" type="button" ${nw.dirty && !nw.busy ? '' : 'disabled'}>Сохранить и опубликовать</button>
         <button class="btn s" id="nadd" type="button" ${nw.items.length >= 6 ? 'disabled' : ''}>+ Добавить карточку</button>
         <span class="${/Ошибка|Не удалось|должн|Недопуст|слишком|Поддерживаются|Ссылка/.test(nw.msg) ? 'err' : 'ok'}" id="nmsg" role="status">${esc(nw.msg)}</span>
         <a class="btn s" href="/" target="_blank" rel="noopener" style="margin-left:auto">Открыть сайт ↗</a></div>
-      <div class="note">Карточки под верхним меню сайта, над заголовком: до 6 штук, листаются вбок. ${nw.published ? 'Сейчас на сайте эти карточки.' : esc(DEFAULT_NEWS_NOTE)}
+      <div class="note">Карточки под верхним меню сайта, над заголовком (формат 21:9, по центру): до 6 штук, листаются вбок. Заголовок — до ~22 символов, текст — до ~35, иначе обрежутся многоточием. ${nw.published ? 'Сейчас на сайте эти карточки.' : esc(DEFAULT_NEWS_NOTE)}
         Фото до 10 МБ (JPG, PNG, WebP, GIF), видео до 50 МБ (MP4, WebM), лучше горизонтальное 16:9 — видео играет без звука по кругу. Сайт открывается на английском: заполните English; русский показывается на oneflow.art/ru (если его нет — английский).</div>
       ${nw.items.map((x, i) => `<div class="card" data-i="${i}"><div class="bn"><div>${prev(x)}
           <div class="row"><label class="btn s upl">${x.media ? 'Заменить фото / видео' : 'Загрузить фото / видео'}<input type="file" data-f="media" accept="${Object.keys(TYPES).join(',')}"></label>
