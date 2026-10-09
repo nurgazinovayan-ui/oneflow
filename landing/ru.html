@@ -651,43 +651,37 @@ dialog.doc { background: var(--card); } .sf input, .sf textarea { background: va
 
 /* news: rectangular video/image cards under the hero; they share the row while they fit, then the row scrolls */
 .news { position: relative; z-index: 1; margin: 8px 0 0; }
-.nw-row { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 20px; scrollbar-width: none;
-  padding: 8px 20px 36px; margin: -8px -20px -36px; }
+.nw-row { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 20px; scrollbar-width: none;
+  padding: 16px 20px 36px; margin: -16px -20px -36px; }  /* room above for the NEW badges, which stick out of the corner */
 .nw-row::-webkit-scrollbar { display: none; }
 /* centred while they fit; once the row scrolls, the auto margins collapse and it starts at the left edge */
 .nw-row > :first-child { margin-left: auto; } .nw-row > :last-child { margin-right: auto; }
-.nw-card { position: relative; flex: 1 1 0; min-width: 190px; max-width: 260px; aspect-ratio: 21 / 9; border-radius: 16px; overflow: hidden; scroll-snap-align: start; isolation: isolate;
-  background: #cfcfcf; box-shadow: none; color: #fff; text-decoration: none;
-  transition: transform .3s var(--e); }
+.nw-card { position: relative; flex: 1 1 0; min-width: 190px; max-width: 260px; aspect-ratio: 21 / 9; border-radius: 16px; scroll-snap-align: start; isolation: isolate;
+  background: #cfcfcf; box-shadow: none; color: #fff; text-decoration: none; transition: transform .3s var(--e);
+  --nw-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.1 0'/%3E%3C/filter%3E%3Crect width='80' height='80' filter='url(%23n)'/%3E%3C/svg%3E"); }
 a.nw-card:hover { transform: translateY(-3px); }
-.nw-media, .nw-card video, .nw-card img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; background: center / cover no-repeat; }
-.nw-card { --nw-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.1 0'/%3E%3C/filter%3E%3Crect width='80' height='80' filter='url(%23n)'/%3E%3C/svg%3E"); }
-/* ring of matte blue glass (the app's light-theme glass): frosted grain, a soft sheen running round it */
-.nw-card::before { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 3px; pointer-events: none;
-  background: var(--nw-grain),
-    conic-gradient(from var(--nwa), rgba(255,255,255,0) 0deg, rgba(225,240,255,.9) 34deg, rgba(255,255,255,0) 80deg, rgba(255,255,255,0) 180deg, rgba(160,210,255,.55) 214deg, rgba(255,255,255,0) 260deg),
-    linear-gradient(165deg, rgba(42,111,230,.82), rgba(15,67,168,.88));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
-  animation: nwBorder 4.5s linear infinite; }
-/* the sheen runs round the card (stays still where @property isn't supported) */
-@property --nwa { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-@keyframes nwBorder { to { --nwa: 360deg; } }
-.nw-card::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(0,0,0,0) 38%, rgba(0,0,0,.72)); }
-.nw-new { position: absolute; left: 6px; top: 6px; width: 40px; height: 40px; display: grid; place-items: center; isolation: isolate;
-  color: #fff; font: 800 8.5px/1 var(--d); letter-spacing: .05em; transform: rotate(-14deg); text-shadow: 0 1px 1px rgba(0,15,50,.4);
-  filter: drop-shadow(0 3px 8px rgba(10,40,120,.4)); }
-/* a scalloped «flower» sticker of matte blue glass: frosted, a glow from below; the shape turns slowly, the word stays put */
-.nw-new::before { content: ''; position: absolute; inset: 0; z-index: -1;
-  background: var(--nw-grain), linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(225,240,255,.55) 50%, rgba(255,255,255,0) 70%),
-    radial-gradient(110% 90% at 50% 110%, rgba(150,205,255,.8), rgba(60,140,255,.35) 45%, rgba(60,140,255,0) 75%),
-    linear-gradient(165deg, rgba(42,111,230,.88), rgba(15,67,168,.92));
-  -webkit-backdrop-filter: blur(8px) saturate(150%); backdrop-filter: blur(8px) saturate(150%);
-  clip-path: path('M20.00 4.80 A5.07 5.07 0 0 1 28.93 7.70 A5.07 5.07 0 0 1 34.46 15.30 A5.07 5.07 0 0 1 34.46 24.70 A5.07 5.07 0 0 1 28.93 32.30 A5.07 5.07 0 0 1 20.00 35.20 A5.07 5.07 0 0 1 11.07 32.30 A5.07 5.07 0 0 1 5.54 24.70 A5.07 5.07 0 0 1 5.54 15.30 A5.07 5.07 0 0 1 11.07 7.70 A5.07 5.07 0 0 1 20.00 4.80 Z'); animation: nwSpin 14s linear infinite; }
+/* no overflow clip on the card (the badge sticks out), so the media and the shade round their own corners */
+.nw-media, .nw-card video, .nw-card img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; background: center / cover no-repeat; }
+.nw-card::after { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: linear-gradient(180deg, rgba(0,0,0,0) 38%, rgba(0,0,0,.72)); }
+/* NEW: a scalloped sticker of matte blue glass (like the app's banner tag) over the top-left corner, no shadow:
+   a light rim (::before) round frosted blue glass with grain, a glow from below and a sheen running across (::after) */
+.nw-new { position: absolute; left: -9px; top: -11px; z-index: 1; width: 40px; height: 40px; display: grid; place-items: center; isolation: isolate;
+  color: #eef5ff; font: 800 8.5px/1 var(--d); letter-spacing: .05em; transform: rotate(-14deg); text-shadow: 0 1px 1px rgba(0,15,50,.35); }
+.nw-new::before, .nw-new::after { content: ''; position: absolute; inset: 0; z-index: -1; clip-path: path('M20.00 4.80 A5.07 5.07 0 0 1 28.93 7.70 A5.07 5.07 0 0 1 34.46 15.30 A5.07 5.07 0 0 1 34.46 24.70 A5.07 5.07 0 0 1 28.93 32.30 A5.07 5.07 0 0 1 20.00 35.20 A5.07 5.07 0 0 1 11.07 32.30 A5.07 5.07 0 0 1 5.54 24.70 A5.07 5.07 0 0 1 5.54 15.30 A5.07 5.07 0 0 1 11.07 7.70 A5.07 5.07 0 0 1 20.00 4.80 Z'); }
+.nw-new::before { background: rgba(165,210,255,.85); animation: nwSpin 14s linear infinite; }
+.nw-new::after { background: var(--nw-grain),
+    linear-gradient(110deg, transparent calc(var(--nws) - 16%), rgba(225,240,255,.5) var(--nws), transparent calc(var(--nws) + 16%)),
+    radial-gradient(120% 140% at 50% 120%, rgba(120,185,255,.55), transparent 70%), linear-gradient(165deg, rgba(36,96,214,.9), rgba(18,62,170,.92));
+  -webkit-backdrop-filter: blur(14px) saturate(160%); backdrop-filter: blur(14px) saturate(160%);
+  animation: nwSpinIn 14s linear infinite, nwSheen 3.6s ease-in-out infinite; }
+@property --nws { syntax: '<percentage>'; inherits: false; initial-value: -40%; }
 @keyframes nwSpin { to { transform: rotate(360deg); } }
+@keyframes nwSpinIn { from { transform: scale(.9) rotate(0deg); } to { transform: scale(.9) rotate(360deg); } }
+@keyframes nwSheen { 0% { --nws: -40%; } 55%, 100% { --nws: 140%; } }
 .nw-txt { position: absolute; left: 12px; right: 12px; bottom: 9px; display: grid; gap: 2px; text-shadow: 0 1px 8px rgba(0,0,0,.35); }
 .nw-txt b { font: 600 13px/1.25 var(--d); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nw-txt span { font-size: 11px; line-height: 1.35; color: rgba(255,255,255,.82); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (prefers-reduced-motion: reduce) { .nw-new::before, .nw-card::before { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .nw-new::before { animation: none; } .nw-new::after { animation: none; transform: scale(.9); } }
 @media (max-width: 760px) { .news { margin-top: 4px; } .nw-card { flex: none; width: 62vw; min-width: 0; max-width: 228px; } }
 
 /* ===================== «Soft» — the app's light theme ===================== */
