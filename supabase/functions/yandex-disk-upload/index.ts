@@ -67,6 +67,21 @@ async function ensureFolder(accessToken: string): Promise<void> {
   }
 }
 
+// Yandex downloads sourceUrl itself; still only plain public https URLs are accepted (no credentials,
+// no IP literals, no internal-looking hosts).
+function isPublicHttpsUrl(v: unknown): v is string {
+  if (typeof v !== 'string' || v.length > 4096) return false;
+  try {
+    const u = new URL(v);
+    const host = u.hostname.toLowerCase();
+    if (u.protocol !== 'https:' || u.username || u.password || !host.includes('.')) return false;
+    if (host.startsWith('[') || /^[\d.]+$/.test(host) || /(^|\.)(localhost|local|internal)$/.test(host)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
@@ -85,7 +100,7 @@ Deno.serve(async (req) => {
     }
 
     const { sourceUrl, fileName } = await req.json();
-    if (!sourceUrl || !fileName) {
+    if (!isPublicHttpsUrl(sourceUrl) || typeof fileName !== 'string' || fileName.length > 200) {
       return new Response(JSON.stringify({ error: 'Не переданы sourceUrl/fileName.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

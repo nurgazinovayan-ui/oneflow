@@ -1,0 +1,79 @@
+# ШАБЛОН — НЕ ПОДКЛЮЧЁН. GitHub Actions запускает только файлы из .github/workflows/, а этот
+# лежит в docs/. Чтобы включить: скопируйте в .github/workflows/security.yml и закоммитьте.
+#
+# Что проверяет на каждом push и pull request:
+#   1. типы и сборку веб-клиента;
+#   2. что общий блок защиты одинаков во всех Edge Functions (scripts/sync-edge-guard.mjs --check);
+#   3. тесты безопасности базы на одноразовом PostgreSQL 16 (tests/security/run_db_tests.sh);
+#   4. тесты Edge Functions с подменёнными Supabase и провайдерами: ни одного внешнего запроса,
+#      ни одной платной генерации (tests/security/run_edge_tests.sh);
+#   5. уязвимые зависимости рантайма (npm audit, уровень high);
+#   6. секреты в истории git; значения маскируются (--redact), в лог попадают только файл и строка.
+#
+# Секреты репозитория не нужны: все тесты работают на подставных данных.
+
+name: security
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build:web
+      - run: node scripts/sync-edge-guard.mjs --check
+      # Сейчас найдёт 2 high (image-size через pptxgenjs, риск R-08 в audit.md), поэтому пока не
+      # блокирует сборку. Уберите continue-on-error после обновления pptxgenjs.
+      - name: npm audit (runtime, high+)
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
+
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ci-only-throwaway
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: ci-only-throwaway
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: bash tests/security/run_db_tests.sh
+
+  edge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: DENO=deno bash tests/security/run_edge_tests.sh
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks (redacted)
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.18.4 detect --source /repo --redact --no-banner -v

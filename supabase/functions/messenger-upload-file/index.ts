@@ -27,6 +27,49 @@ function isAllowed(email: string): boolean {
 const MAX_FILE_BYTES = 25 * 1024 * 1024; // matches the bucket's own file_size_limit
 const BUCKET = 'messenger-files';
 
+// messenger-files is a private bucket (202610090001_security_hardening.sql): stored rows keep the
+// object path in a public-style URL, and every reader gets a short-lived signed download link.
+const SIGNED_URL_TTL_SECONDS = 12 * 60 * 60;
+const PUBLIC_MARKER = `/object/public/${BUCKET}/`;
+function objectPathOf(mediaUrl: string | null): string | null {
+  if (!mediaUrl) return null;
+  const i = mediaUrl.indexOf(PUBLIC_MARKER);
+  return i < 0 ? null : decodeURIComponent(mediaUrl.slice(i + PUBLIC_MARKER.length));
+}
+
+// Per-account limit shared by every function instance (rate_limit_hit in Postgres). A limiter outage
+// must not stop people from chatting, so errors let the request through (and are logged).
+type RpcClient = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }> };
+async function retryAfterSeconds(client: RpcClient, bucket: string, limit: number, windowSeconds: number): Promise<number> {
+  const { data, error } = await client.rpc('rate_limit_hit', { p_bucket: bucket, p_limit: limit, p_window_seconds: windowSeconds });
+  if (error) {
+    console.error('rate_limit_hit failed', error);
+    return 0;
+  }
+  return Number(data) || 0;
+}
+
+// The stored Content-Type comes from the file's own first bytes, never from the browser: anything
+// that is not a known safe format is stored as application/octet-stream (no HTML/SVG/script can be
+// served as a page from our storage domain), and every link is a download (audit F-04).
+async function sniffContentType(file: File): Promise<string> {
+  const b = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const at = (i: number, ...bytes: number[]) => bytes.every((x, k) => b[i + k] === x);
+  const ascii = (i: number, s: string) => at(i, ...[...s].map((c) => c.charCodeAt(0)));
+  if (at(0, 0x89, 0x50, 0x4e, 0x47)) return 'image/png';
+  if (at(0, 0xff, 0xd8, 0xff)) return 'image/jpeg';
+  if (ascii(0, 'GIF8')) return 'image/gif';
+  if (ascii(0, 'RIFF') && ascii(8, 'WEBP')) return 'image/webp';
+  if (ascii(0, '%PDF-')) return 'application/pdf';
+  if (ascii(4, 'ftyp')) return 'video/mp4';
+  if (at(0, 0x1a, 0x45, 0xdf, 0xa3)) return 'video/webm';
+  if (ascii(0, 'ID3') || (b[0] === 0xff && (b[1] & 0xe0) === 0xe0)) return 'audio/mpeg';
+  if (ascii(0, 'RIFF') && ascii(8, 'WAVE')) return 'audio/wav';
+  if (ascii(0, 'OggS')) return 'audio/ogg';
+  if (at(0, 0x50, 0x4b, 0x03, 0x04)) return 'application/zip'; // also docx/xlsx/pptx
+  return 'application/octet-stream';
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -61,6 +104,16 @@ Deno.serve(async (req) => {
     const callerEmail = caller?.email?.toLowerCase() ?? '';
     if (!caller || !isAllowed(callerEmail)) return jsonError('Доступ запрещён.', 403);
 
+    // uploads per account: 20 a minute
+    const wait = await retryAfterSeconds(admin, `messenger-upload:${caller.id}`, 20, 60);
+    if (wait > 0) {
+      return new Response(JSON.stringify({ error: 'Слишком много файлов подряд. Подождите минуту.' }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(wait) },
+      });
+    }
+    if (Number(req.headers.get('content-length') ?? '0') > MAX_FILE_BYTES + 1024 * 1024) return jsonError('Файл больше 25 МБ.', 413);
+
     const form = await req.formData().catch(() => null);
     if (!form) return jsonError('Ожидается multipart/form-data.', 400);
     const channelId = String(form.get('channelId') ?? '');
@@ -81,8 +134,10 @@ Deno.serve(async (req) => {
 
     const originalName = file.name || 'file';
     const objectPath = `${channelId}/${crypto.randomUUID()}-${safeFilename(originalName)}`;
-    const { error: uploadErr } = await admin.storage.from(BUCKET).upload(objectPath, file, {
-      contentType: file.type || 'application/octet-stream',
+    // Raw bytes, not the File: for a File/Blob supabase-js ignores contentType and sends the type the
+    // browser claimed, which is exactly what must not decide how the file is served.
+    const { error: uploadErr } = await admin.storage.from(BUCKET).upload(objectPath, await file.arrayBuffer(), {
+      contentType: await sniffContentType(file),
       upsert: false,
     });
     if (uploadErr) throw uploadErr;
@@ -103,10 +158,11 @@ Deno.serve(async (req) => {
       .single();
     if (insertErr) throw insertErr;
 
+    const { data: signed } = await admin.storage.from(BUCKET).createSignedUrl(objectPath, SIGNED_URL_TTL_SECONDS, { download: true });
     return new Response(
       JSON.stringify({
         id: created.id, senderEmail: created.sender_email, body: created.body, createdAt: created.created_at,
-        kind: created.kind, mediaUrl: created.media_url, fileSize: created.file_size,
+        kind: created.kind, mediaUrl: signed?.signedUrl ?? null, fileSize: created.file_size,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

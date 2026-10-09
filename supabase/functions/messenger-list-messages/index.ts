@@ -25,6 +25,17 @@ function isAllowed(email: string): boolean {
   return email.includes('@');
 }
 const MAX_MESSAGES = 200;
+const BUCKET = 'messenger-files';
+
+// messenger-files is a private bucket (202610090001_security_hardening.sql): stored rows keep the
+// object path in a public-style URL, and every reader gets a short-lived signed download link.
+const SIGNED_URL_TTL_SECONDS = 12 * 60 * 60;
+const PUBLIC_MARKER = `/object/public/${BUCKET}/`;
+function objectPathOf(mediaUrl: string | null): string | null {
+  if (!mediaUrl) return null;
+  const i = mediaUrl.indexOf(PUBLIC_MARKER);
+  return i < 0 ? null : decodeURIComponent(mediaUrl.slice(i + PUBLIC_MARKER.length));
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -75,14 +86,24 @@ Deno.serve(async (req) => {
     const { data, error } = await query;
     if (error) throw error;
 
-    const messages = (after ? data ?? [] : [...(data ?? [])].reverse()).map(
+    // file links: signed, short-lived, download-only (the bucket is private)
+    const rows = after ? data ?? [] : [...(data ?? [])].reverse();
+    const paths = rows.map((m: { kind: string; media_url: string | null }) => (m.kind === 'file' ? objectPathOf(m.media_url) : null));
+    const wanted = paths.filter((p): p is string => !!p);
+    const signedByPath = new Map<string, string>();
+    if (wanted.length) {
+      const { data: signed, error: signErr } = await admin.storage.from(BUCKET).createSignedUrls(wanted, SIGNED_URL_TTL_SECONDS, { download: true });
+      if (signErr) console.error('createSignedUrls failed', signErr);
+      for (const s of signed ?? []) if (s.path && s.signedUrl) signedByPath.set(s.path, s.signedUrl);
+    }
+    const messages = rows.map(
       (m: { id: string; sender_email: string; body: string; created_at: string; kind: string; media_url: string | null; file_size: number | null }) => ({
         id: m.id,
         senderEmail: m.sender_email,
         body: m.body,
         createdAt: m.created_at,
         kind: m.kind,
-        mediaUrl: m.media_url,
+        mediaUrl: m.kind === 'file' ? signedByPath.get(objectPathOf(m.media_url) ?? '') ?? null : m.media_url,
         fileSize: m.file_size,
       })
     );

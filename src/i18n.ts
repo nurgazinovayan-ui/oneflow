@@ -1065,6 +1065,13 @@ export interface Translations {
     tooManyJobs: string;
     emailNotConfirmed: string;
     jobTooExpensive: string;
+    rateLimited: string;
+    spendLimit: string;
+    servicePaused: string;
+    accountBlocked: string;
+    serviceUnavailable: string;
+    payloadTooLarge: string;
+    jobStillRunning: string;
   };
   nodes: {
     common: {
@@ -2380,6 +2387,13 @@ export const ru: Translations = {
     tooManyJobs: 'Слишком много генераций одновременно — дождитесь завершения текущих.',
     emailNotConfirmed: 'Подтвердите email по ссылке из письма, чтобы пользоваться генерацией.',
     jobTooExpensive: 'Этот запрос слишком дорогой для одной генерации — уменьшите длительность или разрешение.',
+    rateLimited: 'Слишком много запросов подряд. Подождите минуту и попробуйте снова.',
+    spendLimit: 'Сейчас достигнут лимит расходов. Попробуйте позже.',
+    servicePaused: 'Генерация временно приостановлена. Попробуйте позже.',
+    accountBlocked: 'Генерация для этого аккаунта приостановлена. Напишите в поддержку.',
+    serviceUnavailable: 'Сервис временно недоступен. Попробуйте позже.',
+    payloadTooLarge: 'Запрос слишком большой — уменьшите количество или размер файлов.',
+    jobStillRunning: 'Видео всё ещё готовится. Попробуйте позже.',
   },
   nodes: {
     common: {
@@ -3684,6 +3698,13 @@ export const en: Translations = {
     tooManyJobs: 'Too many generations at once — wait for the current ones to finish.',
     emailNotConfirmed: 'Confirm your email via the link we sent you to use generation.',
     jobTooExpensive: 'This request is too expensive for a single generation — lower the duration or resolution.',
+    rateLimited: 'Too many requests in a row. Wait a minute and try again.',
+    spendLimit: 'The spending limit has been reached for now. Try again later.',
+    servicePaused: 'Generation is temporarily paused. Try again later.',
+    accountBlocked: 'Generation is suspended for this account. Please contact support.',
+    serviceUnavailable: 'The service is temporarily unavailable. Try again later.',
+    payloadTooLarge: 'The request is too large — use fewer or smaller files.',
+    jobStillRunning: 'The video is still being made. Try again later.',
   },
   nodes: {
     common: {

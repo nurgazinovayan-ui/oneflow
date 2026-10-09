@@ -39,13 +39,31 @@ function jsonError(message: string, status: number) {
   });
 }
 
+// GIFs come from GIPHY (messenger-gif-search); any other host would let a message make every
+// recipient's browser call an arbitrary server (audit F-10).
 function httpsUrl(value: unknown): string | null {
-  if (typeof value !== 'string' || !value) return null;
+  if (typeof value !== 'string' || !value || value.length > 2048) return null;
   try {
     const u = new URL(value);
     if (u.protocol !== 'https:' || u.username || u.password) return null;
-    return u.href;
-  } catch { return null; }
+    const host = u.hostname.toLowerCase();
+    if (host !== 'giphy.com' && !host.endsWith('.giphy.com')) return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
+// Per-account limit shared by every function instance (rate_limit_hit in Postgres). A limiter outage
+// must not stop people from chatting, so errors let the request through (and are logged).
+type RpcClient = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }> };
+async function retryAfterSeconds(client: RpcClient, bucket: string, limit: number, windowSeconds: number): Promise<number> {
+  const { data, error } = await client.rpc('rate_limit_hit', { p_bucket: bucket, p_limit: limit, p_window_seconds: windowSeconds });
+  if (error) {
+    console.error('rate_limit_hit failed', error);
+    return 0;
+  }
+  return Number(data) || 0;
 }
 
 Deno.serve(async (req) => {
@@ -61,6 +79,15 @@ Deno.serve(async (req) => {
     const callerEmail = caller?.email?.toLowerCase() ?? '';
     if (!caller || !isAllowed(callerEmail)) return jsonError('Доступ запрещён.', 403);
 
+    // messages per account: 60 a minute
+    const wait = await retryAfterSeconds(admin, `messenger-send:${caller.id}`, 60, 60);
+    if (wait > 0) {
+      return new Response(JSON.stringify({ error: 'Слишком много сообщений подряд. Подождите минуту.' }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': String(wait) },
+      });
+    }
+
     const body = await req.json().catch(() => ({}));
     const channelId = typeof body?.channelId === 'string' ? body.channelId : '';
     const kind = body?.kind === 'sticker' ? 'sticker' : body?.kind === 'gif' ? 'gif' : 'text';
@@ -68,7 +95,7 @@ Deno.serve(async (req) => {
     const mediaUrl = kind === 'gif' ? httpsUrl(body?.mediaUrl) : null;
     if (!channelId) return jsonError('channelId обязателен.', 400);
     if (kind === 'gif') {
-      if (!mediaUrl) return jsonError('mediaUrl должен быть HTTPS-ссылкой.', 400);
+      if (!mediaUrl) return jsonError('mediaUrl должен быть HTTPS-ссылкой GIPHY.', 400);
       if (text.length > MAX_BODY_LENGTH) return jsonError(`Подпись должна быть не длиннее ${MAX_BODY_LENGTH} символов.`, 400);
     } else if (kind === 'sticker') {
       if (!text || text.length > MAX_STICKER_LENGTH) return jsonError(`Стикер должен быть от 1 до ${MAX_STICKER_LENGTH} символов.`, 400);

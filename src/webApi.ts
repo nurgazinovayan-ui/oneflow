@@ -97,6 +97,54 @@ const TRACKED_FUNCTIONS: Record<string, string> = {
   'motion-storyboard': 'motion',
 };
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function postFunction(name: string, body: unknown, accessToken: string, idempotencyKey?: string): Promise<Response> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${accessToken}`,
+  };
+  // One key per logical call: if the same request reaches the server twice (a network retry, a
+  // proxy replay), the server's reserve_generation_v2 starts at most one paid job for it.
+  if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+  return fetch(`${SUPABASE_URL}/functions/v1/${name}`, { method: 'POST', headers, body: JSON.stringify(body) });
+}
+
+// Long jobs (video) answer 202 {pending, jobId} and are polled with {jobId} until they finish. Only
+// the account that started a job can poll it (the server checks). Brief outages and rate limits
+// while polling are waited out instead of failing a job that is still running.
+const JOB_POLL_EVERY_MS = 5_000;
+const JOB_POLL_FOR_MS = 20 * 60_000;
+async function pollJob(name: string, jobId: string): Promise<{ res: Response; data: any }> {
+  const deadline = Date.now() + JOB_POLL_FOR_MS;
+  let transient = 0;
+  for (;;) {
+    if (Date.now() > deadline) throw new Error(t().errors.jobStillRunning);
+    await sleep(JOB_POLL_EVERY_MS);
+    const session = await getValidSession();
+    if (!session) throw new Error(t().errors.notLoggedIn);
+    let res: Response;
+    try {
+      res = await postFunction(name, { jobId }, session.accessToken);
+    } catch (err) {
+      if (++transient > 6) throw err;
+      continue;
+    }
+    const data = await res.json().catch(() => null);
+    if (res.status === 202) {
+      transient = 0;
+      continue;
+    }
+    if ([429, 500, 503, 504].includes(res.status) && ++transient <= 6) {
+      const wait = Number(res.headers.get('Retry-After'));
+      if (wait > 0) await sleep(Math.min(wait, 30) * 1000);
+      continue;
+    }
+    return { res, data };
+  }
+}
+
 async function callFunction<T>(name: string, body: unknown): Promise<T> {
   const session = await getValidSession();
   if (!session) throw new Error(t().errors.notLoggedIn);
@@ -107,16 +155,13 @@ async function callFunction<T>(name: string, body: unknown): Promise<T> {
   const startedAt = Date.now();
   if (kind) capture(`${kind}_started`, { fn: name, model });
   try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json().catch(() => null);
+    let res = await postFunction(name, body, session.accessToken, crypto.randomUUID().replace(/-/g, ''));
+    let data = await res.json().catch(() => null);
+    // a pending async job, or the same request already running on the server: follow that job
+    const jobId = (res.status === 202 && data?.pending) || (res.status === 409 && data?.code === 'duplicate_request')
+      ? (typeof data?.jobId === 'string' ? data.jobId : null)
+      : null;
+    if (jobId) ({ res, data } = await pollJob(name, jobId));
     if (!res.ok) {
       // limits from the server's spend guard come with a code → a message in the user's language
       const byCode: Record<string, string> = {
@@ -124,6 +169,12 @@ async function callFunction<T>(name: string, body: unknown): Promise<T> {
         too_many_jobs: t().errors.tooManyJobs,
         email_not_confirmed: t().errors.emailNotConfirmed,
         job_too_expensive: t().errors.jobTooExpensive,
+        rate_limited: t().errors.rateLimited,
+        spend_limit: t().errors.spendLimit,
+        service_paused: t().errors.servicePaused,
+        account_blocked: t().errors.accountBlocked,
+        guard_unavailable: t().errors.serviceUnavailable,
+        payload_too_large: t().errors.payloadTooLarge,
       };
       throw new Error(byCode[data?.code] || data?.error || t().errors.generationError);
     }

@@ -69,6 +69,19 @@ async function ensureFolder(accessToken: string): Promise<void> {
   }
 }
 
+// The link Yandex hands back is followed server-side, so it must really point at Yandex
+// (https, a yandex.net / yandex.ru host) — never wherever a tampered response says.
+function isYandexHref(href: unknown): href is string {
+  if (typeof href !== 'string') return false;
+  try {
+    const u = new URL(href);
+    const h = u.hostname.toLowerCase();
+    return u.protocol === 'https:' && !u.username && !u.password && (h.endsWith('.yandex.net') || h.endsWith('.yandex.ru') || h === 'yandex.net' || h === 'yandex.ru');
+  } catch {
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
@@ -131,6 +144,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (!isYandexHref(href)) throw new Error('unexpected upload host');
     const putRes = await fetch(href, {
       method: method || 'PUT',
       headers: { 'Content-Type': 'application/json' },

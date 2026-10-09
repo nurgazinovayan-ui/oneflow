@@ -16,7 +16,44 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 // Only this account may send admin messages. The client hides the "Отправить сообщение"
 // button for everyone else, but that's just UX — this check is what actually enforces it,
 // against the caller's own verified JWT rather than anything the client claims.
-const ADMIN_EMAIL = 'nurgazinov.ayan@gmail.com';
+// ---- Admin check — generated from supabase/functions/_shared/admin_check.ts by
+// scripts/sync-edge-guard.mjs (the admin-api / admin-send-message copies in the admin repo carry the
+// same block). Edit the shared file, not this copy.
+//
+// Admin = a confirmed account whose e-mail is in ADMIN_EMAILS (comma separated secret; defaults to
+// the owner). With ADMIN_REQUIRE_MFA=1 the session must also have passed MFA: the JWT, already
+// verified by auth.getUser before this runs, carries aal2 (Supabase Auth → MFA → TOTP).
+const ADMIN_EMAILS = (Deno.env.get('ADMIN_EMAILS') ?? 'nurgazinov.ayan@gmail.com')
+  .split(',')
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+function jwtClaim(token: string, claim: string): unknown {
+  try {
+    const part = token.split('.')[1] ?? '';
+    const b64 = part.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(part.length / 4) * 4, '=');
+    return JSON.parse(atob(b64))?.[claim];
+  } catch {
+    return undefined;
+  }
+}
+function isAdminUser(user: { email?: string | null; email_confirmed_at?: string | null } | null | undefined, token: string): boolean {
+  if (!user || !user.email_confirmed_at || !ADMIN_EMAILS.includes((user.email ?? '').toLowerCase())) return false;
+  if (Deno.env.get('ADMIN_REQUIRE_MFA') === '1' && jwtClaim(token, 'aal') !== 'aal2') return false;
+  return true;
+}
+// Every administrative action leaves a row in security_events (who, what, on whom; never secrets).
+type AuditClient = { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ error: unknown }> };
+async function auditAdmin(client: AuditClient, action: string, actorId: string, details: Record<string, unknown>): Promise<void> {
+  const { error } = await client.rpc('log_security_event', {
+    p_kind: `admin_${action}`.slice(0, 60),
+    p_severity: 'info',
+    p_user: actorId,
+    p_details: details,
+    p_dedupe: null,
+  });
+  if (error) console.error('audit log failed', error);
+}
+// ---- end of admin check
 
 // The web build is served from a different origin than *.supabase.co, so every browser call
 // here is cross-origin and triggers a CORS preflight (OPTIONS) first — without these headers
@@ -38,7 +75,7 @@ Deno.serve(async (req) => {
     const { data: callerData } = await admin.auth.getUser(token);
     const caller = callerData.user;
     // Audit M-2: the owner's address must also be confirmed — an unconfirmed sign-up proves nothing.
-    if (!caller || !caller.email_confirmed_at || caller.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    if (!caller || !isAdminUser(caller, token)) {
       return new Response(JSON.stringify({ error: 'Доступ запрещён.' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -89,6 +126,7 @@ Deno.serve(async (req) => {
       .from('admin_messages')
       .insert(targetIds.map((id) => ({ target_user_id: id, body: message })));
     if (insertError) throw insertError;
+    await auditAdmin(admin, 'send_message', caller.id, { mode, recipients: targetIds.length });
 
     return new Response(JSON.stringify({ ok: true, count: targetIds.length }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

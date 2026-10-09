@@ -71,7 +71,7 @@ function constantTimeEqual(a: string, b: string): boolean {
 async function verifySignature(rawBody: string, header: string | null): Promise<boolean> {
   if (!header || !LEMONSQUEEZY_WEBHOOK_SECRET) return false;
   const expected = await hmacSha256Hex(LEMONSQUEEZY_WEBHOOK_SECRET, rawBody);
-  return constantTimeEqual(expected, header);
+  return constantTimeEqual(expected, header.trim().toLowerCase());
 }
 
 async function findUserIdByEmail(email: string): Promise<string | null> {
@@ -81,16 +81,34 @@ async function findUserIdByEmail(email: string): Promise<string | null> {
   for (let i = 0; i < 10; i++) {
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
     if (error || !data) return null;
-    const match = data.users.find((u) => (u.email ?? '').toLowerCase() === target);
+    const users = data.users as { id: string; email?: string }[];
+    const match = users.find((u) => (u.email ?? '').toLowerCase() === target);
     if (match) return match.id;
-    if (data.users.length < perPage) return null;
+    if (users.length < perPage) return null;
     page += 1;
   }
   return null;
 }
 
+// Hardening (audit F-06): the body is capped before it is read, the HMAC is checked on the raw bytes
+// before any parsing, and the state change goes through subscription_apply_event, which records the
+// event (sha256 of the signed body) once and refuses an event older than the one already applied —
+// a redelivered or out-of-order "active" can no longer revive an expired subscription.
+const MAX_WEBHOOK_BYTES = 1024 * 1024;
+
+async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+const isoOrNull = (v: unknown): string | null => (typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? v : null);
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 Deno.serve(async (req) => {
+  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
+  if (Number(req.headers.get('content-length') ?? '0') > MAX_WEBHOOK_BYTES) return new Response('Too large', { status: 413 });
   const rawBody = await req.text();
+  if (rawBody.length > MAX_WEBHOOK_BYTES) return new Response('Too large', { status: 413 });
   const signatureHeader = req.headers.get('X-Signature');
 
   const valid = await verifySignature(rawBody, signatureHeader);
@@ -98,50 +116,55 @@ Deno.serve(async (req) => {
     return new Response('Invalid signature', { status: 401 });
   }
 
-  const payload = JSON.parse(rawBody);
-  const eventName: string = payload.meta?.event_name ?? '';
+  let payload: any;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch {
+    return new Response('Bad payload', { status: 400 });
+  }
+  const eventName: string = String(payload.meta?.event_name ?? '');
   const attributes = payload.data?.attributes ?? {};
 
-  let userId: string | undefined = payload.meta?.custom_data?.user_id;
-  if (!userId && attributes.user_email) {
+  if (!eventName.startsWith('subscription_')) {
+    // Not something we track (credits are never granted from here) — acknowledge so it is not retried.
+    return new Response('ok', { status: 200 });
+  }
+
+  // custom_data.user_id comes from the checkout link the app opened for a signed-in user; it is a
+  // hint, not proof, so it must be a real uuid of an existing account (checked in the database).
+  let userId: string | undefined = typeof payload.meta?.custom_data?.user_id === 'string' && UUID_RE.test(payload.meta.custom_data.user_id)
+    ? payload.meta.custom_data.user_id
+    : undefined;
+  if (!userId && typeof attributes.user_email === 'string') {
     userId = (await findUserIdByEmail(attributes.user_email)) ?? undefined;
   }
-
   if (!userId) {
-    console.error('lemonsqueezy-webhook: could not resolve user_id', {
-      eventName,
-      email: attributes.user_email,
-    });
+    console.error('lemonsqueezy-webhook: could not resolve the account', { eventName });
     return new Response('ok', { status: 200 });
   }
 
-  if (!eventName.startsWith('subscription_')) {
-    // Not something we track — acknowledge so LemonSqueezy doesn't retry.
-    return new Response('ok', { status: 200 });
-  }
-
-  const status: string | undefined = attributes.status;
-  // Active subscriptions have renews_at set; cancelled/expired ones have ends_at instead.
-  const currentPeriodEnd: string | null = attributes.renews_at ?? attributes.ends_at ?? null;
-
+  const status: string | undefined = typeof attributes.status === 'string' ? attributes.status : undefined;
   if (!status) {
-    console.error('lemonsqueezy-webhook: missing status', { userId, eventName });
+    console.error('lemonsqueezy-webhook: missing status', { eventName });
     return new Response('ok', { status: 200 });
   }
+  // Active subscriptions have renews_at set; cancelled/expired ones have ends_at instead.
+  const currentPeriodEnd = isoOrNull(attributes.renews_at) ?? isoOrNull(attributes.ends_at);
 
-  const { error } = await supabaseAdmin.from('subscriptions').upsert({
-    user_id: userId,
-    status,
-    lemonsqueezy_subscription_id: payload.data?.id ?? null,
-    lemonsqueezy_customer_id: attributes.customer_id ? String(attributes.customer_id) : null,
-    current_period_end: currentPeriodEnd,
-    updated_at: new Date().toISOString(),
+  const { data: outcome, error } = await supabaseAdmin.rpc('subscription_apply_event', {
+    p_event_id: await sha256Hex(rawBody),
+    p_event_name: eventName,
+    p_user: userId,
+    p_status: status,
+    p_subscription_id: payload.data?.id != null ? String(payload.data.id) : null,
+    p_customer_id: attributes.customer_id != null ? String(attributes.customer_id) : null,
+    p_period_end: currentPeriodEnd,
+    p_provider_updated_at: isoOrNull(attributes.updated_at),
   });
-
   if (error) {
-    console.error('Failed to upsert subscription', error);
-    return new Response('error', { status: 500 });
+    console.error('subscription_apply_event failed', error);
+    return new Response('error', { status: 500 }); // LemonSqueezy retries; the event id makes the retry safe
   }
-
+  if (outcome !== 'applied') console.warn('lemonsqueezy-webhook:', outcome, eventName);
   return new Response('ok', { status: 200 });
 });
