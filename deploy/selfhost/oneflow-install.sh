@@ -45,6 +45,15 @@ set_env() {
 
 get_env() { grep -E "^$1=" "${2:-$APP_DIR/.env}" | tail -n1 | cut -d= -f2-; }
 
+# Adds a compose file to COMPOSE_FILE in .env, keeping the ones already listed
+# (install-functions.sh adds its own override file).
+compose_files_add() {
+  local current; current=$(get_env COMPOSE_FILE)
+  [[ -n "$current" ]] || current="docker-compose.yml"
+  case ":$current:" in *":$1:"*) return ;; esac
+  set_env COMPOSE_FILE "$current:$1"
+}
+
 check_dns() {
   step "1/7 Проверка домена $DOMAIN"
   command -v dig >/dev/null || apt-get install -y -qq bind9-dnsutils >/dev/null
@@ -189,7 +198,7 @@ services:
       - "127.0.0.1:5432:5432"
       - "127.0.0.1:6543:6543"
 EOF
-  set_env COMPOSE_FILE "docker-compose.yml:docker-compose.oneflow.yml"
+  compose_files_add docker-compose.oneflow.yml
   (cd "$APP_DIR" && docker compose config --format json >/dev/null) || die "docker compose не принял docker-compose.oneflow.yml"
   ok "Порты шлюза (8000) и базы (5432/6543) — только 127.0.0.1"
 }
