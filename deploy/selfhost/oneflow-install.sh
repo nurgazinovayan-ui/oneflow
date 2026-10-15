@@ -239,6 +239,11 @@ $2 {
 			header_up -CF-Connecting-IP
 		}
 	}
+	# e-mail templates that Auth loads (configure-auth.sh): static files, no listing, no secrets
+	handle_path /mail-templates/* {
+		root * /srv/oneflow-mail-templates
+		file_server
+	}
 	handle {
 		respond "Not found" 404
 	}
