@@ -4,15 +4,17 @@
     fix_data.py <data.sql> <managed-columns.tsv> <out.sql>
 
 managed-columns.tsv lists, for the schemas Supabase itself manages on the new server (auth,
-storage), every existing table with its columns: "schema.table<TAB>col1,col2,...", and every
-existing sequence as "seq:schema.sequence<TAB>".
+storage), every existing table with its columns and whether this connection may write to it:
+"schema.table<TAB>col1,col2,...<TAB>t|f", and every existing sequence the same way as
+"seq:schema.sequence<TAB><TAB>t|f". A missing third field counts as writable.
 
 For each COPY block:
   * schemas/tables that must not travel (pg_cron jobs, Vault secrets, pg_net queues, Realtime,
     webhooks, migration bookkeeping) are skipped: they would re-run the old project's schedules
     against the old URLs, or hold secrets encrypted with the old project's key;
-  * in managed schemas, a table that does not exist here is skipped and a column that does not
-    exist here is dropped (platform Auth/Storage can be newer than self-hosted);
+  * in managed schemas, a table that does not exist here, or that only Supabase itself may write
+    (e.g. storage.buckets_vectors), is skipped and a column that does not exist here is dropped
+    (platform Auth/Storage can be newer than self-hosted);
   * everything else (public and other app schemas created by schema.sql) passes unchanged.
 Sequence positions (SELECT pg_catalog.setval(...)) follow the same rules: skipped for schemas that
 do not travel and for managed sequences that do not exist here.
@@ -47,13 +49,17 @@ def quote(ident: str) -> str:
 def main() -> int:
     src, cols_path, dst = sys.argv[1:4]
     managed: dict[str, list[str]] = {}
+    writable: set[str] = set()
     with open(cols_path, encoding="utf-8") as f:
         for line in f:
             line = line.rstrip("\n")
             if not line:
                 continue
-            name, _, cols = line.partition("\t")
+            parts = line.split("\t")
+            name, cols = parts[0], parts[1] if len(parts) > 1 else ""
             managed[name] = cols.split(",") if cols else []
+            if len(parts) < 3 or parts[2] != "f":
+                writable.add(name)
 
     changes = 0
     with open(src, encoding="utf-8", newline="") as fin, open(dst, "w", encoding="utf-8", newline="") as fout:
@@ -64,7 +70,7 @@ def main() -> int:
             if mode != "pass":
                 if line.rstrip("\r\n") == "\\.":
                     if mode == "skip":
-                        print(f"    пропущено строк: {skipped_rows}")
+                        print(f"    пропущено строк: {skipped_rows}" + ("  ← в ней были данные" if skipped_rows else ""))
                     else:
                         fout.write(line)
                     mode = "pass"
@@ -79,7 +85,7 @@ def main() -> int:
             sv = SETVAL_RE.match(line.rstrip("\r\n"))
             if sv:
                 schema, seq = unquote(sv["schema"]), unquote(sv["seq"])
-                if schema in SKIP_SCHEMAS or (schema in MANAGED_SCHEMAS and f"seq:{schema}.{seq}" not in managed):
+                if schema in SKIP_SCHEMAS or (schema in MANAGED_SCHEMAS and f"seq:{schema}.{seq}" not in writable):
                     print(f"  skip sequence {schema}.{seq}: нет на этом сервере или не переносится")
                     changes += 1
                     fout.write("-- " + line)
@@ -103,6 +109,8 @@ def main() -> int:
                 reason = "журнал миграций сервиса — на новом сервере свой"
             elif schema in MANAGED_SCHEMAS and full not in managed:
                 reason = "такой таблицы нет в версии Supabase на этом сервере"
+            elif schema in MANAGED_SCHEMAS and full not in writable:
+                reason = "служебная таблица, писать в неё на этом сервере может только сам Supabase"
             if reason:
                 print(f"  skip {full}: {reason}")
                 changes += 1

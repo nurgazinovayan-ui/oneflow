@@ -185,13 +185,14 @@ dump_old() {
 prepare_data() {
   step "5/10 Подгонка данных под версию Supabase на этом сервере"
   psql "$NEW_DB_URL" -X -At -F $'\t' -c "
-    select n.nspname || '.' || c.relname, string_agg(a.attname, ',' order by a.attnum)
+    select n.nspname || '.' || c.relname, string_agg(a.attname, ',' order by a.attnum),
+           bool_and(has_table_privilege(c.oid, 'INSERT'))
     from pg_class c join pg_namespace n on n.oid = c.relnamespace
     join pg_attribute a on a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped
     where c.relkind in ('r', 'p') and n.nspname in ('auth', 'storage')
     group by 1
     union all
-    select 'seq:' || n.nspname || '.' || c.relname, ''
+    select 'seq:' || n.nspname || '.' || c.relname, '', has_sequence_privilege(c.oid, 'UPDATE')
     from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where c.relkind = 'S' and n.nspname in ('auth', 'storage')" > "$WORK/managed-columns.tsv"
   install -d -m 700 "$REPORTS"
@@ -335,22 +336,21 @@ copy_files() {
   echo "    Файлов: $count"
   (( count > 0 )) || { ok "Файлов нет"; return 0; }
   # an upload by service_role rewrites owner/metadata of the row restored from the dump:
-  # remember the original owners and put them back afterwards (policies can depend on them)
+  # remember the original owners (a CSV in WORK) and put them back afterwards — policies can
+  # depend on them. A temp table needs no extra rights, unlike a schema.
   cols=$(psql "$NEW_DB_URL" -X -At -c "select string_agg(column_name, ',' order by column_name)
     from information_schema.columns where table_schema = 'storage' and table_name = 'objects'
       and column_name in ('owner', 'owner_id', 'user_metadata', 'created_at')")
-  psql "$NEW_DB_URL" -X -q -v ON_ERROR_STOP=1 -c "set client_min_messages = warning;
-    drop schema if exists oneflow_migrate cascade;
-    create schema oneflow_migrate;
-    create table oneflow_migrate.objects_before as select bucket_id, name, $cols from storage.objects" >/dev/null
+  psql "$NEW_DB_URL" -X -q -v ON_ERROR_STOP=1 \
+    -c "\\copy (select bucket_id, name, $cols from storage.objects) to '$WORK/owners.csv' csv"
   OLD_URL="$OLD_URL" OLD_KEY="$OLD_KEY" NEW_URL="http://127.0.0.1:8000" NEW_KEY="$(get_env SERVICE_ROLE_KEY)" \
     TMPDIR="$WORK" python3 "$HERE/tools/copy_storage.py" "$WORK/objects.tsv" | tee "$REPORTS/storage-$STAMP.txt" \
     || warn "Часть файлов не скопирована — список выше. Остальное перенесено."
   sets=$(sed -E 's/([a-z_]+)/\1 = b.\1/g' <<< "$cols")
-  psql "$NEW_DB_URL" -X -q -v ON_ERROR_STOP=1 -c "set client_min_messages = warning;
-    update storage.objects o set $sets
-    from oneflow_migrate.objects_before b where b.bucket_id = o.bucket_id and b.name = o.name;
-    drop schema oneflow_migrate cascade" >/dev/null
+  psql "$NEW_DB_URL" -X -q -v ON_ERROR_STOP=1 \
+    -c "create temp table b as select bucket_id, name, $cols from storage.objects limit 0" \
+    -c "\\copy b from '$WORK/owners.csv' csv" \
+    -c "update storage.objects o set $sets from b where b.bucket_id = o.bucket_id and b.name = o.name" >/dev/null
   ok "Файлы скопированы, владельцы файлов сохранены"
 }
 
