@@ -163,7 +163,9 @@ EOF
   ok "База на этом сервере пустая"
 
   local need_mb free_mb
-  need_mb=$(psql "$OLD_DB_URL" -X -At -c "select (pg_database_size(current_database()) + coalesce((select sum((metadata->>'size')::bigint) from storage.objects), 0)) / 1000000 * 3")
+  # sum() of bigint is numeric in Postgres: round up to a whole number for bash arithmetic
+  need_mb=$(psql "$OLD_DB_URL" -X -At -c "select ceil((pg_database_size(current_database())
+    + coalesce((select sum((metadata->>'size')::bigint) from storage.objects), 0)) / 1000000.0 * 3)::bigint")
   free_mb=$(df -Pm /root | awk 'NR == 2 {print $4}')
   (( free_mb > need_mb )) || die "Мало места на диске: нужно ~${need_mb} МБ, свободно ${free_mb} МБ"
   ok "Места на диске достаточно (нужно ~${need_mb} МБ, свободно ${free_mb} МБ)"
