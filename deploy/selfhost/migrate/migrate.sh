@@ -213,12 +213,45 @@ prepare_data() {
 restore_new() {
   step "6/10 Загрузка на этот сервер (одной транзакцией)"
   # psql output can quote rows (CONTEXT: COPY …), so it stays in WORK; reports get error lines only
-  local log="$WORK/restore.log"
+  local log="$WORK/restore.log" n line errs rc
+
+  # roles.sql (one statement per line): a statement this server refuses — e.g. a platform-only
+  # role setting such as log_min_messages, which needs superuser here — is found in a trial that
+  # is rolled back (each statement in its own savepoint) and commented out
+  psql "$NEW_DB_URL" -X -q -v ON_ERROR_ROLLBACK=on -c 'BEGIN' -f "$WORK/roles.sql" -c 'ROLLBACK' > "$log" 2>&1 && rc=0 || rc=$?
+  # statement errors leave the exit code at 0 here; 1/2 = file missing or no connection
+  (( rc == 0 )) || die "Пробная загрузка ролей не запустилась: $(grep -m1 -E 'error|ошибка' "$log" | cut -c1-160)"
+  while read -r n; do
+    [[ -n "$n" ]] || continue
+    line=$(sed -n "${n}p" "$WORK/roles.sql")
+    sed -i "${n}s/^/-- skipped: /" "$WORK/roles.sql"
+    warn "Роли: пропущена строка, которую этот сервер не разрешает: ${line:0:110}" | tee -a "$REPORTS/restore-$STAMP.txt"
+  done < <(grep -oE 'roles\.sql:[0-9]+: (ERROR|ОШИБКА)' "$log" | cut -d: -f2 | sort -un || true)
+
+  # full trial, rolled back at the end: shows EVERY problem at once instead of one per run.
+  # When a COPY fails, psql reads its rows as SQL: those follow-up syntax errors are dropped, and
+  # quoted values in other data errors are masked, so no user data reaches the screen
+  psql "$NEW_DB_URL" -X -q -v ON_ERROR_ROLLBACK=on -c 'BEGIN' \
+    -f "$WORK/roles.sql" -f "$WORK/schema.sql" -c 'SET session_replication_role = replica' \
+    -f "$WORK/data.fixed.sql" -c 'ROLLBACK' > "$log" 2>&1 && rc=0 || rc=$?
+  (( rc == 0 )) || die "Пробная загрузка не запустилась: $(grep -m1 -E 'error|ошибка' "$log" | sed -E 's#^psql:[^ ]*/##' | cut -c1-160)"
+  errs=$(grep -E '(^|: )(ERROR|ОШИБКА):' "$log" | sed -E 's#^psql:[^ ]*/##' \
+    | grep -vE '^data\.fixed\.sql:[0-9]+: (ERROR|ОШИБКА): +(syntax error|синтаксическая ошибка)' \
+    | sed -E '/^data\.fixed\.sql:/{/does not exist|не существует|permission denied|нет доступа|must be/!s/"[^"]*"/"…"/g}' \
+    | cut -c1-180 | uniq || true)
+  if [[ -n "$errs" ]]; then
+    echo "    Пробная загрузка (с откатом) нашла ошибки: $(wc -l <<< "$errs")"
+    head -n 15 <<< "$errs" | tee -a "$REPORTS/restore-$STAMP.txt" | sed 's/^/    /'
+    die "Загрузка не начиналась, база на этом сервере не изменилась. Пришлите скриншот строк выше (данных пользователей в них нет)."
+  fi
+  ok "Пробная загрузка прошла без ошибок"
+
   if ! psql "$NEW_DB_URL" -X -q --single-transaction -v ON_ERROR_STOP=1 \
         --file "$WORK/roles.sql" --file "$WORK/schema.sql" \
         --command 'SET session_replication_role = replica' \
         --file "$WORK/data.fixed.sql" > "$log" 2>&1; then
-    grep -E '(^|: )(ERROR|ОШИБКА):' "$log" | head -3 | cut -c1-200 | tee "$REPORTS/restore-error-$STAMP.txt" | sed 's/^/    /'
+    grep -E '(^|: )(ERROR|ОШИБКА):' "$log" | sed -E 's#^psql:[^ ]*/##' | head -3 | cut -c1-180 \
+      | tee -a "$REPORTS/restore-$STAMP.txt" | sed 's/^/    /'
     die "Загрузка отменена, база на этом сервере не изменилась. Пришлите скриншот строк выше (данных пользователей в них нет)."
   fi
   ok "Роли, схема, пользователи и данные загружены"
