@@ -235,7 +235,13 @@ configure_caddy() {
   local caddyfile=/etc/caddy/Caddyfile
   if [[ -f "$caddyfile" && ! -f "$caddyfile.orig" ]]; then cp "$caddyfile" "$caddyfile.orig"; fi
   write_caddyfile "$caddyfile" "$DOMAIN"
+  # The access log must belong to the caddy user: `caddy validate` runs as root here and
+  # would otherwise create it root-owned, and the service could then not load the config.
+  local access_log=/var/log/caddy/api-access.log
+  install -d -m 0755 -o caddy -g caddy /var/log/caddy
+  touch "$access_log"; chown caddy:caddy "$access_log"
   caddy validate --config "$caddyfile" --adapter caddyfile >/dev/null 2>&1 || die "Ошибка в конфигурации Caddy"
+  chown caddy:caddy /var/log/caddy/api-access.log* 2>/dev/null || true
   systemctl enable --now caddy >/dev/null 2>&1
   systemctl reload caddy 2>/dev/null || systemctl restart caddy
 
