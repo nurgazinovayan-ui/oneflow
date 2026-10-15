@@ -75,9 +75,8 @@ install_docker() {
   fi
   docker compose version >/dev/null || die "Не найден docker compose"
 
-  # Published container ports bind to 127.0.0.1 unless a compose file names another address:
-  # Docker writes its own iptables rules and bypasses ufw, so 0.0.0.0 here would expose the
-  # database pooler (5432/6543) and the API gateway (8000) to the internet.
+  # "ip" only covers Docker's default bridge; Supabase runs on its own compose network, so the
+  # ports that matter are pinned to 127.0.0.1 in docker-compose.oneflow.yml (pin_ports).
   local want='{
   "ip": "127.0.0.1",
   "log-driver": "local",
@@ -88,9 +87,9 @@ install_docker() {
     mkdir -p /etc/docker
     printf '%s\n' "$want" > /etc/docker/daemon.json
     systemctl restart docker
-    ok "Порты контейнеров привязаны к 127.0.0.1, логи Docker ограничены по размеру"
+    ok "Логи Docker ограничены по размеру"
   else
-    ok "Docker уже настроен (порты только на 127.0.0.1)"
+    ok "Docker уже настроен"
   fi
   systemctl enable --now docker >/dev/null 2>&1
 }
@@ -172,6 +171,27 @@ configure_env() {
   printf '\n# oneflow-configured %s\n' "$(date -u +%FT%TZ)" >> "$env"
   chown root:root "$env"; chmod 600 "$env"
   ok "Секреты сгенерированы и сохранены в $env (только для root)"
+}
+
+pin_ports() {
+  # Docker writes its own iptables rules and bypasses ufw: a bare "8000:8000" in the upstream
+  # compose file is reachable from the internet. The gateway and the database pooler are
+  # re-published on 127.0.0.1 only; Caddy is the single public entry point.
+  cat > "$APP_DIR/docker-compose.oneflow.yml" <<'EOF'
+# ONEFLOW: the API gateway and the database pooler listen on localhost only.
+# Docker bypasses ufw, so a bare "8000:8000" would be reachable from the internet.
+services:
+  api-gw:
+    ports: !override
+      - "127.0.0.1:8000:8000/tcp"
+  supavisor:
+    ports: !override
+      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:6543:6543"
+EOF
+  set_env COMPOSE_FILE "docker-compose.yml:docker-compose.oneflow.yml"
+  (cd "$APP_DIR" && docker compose config --format json >/dev/null) || die "docker compose не принял docker-compose.oneflow.yml"
+  ok "Порты шлюза (8000) и базы (5432/6543) — только 127.0.0.1"
 }
 
 start_supabase() {
@@ -297,6 +317,7 @@ main() {
   install_caddy
   fetch_supabase
   configure_env
+  pin_ports
   start_supabase
   configure_caddy
   summary
