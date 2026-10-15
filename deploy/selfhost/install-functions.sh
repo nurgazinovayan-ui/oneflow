@@ -65,7 +65,7 @@ ask() {
   cur=$(get_env "$key" "$ENV_FILE")
   while true; do
     printf '\n  \033[1m%s\033[0m — %s\n' "$key" "$label"
-    if [[ -n "$cur" ]]; then prompt="    Вставьте значение (Enter — оставить сохранённое, ${#cur} симв.): "
+    if [[ -n "$cur" ]]; then prompt="    Вставьте значение (Enter — оставить сохранённое, ${#cur} симв.; «-» — удалить): "
     elif [[ "$need" == optional ]]; then prompt="    Вставьте значение (Enter — пропустить): "
     else prompt="    Вставьте значение: "; fi
     if [[ "$mode" == hidden ]]; then
@@ -79,6 +79,16 @@ ask() {
       if [[ "$need" == optional ]]; then VAL[$key]=""; warn "пропущено"; return; fi
       warn "это обязательный ключ"; continue
     fi
+    if [[ "$value" == "-" ]]; then VAL[$key]=""; warn "удалено"; return; fi
+    # the same key pasted twice or more before Enter arrives as one long value
+    local k part rep i dup=0
+    for k in 2 3 4 5; do
+      (( ${#value} % k == 0 )) || continue
+      part=${value:0:$(( ${#value} / k ))}; rep=""
+      for ((i = 0; i < k; i++)); do rep+=$part; done
+      if [[ "$rep" == "$value" ]]; then dup=$k; break; fi
+    done
+    if (( dup )); then warn "ключ вставлен $dup раза подряд — вставьте его один раз"; continue; fi
     if [[ "$value" == *"'"* || "$value" == *$'\n'* ]]; then warn "в значении не должно быть апострофа ' — проверьте, что скопировали только ключ"; continue; fi
     if [[ -n "$re" && ! "$value" =~ $re ]]; then warn "не похоже на этот ключ${hint:+ (ожидается: $hint)} — вставьте ещё раз"; continue; fi
     VAL[$key]=$value
