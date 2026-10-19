@@ -21,7 +21,7 @@ ZIP="${1:-}"
 step "1/3 Пакет и сервер"
 (cd "$HERE" && sha256sum -c --quiet SHA256SUMS) || die "Пакет повреждён — скачайте oneflow-site.tar.gz заново"
 for c in caddy python3 curl flock; do command -v "$c" >/dev/null || die "Не найдено: $c — сначала oneflow-install.sh"; done
-[[ -f /etc/caddy/Caddyfile ]] || die "Нет /etc/caddy/Caddyfile — сначала oneflow-install.sh"
+[[ -f "${CADDYFILE:-/etc/caddy/Caddyfile}" ]] || die "Нет ${CADDYFILE:-/etc/caddy/Caddyfile} — сначала oneflow-install.sh"
 systemctl is-active --quiet caddy || die "Caddy не запущен (sudo systemctl status caddy)"
 command -v dig >/dev/null || apt-get install -y -qq dnsutils >/dev/null 2>&1 || die "Не удалось установить dnsutils (dig)"
 # the check port must be free, or already Caddy's own (a re-run)

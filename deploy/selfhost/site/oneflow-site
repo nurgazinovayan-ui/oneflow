@@ -348,7 +348,8 @@ prune() {
   local cur prev keep id
   cur=$(current_id); prev=$(previous_of "$cur")
   keep=$(ls -1t "$RELEASES" | head -n "$KEEP_RELEASES")
-  for id in $(ls -1 "$RELEASES"); do
+  for id in "$RELEASES"/*/; do
+    id=$(basename "$id")
     [[ "$id" == "$cur" || "$id" == "$prev" ]] && continue
     grep -qxF "$id" <<< "$keep" && continue
     [[ "$id" =~ ^[0-9]{8}-[0-9]{6}-[0-9a-f]{12}$ ]] && rm -rf -- "${RELEASES:?}/$id"

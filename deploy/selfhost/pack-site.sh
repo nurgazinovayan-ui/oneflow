@@ -2,6 +2,7 @@
 # Builds oneflow-site.tar.gz for install-site.sh (the website from the KZ server instead of Vercel):
 #   oneflow-site/install-site.sh   (run on the server: sudo bash ~/oneflow-site/install-site.sh <site.zip>)
 #   oneflow-site/oneflow-site      (installed to /usr/local/sbin; deploy | rollback | status | dns | go-live | check)
+#   oneflow-site/RUNBOOK.md        (the steps: install, DNS change, updates, back to Vercel)
 #
 #   bash deploy/selfhost/pack-site.sh <output-dir>
 set -euo pipefail
@@ -15,7 +16,7 @@ bash -n "$SRC/oneflow-site"
 STAGE="$(mktemp -d)"
 PKG="$STAGE/oneflow-site"
 mkdir -p "$PKG"
-cp "$SRC/install-site.sh" "$SRC/oneflow-site" "$PKG/"
+cp "$SRC/install-site.sh" "$SRC/oneflow-site" "$SRC/RUNBOOK.md" "$PKG/"
 sed -i 's/\r$//' "$PKG/install-site.sh" "$PKG/oneflow-site"
 chmod 755 "$PKG/install-site.sh" "$PKG/oneflow-site"
 (cd "$PKG" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
