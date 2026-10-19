@@ -40,7 +40,7 @@ install_tools() {
   if ! command -v restic >/dev/null || ! command -v zstd >/dev/null; then
     apt-get update -qq && apt-get install -y -qq restic zstd >/dev/null
   fi
-  ok "$(restic version | cut -d' ' -f1-2), zstd $(zstd -V | grep -oE 'v[0-9.]+' | head -n1)"
+  ok "$(restic version | cut -d' ' -f1-2), zstd $(zstd -V | sed -nE 's/.* (v[0-9.]+).*/\1/p')"
   docker inspect supabase-db >/dev/null 2>&1 || die "Контейнер базы supabase-db не найден — Supabase запущен?"
 }
 

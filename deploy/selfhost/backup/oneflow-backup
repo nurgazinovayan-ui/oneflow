@@ -92,12 +92,18 @@ run() {
   fi
   unset PGPASSWORD
 
-  # a dump is only kept when it is complete and holds at least the users counted just before it
+  # a dump is only kept when it is complete and holds at least the users counted just before it.
+  # One awk pass reads the whole dump: a reader that stops early (grep -q, awk exit) would make
+  # zstd die of SIGPIPE on a real-sized dump, and pipefail would report that as a failure.
+  local footer
   zstd -tq "$STAGE/db.sql.zst" || fail "архив дампа повреждён"
-  zstd -dc "$STAGE/db.sql.zst" | tail -n 5 | grep -q 'PostgreSQL database cluster dump complete' \
-    || fail "дамп базы оборван"
-  dump_users=$(zstd -dc "$STAGE/db.sql.zst" \
-    | awk '/^COPY auth\.users /{f=1; next} f && /^\\\.$/{print n+0; exit} f{n++}')
+  read -r dump_users footer < <(zstd -dc "$STAGE/db.sql.zst" | awk '
+    /^COPY auth\.users /    { f = 1; next }
+    f && /^\\\.$/           { f = 0; if (u == "") u = n + 0; next }
+    f                       { n++ }
+    /^-- PostgreSQL database cluster dump complete/ { c = 1 }
+    END { print (u == "" ? "none" : u), c + 0 }')
+  [[ "$footer" == 1 ]] || fail "дамп базы оборван"
   [[ "$dump_users" =~ ^[0-9]+$ ]] || fail "в дампе нет таблицы пользователей"
   (( dump_users >= users )) || fail "в дампе $dump_users пользователей, а в базе $users"
   size=$(du -h "$STAGE/db.sql.zst" | cut -f1)
