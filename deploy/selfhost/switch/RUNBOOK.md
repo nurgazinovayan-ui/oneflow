@@ -18,7 +18,7 @@
 | 3 | Сервер | `sudo bash ~/oneflow-migrate/migrate.sh` → строка Session pooler, пароль базы, service_role. В сверке — только ✓ и ~. |
 | 4 | Сервер | `sudo bash ~/oneflow-switch/switch.sh finish` → ссылки на файлы, расписание трендов, резервная копия, проверки. В конце «Сервер готов». |
 | 5 | Vercel | Загрузить `oneflow-art-site-v18.zip` в production. Если в Settings → Environment Variables есть `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` — заменить на новые (как в `.env.web.example`). |
-| 6 | LemonSqueezy | Settings → Webhooks → Callback URL: `https://api.oneflow.art/functions/v1/lemonsqueezy-webhook` (Signing secret не менять). |
+| 6 | LemonSqueezy | Только если он используется: Settings → Webhooks → Callback URL `https://api.oneflow.art/functions/v1/lemonsqueezy-webhook`. Если нет — приостановить магазин/товар в LemonSqueezy, чтобы никто не оплатил мимо нового сервера. |
 | 7 | Браузер | Проверка: вход по почте и через Google на oneflow.art/app, список генераций, одна недорогая генерация, /admin, мессенджер, «Забыли пароль?» (письмо приходит). |
 
 ## Откат (в первые часы)

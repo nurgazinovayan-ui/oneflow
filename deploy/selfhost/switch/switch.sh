@@ -83,11 +83,18 @@ precheck() {
 
   step "Функции"
   local key
-  for key in CRON_SECRET LEMONSQUEEZY_WEBHOOK_SECRET OPENROUTER_API_KEY; do
+  for key in CRON_SECRET OPENROUTER_API_KEY; do
     [[ -n "$(env_value "$APP_DIR/functions.env" "$key")" ]] && ok "$key задан" || bad "$key не задан (install-functions.sh)"
   done
+  # LemonSqueezy is optional: without its secret the webhook refuses every event, which is the
+  # safe state while payments go elsewhere (or nowhere yet)
+  if [[ -n "$(env_value "$APP_DIR/functions.env" LEMONSQUEEZY_WEBHOOK_SECRET)" ]]; then
+    ok "LemonSqueezy: секрет вебхука задан"
+  else
+    warn "LemonSqueezy не подключён — уведомления об оплате через него не принимаются (если не используется — так и нужно)"
+  fi
   code=$(http_code -X POST "$NEW_URL/functions/v1/lemonsqueezy-webhook")
-  [[ "$code" =~ ^(400|401|403)$ ]] && ok "вебхук оплаты отвечает и без подписи не принимает (HTTP $code)" \
+  [[ "$code" =~ ^(400|401|403)$ ]] && ok "вебхук оплаты без подписи ничего не принимает (HTTP $code)" \
     || bad "вебхук оплаты → HTTP $code"
 
   step "Резервные копии"
@@ -284,11 +291,13 @@ finish() {
     printf '\033[1;31mЕсть пункты с ✗ (%s) — пришлите скриншот, сайт пока не переключайте.\033[0m\n' "$FAILS"
     exit 1
   fi
-  printf '\033[1;32mСервер готов.\033[0m Дальше — по инструкции: сайт v18 в Vercel, адрес вебхука в LemonSqueezy.\n'
-  echo
-  echo "    Вебхук LemonSqueezy (Settings → Webhooks → ваш вебхук → Callback URL):"
-  echo "      $NEW_URL/functions/v1/lemonsqueezy-webhook"
-  echo "    Signing secret не меняйте: он совпадает с тем, что введён в install-functions.sh."
+  printf '\033[1;32mСервер готов.\033[0m Дальше — по инструкции: сайт v18 в Vercel.\n'
+  if [[ -n "$(env_value "$APP_DIR/functions.env" LEMONSQUEEZY_WEBHOOK_SECRET)" ]]; then
+    echo
+    echo "    Вебхук LemonSqueezy (Settings → Webhooks → ваш вебхук → Callback URL):"
+    echo "      $NEW_URL/functions/v1/lemonsqueezy-webhook"
+    echo "    Signing secret — тот же, что введён в install-functions.sh."
+  fi
 }
 
 rollback() {
