@@ -5,6 +5,8 @@
 #   oneflow-backup status   last successful backup and the latest snapshots
 #   oneflow-backup check    verify the repository and re-read 10% of the stored data (weekly timer)
 #   oneflow-backup fetch <empty-dir>   restore the latest snapshot into a directory (for recovery)
+#   oneflow-backup restore-test        drill: restore the latest dump into a throwaway copy of the db
+#                                      container (no network, own storage) and compare the counts
 #
 # What goes in: a full database dump (all roles and databases, taken inside the db container with
 # its own pg_dumpall, so the dump matches the server version), Storage files, the functions and the
@@ -130,6 +132,94 @@ check() {
   say "Проверка пройдена: хранилище цело, 10% данных перечитано, последняя копия свежая"
 }
 
+# Restore drill. The throwaway database is started from the live db container's own settings
+# (image, command, environment, init scripts — read with docker inspect), but with its own
+# temporary storage, no network and another name; the live database is never touched. The latest
+# dump is loaded into it and the users, files and app tables are counted against the dump.
+# Errors like "already exists" are expected: the fresh copy initialises itself first.
+restore_test() {
+  load_conf
+  local cname=oneflow-restore-test tmp dump expect_users expect_objects expect_tables
+  local got_users got_objects got_tables errors i
+  tmp=$(mktemp -d /var/tmp/oneflow-restore.XXXXXX)
+  # shellcheck disable=SC2064
+  trap "docker rm -f -v $cname >/dev/null 2>&1 || true; rm -rf '$tmp'" EXIT
+  docker rm -f -v "$cname" >/dev/null 2>&1 || true
+
+  say "Достаю последнюю копию базы из хранилища…"
+  restic restore latest --tag oneflow --target "$tmp/r" --include "$STAGE/db.sql.zst" >/dev/null
+  dump="$tmp/r$STAGE/db.sql.zst"
+  [[ -s "$dump" ]] || { echo "В последней копии нет дампа базы" >&2; exit 1; }
+  read -r expect_users expect_objects expect_tables < <(zstd -dc "$dump" | awk '
+    /^COPY auth\.users /      { blk = "u"; next }
+    /^COPY storage\.objects / { blk = "o"; next }
+    blk != "" && /^\\\.$/      { blk = ""; next }
+    blk == "u" { u++ } blk == "o" { o++ }
+    /^CREATE TABLE public\./  { t++ }
+    END { print u + 0, o + 0, t + 0 }')
+
+  say "Запускаю временную копию контейнера базы (без сети)…"
+  # docker run arguments from the live container; its environment (with the database password)
+  # goes through an env file in the private temp dir, never through argv
+  python3 - "$DB_CONTAINER" "$tmp" <<'PY'
+import json, subprocess, sys
+name, tmp = sys.argv[1], sys.argv[2]
+c = json.loads(subprocess.check_output(["docker", "inspect", name]))[0]
+with open(f"{tmp}/env", "w") as f:
+    for e in c["Config"].get("Env") or []:
+        if "\n" not in e:
+            f.write(e + "\n")
+args = ["--env-file", f"{tmp}/env"]
+for m in c.get("Mounts", []):
+    dst = m["Destination"]
+    if dst == "/var/lib/postgresql/data" or m.get("Type") == "volume":
+        args += ["-v", dst]                    # fresh anonymous volume, removed with the container
+    elif m.get("Type") == "bind":
+        args += ["-v", f"{m['Source']}:{dst}:ro"]
+args.append(c["Config"]["Image"])
+args += c["Config"].get("Cmd") or []
+with open(f"{tmp}/args", "wb") as f:
+    f.write(b"\0".join(a.encode() for a in args))
+PY
+  local -a run_args
+  mapfile -d '' run_args < "$tmp/args"
+  docker run -d --name "$cname" --network none "${run_args[@]}" >/dev/null
+
+  # ready = the init scripts finished and the server listens on TCP (during init it does not)
+  for i in $(seq 1 120); do
+    if docker exec "$cname" pg_isready -U postgres -h localhost >/dev/null 2>&1; then break; fi
+    (( i == 120 )) && { docker logs --tail 15 "$cname" 2>&1 | sed 's/^/    /'; echo "Временная база не запустилась за 10 минут" >&2; exit 1; }
+    sleep 5
+  done
+  sleep 5
+
+  say "Загружаю дамп во временную базу…"
+  PGPASSWORD=$(env_value "$APP_DIR/.env" POSTGRES_PASSWORD)
+  export PGPASSWORD
+  zstd -dc "$dump" | docker exec -i -e PGPASSWORD "$cname" \
+    psql -U supabase_admin -h localhost -d postgres -X -q -v ON_ERROR_STOP=0 > "$tmp/restore.log" 2>&1 || true
+  read -r got_users got_objects got_tables < <(docker exec -e PGPASSWORD "$cname" \
+    psql -U supabase_admin -h localhost -d postgres -XAt -F ' ' -c "select
+      (select count(*) from auth.users), (select count(*) from storage.objects),
+      (select count(*) from pg_tables where schemaname = 'public')" 2>/dev/null || echo "? ? ?")
+  unset PGPASSWORD
+  errors=$(grep -cE '(^|: )(ERROR|ОШИБКА):' "$tmp/restore.log" || true)
+
+  mark() { [[ "$1" == "$2" ]] && echo "✓" || echo "✗"; }
+  echo
+  echo "    Пользователи:             в копии $expect_users, восстановлено $got_users $(mark "$expect_users" "$got_users")"
+  echo "    Записи файлов хранилища:  в копии $expect_objects, восстановлено $got_objects $(mark "$expect_objects" "$got_objects")"
+  echo "    Таблицы приложения:       в копии $expect_tables, восстановлено $got_tables $(mark "$expect_tables" "$got_tables")"
+  echo "    Сообщений об ошибках при загрузке: $errors (ожидаемы «уже существует» — копия сначала инициализируется сама)"
+  if [[ "$got_users" == "$expect_users" && "$got_objects" == "$expect_objects" && "$got_tables" == "$expect_tables" ]]; then
+    say "Учебное восстановление прошло: из копии поднимаются все пользователи, записи файлов и таблицы"
+  else
+    echo "    Чаще всего встречались (без данных пользователей):"
+    grep -oE '(ERROR|ОШИБКА): +[^"]*' "$tmp/restore.log" | sort | uniq -c | sort -rn | head -5 | sed 's/^/      /'
+    fail "учебное восстановление: числа не совпали"
+  fi
+}
+
 status() {
   load_conf
   echo "Последняя удачная копия:"
@@ -154,5 +244,6 @@ case "${1:-}" in
   check) check ;;
   status) status ;;
   fetch) fetch "${2:-}" ;;
-  *) sed -n '2,8p' "$0"; exit 1 ;;
+  restore-test) restore_test ;;
+  *) sed -n '2,10p' "$0"; exit 1 ;;
 esac
