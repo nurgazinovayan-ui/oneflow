@@ -84,9 +84,9 @@ export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = 
             'Служебные письма отправляет почтовый сервер казахстанского хостинг-провайдера ' +
               'Megahost. Резервные копии базы данных шифруются и хранятся в объектном хранилище ' +
               'того же провайдера в Казахстане.',
-            'Страницы сайта и код интерфейса раздаёт сеть доставки контента Vercel (США). При ' +
-              'открытии сайта Vercel обрабатывает технические данные запроса — IP-адрес и сведения ' +
-              'о браузере; данные аккаунта у Vercel не хранятся.',
+            'Сайт и интерфейс Сервиса раздаются с того же сервера в Казахстане; журнал запросов ' +
+              '(IP-адрес, сведения о браузере, время) хранится там же и нужен для защиты от атак и ' +
+              'поиска ошибок.',
             'Доступ к данным ограничен: каждый пользователь видит только свои записи (Row Level ' +
               'Security), соединения шифруются (HTTPS).',
             'Данные хранятся, пока существует аккаунт. После удаления аккаунта мы удаляем ' +
@@ -384,9 +384,9 @@ export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = 
             'Service emails are sent by the mail server of the Kazakhstan hosting provider ' +
               'Megahost. Database backups are encrypted and kept in the same provider’s object ' +
               'storage in Kazakhstan.',
-            'Website pages and the interface code are served by the Vercel content delivery ' +
-              'network (USA). When you open the site, Vercel processes technical request data — IP ' +
-              'address and browser details; no account data is stored at Vercel.',
+            'The website and the Service interface are served from the same server in Kazakhstan; ' +
+              'its request log (IP address, browser details, time) is kept there too and is used ' +
+              'to fend off attacks and find errors.',
             'Access is restricted: every user can only see their own records (Row Level ' +
               'Security), and connections are encrypted (HTTPS).',
             'Data is kept for as long as your account exists. After you delete your account, we ' +
