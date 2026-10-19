@@ -5,7 +5,7 @@ export type LegalDoc = 'privacy' | 'terms' | 'refund' | 'help';
 // Edition of the Terms of Service + Privacy Policy that users accept (YYYYMMDD of their «updated» date). Must equal
 // app_settings.legal_version (supabase/migrations/202610070001_legal_consent.sql): bump both whenever either text
 // changes, and every account is asked to accept the new edition once at its next login.
-export const LEGAL_VERSION = 20260901;
+export const LEGAL_VERSION = 20261020;
 
 export interface LegalSection {
   heading: string;
@@ -19,104 +19,126 @@ export interface LegalDocument {
   sections: LegalSection[];
 }
 
-// Template legal copy for ONEFLOW — written to reflect how the product actually works (the
-// Replicate-backed generation pipeline, the LemonSqueezy-funded credit balance, the optional
-// Yandex Disk backup). Not a substitute for review by a lawyer in your jurisdiction before
-// relying on it for real compliance (GDPR-style rights, local consumer-protection law, etc.).
+// Legal copy for ONEFLOW — written to reflect how the product actually works: the databases on our
+// own server in Kazakhstan (Law of the RK No. 94-V on personal data), generations through
+// OpenRouter/Replicate abroad (cross-border transfer, consented to with this Policy), the prepaid
+// balance (payments paused until a new acquirer is connected), the optional Yandex Disk backup.
+// Not a substitute for review by a lawyer before relying on it for real compliance.
 export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = {
   ru: {
     privacy: {
       title: 'Политика конфиденциальности',
-      updated: 'Последнее обновление: 1 сентября 2026 г.',
+      updated: 'Последнее обновление: 20 октября 2026 г.',
       intro:
-        'Настоящая Политика конфиденциальности описывает, какие данные собирает ONEFLOW ' +
-        '(далее — «Сервис»), как они используются, кому передаются и какими правами вы ' +
-        'располагаете в отношении своих данных.',
+        'Настоящая Политика описывает, какие персональные данные собирает ONEFLOW (далее — ' +
+        '«Сервис»), где они хранятся, кому передаются и какими правами вы располагаете. ' +
+        'Политика составлена в соответствии с Законом Республики Казахстан «О персональных ' +
+        'данных и их защите».',
       sections: [
         {
-          heading: '1. Какие данные мы собираем',
+          heading: '1. Оператор и контакты',
           paragraphs: [
-            'Данные аккаунта: адрес электронной почты и данные аутентификации, которые ' +
-              'обрабатывает наш поставщик инфраструктуры (Supabase) при регистрации и входе.',
-            'Данные об оплате: при оплате тарифа платёжные данные (номер карты и т. п.) ' +
-              'вводятся непосредственно в интерфейсе платёжного партнёра LemonSqueezy — Сервис ' +
-              'их не видит и не хранит. Нам передаётся только факт и сумма оплаты для начисления ' +
-              'баланса.',
-            'Данные об использовании: история ваших запросов на генерацию (используемая модель, ' +
-              'стоимость, время) — нужна для списания баланса и отображения истории генераций.',
-            'Содержимое генераций: промпты и загружаемые вами изображения/видео передаются ' +
-              'сторонним поставщикам AI-моделей (см. раздел 3) для выполнения генерации.',
-            'Данные интеграций: если вы подключаете резервное копирование в Яндекс.Диск, мы ' +
-              'храним токен доступа, полученный по протоколу OAuth, в защищённом виде — только ' +
-              'для загрузки ваших собственных генераций в вашу же папку на Диске.',
-            'Локальные данные: часть настроек интерфейса и статистика использования сохраняются ' +
-              'локально в вашем браузере (localStorage) и не передаются на наши серверы.',
-          ],
-        },
-        {
-          heading: '2. Как мы используем данные',
-          paragraphs: [
-            'Для предоставления функциональности Сервиса: выполнение генераций, списание и ' +
-              'начисление баланса, отображение истории и профиля.',
-            'Для связи с вами: уведомления об оплате, ответы на обращения в поддержку.',
-            'Для обеспечения безопасности: предотвращение злоупотреблений и несанкционированного ' +
-              'доступа к аккаунту.',
-            'Мы не продаём ваши персональные данные третьим лицам и не используем их в рекламных ' +
-              'целях за пределами самого Сервиса.',
-          ],
-        },
-        {
-          heading: '3. Передача данных третьим лицам',
-          paragraphs: [
-            'Supabase — хостинг базы данных и аутентификация пользователей.',
-            'Replicate — выполнение AI-генераций; ваши промпты и загруженные изображения ' +
-              'передаются на их серверы исключительно для обработки запроса и не используются ' +
-              'нами для иных целей.',
-            'LemonSqueezy — обработка платежей в качестве продавца записи (merchant of record); ' +
-              'полностью отвечает за безопасность платёжных данных согласно стандарту PCI DSS.',
-            'Яндекс.Диск — только если вы сами подключили интеграцию резервного копирования.',
-            'Мы не передаём данные каким-либо иным третьим лицам, кроме случаев, предусмотренных ' +
-              'законом.',
-          ],
-        },
-        {
-          heading: '4. Хранение и защита данных',
-          paragraphs: [
-            'Доступ к данным ограничен ролевой моделью на уровне базы данных (Row Level ' +
-              'Security) — каждый пользователь видит только свои собственные записи.',
-            'Данные хранятся столько, сколько существует ваш аккаунт. При удалении аккаунта мы ' +
-              'удаляем связанные с ним данные, за исключением информации, которую обязаны хранить ' +
-              'по закону (например, записи о платежах).',
-          ],
-        },
-        {
-          heading: '5. Ваши права',
-          paragraphs: [
-            'Вы можете запросить копию своих данных, их исправление или полное удаление аккаунта, ' +
-              'написав на адрес поддержки, указанный в разделе «Контакты».',
-            'Отключить резервное копирование в Яндекс.Диск можно в любой момент из интерфейса ' +
-              'Сервиса — токен доступа будет удалён немедленно.',
-          ],
-        },
-        {
-          heading: '6. Изменения политики',
-          paragraphs: [
-            'Мы можем время от времени обновлять эту Политику. При существенных изменениях мы ' +
-              'уведомим вас через интерфейс Сервиса или по электронной почте.',
-          ],
-        },
-        {
-          heading: '7. Контакты',
-          paragraphs: [
-            'По всем вопросам, связанным с обработкой персональных данных, пишите на ' +
+            'Собственник и оператор баз персональных данных Сервиса — {{ОПЕРАТОР}}.',
+            'По всем вопросам обработки персональных данных пишите на ' +
               'nurgazinov.ayan@gmail.com.',
+          ],
+        },
+        {
+          heading: '2. Какие данные мы собираем',
+          paragraphs: [
+            'Данные аккаунта: адрес электронной почты, пароль (хранится только в виде ' +
+              'криптографического хеша), даты регистрации и последней активности. При входе через ' +
+              'Google — также имя и изображение профиля, которые передаёт Google.',
+            'Данные о согласии: какую редакцию Условий и Политики вы приняли и когда, а также ' +
+              'IP-адрес и сведения о браузере в момент принятия — чтобы подтвердить факт согласия.',
+            'Данные об использовании: история генераций (модель, стоимость, время), баланс и его ' +
+              'изменения. Для защиты от злоупотреблений мы сохраняем хеш IP-адреса, а не сам адрес.',
+            'Ваш контент: промпты, загруженные и созданные файлы, сообщения в мессенджере Сервиса ' +
+              'и обращения в поддержку.',
+            'Данные интеграций: если вы подключаете Яндекс.Диск, мы храним токен доступа OAuth в ' +
+              'зашифрованном виде — только для работы с вашей папкой на Диске.',
+            'Платёжные данные: номера банковских карт Сервис не получает и не хранит — их вводят ' +
+              'на стороне платёжного партнёра. Мы храним только сведения о поступившей оплате ' +
+              '(сумма, дата), чтобы начислить баланс.',
+            'Локальные данные: часть настроек интерфейса сохраняется в вашем браузере ' +
+              '(localStorage) и не передаётся на наши серверы. Сторонние системы аналитики и ' +
+              'рекламные трекеры Сервис не использует.',
+          ],
+        },
+        {
+          heading: '3. Зачем мы используем данные',
+          paragraphs: [
+            'Чтобы Сервис работал: генерации, баланс, история, проекты и мессенджер.',
+            'Для входа в аккаунт и служебных писем: подтверждение адреса, восстановление пароля, ' +
+              'уведомления о смене почты или пароля.',
+            'Для поддержки: ответы на ваши обращения.',
+            'Для безопасности: защита аккаунтов, предотвращение злоупотреблений и мошенничества.',
+            'Мы не продаём персональные данные и не используем их для сторонней рекламы.',
+          ],
+        },
+        {
+          heading: '4. Где хранятся данные',
+          paragraphs: [
+            'Базы персональных данных Сервиса — аккаунты, история, баланс, файлы и сообщения — ' +
+              'размещены на сервере в Республике Казахстан (облачный провайдер SmartCloud).',
+            'Служебные письма отправляет почтовый сервер казахстанского хостинг-провайдера ' +
+              'Megahost. Резервные копии базы данных шифруются и хранятся в объектном хранилище ' +
+              'того же провайдера в Казахстане.',
+            'Страницы сайта и код интерфейса раздаёт сеть доставки контента Vercel (США). При ' +
+              'открытии сайта Vercel обрабатывает технические данные запроса — IP-адрес и сведения ' +
+              'о браузере; данные аккаунта у Vercel не хранятся.',
+            'Доступ к данным ограничен: каждый пользователь видит только свои записи (Row Level ' +
+              'Security), соединения шифруются (HTTPS).',
+            'Данные хранятся, пока существует аккаунт. После удаления аккаунта мы удаляем ' +
+              'связанные с ним данные, кроме сведений, которые обязаны хранить по закону (например, ' +
+              'о платежах); из резервных копий они исчезают по мере их обновления — не позднее ' +
+              'чем через 7 месяцев.',
+          ],
+        },
+        {
+          heading: '5. Передача данных, в том числе за пределы Казахстана',
+          paragraphs: [
+            'Генерации выполняют сторонние AI-модели за пределами Казахстана. Ваши промпты и ' +
+              'прикреплённые к запросу файлы передаются OpenRouter (США), который направляет ' +
+              'запрос разработчику выбранной вами модели, а для инструментов «Удалить фон» и ' +
+              '«Апскейлер» — Replicate (США). Передаётся только содержимое запроса: email и другие ' +
+              'данные аккаунта этим компаниям не передаются.',
+            'Google (США) — если вы входите через аккаунт Google.',
+            'Яндекс (Россия) — только если вы сами подключили Яндекс.Диск: файлы загружаются в ' +
+              'вашу папку на Диске.',
+            'GIPHY (США) — при поиске GIF в мессенджере: передаётся текст поискового запроса, а ' +
+              'сами GIF ваш браузер загружает с серверов GIPHY.',
+            'Платёжные партнёры — при оплате тарифа. Сейчас приём оплаты временно недоступен; ' +
+              'ранее платежи принимал LemonSqueezy (США), и сведения о тех платежах хранятся у него.',
+            'Принимая эту Политику, вы даёте согласие на трансграничную передачу перечисленных в ' +
+              'этом разделе данных в объёме, необходимом для работы соответствующих функций. Без ' +
+              'неё генерации, вход через Google, Яндекс.Диск и поиск GIF недоступны; остальные ' +
+              'данные хранятся только в Казахстане.',
+            'Иным лицам мы передаём данные только в случаях, предусмотренных законом.',
+          ],
+        },
+        {
+          heading: '6. Ваши права',
+          paragraphs: [
+            'Вы можете узнать, какие ваши данные мы храним, получить их копию, исправить их, ' +
+              'отозвать согласие на обработку и удалить аккаунт — напишите на ' +
+              'nurgazinov.ayan@gmail.com с адреса, привязанного к аккаунту.',
+            'Доступ Сервиса к Яндекс.Диску можно отозвать в любой момент в настройках Яндекс ID; ' +
+              'сохранённый токен мы удалим по вашему запросу.',
+          ],
+        },
+        {
+          heading: '7. Изменения политики',
+          paragraphs: [
+            'Мы можем обновлять эту Политику. При существенных изменениях мы попросим принять ' +
+              'новую редакцию при следующем входе в Сервис.',
           ],
         },
       ],
     },
     terms: {
       title: 'Пользовательское соглашение',
-      updated: 'Последнее обновление: 1 сентября 2026 г.',
+      updated: 'Последнее обновление: 20 октября 2026 г.',
       intro:
         'Используя ONEFLOW (далее — «Сервис»), вы соглашаетесь с настоящими Условиями. Если вы ' +
         'не согласны с каким-либо пунктом — пожалуйста, не используйте Сервис.',
@@ -127,8 +149,8 @@ export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = 
             'ONEFLOW — нод-редактор для генерации и адаптации рекламных фото, видео и аудио с ' +
               'помощью сторонних AI-моделей, а также набор инструментов для подготовки креативов ' +
               'под рекламные площадки (Kaspi, GDN, РСЯ/YAN, BYYD, Discovery и др.).',
-            'Фактическую генерацию контента выполняют сторонние поставщики AI-моделей (в первую ' +
-              'очередь Replicate) — Сервис выступает интерфейсом и не гарантирует бесперебойную ' +
+            'Фактическую генерацию контента выполняют сторонние поставщики AI-моделей (через ' +
+              'OpenRouter и Replicate) — Сервис выступает интерфейсом и не гарантирует бесперебойную ' +
               'доступность конкретных моделей, поскольку это зависит от третьих лиц.',
           ],
         },
@@ -144,9 +166,12 @@ export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = 
         {
           heading: '3. Тарифы и баланс',
           paragraphs: [
-            'Оплата тарифа через LemonSqueezy пополняет ваш баланс в Сервисе на сумму, равную ' +
-              '85% от фактически оплаченной суммы (комиссия Сервиса и платёжного партнёра ' +
-              'составляет 15%).',
+            'Баланс пополняется оплатой тарифа через платёжного партнёра, указанного на странице ' +
+              'оплаты. На баланс зачисляется 85% от фактически оплаченной суммы (комиссия Сервиса и ' +
+              'платёжного партнёра составляет 15%).',
+            'Сейчас приём оплаты временно недоступен: мы подключаем новый способ оплаты и сообщим ' +
+              'о нём в интерфейсе Сервиса. Ранее пополненный баланс сохраняется и расходуется как ' +
+              'обычно.',
             'Баланс — это разовое пополнение: он не сгорает и не обнуляется в начале следующего ' +
               'месяца, а расходуется по мере использования Сервиса, пока не закончится.',
             'Стоимость каждой генерации списывается с баланса по фактической цене используемой ' +
@@ -183,8 +208,8 @@ export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = 
           paragraphs: [
             'Сервис предоставляется «как есть». Мы не гарантируем, что сгенерированный контент ' +
               'будет полностью точным, пригодным для конкретной цели или свободным от ошибок.',
-            'Мы не несём ответственности за перебои в работе сторонних поставщиков (Replicate, ' +
-              'LemonSqueezy, Яндекс.Диск и др.), находящиеся вне нашего контроля.',
+            'Мы не несём ответственности за перебои в работе сторонних поставщиков (OpenRouter, ' +
+              'Replicate, Яндекс.Диск, платёжные партнёры и др.), находящиеся вне нашего контроля.',
           ],
         },
         {
@@ -196,14 +221,18 @@ export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = 
           ],
         },
         {
-          heading: '8. Контакты',
+          heading: '8. Применимое право',
+          paragraphs: ['К настоящим Условиям применяется законодательство Республики Казахстан.'],
+        },
+        {
+          heading: '9. Контакты',
           paragraphs: ['По всем вопросам пишите на nurgazinov.ayan@gmail.com.'],
         },
       ],
     },
     refund: {
       title: 'Политика возврата средств',
-      updated: 'Последнее обновление: 1 сентября 2026 г.',
+      updated: 'Последнее обновление: 20 октября 2026 г.',
       intro:
         'Эта политика описывает, в каких случаях и в каком порядке возможен возврат средств за ' +
         'оплаченный тариф ONEFLOW.',
@@ -237,9 +266,10 @@ export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = 
         {
           heading: '4. Способ возврата',
           paragraphs: [
-            'Возврат осуществляется через LemonSqueezy (наш платёжный партнёр и продавец записи) ' +
-              'тем же способом, которым была произведена оплата. Срок зачисления зависит от вашего ' +
-              'банка или платёжной системы.',
+            'Возврат производится тем же способом, которым была произведена оплата, через ' +
+              'платёжного партнёра, принявшего платёж. По платежам, принятым через LemonSqueezy, ' +
+              'возврат оформляется через LemonSqueezy. Срок зачисления зависит от вашего банка или ' +
+              'платёжной системы.',
           ],
         },
         {
@@ -296,92 +326,119 @@ export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = 
   en: {
     privacy: {
       title: 'Privacy Policy',
-      updated: 'Last updated: September 1, 2026',
+      updated: 'Last updated: October 20, 2026',
       intro:
-        'This Privacy Policy explains what data ONEFLOW (the "Service") collects, how it is ' +
-        'used, who it is shared with, and what rights you have over your data.',
+        'This Privacy Policy explains what personal data ONEFLOW (the "Service") collects, where ' +
+        'it is stored, who it is shared with, and what rights you have. It is written in ' +
+        'accordance with the Law of the Republic of Kazakhstan "On Personal Data and Their ' +
+        'Protection".',
       sections: [
         {
-          heading: '1. What we collect',
+          heading: '1. Operator and contact',
           paragraphs: [
-            'Account data: your email address and authentication data, processed by our ' +
-              'infrastructure provider (Supabase) when you sign up and sign in.',
-            'Payment data: when you pay for a tariff, your card details are entered directly on ' +
-              'our payment partner LemonSqueezy’s interface — the Service never sees or ' +
-              'stores them. We only receive the fact and amount of the payment, used to credit ' +
-              'your balance.',
-            'Usage data: your generation request history (model used, cost, timestamp) — needed ' +
-              'to deduct your balance and show your generation history.',
-            'Generation content: prompts and images/video you upload are sent to third-party AI ' +
-              'model providers (see Section 3) to perform the generation.',
-            'Integration data: if you connect Yandex Disk backup, we store the OAuth access token ' +
-              'securely — used only to upload your own generations to your own Disk folder.',
-            'Local data: some interface preferences and usage statistics are stored locally in ' +
-              'your browser (localStorage) and never sent to our servers.',
-          ],
-        },
-        {
-          heading: '2. How we use it',
-          paragraphs: [
-            'To provide the Service: running generations, crediting/deducting your balance, ' +
-              'showing your history and profile.',
-            'To communicate with you: payment notifications, support responses.',
-            'To keep the Service secure: preventing abuse and unauthorized account access.',
-            'We do not sell your personal data to third parties or use it for advertising outside ' +
-              'the Service itself.',
-          ],
-        },
-        {
-          heading: '3. Third parties we share data with',
-          paragraphs: [
-            'Supabase — database hosting and user authentication.',
-            'Replicate — runs the AI generations; your prompts and uploaded images are sent to ' +
-              'their servers solely to process the request and are not used by us for any other ' +
-              'purpose.',
-            'LemonSqueezy — processes payments as the merchant of record; fully responsible for ' +
-              'payment data security under PCI DSS.',
-            'Yandex Disk — only if you connect the backup integration yourself.',
-            'We do not share your data with any other third party except where required by law.',
-          ],
-        },
-        {
-          heading: '4. Storage and security',
-          paragraphs: [
-            'Access to data is restricted at the database level via Row Level Security — every ' +
-              'user can only see their own records.',
-            'Data is kept for as long as your account exists. When you delete your account, we ' +
-              'delete the associated data except information we’re required to keep by law ' +
-              '(e.g. payment records).',
-          ],
-        },
-        {
-          heading: '5. Your rights',
-          paragraphs: [
-            'You can request a copy of your data, a correction, or full account deletion by ' +
-              'contacting the support address in the Contacts section.',
-            'You can disconnect Yandex Disk backup at any time from the Service — the access ' +
-              'token is deleted immediately.',
-          ],
-        },
-        {
-          heading: '6. Changes to this policy',
-          paragraphs: [
-            'We may update this Policy from time to time. We will notify you of material changes ' +
-              'through the Service interface or by email.',
-          ],
-        },
-        {
-          heading: '7. Contact',
-          paragraphs: [
+            'The owner and operator of the Service’s personal data databases is {{OPERATOR}}.',
             'For any questions about how we handle personal data, write to ' +
               'nurgazinov.ayan@gmail.com.',
+          ],
+        },
+        {
+          heading: '2. What we collect',
+          paragraphs: [
+            'Account data: your email address, your password (stored only as a cryptographic ' +
+              'hash), sign-up and last-activity dates. If you sign in with Google, also the name ' +
+              'and profile picture Google shares with us.',
+            'Consent records: which edition of the Terms and this Policy you accepted and when, ' +
+              'plus your IP address and browser details at that moment — to prove the consent.',
+            'Usage data: your generation history (model, cost, time), your balance and its ' +
+              'changes. To prevent abuse we store a hash of your IP address, not the address ' +
+              'itself.',
+            'Your content: prompts, uploaded and generated files, messages in the Service’s ' +
+              'messenger, and support requests.',
+            'Integration data: if you connect Yandex Disk, we store the OAuth access token ' +
+              'encrypted — used only to work with your own Disk folder.',
+            'Payment data: the Service never receives or stores card numbers — you enter them on ' +
+              'the payment partner’s side. We only keep the record of a received payment ' +
+              '(amount, date) to credit your balance.',
+            'Local data: some interface preferences are stored in your browser (localStorage) and ' +
+              'never sent to our servers. The Service uses no third-party analytics or advertising ' +
+              'trackers.',
+          ],
+        },
+        {
+          heading: '3. Why we use it',
+          paragraphs: [
+            'To run the Service: generations, balance, history, projects, and the messenger.',
+            'For sign-in and service emails: address confirmation, password recovery, notices ' +
+              'about email or password changes.',
+            'For support: replying to your requests.',
+            'For security: protecting accounts and preventing abuse and fraud.',
+            'We do not sell personal data or use it for third-party advertising.',
+          ],
+        },
+        {
+          heading: '4. Where data is stored',
+          paragraphs: [
+            'The Service’s personal data databases — accounts, history, balance, files, and ' +
+              'messages — are hosted on a server in the Republic of Kazakhstan (cloud provider ' +
+              'SmartCloud).',
+            'Service emails are sent by the mail server of the Kazakhstan hosting provider ' +
+              'Megahost. Database backups are encrypted and kept in the same provider’s object ' +
+              'storage in Kazakhstan.',
+            'Website pages and the interface code are served by the Vercel content delivery ' +
+              'network (USA). When you open the site, Vercel processes technical request data — IP ' +
+              'address and browser details; no account data is stored at Vercel.',
+            'Access is restricted: every user can only see their own records (Row Level ' +
+              'Security), and connections are encrypted (HTTPS).',
+            'Data is kept for as long as your account exists. After you delete your account, we ' +
+              'delete the associated data except what we are required to keep by law (e.g. payment ' +
+              'records); it leaves our backups as they rotate — within 7 months at most.',
+          ],
+        },
+        {
+          heading: '5. Sharing, including outside Kazakhstan',
+          paragraphs: [
+            'Generations are run by third-party AI models outside Kazakhstan. Your prompts and the ' +
+              'files attached to a request are sent to OpenRouter (USA), which routes the request ' +
+              'to the developer of the model you chose, and, for the "Remove background" and ' +
+              '"Upscaler" tools, to Replicate (USA). Only the request content is sent: your email ' +
+              'and other account data are not shared with these companies.',
+            'Google (USA) — if you sign in with a Google account.',
+            'Yandex (Russia) — only if you connect Yandex Disk yourself: files are uploaded to ' +
+              'your own Disk folder.',
+            'GIPHY (USA) — when you search for GIFs in the messenger: the search text is sent, and ' +
+              'your browser loads the GIFs from GIPHY’s servers.',
+            'Payment partners — when you pay for a tariff. Payments are temporarily unavailable; ' +
+              'earlier payments were accepted by LemonSqueezy (USA), which keeps the records of ' +
+              'those payments.',
+            'By accepting this Policy you consent to the cross-border transfer of the data listed ' +
+              'in this section, to the extent needed for the corresponding features. Without it, ' +
+              'generations, Google sign-in, Yandex Disk, and GIF search are unavailable; all other ' +
+              'data stays in Kazakhstan.',
+            'We share data with anyone else only where required by law.',
+          ],
+        },
+        {
+          heading: '6. Your rights',
+          paragraphs: [
+            'You can find out what data we hold about you, get a copy, correct it, withdraw your ' +
+              'consent to processing, and delete your account — write to ' +
+              'nurgazinov.ayan@gmail.com from the address linked to your account.',
+            'You can revoke the Service’s access to Yandex Disk at any time in your Yandex ID ' +
+              'settings; we will delete the stored token on request.',
+          ],
+        },
+        {
+          heading: '7. Changes to this policy',
+          paragraphs: [
+            'We may update this Policy. For material changes, we will ask you to accept the new ' +
+              'edition the next time you sign in.',
           ],
         },
       ],
     },
     terms: {
       title: 'Terms of Service',
-      updated: 'Last updated: September 1, 2026',
+      updated: 'Last updated: October 20, 2026',
       intro:
         'By using ONEFLOW (the "Service") you agree to these Terms. If you disagree with any ' +
         'part of them, please do not use the Service.',
@@ -392,9 +449,10 @@ export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = 
             'ONEFLOW is a node-based editor for generating and adapting advertising photos, ' +
               'video, and audio using third-party AI models, plus tools for preparing creatives ' +
               'for ad platforms (Kaspi, GDN, YAN, BYYD, Discovery, and others).',
-            'Actual content generation is performed by third-party AI model providers (primarily ' +
-              'Replicate) — the Service acts as an interface and does not guarantee uninterrupted ' +
-              'availability of any specific model, since that depends on those third parties.',
+            'Actual content generation is performed by third-party AI model providers (through ' +
+              'OpenRouter and Replicate) — the Service acts as an interface and does not guarantee ' +
+              'uninterrupted availability of any specific model, since that depends on those third ' +
+              'parties.',
           ],
         },
         {
@@ -409,8 +467,12 @@ export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = 
         {
           heading: '3. Tariffs and balance',
           paragraphs: [
-            'Paying for a tariff through LemonSqueezy credits your Service balance with 85% of ' +
-              'the amount actually charged (the Service and payment partner retain a 15% margin).',
+            'You top up your balance by paying for a tariff through the payment partner shown on ' +
+              'the payment page. Your balance is credited with 85% of the amount actually charged ' +
+              '(the Service and payment partner retain a 15% margin).',
+            'Payments are temporarily unavailable: we are connecting a new payment method and will ' +
+              'announce it in the Service interface. A balance you topped up earlier is kept and ' +
+              'spent as usual.',
             'The balance is a one-time top-up: it never expires and never resets at the start of ' +
               'a new month — it is spent down as you use the Service until it runs out.',
             'The cost of each generation is deducted from your balance at the actual price of the ' +
@@ -447,8 +509,8 @@ export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = 
           paragraphs: [
             'The Service is provided "as is". We do not guarantee that generated content will be ' +
               'fully accurate, fit for a particular purpose, or error-free.',
-            'We are not liable for outages of third-party providers (Replicate, LemonSqueezy, ' +
-              'Yandex Disk, etc.) that are outside our control.',
+            'We are not liable for outages of third-party providers (OpenRouter, Replicate, Yandex ' +
+              'Disk, payment partners, etc.) that are outside our control.',
           ],
         },
         {
@@ -459,14 +521,18 @@ export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = 
           ],
         },
         {
-          heading: '8. Contact',
+          heading: '8. Governing law',
+          paragraphs: ['These Terms are governed by the laws of the Republic of Kazakhstan.'],
+        },
+        {
+          heading: '9. Contact',
           paragraphs: ['For any questions, write to nurgazinov.ayan@gmail.com.'],
         },
       ],
     },
     refund: {
       title: 'Refund Policy',
-      updated: 'Last updated: September 1, 2026',
+      updated: 'Last updated: October 20, 2026',
       intro:
         'This policy describes when and how you can get a refund for a paid ONEFLOW tariff.',
       sections: [
@@ -499,9 +565,10 @@ export const LEGAL_CONTENT: Record<Language, Record<LegalDoc, LegalDocument>> = 
         {
           heading: '4. Refund method',
           paragraphs: [
-            'Refunds are processed through LemonSqueezy (our payment partner and merchant of ' +
-              'record) using the same method you paid with. The time to receive the funds depends ' +
-              'on your bank or payment provider.',
+            'Refunds go back to the method you paid with, through the payment partner that ' +
+              'accepted the payment. Payments accepted through LemonSqueezy are refunded through ' +
+              'LemonSqueezy. The time to receive the funds depends on your bank or payment ' +
+              'provider.',
           ],
         },
         {
