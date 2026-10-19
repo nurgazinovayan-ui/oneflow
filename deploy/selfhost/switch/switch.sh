@@ -53,8 +53,10 @@ precheck() {
   step "Адрес https://$DOMAIN"
   code=$(http_code -H "apikey: $anon" "$NEW_URL/auth/v1/health")
   [[ "$code" == 200 ]] && ok "вход (auth) отвечает" || bad "auth/v1/health → HTTP $code"
-  code=$(http_code -H "apikey: $anon" "$NEW_URL/rest/v1/")
-  [[ "$code" =~ ^(200|401|404)$ ]] && ok "база (rest) отвечает" || bad "rest/v1 → HTTP $code"
+  # the REST root (/rest/v1/, the schema description) is service-role only by design; check a
+  # table the site really reads with the public key instead (trend catalog, public select policy)
+  code=$(http_code -H "apikey: $anon" "$NEW_URL/rest/v1/trend_prompts?limit=1")
+  [[ "$code" == 200 ]] && ok "база (rest) отдаёт публичные данные" || bad "rest/v1/trend_prompts → HTTP $code"
 
   step "Запросы с сайта $SITE_ORIGIN (CORS)"
   for path in "/auth/v1/token?grant_type=password" "/rest/v1/site_content" "/storage/v1/object/x/y" "/functions/v1/generate-image"; do
