@@ -1,0 +1,659 @@
+#!/usr/bin/env bash
+# ONEFLOW — the website (oneflow.art: landing, app, admin) served from this server instead of Vercel.
+#
+#   sudo oneflow-site deploy <site.zip>   install a site build (the zip that used to go to Vercel) as a
+#                                         new release and switch to it; checks run on the server itself
+#                                         and a failed check switches back to the previous release
+#   sudo oneflow-site rollback            switch back to the previous release
+#   sudo oneflow-site status              releases, DNS, certificate
+#   sudo oneflow-site dns                 do oneflow.art and www.oneflow.art point to this server?
+#   sudo oneflow-site go-live             waits for the DNS change, then serves https://oneflow.art
+#   sudo oneflow-site check               the checks again (on the server; through HTTPS once live)
+#
+# Layout: /srv/oneflow-site/releases/<id>/ holds each build read-only, current -> the live one.
+# Caddy serves "current" on 127.0.0.1:8088 for the checks (never reachable from outside) and,
+# after go-live, as https://oneflow.art (www.oneflow.art redirects there). The behaviour repeats
+# the site's vercel.json: addresses without .html, the same security headers, 404.html, caching.
+
+set -Eeuo pipefail
+umask 022
+
+SITE_HOME="${SITE_HOME:-/srv/oneflow-site}"
+SITE_DOMAIN="${SITE_DOMAIN:-oneflow.art}"
+API_DOMAIN="${API_DOMAIN:-api.oneflow.art}"
+CADDYFILE="${CADDYFILE:-/etc/caddy/Caddyfile}"
+SITE_CADDY="${SITE_CADDY:-/etc/caddy/oneflow-site.caddy}"
+SITE_LOG="${SITE_LOG:-/var/log/caddy/site-access.log}"
+LOCAL_ADDR="${LOCAL_ADDR:-127.0.0.1:8088}"
+KEEP_RELEASES=5
+# the rest is changed by the tests only (other ports, "tls internal", no systemd, short waits)
+PUBLIC_ADDR="${PUBLIC_ADDR:-$SITE_DOMAIN}"
+WWW_ADDR="${WWW_ADDR:-www.$SITE_DOMAIN}"
+PUBLIC_TLS="${PUBLIC_TLS:-}"
+HTTPS_PORT="${HTTPS_PORT:-443}"
+HTTP_PORT="${HTTP_PORT:-80}"
+CADDY_RELOAD="${CADDY_RELOAD:-systemctl reload caddy}"
+DNS_POLL="${DNS_POLL:-15}"
+DNS_PAUSE_MIN="${DNS_PAUSE_MIN:-60}"
+
+RELEASES="$SITE_HOME/releases"
+CURRENT="$SITE_HOME/current"
+HISTORY="$SITE_HOME/releases.log"
+PUBLIC_FLAG="$SITE_HOME/.public-on"
+PUBLIC_HOST="${PUBLIC_ADDR%:*}"
+WWW_HOST="${WWW_ADDR%:*}"
+
+step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
+ok()   { printf '\033[1;32m    ✓ %s\033[0m\n' "$*"; }
+bad()  { printf '\033[1;31m    ✗ %s\033[0m\n' "$*"; FAILS=$(( ${FAILS:-0} + 1 )); }
+warn() { printf '\033[1;33m    ! %s\033[0m\n' "$*"; }
+die()  { printf '\033[1;31m    ✗ %s\033[0m\n' "$*" >&2; exit 1; }
+
+need_root() { [[ $EUID -eq 0 ]] || die "Запустите через sudo: sudo oneflow-site $*"; }
+lock() { exec 9>"$SITE_HOME/.lock"; flock -n 9 || die "oneflow-site уже выполняется в другом окне"; }
+
+# Report-only, as on Vercel (nothing is blocked; the browser only notes what falls outside). The
+# old payment, analytics and database hosts are gone: the site talks to api.oneflow.art only.
+CSP_REPORT="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https: data: blob:; frame-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self' https://oauth.yandex.ru https://$API_DOMAIN; frame-ancestors 'self'"
+PERMISSIONS="camera=(), microphone=(), geolocation=(), usb=(), payment=(), interest-cohort=()"
+
+# ---------------------------------------------------------------------------------------------
+write_caddy() {  # $1 = 1: also the public https://oneflow.art
+  local tmp="$SITE_CADDY.tmp"
+  cat > "$tmp" <<EOF
+# ONEFLOW website — written by oneflow-site (changes here are overwritten)
+
+(oneflow_common_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Permissions-Policy "$PERMISSIONS"
+		Cross-Origin-Opener-Policy "same-origin-allow-popups"
+		X-Permitted-Cross-Domain-Policies "none"
+		-Server
+	}
+}
+
+(oneflow_page_headers) {
+	X-Frame-Options "SAMEORIGIN"
+	Content-Security-Policy "frame-ancestors 'self'"
+	Referrer-Policy "strict-origin-when-cross-origin"
+	Content-Security-Policy-Report-Only "$CSP_REPORT"
+}
+
+# named matchers may appear once per site, so this one is imported once per site; error pages
+# (handle_errors) get the page headers without matchers
+(oneflow_site_headers) {
+	import oneflow_common_headers
+	@oneflow_main not path /admin*
+	header @oneflow_main {
+		import oneflow_page_headers
+	}
+	@oneflow_admin path /admin*
+	header @oneflow_admin {
+		X-Frame-Options "DENY"
+		Content-Security-Policy "frame-ancestors 'none'"
+		X-Robots-Tag "noindex, nofollow"
+		Referrer-Policy "no-referrer"
+		Cache-Control "no-store"
+	}
+	# file names under /assets/ carry their content hash; pages are re-checked on every visit, so a
+	# new release reaches everyone at once
+	@oneflow_assets path /assets/*
+	header @oneflow_assets Cache-Control "public, max-age=31536000, immutable"
+	@oneflow_pages not path /assets/* /admin*
+	header @oneflow_pages Cache-Control "public, max-age=0, must-revalidate"
+}
+
+(oneflow_site) {
+	root * $CURRENT
+	import oneflow_site_headers
+	route {
+		encode zstd gzip
+		# addresses without .html and without a trailing slash, as on Vercel: /app.html -> /app,
+		# /index.html -> /, /ru/ -> /ru (the query string is kept; "//host" paths never redirect)
+		@oneflow_html path_regexp ^/[^/\\\\].*\.html\$
+		route @oneflow_html {
+			uri strip_suffix .html
+			uri path_regexp ^/index\$ /
+			redir {uri} 308
+		}
+		@oneflow_index path /index
+		route @oneflow_index {
+			uri path_regexp ^/index\$ /
+			redir {uri} 308
+		}
+		@oneflow_slash path_regexp ^/[^/\\\\].*/\$
+		route @oneflow_slash {
+			uri strip_suffix /
+			redir {uri} 308
+		}
+		try_files {path} {path}.html
+		file_server {
+			hide .* vercel.json _redirects
+			disable_canonical_uris
+		}
+	}
+	handle_errors {
+		import oneflow_common_headers
+		header {
+			import oneflow_page_headers
+			Cache-Control "public, max-age=0, must-revalidate"
+		}
+		@oneflow_404 expression {err.status_code} == 404
+		handle @oneflow_404 {
+			rewrite * /404.html
+			file_server
+		}
+		handle {
+			respond "{err.status_code} {err.status_text}"
+		}
+	}
+}
+
+# for the checks: reachable from this server only
+http://$LOCAL_ADDR {
+	bind ${LOCAL_ADDR%:*}
+	import oneflow_site
+}
+EOF
+  if [[ "${1:-0}" == 1 ]]; then
+    local tls="${PUBLIC_TLS:-# certificate: automatic, from Let’s Encrypt}"
+    cat >> "$tmp" <<EOF
+
+$PUBLIC_ADDR {
+	$tls
+	import oneflow_site
+	log {
+		output file $SITE_LOG {
+			roll_size 50MiB
+			roll_keep 10
+			roll_keep_for 720h
+		}
+	}
+}
+
+$WWW_ADDR {
+	$tls
+	import oneflow_common_headers
+	redir https://$SITE_DOMAIN{uri} 308
+}
+EOF
+  fi
+  mv "$tmp" "$SITE_CADDY"
+}
+
+# Writes the site's Caddy file (public part on/off) and reloads Caddy; an invalid result is undone.
+apply_caddy() {
+  local public="$1" backup_site="" backup_main=""
+  [[ -f "$SITE_CADDY" ]] && { backup_site="$SITE_CADDY.bak-$(date +%Y%m%d-%H%M%S)"; cp "$SITE_CADDY" "$backup_site"; }
+  write_caddy "$public"
+  if ! grep -qxF "import $SITE_CADDY" "$CADDYFILE"; then
+    backup_main="$CADDYFILE.bak-$(date +%Y%m%d-%H%M%S)"
+    cp "$CADDYFILE" "$backup_main"
+    printf '\n# ONEFLOW website (oneflow-site)\nimport %s\n' "$SITE_CADDY" >> "$CADDYFILE"
+  fi
+  if [[ "$public" == 1 && -n "$SITE_LOG" ]]; then
+    install -d -m 0755 -o caddy -g caddy "$(dirname "$SITE_LOG")" 2>/dev/null || install -d -m 0755 "$(dirname "$SITE_LOG")"
+    touch "$SITE_LOG"; chown caddy:caddy "$SITE_LOG" 2>/dev/null || true
+  fi
+  local out
+  if ! out=$(caddy validate --config "$CADDYFILE" --adapter caddyfile 2>&1); then
+    if [[ -n "$backup_site" ]]; then cp "$backup_site" "$SITE_CADDY"; else rm -f "$SITE_CADDY"; fi
+    [[ -n "$backup_main" ]] && cp "$backup_main" "$CADDYFILE"
+    grep -iE 'error|ошибк' <<< "$out" | tail -n 3 | cut -c1-200 | sed 's/^/    /'
+    die "Настройка Caddy не прошла проверку — вернул прежнюю, сайт не изменился. Пришлите скриншот."
+  fi
+  [[ -n "$SITE_LOG" ]] && chown caddy:caddy "$SITE_LOG"* 2>/dev/null || true
+  $CADDY_RELOAD
+  if [[ "$public" == 1 ]]; then touch "$PUBLIC_FLAG"; else rm -f "$PUBLIC_FLAG"; fi
+  [[ -n "$backup_site" ]] && rm -f "$backup_site"
+  return 0
+}
+
+# ---------------------------------------------------------------------------------------------
+# Checks a zip and unpacks it into $2. Refuses: paths outside the folder, links, hidden files,
+# file types a static site does not need, a missing page, a build that still points at the old
+# Supabase project, and any key in the files other than the public (anon) one.
+unpack_zip() {
+  python3 -I - "$1" "$2" <<'PY'
+import base64, json, os, re, shutil, stat, sys, zipfile
+
+zpath, dest = sys.argv[1], sys.argv[2]
+ALLOWED = {'.html', '.js', '.css', '.json', '.txt', '.xml', '.webmanifest', '.png', '.jpg', '.jpeg', '.webp',
+           '.gif', '.svg', '.ico', '.avif', '.webm', '.mp4', '.mp3', '.woff', '.woff2', '.ttf', '.otf', '.map'}
+NAMES_OK = {'_redirects'}             # Netlify leftover in the build; never served
+REQUIRED = ('index.html', 'app.html', '404.html')
+MAX_FILES, MAX_TOTAL = 5000, 1024 * 1024 * 1024
+problems = []
+
+def fail(msg):
+    problems.append(msg)
+
+try:
+    z = zipfile.ZipFile(zpath)
+except (zipfile.BadZipFile, OSError) as e:
+    sys.exit(f'не zip-архив: {e}')
+
+infos = [i for i in z.infolist() if not i.is_dir()]
+names = [i.filename for i in infos]
+# builds zipped together with their folder (dist/index.html …) are taken from inside that folder
+prefix = ''
+if 'index.html' not in names:
+    tops = {n.split('/', 1)[0] for n in names}
+    if len(tops) == 1 and f'{next(iter(tops))}/index.html' in names:
+        prefix = next(iter(tops)) + '/'
+if len(infos) > MAX_FILES:
+    fail(f'слишком много файлов: {len(infos)}')
+total = sum(i.file_size for i in infos)
+if total > MAX_TOTAL:
+    fail(f'слишком большой после распаковки: {total // 1048576} МБ')
+
+files = {}
+for i in infos:
+    n = i.filename
+    mode = i.external_attr >> 16
+    if stat.S_ISLNK(mode):
+        fail(f'ссылка вместо файла: {n}')
+        continue
+    if '\\' in n or n.startswith('/') or any(p in ('', '.', '..') for p in n.split('/')):
+        fail(f'недопустимый путь: {n}')
+        continue
+    if not n.startswith(prefix):
+        fail(f'файл вне папки сборки: {n}')
+        continue
+    rel = n[len(prefix):]
+    if rel in files:
+        fail(f'файл повторяется в архиве: {rel}')
+        continue
+    base = rel.rsplit('/', 1)[-1]
+    ext = os.path.splitext(base)[1].lower()
+    if any(p.startswith('.') for p in rel.split('/')):
+        fail(f'скрытый файл: {rel}')
+        continue
+    if base not in NAMES_OK and ext not in ALLOWED:
+        fail(f'тип файла не для сайта: {rel}')
+        continue
+    if i.compress_size and i.file_size / i.compress_size > 200 and i.file_size > 10 * 1048576:
+        fail(f'подозрительно сильное сжатие: {rel}')
+        continue
+    files[rel] = i
+
+for r in REQUIRED:
+    if r not in files:
+        fail(f'нет обязательного файла {r}')
+
+JWT = re.compile(rb'eyJ[A-Za-z0-9_-]{10,}\.(eyJ[A-Za-z0-9_-]{10,})\.[A-Za-z0-9_-]{10,}')
+OLD = re.compile(rb'[a-z0-9]{20}\.supabase\.co')
+TEXT = {'.html', '.js', '.css', '.json', '.txt', '.xml', '.webmanifest', '.svg', '.map', ''}
+for rel, i in files.items():
+    if os.path.splitext(rel)[1].lower() not in TEXT:
+        continue
+    if i.file_size > 64 * 1048576:
+        fail(f'{rel}: текстовый файл больше 64 МБ')
+        continue
+    data = z.read(i)
+    if OLD.search(data):
+        fail(f'{rel}: ссылка на старый проект Supabase — это сборка до переезда')
+    for m in JWT.finditer(data):
+        try:
+            payload = json.loads(base64.urlsafe_b64decode(m.group(1) + b'=' * (-len(m.group(1)) % 4)))
+        except Exception:
+            continue
+        if payload.get('role') not in (None, 'anon'):
+            fail(f'{rel}: в файле ключ с ролью «{payload.get("role")}» — такой сайт публиковать нельзя')
+
+if problems:
+    print('\n'.join('    - ' + p for p in problems[:30]))
+    if len(problems) > 30:
+        print(f'    … и ещё {len(problems) - 30}')
+    sys.exit('архив не принят')
+
+free = shutil.disk_usage(os.path.dirname(dest)).free
+if free < total * 2 + 512 * 1048576:
+    sys.exit(f'мало места на диске: свободно {free // 1048576} МБ, нужно {(total * 2) // 1048576 + 512} МБ')
+os.makedirs(dest, mode=0o755)
+for rel, i in files.items():
+    out = os.path.join(dest, rel)
+    os.makedirs(os.path.dirname(out), mode=0o755, exist_ok=True)
+    with z.open(i) as src, open(out, 'xb') as dst:
+        while chunk := src.read(1 << 20):
+            dst.write(chunk)
+    os.chmod(out, 0o644)
+print(f'{len(files)} файлов, {total // 1048576} МБ')
+PY
+}
+
+current_id() { [[ -L "$CURRENT" ]] && basename "$(readlink "$CURRENT")" || true; }
+
+switch_to() {  # atomic: the new link replaces the old one in one rename
+  ln -sfn "releases/$1" "$CURRENT.new"
+  mv -T "$CURRENT.new" "$CURRENT"
+}
+
+# the release deployed before $1 and still on disk, so that rollback after rollback keeps going back
+previous_of() {
+  [[ -f "$HISTORY" ]] || return 0
+  local ids=() i pos=-1
+  mapfile -t ids < <(awk '$3 == "deploy" {print $2}' "$HISTORY")
+  for i in "${!ids[@]}"; do [[ "${ids[$i]}" == "$1" ]] && pos=$i; done
+  (( pos >= 0 )) || pos=${#ids[@]}
+  for (( i = pos - 1; i >= 0; i-- )); do
+    [[ "${ids[$i]}" != "$1" && -d "$RELEASES/${ids[$i]}" ]] && { echo "${ids[$i]}"; return 0; }
+  done
+  return 0
+}
+
+prune() {
+  local cur prev keep id
+  cur=$(current_id); prev=$(previous_of "$cur")
+  keep=$(ls -1t "$RELEASES" | head -n "$KEEP_RELEASES")
+  for id in $(ls -1 "$RELEASES"); do
+    [[ "$id" == "$cur" || "$id" == "$prev" ]] && continue
+    grep -qxF "$id" <<< "$keep" && continue
+    [[ "$id" =~ ^[0-9]{8}-[0-9]{6}-[0-9a-f]{12}$ ]] && rm -rf -- "${RELEASES:?}/$id"
+  done
+  return 0
+}
+
+# ---------------------------------------------------------------------------------------------
+# HTTP checks. $1 = base URL; extra curl options (e.g. --resolve) follow.
+hdr() { grep -i "^$1:" <<< "$2" | head -n1 | cut -d: -f2- | tr -d '\r' | sed 's/^ *//' || true; }
+fetch() {  # sets CODE, HEAD, BODY for $1 (url) with the rest as curl options
+  local url="$1"; shift
+  local tmp; tmp=$(mktemp)
+  HEAD=$(curl -sS -m 20 -o "$tmp" -D - "$@" "$url" 2>/dev/null) || HEAD=""
+  CODE=$(awk 'toupper($1) ~ /^HTTP\// {c=$2} END {print c+0}' <<< "$HEAD")
+  BODY=$(head -c 400000 "$tmp"); rm -f "$tmp"
+}
+
+run_checks() {
+  local base="$1"; shift
+  local opts=("$@") js loc
+  FAILS=0
+
+  fetch "$base/" "${opts[@]}"
+  [[ "$CODE" == 200 && "$BODY" == *ONEFLOW* ]] && ok "/ — главная (EN)" || bad "/ → HTTP $CODE"
+  [[ "$(hdr strict-transport-security "$HEAD")" == max-age=* ]] || bad "/ — нет HSTS"
+  [[ "$(hdr x-frame-options "$HEAD")" == SAMEORIGIN ]] || bad "/ — нет X-Frame-Options"
+  [[ "$(hdr x-content-type-options "$HEAD")" == nosniff ]] || bad "/ — нет X-Content-Type-Options"
+  [[ "$(hdr cache-control "$HEAD")" == *must-revalidate* ]] || bad "/ — страница кэшируется без проверки"
+  [[ -z "$(hdr server "$HEAD")" ]] || bad "/ — сервер называет себя (Server: …)"
+
+  fetch "$base/ru" "${opts[@]}"
+  [[ "$CODE" == 200 && "$BODY" == *'lang="ru"'* ]] && ok "/ru — главная (RU)" || bad "/ru → HTTP $CODE"
+
+  fetch "$base/app?auth=register" "${opts[@]}"
+  if [[ "$CODE" == 200 ]]; then
+    ok "/app — приложение"
+    js=$(grep -oE 'src="\./assets/[^"]+\.js"' <<< "$BODY" | head -n1 | sed -E 's/^src="\.//; s/"$//' || true)
+    if [[ -n "$js" ]]; then
+      fetch "$base$js" "${opts[@]}"
+      [[ "$CODE" == 200 && "$(hdr cache-control "$HEAD")" == *immutable* ]] && ok "код приложения ($js) отдаётся и кэшируется" \
+        || bad "$js → HTTP $CODE"
+    else
+      bad "/app — в странице нет ссылки на код приложения"
+    fi
+  else
+    bad "/app → HTTP $CODE"
+  fi
+
+  fetch "$base/admin" "${opts[@]}"
+  if [[ "$CODE" == 200 ]]; then
+    [[ "$(hdr x-frame-options "$HEAD")" == DENY && "$(hdr cache-control "$HEAD")" == no-store && "$(hdr x-robots-tag "$HEAD")" == *noindex* ]] \
+      && ok "/admin — админка (не кэшируется, не индексируется, не встраивается)" || bad "/admin — нет защитных заголовков"
+  else
+    warn "/admin → HTTP $CODE (в этой сборке нет админки?)"
+  fi
+
+  fetch "$base/app.html?x=1" "${opts[@]}"; loc=$(hdr location "$HEAD")
+  [[ "$CODE" == 308 && "$loc" == "/app?x=1" ]] && ok "/app.html → /app (адреса без .html, как на Vercel)" || bad "/app.html → HTTP $CODE $loc"
+  fetch "$base/ru/" "${opts[@]}"; loc=$(hdr location "$HEAD")
+  [[ "$CODE" == 308 && "$loc" == "/ru" ]] && ok "/ru/ → /ru" || bad "/ru/ → HTTP $CODE $loc"
+  # a Location starting with // or /\ or a scheme would send the visitor to another site
+  local p bad_loc=0
+  for p in '//example.com/x.html' '/%2Fexample.com/x.html' '/%5Cexample.com/x/' '//example.com/'; do
+    fetch "$base$p" "${opts[@]}"; loc=$(hdr location "$HEAD")
+    if [[ "$loc" == //* || "$loc" == /\\* || "$loc" == *://* ]]; then bad "$p → $loc"; bad_loc=1; fi
+  done
+  [[ $bad_loc == 0 ]] && ok "переадресация на чужие сайты невозможна"
+
+  fetch "$base/no-such-page-$RANDOM" "${opts[@]}"
+  [[ "$CODE" == 404 && "$BODY" == *ONEFLOW* && -n "$(hdr x-frame-options "$HEAD")" ]] && ok "несуществующий адрес → страница 404" || bad "несуществующий адрес → HTTP $CODE"
+  local hidden=0
+  for p in /vercel.json /_redirects /.env /assets /avatars; do
+    fetch "$base$p" "${opts[@]}"
+    [[ "$CODE" == 404 ]] || { bad "$p → HTTP $CODE (должно быть 404)"; hidden=1; }
+  done
+  [[ $hidden == 0 ]] && ok "служебные файлы и списки папок закрыты"
+  return 0
+}
+
+local_checks() { run_checks "http://$LOCAL_ADDR"; }
+
+public_checks() {
+  local loc
+  run_checks "https://$PUBLIC_ADDR" --resolve "$PUBLIC_HOST:$HTTPS_PORT:127.0.0.1"
+  fetch "https://$WWW_ADDR/ru?x=1" --resolve "$WWW_HOST:$HTTPS_PORT:127.0.0.1"; loc=$(hdr location "$HEAD")
+  [[ "$CODE" == 308 && "$loc" == "https://$SITE_DOMAIN/ru?x=1" ]] && ok "www.$SITE_DOMAIN → $SITE_DOMAIN" || bad "www → HTTP $CODE $loc"
+  fetch "http://$PUBLIC_HOST:$HTTP_PORT/ru" --resolve "$PUBLIC_HOST:$HTTP_PORT:127.0.0.1"; loc=$(hdr location "$HEAD")
+  [[ "$loc" == https://* ]] && ok "http:// → https://" || warn "http://$SITE_DOMAIN → HTTP $CODE $loc"
+  # sign-in from the site: the API must still accept requests from this origin
+  local acao
+  acao=$(curl -s -m 20 -o /dev/null -D - -X OPTIONS -H "Origin: https://$SITE_DOMAIN" \
+    -H 'Access-Control-Request-Method: POST' "https://$API_DOMAIN/auth/v1/token" 2>/dev/null | tr -d '\r' \
+    | grep -i '^access-control-allow-origin:' | cut -d' ' -f2-) || true
+  [[ "$acao" == "https://$SITE_DOMAIN" || "$acao" == '*' ]] && ok "API принимает запросы сайта (вход)" || bad "API не разрешает вход с https://$SITE_DOMAIN ($acao)"
+}
+
+# ---------------------------------------------------------------------------------------------
+cmd_deploy() {
+  need_root deploy
+  local zip="${1:-}"
+  [[ -n "$zip" && -f "$zip" ]] || die "Укажите zip сайта: sudo oneflow-site deploy ~/oneflow-art-site-vNN.zip"
+  [[ -f "$SITE_CADDY" ]] || die "Сначала установка: sudo bash ~/oneflow-site/install-site.sh"
+  install -d -m 755 "$SITE_HOME" "$RELEASES"
+  lock
+
+  step "1/3 Проверка архива $(basename "$zip")"
+  local sha id dir prev
+  sha=$(sha256sum "$zip" | cut -c1-12)
+  id="$(date +%Y%m%d-%H%M%S)-$sha"
+  dir="$RELEASES/$id"
+  rm -rf -- "$RELEASES/.incoming"
+  unpack_zip "$zip" "$RELEASES/.incoming" | sed 's/^/    /' || { rm -rf -- "$RELEASES/.incoming"; die "Сайт не изменился."; }
+  [[ -d "$RELEASES/.incoming" ]] || die "Архив не распакован. Сайт не изменился."
+  mv -T "$RELEASES/.incoming" "$dir"
+  ok "Архив принят (sha256 $sha…)"
+
+  step "2/3 Переключение на новую версию"
+  prev=$(current_id)
+  switch_to "$id"
+  ok "Сейчас: $id${prev:+ (было: $prev)}"
+
+  step "3/3 Проверка сайта на сервере"
+  local_checks
+  if [[ $FAILS -gt 0 ]]; then
+    if [[ -n "$prev" ]]; then switch_to "$prev"; warn "Вернул прежнюю версию $prev"; else rm -f "$CURRENT"; fi
+    rm -rf -- "${dir:?}"
+    die "Новая версия не прошла проверку ($FAILS) — сайт остался прежним. Пришлите скриншот."
+  fi
+  printf '%s %s %s %s\n' "$(date -Is)" "$id" "deploy" "$(basename "$zip")" >> "$HISTORY"
+  prune
+  if [[ -f "$PUBLIC_FLAG" ]]; then
+    step "Проверка https://$SITE_DOMAIN"
+    public_checks
+    [[ $FAILS -eq 0 ]] || warn "Через HTTPS не всё в порядке — пришлите скриншот (откат: sudo oneflow-site rollback)"
+  fi
+  printf '\n\033[1;32mГотово: опубликована версия %s.\033[0m Откат: sudo oneflow-site rollback\n' "$id"
+}
+
+cmd_rollback() {
+  need_root rollback
+  lock
+  local cur prev
+  cur=$(current_id); prev=$(previous_of "$cur")
+  [[ -n "$prev" ]] || die "Предыдущей версии нет — откатываться не на что"
+  step "Откат: $cur → $prev"
+  switch_to "$prev"
+  local_checks
+  printf '%s %s %s %s\n' "$(date -Is)" "$prev" "rollback" "from $cur" >> "$HISTORY"
+  [[ $FAILS -eq 0 ]] && printf '\n\033[1;32mГотово: сайт снова на версии %s.\033[0m\n' "$prev" || die "Проверки после отката не прошли — пришлите скриншот"
+}
+
+# ---------------------------------------------------------------------------------------------
+server_ip() {
+  { dig +short A "$API_DOMAIN" @1.1.1.1 2>/dev/null; getent ahostsv4 "$API_DOMAIN" | awk '{print $1}'; } \
+    | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || true
+}
+# (every helper whose result is captured ends with "|| true": an empty answer is an answer)
+ips_at() { dig +short +norecurse "$1" "$2" "@$3" 2>/dev/null | grep -E '^[0-9a-f.:]+$' | sort -u | tr '\n' ' ' | sed 's/ $//' || true; }
+ttl_at() { dig +noall +answer +norecurse "$1" "$2" "@$3" 2>/dev/null | awk '$4 == "A" || $4 == "CNAME" {print $2}' | sort -n | tail -n1 || true; }
+
+# DNS_READY=1 when every authoritative server and two public resolvers answer this server's address
+# for both names and nothing else (no IPv6 address that would lead past this server).
+dns_report() {
+  local quiet="${1:-}" ip ns name a aaaa r all_ok=1 caa
+  command -v dig >/dev/null || { apt-get install -y -qq dnsutils >/dev/null 2>&1 || die "Не удалось установить dig (dnsutils)"; }
+  ip=$(server_ip)
+  [[ -n "$ip" ]] || die "Не удалось узнать адрес сервера (A-запись $API_DOMAIN)"
+  SERVER_IP="$ip"
+  mapfile -t NS < <(dig +short NS "$SITE_DOMAIN" @1.1.1.1 2>/dev/null | sed 's/\.$//' | sort || true)
+  [[ ${#NS[@]} -gt 0 ]] || die "Не удалось узнать DNS-серверы домена $SITE_DOMAIN"
+  [[ -z "$quiet" ]] && echo "    Адрес этого сервера: $ip   DNS домена: ${NS[*]}"
+  OLD_TTL=0
+  for name in "$SITE_DOMAIN" "www.$SITE_DOMAIN"; do
+    for ns in "${NS[@]}"; do
+      a=$(ips_at "$name" A "$ns"); aaaa=$(ips_at "$name" AAAA "$ns")
+      r=$(ttl_at "$name" A "$ns"); [[ -n "$r" && "$r" -gt "$OLD_TTL" ]] && OLD_TTL=$r
+      if [[ "$a" == "$ip" && -z "$aaaa" ]]; then
+        [[ -z "$quiet" ]] && ok "$name → $a  ($ns)"
+      else
+        all_ok=0
+        [[ -z "$quiet" ]] && printf '\033[1;33m    · %s → %s%s  (%s)\033[0m\n' "$name" "${a:-нет A-записи}" "${aaaa:+, IPv6 $aaaa}" "$ns"
+      fi
+    done
+    for r in 1.1.1.1 8.8.8.8; do
+      a=$(dig +short A "$name" "@$r" 2>/dev/null | grep -E '^[0-9.]+$' | sort -u | tr '\n' ' ' | sed 's/ $//' || true)
+      if [[ "$a" != "$ip" ]]; then all_ok=0; [[ -z "$quiet" ]] && printf '\033[1;33m    · %s → %s  (кэш %s)\033[0m\n' "$name" "${a:-—}" "$r"; fi
+    done
+  done
+  caa=$(dig +short CAA "$SITE_DOMAIN" @1.1.1.1 2>/dev/null || true)
+  if [[ -n "$caa" ]] && ! grep -q 'letsencrypt.org' <<< "$caa"; then
+    all_ok=0; [[ -z "$quiet" ]] && bad "CAA-запись домена не разрешает Let's Encrypt: $caa"
+  fi
+  DNS_READY=$all_ok
+}
+
+cmd_dns() {
+  step "DNS"
+  dns_report
+  if [[ $DNS_READY == 1 ]]; then ok "Оба адреса указывают на этот сервер"; else
+    warn "Ещё не везде. Нужные записи в Vercel → Domains → $SITE_DOMAIN → DNS Records:"
+    echo "        A   @    $SERVER_IP"
+    echo "        A   www  $SERVER_IP"
+    echo "      и никаких других A / AAAA / CNAME для @ и www."
+  fi
+}
+
+cmd_go_live() {
+  need_root go-live
+  [[ -n "$(current_id)" ]] || die "Сначала опубликуйте сайт: sudo oneflow-site deploy <site.zip>"
+  lock
+  step "1/4 Сайт на сервере"
+  local_checks
+  [[ $FAILS -eq 0 ]] || die "Проверки на сервере не прошли — DNS не меняйте. Пришлите скриншот."
+
+  step "2/4 DNS"
+  dns_report
+  local first_ttl=$OLD_TTL waited=0
+  if [[ $DNS_READY != 1 ]]; then
+    cat <<EOF
+
+    Теперь в Vercel → Domains → $SITE_DOMAIN → DNS Records:
+      1) удалите записи для @ и www, которые ведут на Vercel (если есть);
+      2) добавьте  A  @    $SERVER_IP   (TTL 60)
+                   A  www  $SERVER_IP   (TTL 60)
+      3) в проекте Vercel → Settings → Domains уберите $SITE_DOMAIN и www.$SITE_DOMAIN,
+         если после шагов 1–2 этот экран за 2 минуты не покажет ✓.
+    Жду, пока DNS укажет сюда (до 30 минут). Ctrl+C — прервать: здесь ничего не изменится.
+EOF
+    while [[ $DNS_READY != 1 ]]; do
+      (( waited >= 1800 )) && die "За 30 минут DNS не переключился. Сайт работает как раньше; запустите go-live ещё раз после правки записей."
+      sleep "$DNS_POLL"; waited=$((waited + DNS_POLL))
+      dns_report quiet
+      printf '\r    … %d с' "$waited"
+    done
+    echo
+    dns_report
+    # resolvers that still remember the old answer (Let's Encrypt's among them) forget it after
+    # the old TTL; waiting it out keeps the certificate request from hitting Vercel
+    local pause=$(( first_ttl > DNS_PAUSE_MIN ? first_ttl : DNS_PAUSE_MIN )); (( pause > 600 )) && pause=600
+    echo "    Пауза ${pause} с, пока у всех истечёт прежняя запись…"
+    sleep "$pause"
+  fi
+  ok "DNS указывает на этот сервер"
+
+  step "3/4 HTTPS для $SITE_DOMAIN (сертификат Let's Encrypt)"
+  apply_caddy 1
+  local i
+  for i in $(seq 1 60); do
+    curl -fsS -m 10 -o /dev/null --resolve "$PUBLIC_HOST:$HTTPS_PORT:127.0.0.1" "https://$PUBLIC_ADDR/" 2>/dev/null && break
+    [[ $i -eq 60 ]] && die "Сертификат не выпущен за 5 минут. Пришлите скриншот: sudo journalctl -u caddy --since '-10 min' | grep -i $SITE_DOMAIN | tail -n 20"
+    sleep 5
+  done
+  ok "https://$SITE_DOMAIN работает, сертификат выпущен"
+
+  step "4/4 Проверка сайта через HTTPS"
+  public_checks
+  [[ $FAILS -eq 0 ]] || die "Есть замечания ($FAILS) — пришлите скриншот."
+  cat <<EOF
+
+$(printf '\033[1;32m')Готово: https://$SITE_DOMAIN раздаётся с этого сервера.$(printf '\033[0m')
+  Обновить сайт:  sudo oneflow-site deploy ~/oneflow-art-site-vNN.zip
+  Откат версии:   sudo oneflow-site rollback
+  Проект в Vercel пока не удаляйте — это запасной путь на 2 недели.
+EOF
+}
+
+cmd_check() {
+  step "Сайт на сервере ($(current_id))"
+  local_checks
+  local f=$FAILS
+  if [[ -f "$PUBLIC_FLAG" ]]; then step "https://$SITE_DOMAIN"; public_checks; f=$((f + FAILS)); fi
+  [[ $f -eq 0 ]] && printf '\n\033[1;32mВсё в порядке.\033[0m\n' || die "Замечаний: $f"
+}
+
+cmd_status() {
+  step "Версии сайта"
+  local cur; cur=$(current_id)
+  if [[ -z "$cur" ]]; then echo "    ещё не опубликован"; else
+    ls -1t "$RELEASES" | while read -r id; do
+      [[ "$id" == "$cur" ]] && echo "  * $id   (сейчас)" || echo "    $id"
+    done
+    [[ -f "$HISTORY" ]] && { echo "    последние события:"; tail -n 5 "$HISTORY" | sed 's/^/      /'; }
+  fi
+  step "Публичный адрес"
+  if [[ -f "$PUBLIC_FLAG" ]]; then
+    local end
+    end=$(echo | openssl s_client -connect 127.0.0.1:"$HTTPS_PORT" -servername "$PUBLIC_HOST" 2>/dev/null | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2 || true)
+    ok "https://$SITE_DOMAIN включён${end:+, сертификат до $end}"
+  else
+    echo "    ещё не включён (sudo oneflow-site go-live)"
+  fi
+  cmd_dns
+}
+
+# sourced (by the tests): functions only
+[[ "${BASH_SOURCE[0]}" == "$0" ]] || return 0
+
+case "${1:-}" in
+  deploy)   shift; cmd_deploy "$@" ;;
+  rollback) cmd_rollback ;;
+  go-live)  cmd_go_live ;;
+  dns)      cmd_dns ;;
+  check)    cmd_check ;;
+  status)   cmd_status ;;
+  setup)    need_root setup; install -d -m 755 "$SITE_HOME" "$RELEASES"; apply_caddy "$([[ -f "$PUBLIC_FLAG" ]] && echo 1 || echo 0)"; ok "Caddy: сайт на $LOCAL_ADDR (только для проверок)" ;;
+  *) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac
