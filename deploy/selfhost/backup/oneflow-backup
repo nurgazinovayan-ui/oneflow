@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+# ONEFLOW — encrypted off-site backup of the KZ server (restic → S3-compatible storage).
+#
+#   oneflow-backup run      back up now (the systemd timer runs this every night)
+#   oneflow-backup status   last successful backup and the latest snapshots
+#   oneflow-backup check    verify the repository and re-read 10% of the stored data (weekly timer)
+#   oneflow-backup fetch <empty-dir>   restore the latest snapshot into a directory (for recovery)
+#
+# What goes in: a full database dump (all roles and databases, taken inside the db container with
+# its own pg_dumpall, so the dump matches the server version), Storage files, the functions and the
+# configuration (.env with the server keys, functions.env, compose files, Caddyfile, mail templates).
+# restic encrypts everything on this server before upload; the storage provider sees ciphertext only.
+# Settings: /etc/oneflow-backup/env and /etc/oneflow-backup/restic-password (both 600 root).
+# On failure: a message without data or secrets goes to ALERT_WEBHOOK_URL from functions.env.
+
+set -Eeuo pipefail
+
+CONF_DIR="${CONF_DIR:-/etc/oneflow-backup}"
+APP_DIR="${APP_DIR:-/opt/oneflow/supabase}"
+STAGE="${STAGE:-/var/backups/oneflow}"
+STATE="${STATE:-/var/lib/oneflow-backup}"
+DB_CONTAINER="${DB_CONTAINER:-supabase-db}"
+KEEP=(--keep-daily 7 --keep-weekly 4 --keep-monthly 6)
+
+umask 077
+
+say() { printf '%s %s\n' "$(date '+%F %T')" "$*"; }
+
+unquote() { local v=$1; v=${v#\'}; printf '%s' "${v%\'}"; }
+env_value() {  # file key
+  unquote "$(grep -E "^$2=" "$1" 2>/dev/null | tail -n1 | cut -d= -f2-)"
+}
+
+load_conf() {
+  [[ -r "$CONF_DIR/env" && -r "$CONF_DIR/restic-password" ]] \
+    || { echo "Нет настроек в $CONF_DIR — сначала выполните install-backup.sh" >&2; exit 1; }
+  set -a
+  # shellcheck source=/dev/null
+  source "$CONF_DIR/env"
+  set +a
+  export RESTIC_PASSWORD_FILE="$CONF_DIR/restic-password"
+}
+
+# POST {"text": …} like the functions' spend alerts; the URL (it may carry a token) goes to curl
+# through a config file descriptor, not argv
+alert() {
+  local url text
+  url=$(env_value "$APP_DIR/functions.env" ALERT_WEBHOOK_URL)
+  [[ "$url" == https://* ]] || return 0
+  text=$(python3 -c 'import json, sys; print(json.dumps({"text": sys.argv[1]}))' "$1")
+  curl -fsS -m 15 -K <(printf 'url = "%s"\n' "$url") -H 'Content-Type: application/json' \
+    --data @- >/dev/null 2>&1 <<< "$text" || true
+}
+
+fail() {
+  say "ОШИБКА: $1" >&2
+  rm -f "$STAGE/db.sql.zst"
+  alert "ONEFLOW backup FAILED on $(hostname): $1"
+  exit 1
+}
+
+backup_paths() {
+  local p
+  BACKUP_PATHS=("$STAGE/db.sql.zst")
+  for p in "$APP_DIR/volumes/storage" "$APP_DIR/volumes/functions" "$APP_DIR/.env" "$APP_DIR/functions.env" \
+           "$APP_DIR"/docker-compose*.yml /etc/caddy/Caddyfile /srv/oneflow-mail-templates; do
+    [[ -e "$p" ]] && BACKUP_PATHS+=("$p")
+  done
+  return 0
+}
+
+run() {
+  load_conf
+  exec 9>/run/oneflow-backup.lock
+  flock -n 9 || { say "Копирование уже идёт"; exit 0; }
+  trap 'fail "строка $LINENO"' ERR
+  trap 'fail "прервано"' INT TERM
+  install -d -m 700 "$STAGE" "$STATE"
+  local started users dump_users snap size
+  started=$(date +%s)
+
+  # the dump runs inside the db container (its pg_dumpall matches the server version); the password
+  # is handed over by name (-e PGPASSWORD), so it is not on any command line
+  PGPASSWORD=$(env_value "$APP_DIR/.env" POSTGRES_PASSWORD)
+  export PGPASSWORD
+  users=$(docker exec -e PGPASSWORD "$DB_CONTAINER" psql -U supabase_admin -h 127.0.0.1 -d postgres -XAt \
+    -c "select count(*) from auth.users") || fail "база не отвечает (контейнер $DB_CONTAINER)"
+  [[ "$users" =~ ^[0-9]+$ ]] || fail "не удалось посчитать пользователей"
+  if ! docker exec -e PGPASSWORD "$DB_CONTAINER" pg_dumpall -U supabase_admin -h 127.0.0.1 \
+      | zstd -q -T0 -f -o "$STAGE/db.sql.zst"; then
+    fail "выгрузка базы (pg_dumpall) не удалась"
+  fi
+  unset PGPASSWORD
+
+  # a dump is only kept when it is complete and holds at least the users counted just before it
+  zstd -tq "$STAGE/db.sql.zst" || fail "архив дампа повреждён"
+  zstd -dc "$STAGE/db.sql.zst" | tail -n 5 | grep -q 'PostgreSQL database cluster dump complete' \
+    || fail "дамп базы оборван"
+  dump_users=$(zstd -dc "$STAGE/db.sql.zst" \
+    | awk '/^COPY auth\.users /{f=1; next} f && /^\\\.$/{print n+0; exit} f{n++}')
+  [[ "$dump_users" =~ ^[0-9]+$ ]] || fail "в дампе нет таблицы пользователей"
+  (( dump_users >= users )) || fail "в дампе $dump_users пользователей, а в базе $users"
+  size=$(du -h "$STAGE/db.sql.zst" | cut -f1)
+
+  backup_paths
+  restic backup --quiet --tag oneflow --host "$(hostname)" "${BACKUP_PATHS[@]}"
+  restic forget --quiet --tag oneflow --host "$(hostname)" "${KEEP[@]}" --prune
+  snap=$(restic snapshots --tag oneflow --host "$(hostname)" --latest 1 --json \
+    | python3 -c 'import json, sys; s = json.load(sys.stdin); print(s[-1]["short_id"] if s else "")')
+  [[ -n "$snap" ]] || fail "копия не появилась в хранилище"
+  rm -f "$STAGE/db.sql.zst"
+  printf '%s  копия %s  пользователей %s  дамп базы %s  заняло %s с\n' \
+    "$(date '+%F %T %Z')" "$snap" "$users" "$size" "$(( $(date +%s) - started ))" > "$STATE/last-ok"
+  say "Готово: $(cat "$STATE/last-ok")"
+}
+
+check() {
+  load_conf
+  trap 'fail "проверка: строка $LINENO"' ERR
+  restic check --read-data-subset=10% >/dev/null 2>&1 || fail "проверка хранилища копий не прошла (restic check)"
+  # a nightly run that silently stopped is an incident too
+  local last; last=$(stat -c %Y "$STATE/last-ok" 2>/dev/null || echo 0)
+  (( $(date +%s) - last < 2 * 86400 )) || fail "последняя удачная копия старше 2 суток"
+  say "Проверка пройдена: хранилище цело, 10% данных перечитано, последняя копия свежая"
+}
+
+status() {
+  load_conf
+  echo "Последняя удачная копия:"
+  echo "  $(cat "$STATE/last-ok" 2>/dev/null || echo 'ещё не было')"
+  echo
+  restic snapshots --tag oneflow --compact --latest 7
+  echo
+  systemctl list-timers 'oneflow-backup*' --no-pager 2>/dev/null || true
+}
+
+fetch() {
+  local dir=${1:?укажите пустую папку: oneflow-backup fetch /root/restore}
+  load_conf
+  [[ ! -e "$dir" || -z "$(ls -A "$dir")" ]] || { echo "Папка $dir не пустая" >&2; exit 1; }
+  install -d -m 700 "$dir"
+  restic restore latest --tag oneflow --target "$dir"
+  echo "Восстановлено в $dir (дамп базы: $dir$STAGE/db.sql.zst)"
+}
+
+case "${1:-}" in
+  run) run ;;
+  check) check ;;
+  status) status ;;
+  fetch) fetch "${2:-}" ;;
+  *) sed -n '2,8p' "$0"; exit 1 ;;
+esac
