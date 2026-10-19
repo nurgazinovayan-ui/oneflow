@@ -132,11 +132,13 @@ check() {
   say "Проверка пройдена: хранилище цело, 10% данных перечитано, последняя копия свежая"
 }
 
-# Restore drill. The throwaway database is started from the live db container's own settings
-# (image, command, environment, init scripts — read with docker inspect), but with its own
-# temporary storage, no network and another name; the live database is never touched. The latest
-# dump is loaded into it and the users, files and app tables are counted against the dump.
-# Errors like "already exists" are expected: the fresh copy initialises itself first.
+# Restore drill, done the way a real recovery is: the dump goes into an EMPTY cluster, so every
+# role, schema (auth and storage included, with the columns of this Auth/Storage version) and row
+# comes from the backup itself. The throwaway database uses the live db container's image, command
+# and environment (read with docker inspect) but none of its init scripts, its own temporary
+# storage, no network and another name; the live database is never touched. Users, files and app
+# tables are then counted against the dump. A few "already exists" errors are expected (the
+# bootstrap superuser exists before the dump creates it).
 restore_test() {
   load_conf
   local cname=oneflow-restore-test tmp dump expect_users expect_objects expect_tables
@@ -165,13 +167,20 @@ restore_test() {
 import json, subprocess, sys
 name, tmp = sys.argv[1], sys.argv[2]
 c = json.loads(subprocess.check_output(["docker", "inspect", name]))[0]
+import os
 with open(f"{tmp}/env", "w") as f:
     for e in c["Config"].get("Env") or []:
-        if "\n" not in e:
+        if "\n" not in e and not e.startswith("POSTGRES_USER="):
             f.write(e + "\n")
-args = ["--env-file", f"{tmp}/env"]
+    f.write("POSTGRES_USER=supabase_admin\n")  # bootstrap superuser = the role the dump is loaded as
+# an empty init dir: none of the image's or compose's init scripts run, the cluster stays empty
+os.makedirs(f"{tmp}/initdb", mode=0o755)
+os.chmod(f"{tmp}/initdb", 0o755)
+args = ["--env-file", f"{tmp}/env", "-v", f"{tmp}/initdb:/docker-entrypoint-initdb.d:ro"]
 for m in c.get("Mounts", []):
     dst = m["Destination"]
+    if dst.startswith("/docker-entrypoint-initdb.d"):
+        continue                               # init scripts: not for a restore into an empty cluster
     if dst == "/var/lib/postgresql/data" or m.get("Type") == "volume":
         args += ["-v", dst]                    # fresh anonymous volume, removed with the container
     elif m.get("Type") == "bind":
@@ -210,7 +219,7 @@ PY
   echo "    Пользователи:             в копии $expect_users, восстановлено $got_users $(mark "$expect_users" "$got_users")"
   echo "    Записи файлов хранилища:  в копии $expect_objects, восстановлено $got_objects $(mark "$expect_objects" "$got_objects")"
   echo "    Таблицы приложения:       в копии $expect_tables, восстановлено $got_tables $(mark "$expect_tables" "$got_tables")"
-  echo "    Сообщений об ошибках при загрузке: $errors (ожидаемы «уже существует» — копия сначала инициализируется сама)"
+  echo "    Сообщений об ошибках при загрузке: $errors (несколько «уже существует» — нормально)"
   if [[ "$got_users" == "$expect_users" && "$got_objects" == "$expect_objects" && "$got_tables" == "$expect_tables" ]]; then
     say "Учебное восстановление прошло: из копии поднимаются все пользователи, записи файлов и таблицы"
   else
