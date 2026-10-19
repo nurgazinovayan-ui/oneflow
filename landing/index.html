@@ -921,7 +921,7 @@ html[data-theme="dark"] .mb-strip, html[data-theme="dark"] .nw-card { background
 // an override {t: new text, o: original} applies only while the original is unchanged, so rebuilding the page never
 // puts an old override on the wrong element. Cached in localStorage to avoid a flash on the next visit.
 (() => {
-  const SB = 'https://ayxmfihtrsacfdhszsri.supabase.co', KEY = 'sb_publishable_xfd5nkUu18qvdzoo-dzhHQ_f5RKq4tS';
+  const SB = 'https://api.oneflow.art', KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzkyMDc2OTk3LCJleHAiOjE5NDk3NTY5OTd9.TF1AYHjnOlQp9lMUSD-GDUiWkEwKtsCPLSJSjDcQ-uo';
   const SEL = 'h1 .l1, h1 .rw, h1 .gr, h2, h3, h4, p, li, summary, .btn, .k, .pop, .lg, th, td, figcaption, footer nav button, footer nav a, .nav nav a';
   const SKIP = '.pro-b, .ui, .models, .gens, .tp-calc, [data-m], script, style, dialog, .skip, .fnote';
   const txt = (el) => [...el.childNodes].map((n) => n.nodeType === 3 ? n.nodeValue : n.nodeName === 'BR' ? '\n' : '').join('').replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n').trim();
@@ -1083,7 +1083,7 @@ html[data-theme="dark"] .mb-strip, html[data-theme="dark"] .nw-card { background
 (() => {
   const row = document.querySelector('#news .nw-row'); if (!row) return;
   const builtIn = [...row.children];  // shown again if the admin's list is removed
-  const SB = 'https://ayxmfihtrsacfdhszsri.supabase.co', KEY = 'sb_publishable_xfd5nkUu18qvdzoo-dzhHQ_f5RKq4tS', MEDIA = SB + '/storage/v1/object/public/site-media/';
+  const SB = 'https://api.oneflow.art', KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzkyMDc2OTk3LCJleHAiOjE5NDk3NTY5OTd9.TF1AYHjnOlQp9lMUSD-GDUiWkEwKtsCPLSJSjDcQ-uo', MEDIA = SB + '/storage/v1/object/public/site-media/';
   const okMedia = (u) => typeof u === 'string' && ((u.startsWith(MEDIA) && /^[\w\-/]+\.(jpg|png|webp|gif|mp4|webm)$/.test(u.slice(MEDIA.length))) || /^\/[\w.\-/]+$/.test(u));
   const okLink = (u) => typeof u === 'string' && (/^https:\/\/[^\s"'<>]+$/i.test(u) || /^\/[\w.\-/?=&#]*$/.test(u));
   const en = document.documentElement.lang === 'en';
