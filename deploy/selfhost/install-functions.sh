@@ -214,6 +214,10 @@ smoke_test() {
   r=$(probe POST /functions/v1/lemonsqueezy-webhook); code=${r%% *}; err=${r#* }
   [[ "$code" == 401 && "$err" == - ]] && ok "Вебхук доступен без входа, но без подписи отклоняет (401 из функции)" || { warn "вебхук: $code $err"; fail=1; }
 
+  # the landing's support form: no sign-in; an empty form is refused by the function itself (nothing stored)
+  r=$(probe POST /functions/v1/support-submit); code=${r%% *}; err=${r#* }
+  [[ "$code" == 400 && "$err" == - ]] && ok "Форма поддержки на сайте работает без входа (пустую отклоняет: 400)" || { warn "support-submit: $code $err"; fail=1; }
+
   r=$(probe POST /functions/v1/messenger-list-channels "$anon"); code=${r%% *}; err=${r#* }
   [[ "$code" =~ ^4 && "$err" == - ]] && ok "messenger-list-channels запустилась ($code)" || { warn "messenger-list-channels: $code $err"; fail=1; }
 

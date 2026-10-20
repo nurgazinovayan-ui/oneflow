@@ -2,8 +2,8 @@
 # Builds oneflow-functions.tar.gz for install-functions.sh:
 #   oneflow-functions/install-functions.sh
 #   oneflow-functions/main/index.ts          (router with per-function JWT check)
-#   oneflow-functions/functions/<name>/…     (this repo's supabase/functions, plus admin-api and
-#                                             admin-send-message from the admin repo)
+#   oneflow-functions/functions/<name>/…     (this repo's supabase/functions, plus admin-api,
+#                                             admin-send-message and support-submit from the admin repo)
 #
 #   bash deploy/selfhost/pack-functions.sh <admin-repo-dir> <output-dir>
 set -euo pipefail
@@ -21,9 +21,9 @@ for d in "$ROOT"/supabase/functions/*/; do
   [[ "$name" == _* ]] && continue
   cp -a "$d" "$PKG/functions/$name"
 done
-# the admin site's functions: admin-api lives only there; its admin-send-message has the
-# message and recipient limits, so it replaces this repo's copy
-for name in admin-api admin-send-message; do
+# the admin site's functions: admin-api and support-submit (the landing's support form) live only
+# there; its admin-send-message has the message and recipient limits, so it replaces this repo's copy
+for name in admin-api admin-send-message support-submit; do
   rm -rf "${PKG:?}/functions/$name"
   cp -a "$ADMIN_REPO/supabase/functions/$name" "$PKG/functions/$name"
 done

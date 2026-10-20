@@ -16,8 +16,9 @@ const JWT_SECRET = Deno.env.get('JWT_SECRET')
 const SUPABASE_JWKS = parseJwks(Deno.env.get('SUPABASE_JWKS'))
 const LOCAL_JWKS = SUPABASE_JWKS ? jose.createLocalJWKSet(SUPABASE_JWKS) : null
 const VERIFY_JWT = Deno.env.get('VERIFY_JWT') === 'true'
-// ONEFLOW: functions that verify the caller themselves (no user JWT reaches them)
-const NO_JWT_FUNCTIONS = new Set(['lemonsqueezy-webhook', 'trendswatch-refresh'])
+// ONEFLOW: functions that verify the caller themselves (no user JWT reaches them); support-submit is the
+// landing's public support form (honeypot and per-IP limits inside)
+const NO_JWT_FUNCTIONS = new Set(['lemonsqueezy-webhook', 'trendswatch-refresh', 'support-submit'])
 
 type AuthFailure = {
   code: RequestErrors
