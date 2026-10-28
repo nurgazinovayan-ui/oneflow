@@ -5,6 +5,7 @@
 #
 #   sudo bash ~/oneflow-storage-s3/storage-s3.sh             check, copy, switch after «да»
 #   sudo bash ~/oneflow-storage-s3/storage-s3.sh --rollback  back to the disk, bringing back what was saved in S3 meanwhile
+#   sudo bash ~/oneflow-storage-s3/storage-s3.sh --keys      new bucket keys (after «Сменить ключи» at the provider)
 #
 # 1. Asks the bucket address, name, region and keys (the secret is typed hidden, kept root-only in
 #    /opt/oneflow/supabase/storage-s3.env); checks the bucket: write, read, delete, and that it does
@@ -108,8 +109,17 @@ ask_s3() {
   [[ "$S3_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]] || die "Имя бакета: строчные латинские буквы, цифры, точка и дефис"
   read -r -p "    Регион (Enter — $S3_REGION): " v || v=""; v=$(clean "$v"); S3_REGION=${v:-$S3_REGION}
   [[ "$S3_REGION" =~ ^[A-Za-z0-9-]+$ ]] || die "Регион: латинские буквы, цифры и дефис"
-  cur_key=$(env_value "$KEYS_FILE" AWS_ACCESS_KEY_ID)
-  read -r -p "    Идентификатор ключа${cur_key:+ (Enter — оставить сохранённый)}: " v || v=""; v=$(clean "$v"); AK=${v:-$cur_key}
+  ask_keys keep
+  ok "$S3_ENDPOINT, бакет $S3_BUCKET, регион $S3_REGION"
+}
+
+# The bucket keys, both typed hidden (they must not end up on a screenshot); only the last four
+# characters of the key id are shown back. $1 = keep: Enter keeps the saved ones; new: no default.
+ask_keys() {
+  local v cur_key=""
+  [[ "$1" == keep ]] && cur_key=$(env_value "$KEYS_FILE" AWS_ACCESS_KEY_ID)
+  read -r -s -p "    Идентификатор ключа (ввод скрыт${cur_key:+; Enter — оставить сохранённый}): " v || v=""; echo
+  v=$(clean "$v"); AK=${v:-$cur_key}
   [[ -n "$AK" ]] || die "Нужен идентификатор ключа (из личного кабинета S3, страница «Доступы»)"
   [[ "$AK" =~ ^[A-Za-z0-9]{8,128}$ ]] || die "Идентификатор ключа: латинские буквы и цифры"
   if [[ -n "$cur_key" && "$AK" == "$cur_key" ]]; then
@@ -120,7 +130,17 @@ ask_s3() {
     SK=$(clean "$v")
   fi
   [[ "$SK" =~ ^[A-Za-z0-9/+=]{16,128}$ ]] || die "Секретный ключ не похож на ключ S3 — вставьте его ещё раз (только сам ключ)"
-  ok "$S3_ENDPOINT, бакет $S3_BUCKET, регион $S3_REGION"
+  ok "ключ …${AK: -4} принят"
+}
+
+load_saved() {
+  AK=$(env_value "$KEYS_FILE" AWS_ACCESS_KEY_ID); SK=$(env_value "$KEYS_FILE" AWS_SECRET_ACCESS_KEY)
+  S3_ENDPOINT=$(env_value "$CONF_FILE" S3_ENDPOINT); S3_BUCKET=$(env_value "$CONF_FILE" S3_BUCKET); S3_REGION=$(env_value "$CONF_FILE" S3_REGION)
+  [[ -n "$AK" && -n "$SK" && -n "$S3_BUCKET" ]] || die "Нет сохранённых настроек бакета ($KEYS_FILE, $CONF_FILE)"
+}
+write_keys() {
+  install -m 600 -o root -g root /dev/null "$KEYS_FILE"
+  printf "# ONEFLOW: keys of the S3 bucket for the storage service — written by storage-s3.sh. root only; never copy.\nAWS_ACCESS_KEY_ID='%s'\nAWS_SECRET_ACCESS_KEY='%s'\n" "$AK" "$SK" > "$KEYS_FILE"
 }
 
 check_bucket() {
@@ -217,8 +237,7 @@ restart_storage() {
 }
 
 switch_to_s3() {
-  install -m 600 -o root -g root /dev/null "$KEYS_FILE"
-  printf "# ONEFLOW: keys of the S3 bucket for the storage service — written by storage-s3.sh. root only; never copy.\nAWS_ACCESS_KEY_ID='%s'\nAWS_SECRET_ACCESS_KEY='%s'\n" "$AK" "$SK" > "$KEYS_FILE"
+  write_keys
   printf "S3_ENDPOINT='%s'\nS3_BUCKET='%s'\nS3_REGION='%s'\n" "$S3_ENDPOINT" "$S3_BUCKET" "$S3_REGION" > "$CONF_FILE"
   cat > "$APP_DIR/$OVERRIDE" <<EOF
 # ONEFLOW: the storage service keeps the files in the S3 bucket (storage-s3.sh; back: --rollback).
@@ -288,11 +307,35 @@ info "хранилище держит файлы: $([[ "$NOW" == s3 ]] && echo "
 info "файлов в хранилище: $(q -c 'select count(*) from storage.objects'), на диске занято: $(du -sh "$DISK_ROOT" | cut -f1)"
 info "версия хранилища: $(docker inspect -f '{{.Config.Image}}' "$ST_CONTAINER" 2>/dev/null)"
 
+if [[ "${1:-}" == --keys ]]; then
+  [[ "$NOW" == s3 ]] || die "Хранилище на диске — ключи бакета вводятся при обычном запуске скрипта."
+  load_saved
+  OLD_AK=$AK; OLD_SK=$SK
+  step "Новые ключи бакета $S3_BUCKET"
+  cat <<EOF
+    1. В личном кабинете S3: «Доступы» → «Сменить ключи» → Ok. С этой секунды и до конца
+       шага 2 файлы в приложении не открываются (обычно меньше минуты).
+    2. Скопируйте оттуда новые ключи и вставьте сюда (ввод скрыт).
+EOF
+  ask_keys new
+  [[ "$AK" != "$OLD_AK" || "$SK" != "$OLD_SK" ]] || die "Это прежние ключи — сначала нажмите «Сменить ключи» в личном кабинете. Ничего не изменено."
+  check_bucket
+  write_keys
+  if ! restart_storage; then
+    AK=$OLD_AK; SK=$OLD_SK; write_keys; restart_storage || true
+    die "Хранилище не поднялось с новыми ключами — вернул прежние. Пришлите скриншот."
+  fi
+  ok "хранилище работает с новыми ключами"
+  step "Проверка через https://$DOMAIN"
+  verify s3
+  [[ ${FAILS:-0} -eq 0 ]] || die "Замечаний: $FAILS — пришлите скриншот"
+  printf '\n\033[1;32mГотово: ключи бакета заменены, прежние больше не нужны.\033[0m\n'
+  exit 0
+fi
+
 if [[ "${1:-}" == --rollback ]]; then
   [[ "$NOW" == s3 ]] || die "Хранилище и так на диске — откатывать нечего."
-  AK=$(env_value "$KEYS_FILE" AWS_ACCESS_KEY_ID); SK=$(env_value "$KEYS_FILE" AWS_SECRET_ACCESS_KEY)
-  S3_ENDPOINT=$(env_value "$CONF_FILE" S3_ENDPOINT); S3_BUCKET=$(env_value "$CONF_FILE" S3_BUCKET); S3_REGION=$(env_value "$CONF_FILE" S3_REGION)
-  [[ -n "$AK" && -n "$SK" && -n "$S3_BUCKET" ]] || die "Нет сохранённых настроек бакета ($KEYS_FILE, $CONF_FILE)"
+  load_saved
   step "Откат на диск"
   info "хранилище снова будет держать файлы на диске; то, что сохранилось только в бакете, скачается на диск"
   info "файлы в бакете не удаляются"
@@ -307,8 +350,7 @@ if [[ "${1:-}" == --rollback ]]; then
 fi
 
 if [[ "$NOW" == s3 ]]; then
-  AK=$(env_value "$KEYS_FILE" AWS_ACCESS_KEY_ID); SK=$(env_value "$KEYS_FILE" AWS_SECRET_ACCESS_KEY)
-  S3_ENDPOINT=$(env_value "$CONF_FILE" S3_ENDPOINT); S3_BUCKET=$(env_value "$CONF_FILE" S3_BUCKET); S3_REGION=$(env_value "$CONF_FILE" S3_REGION)
+  load_saved
   step "Хранилище уже в бакете $S3_BUCKET — только проверка"
   verify s3
   [[ ${FAILS:-0} -eq 0 ]] || die "Замечаний: $FAILS — пришлите скриншот. Откат: sudo bash $0 --rollback"
