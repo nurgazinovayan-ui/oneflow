@@ -142,7 +142,7 @@ async function finishOrPending(caller: VideoCaller, reservation: string, provide
     if (state.status === 'failed' || state.status === 'cancelled' || state.status === 'expired') {
       console.error('video job ended', state.status, state.error);
       // the provider does not bill jobs that failed on its side
-      const refs = await takeRefs(reservation);
+      const { refs } = await takeJob(reservation);
       const { error } = await supabaseAdmin.rpc('release_generation', { p_reservation: reservation });
       if (error) console.error('release_generation failed', error);
       await removeRefs(refs);
@@ -158,12 +158,13 @@ async function completeVideoJob(caller: VideoCaller, reservation: string, provid
   if (error) throw error;
   if (!claimed) return jsonResponse({ pending: true, jobId: reservation }, 202); // another poller is finishing it
   try {
-    const url = await downloadAndStoreVideo(state.id ?? providerJobId);
+    const video = await downloadAndStoreVideo(state.id ?? providerJobId);
     const realCostUsd = typeof state.usage?.cost === 'number' ? state.usage.cost : null;
-    const refs = await takeRefs(reservation); // read before settling replaces result
-    await settleSpend(reservation, caller.email, realCostUsd, { urls: [url] });
+    const { refs, asset } = await takeJob(reservation); // read before settling replaces result
+    await settleSpend(reservation, caller.email, realCostUsd, { urls: [video.url] });
     await removeRefs(refs);
-    return jsonResponse([url]);
+    await keepVideoAsset(caller.id, VIDEO_BUCKET, video.path, video.bytes, asset);
+    return jsonResponse([video.url]);
   } catch (err) {
     // hand the job back, so the next poll retries the download instead of waiting ten minutes
     await supabaseAdmin
@@ -190,7 +191,7 @@ async function resumeVideoJob(caller: VideoCaller, jobId: unknown): Promise<Resp
   return await finishOrPending(caller, job.id, job.provider_job_id, Date.now() + RESUME_WAIT_MS);
 }
 
-async function downloadAndStoreVideo(jobId: string): Promise<string> {
+async function downloadAndStoreVideo(jobId: string): Promise<{ url: string; path: string; bytes: number }> {
   const res = await fetchWithTimeout(`${OPENROUTER_VIDEOS_URL}/${encodeURIComponent(jobId)}/content?index=0`, {
     headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}` },
   }, 90_000);
@@ -202,7 +203,7 @@ async function downloadAndStoreVideo(jobId: string): Promise<string> {
     .upload(objectPath, bytes, { contentType: 'video/mp4', upsert: false });
   if (error) throw error;
   const { data: pub } = supabaseAdmin.storage.from(VIDEO_BUCKET).getPublicUrl(objectPath);
-  return pub.publicUrl;
+  return { url: pub.publicUrl, path: objectPath, bytes: bytes.length };
 }
 
 // ---- Spend guard v2 — generated from supabase/functions/_shared/paid_guard.ts by
@@ -512,17 +513,20 @@ async function removeRefs(paths: unknown): Promise<void> {
   if (error) console.error('reference cleanup failed', error);
 }
 
-// The stored references ride on the reservation (result.refs) until the job is over: settling
-// replaces result with the video URLs, so they are read before that.
-async function rememberRefs(reservation: string, paths: string[]): Promise<void> {
-  if (!paths.length) return;
-  const { error } = await supabaseAdmin.from('generation_reservations').update({ result: { refs: paths } }).eq('id', reservation);
-  if (error) console.error('remember references failed', error);
+// The stored references and what the asset row will say (result.refs, result.asset) ride on the
+// reservation until the job is over: settling replaces result with the video URLs, so they are
+// read before that.
+async function rememberJob(reservation: string, refs: string[], asset: AssetInfo): Promise<void> {
+  const { error } = await supabaseAdmin.from('generation_reservations').update({ result: { refs, asset } }).eq('id', reservation);
+  if (error) console.error('remember job failed', error);
 }
-async function takeRefs(reservation: string): Promise<string[]> {
-  const { data } = await supabaseAdmin.from('generation_reservations').select('result').eq('id', reservation).maybeSingle();
-  const refs = (data?.result as { refs?: unknown } | null)?.refs;
-  return Array.isArray(refs) ? refs.filter((p): p is string => typeof p === 'string') : [];
+async function takeJob(reservation: string): Promise<{ refs: string[]; asset: AssetInfo }> {
+  const { data } = await supabaseAdmin.from('generation_reservations').select('result, model').eq('id', reservation).maybeSingle();
+  const r = (data?.result ?? null) as { refs?: unknown; asset?: Partial<AssetInfo> } | null;
+  const refs = Array.isArray(r?.refs) ? r.refs.filter((p): p is string => typeof p === 'string') : [];
+  const a = r?.asset && typeof r.asset === 'object' ? r.asset : {};
+  const meta = a.meta && typeof a.meta === 'object' ? a.meta : {};
+  return { refs, asset: { model: String(a.model ?? data?.model ?? ''), prompt: String(a.prompt ?? ''), meta } };
 }
 
 // Submits; when the provider refuses the request (400) and it carried audio references, once more
@@ -540,6 +544,87 @@ async function submitVideoWithRefs(input: Record<string, unknown>): Promise<{ id
   }
 }
 // ---- end of video references
+
+// ---- User assets — generated from supabase/functions/_shared/user_assets.ts by
+// scripts/sync-edge-guard.mjs. Edit that file and re-run the script; do not edit this copy by hand.
+//
+// Every finished generation is kept for its owner, so it shows up again after a reload and on any
+// device (the Assets panel and the Generation history read it back through the user-assets
+// function): the file in storage and a user_assets row that says whose it is. Images go to the
+// private user-generations bucket; a video already lives in the video bucket and only gets the row.
+// Keeping is best effort: a failure is logged and the user still gets the result.
+const ASSET_BUCKET = 'user-generations';
+const ASSET_IMAGE_TYPES: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+const ASSET_MAX_BYTES = 50 * 1024 * 1024;
+interface AssetInfo {
+  model: string;
+  prompt?: string;
+  meta?: Record<string, unknown>;
+}
+
+// The bytes of a provider result: inline base64, or an https link the provider hosts.
+async function assetBytes(src: string): Promise<{ bytes: Uint8Array; mime: string } | null> {
+  if (src.startsWith('data:')) {
+    const comma = src.indexOf(',');
+    const m = /^data:([a-z0-9.+/-]+)(;[a-z0-9=.+-]+)*;base64$/i.exec(src.slice(0, comma));
+    if (!m || comma < 0) return null;
+    const bin = atob(src.slice(comma + 1));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return { bytes, mime: m[1].toLowerCase() };
+  }
+  if (!isPublicHttpsUrl(src)) return null; // a provider link, never an internal address
+  const res = await fetchWithTimeout(src, {}, 60_000);
+  if (!res.ok || Number(res.headers.get('content-length') ?? '0') > ASSET_MAX_BYTES) return null;
+  const mime = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
+  return { bytes: new Uint8Array(await res.arrayBuffer()), mime };
+}
+
+async function recordAsset(userId: string, kind: 'image' | 'video', bucket: string, path: string, mime: string, bytes: number | null, info: AssetInfo): Promise<void> {
+  const { error } = await supabaseAdmin.from('user_assets').insert({
+    user_id: userId,
+    kind,
+    bucket,
+    path,
+    mime,
+    bytes,
+    model: String(info.model ?? '').slice(0, 120),
+    prompt: String(info.prompt ?? '').slice(0, 4000),
+    meta: info.meta ?? {},
+  });
+  if (error) throw error;
+}
+
+async function keepImageAsset(userId: string, src: string, info: AssetInfo): Promise<void> {
+  try {
+    const got = await assetBytes(src);
+    const ext = got ? ASSET_IMAGE_TYPES[got.mime] : undefined;
+    if (!got || !ext || got.bytes.length > ASSET_MAX_BYTES) {
+      console.error('asset not kept: not a png/jpeg/webp under 50 MB');
+      return;
+    }
+    const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabaseAdmin.storage.from(ASSET_BUCKET).upload(path, got.bytes, { contentType: got.mime, upsert: false });
+    if (error) throw error;
+    try {
+      await recordAsset(userId, 'image', ASSET_BUCKET, path, got.mime, got.bytes.length, info);
+    } catch (err) {
+      await supabaseAdmin.storage.from(ASSET_BUCKET).remove([path]); // no file without its owner
+      throw err;
+    }
+  } catch (err) {
+    console.error('asset not kept', String(err).slice(0, 300));
+  }
+}
+
+async function keepVideoAsset(userId: string, bucket: string, path: string, bytes: number | null, info: AssetInfo): Promise<void> {
+  try {
+    await recordAsset(userId, 'video', bucket, path, 'video/mp4', bytes, info);
+  } catch (err) {
+    console.error('asset not kept', String(err).slice(0, 300));
+  }
+}
+// ---- end of user assets
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -592,7 +677,7 @@ Deno.serve(async (req) => {
 
     const job = await submitVideoWithRefs(input);
     if (typeof job?.id !== 'string' || !job.id) throw new Error('OpenRouter video submit returned no job id');
-    await rememberRefs(reservation, stored); // before the job counts as running, so no poll can miss them
+    await rememberJob(reservation, stored, { model: VIDEO_MODEL, prompt: String(input.prompt), meta: { aspectRatio: validRatio(params.aspectRatio, '16:9'), resolution, duration } }); // before the job counts as running, so no poll can miss them
     await markSubmitted(reservation, job.id);
     stored.length = 0; // from here the reservation owns them (removed when the job is over)
     const submitted = reservation;

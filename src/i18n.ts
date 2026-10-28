@@ -672,10 +672,15 @@ export interface Translations {
     filterVideo: string;
     loadingHint: string;
     emptyHint: string;
-    notConnectedHint: string;
     loadError: string;
     downloadTooltip: string;
     tileLoadError: string;
+    deleteTooltip: string;
+    deleteConfirm: string;
+    deleteYes: string;
+    deleteNo: string;
+    deleteError: string;
+    loadMore: string;
   };
   yandexDisk: {
     title: string;
@@ -1880,11 +1885,16 @@ export const ru: Translations = {
     filterPhoto: 'Фото',
     filterVideo: 'Видео',
     loadingHint: 'Загружаю материалы...',
-    emptyHint: 'Пока пусто — здесь появятся фото и видео, сохранённые на Яндекс Диск.',
-    notConnectedHint: 'Подключите Яндекс Диск в настройках, чтобы видеть свои материалы здесь.',
+    emptyHint: 'Пока пусто — здесь появятся все ваши фото и видео из генераций. Они хранятся на сервере и видны с любого устройства.',
     loadError: 'Не удалось загрузить материалы.',
     downloadTooltip: 'Скачать',
     tileLoadError: 'Не удалось загрузить',
+    deleteTooltip: 'Удалить',
+    deleteConfirm: 'Удалить навсегда?',
+    deleteYes: 'Удалить',
+    deleteNo: 'Отмена',
+    deleteError: 'Не удалось удалить.',
+    loadMore: 'Показать ещё',
   },
   yandexDisk: {
     title: 'Яндекс Диск',
@@ -3205,11 +3215,16 @@ export const en: Translations = {
     filterPhoto: 'Photos',
     filterVideo: 'Videos',
     loadingHint: 'Loading assets...',
-    emptyHint: 'Nothing here yet — photos and videos saved to Yandex Disk will show up here.',
-    notConnectedHint: 'Connect Yandex Disk in settings to see your files here.',
+    emptyHint: 'Nothing yet — all your generated photos and videos will show up here. They are kept on the server and visible from any device.',
     loadError: 'Failed to load assets.',
     downloadTooltip: 'Download',
     tileLoadError: 'Failed to load',
+    deleteTooltip: 'Delete',
+    deleteConfirm: 'Delete for good?',
+    deleteYes: 'Delete',
+    deleteNo: 'Cancel',
+    deleteError: 'Could not delete.',
+    loadMore: 'Show more',
   },
   yandexDisk: {
     title: 'Yandex Disk',

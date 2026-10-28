@@ -14,6 +14,7 @@ import type {
   YandexAsset,
   MarketingAIResponse,
   CreditBalance,
+  UserAssetPage,
 } from './types';
 import { estimateImageCost, estimateVideoCost, DSP_URL } from './types';
 import { getWebSession, setWebSession, type WebSession } from './webAuthSession';
@@ -696,6 +697,10 @@ export function installWebApi(): void {
       } catch {
         // Nothing to clean up if storage isn't available.
       }
+    },
+    listAssets: async (params = {}) => callFunction<UserAssetPage>('user-assets', { action: 'list', ...params }),
+    deleteAsset: async (id) => {
+      await callFunction('user-assets', { action: 'delete', id });
     },
     listYandexAssets: async () => {
       const { assets } = await callFunction<{ assets: YandexAsset[] }>('yandex-list-assets', {});

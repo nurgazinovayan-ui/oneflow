@@ -280,7 +280,8 @@ MIGRATIONS='202609070001_trends.sql|to_regclass('"'"'public.trend_prompts'"'"') 
 202610070001_legal_consent.sql|to_regclass('"'"'public.legal_consents'"'"') is not null
 202610090001_security_hardening.sql|
 202610200001_legal_edition_20261020.sql|public.setting('"'"'legal_version'"'"') >= 20261020
-202610280001_video_job_ceiling.sql|'
+202610280001_video_job_ceiling.sql|
+202610280002_user_assets.sql|'
 
 apply_migrations() {
   step "8/10 Обновления базы из репозитория (только недостающие) и миграция защиты"

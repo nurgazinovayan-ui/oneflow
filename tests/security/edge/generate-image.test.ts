@@ -117,4 +117,30 @@ reset();
 r = await call(fn, undefined, { token: A, raw: '{"x":"' + 'a'.repeat(100) + '"}', headers: { 'Content-Length': String(60 * 1024 * 1024) } });
 ok(r.status === 413 && rpcCalls('reserve_generation_v2').length === 0, 'declared oversized body → 413');
 
+// 10. the picture is kept for its owner: the file in the private bucket, a row that says whose
+gate = { id: 'res-3', replay: false, status: 'pending' };
+fake.provider = () => Response.json({ data: [{ b64_json: 'iVBORw0KGgo=', media_type: 'image/png' }], usage: { cost: 0.0336 } });
+const assetRows: any[] = [];
+fake.tables['user_assets'] = (method, _url, body) => {
+  if (method === 'POST') assetRows.push(body);
+  return [];
+};
+reset();
+r = await call(fn, okBody, { token: A });
+const kept = fake.storage.find((x) => x.path.includes('/object/user-generations/'));
+ok(r.status === 200 && kept?.path.includes('/user-generations/aaaaaaaa-0000-0000-0000-000000000001/') && kept.contentType === 'image/png', 'picture stored under the owner in user-generations');
+const row = assetRows[0] && (Array.isArray(assetRows[0]) ? assetRows[0][0] : assetRows[0]);
+ok(row?.user_id === 'aaaaaaaa-0000-0000-0000-000000000001' && row.kind === 'image' && row.bucket === 'user-generations' && row.model === okBody.model && row.prompt === 'a cat' && row.meta?.aspectRatio === '1:1', 'asset row: owner, kind, model, prompt, format');
+ok(typeof r.json?.[0] === 'string' && r.json[0].startsWith('data:image/png'), 'the user still gets the picture as before');
+
+// 10b. keeping fails → the user still gets the picture, and no file is left without its row
+fake.tables['user_assets'] = () => {
+  throw new Error('table down');
+};
+reset();
+r = await call(fn, okBody, { token: A });
+const removedOrphan = fake.calls.some((c) => c.kind === 'storage' && c.name.startsWith('DELETE') && JSON.stringify(c.body ?? '').includes('aaaaaaaa-0000-0000-0000-000000000001/'));
+ok(r.status === 200 && removedOrphan, 'keeping failed: picture delivered, stored file removed');
+delete fake.tables['user_assets'];
+
 done('generate-image');

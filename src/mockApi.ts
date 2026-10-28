@@ -1,4 +1,4 @@
-import type { NodeApi, GenerationLogEntry, AdminMessage, CreativeEvaluationResult, AudioGenParams } from './types';
+import type { NodeApi, GenerationLogEntry, AdminMessage, CreativeEvaluationResult, AudioGenParams, UserAsset } from './types';
 import type { MotionScene, MotionStoryboard, MotionStoryboardRequest, MotionStyle, MotionStyleDirection, MotionStylesRequest } from './motion/types';
 import { estimateImageCost, estimateVideoCost, DSP_URL, ADMIN_EMAIL } from './types';
 import { useLanguageStore, ru, en } from './i18n';
@@ -342,6 +342,27 @@ function mockMotionStyles(req: MotionStylesRequest): MotionStyleDirection[] {
   return [0, 1, 2, 3].map((i) => ({ ...all[(i + round) % all.length], id: `mock-${round}-${i}` }));
 }
 
+// Demo stand-in for the user-assets function: a few kept generations, plus what this session makes.
+const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
+const mockAssets: UserAsset[] = [
+  ['image', '/auth-gallery/coffee.webp', 'google/nano-banana-pro', 'Чашка кофе на деревянном столе, утренний свет', { aspectRatio: '1:1' }, 12],
+  ['video', '/oneflow-promo.mp4', 'kwaivgi/kling-v3-video', 'Камера медленно облетает товар', { aspectRatio: '16:9', duration: 5 }, 40],
+  ['image', '/auth-gallery/pendant.webp', 'openai/gpt-image-2', 'Кулон на бархате, студийный свет', { aspectRatio: '3:4' }, 95],
+  ['image', '/auth-gallery/speaker.webp', 'bytedance-seed/seedream-5-0-pro', 'Колонка на бетонной стене, неон', { aspectRatio: '1:1' }, 180],
+  ['image', '/auth-gallery/hot-vision.webp', 'google/nano-banana-2.1', 'Яркий баннер распродажи', { aspectRatio: '4:5' }, 300],
+  ['video', '/start-screen-video.mp4', 'bytedance/seedance-2.0', 'Товар вращается на подиуме', { aspectRatio: '9:16', duration: 8 }, 1500],
+  ['image', '/auth-gallery/make-a-scene.webp', 'krea/krea-2-large', 'Сцена в стиле фильма', { aspectRatio: '16:9' }, 2900],
+  ['image', '/auth-gallery/pop-off.webp', 'x-ai/grok-imagine-image-2.0', 'Поп-арт постер', { aspectRatio: '1:1' }, 4400],
+].map(([kind, url, model, prompt, meta, ago], i) => ({
+  id: `demo-${i}`,
+  kind: kind as UserAsset['kind'],
+  url: url as string,
+  model: model as string,
+  prompt: prompt as string,
+  meta: meta as UserAsset['meta'],
+  createdAt: minutesAgo(ago as number),
+}));
+
 export function installMockApiIfNeeded(): void {
   if (typeof window.api !== 'undefined') return;
 
@@ -369,6 +390,15 @@ export function installMockApiIfNeeded(): void {
         model: params.model,
         category: params.category ?? 'image',
         costUsd,
+      });
+      mockAssets.unshift({
+        id: `demo-${Date.now()}`,
+        kind: 'image',
+        url: placeholderImage,
+        model: params.model,
+        prompt: params.prompt,
+        meta: { aspectRatio: params.aspectRatio, resolution: params.resolution ?? null },
+        createdAt: new Date().toISOString(),
       });
       return [placeholderImage];
     },
@@ -686,6 +716,16 @@ export function installMockApiIfNeeded(): void {
     isYandexDiskConnected: () => false,
     disconnectYandexDisk: () => {},
     listYandexAssets: async () => [],
+    listAssets: async (params = {}) => {
+      const all = mockAssets.filter((a) => (!params.kind || a.kind === params.kind) && (!params.before || a.createdAt < params.before));
+      const limit = params.limit ?? 30;
+      const items = all.slice(0, limit);
+      return { items, next: all.length > limit ? items[items.length - 1].createdAt : null };
+    },
+    deleteAsset: async (id) => {
+      const i = mockAssets.findIndex((a) => a.id === id);
+      if (i >= 0) mockAssets.splice(i, 1);
+    },
     loadYandexAsset: async (path: string) => path,
     createMotionStoryboard: async (req) => {
       await new Promise((r) => setTimeout(r, 1200));

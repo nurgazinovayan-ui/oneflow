@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   IconPlus,
   IconChevronDown,
@@ -30,6 +30,7 @@ import {
   modelShortName,
   usdToCredits,
 } from '../types';
+import type { UserAsset } from '../types';
 import { useGenerationCounter } from '../store/generationCounter';
 import { formatGenerationError } from '../errorMessages';
 import { resolutionTierFromModelValue } from '../resolutionBadge';
@@ -69,6 +70,20 @@ interface QuickGenPanelProps {
 let entryIdCounter = 0;
 const nextEntryId = () => `qg-${++entryIdCounter}-${Date.now().toString(36)}`;
 
+// how many earlier generations the history shows when the panel first opens
+const HISTORY_SIZE = 24;
+const assetEntry = (a: UserAsset): QuickGenEntry => ({
+  id: `asset-${a.id}`,
+  kind: a.kind,
+  status: 'done',
+  aspectRatio: a.meta.aspectRatio ?? '1:1',
+  prompt: a.prompt,
+  model: a.model,
+  resolution: a.meta.resolution ?? '',
+  duration: a.meta.duration,
+  outputs: [a.url],
+});
+
 // GPT Image 2's "resolution" options are quality tiers with translatable names — same mapping
 // as ImageGenNode's local QUALITY_LABEL_KEYS, duplicated here rather than exported since it's
 // tiny and each node/panel already owns its own resolution-select rendering.
@@ -104,6 +119,20 @@ export default function QuickGenPanel({
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
   const [videoRef, setVideoRef] = useState<string | null>(null);
   const [entries, setEntries] = useState<QuickGenEntry[]>([]);
+  // What this account made before is kept on the server (user-assets), so the history survives a
+  // reload and follows the user to another device. Loaded once, when the panel first opens; what is
+  // generated from then on is added by handleGenerate as before.
+  const historyLoaded = useRef(false);
+  useEffect(() => {
+    if (!active || historyLoaded.current) return;
+    historyLoaded.current = true;
+    window.api
+      .listAssets({ limit: HISTORY_SIZE })
+      .then((page) => setEntries((prev) => [...prev, ...page.items.map(assetEntry)]))
+      .catch(() => {
+        historyLoaded.current = false; // not signed in yet, or offline: try again next time
+      });
+  }, [active]);
   const [openEntry, setOpenEntry] = useState<QuickGenEntry | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [promptCopied, setPromptCopied] = useState(false);

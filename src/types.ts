@@ -33,6 +33,22 @@ export interface AudioGenParams {
 // (the resource's `file` field) — kept for reference/debugging, but NOT safe to use directly as
 // an <img>/<video> src: loading it cross-origin from the browser doesn't reliably render (see
 // NodeApi.loadYandexAsset, which proxies the bytes through yandex-asset-download instead).
+// One kept generation of the signed-in user: a picture comes with a signed link valid for a day, a
+// video with its public link (see supabase/functions/user-assets).
+export interface UserAsset {
+  id: string;
+  kind: 'image' | 'video';
+  url: string;
+  model: string;
+  prompt: string;
+  meta: { aspectRatio?: string; resolution?: string | null; duration?: number };
+  createdAt: string;
+}
+export interface UserAssetPage {
+  items: UserAsset[];
+  next: string | null;
+}
+
 export interface YandexAsset {
   name: string;
   path: string;
@@ -497,6 +513,10 @@ export interface NodeApi {
   // passed to saveFile for downloading. Caller is responsible for URL.revokeObjectURL(...) once
   // done with it (see AssetsPanel's cleanup effect).
   loadYandexAsset: (path: string) => Promise<string>;
+  // The signed-in user's kept generations, newest first (the user-assets function), so they are
+  // there after a reload and on any device. `before` is the previous page's `next`.
+  listAssets: (params?: { kind?: 'image' | 'video'; before?: string; limit?: number }) => Promise<UserAssetPage>;
+  deleteAsset: (id: string) => Promise<void>;
 }
 
 declare global {

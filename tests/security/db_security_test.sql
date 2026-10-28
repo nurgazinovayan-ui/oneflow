@@ -186,6 +186,8 @@ select pg_temp.ok(public.subscription_apply_event('evt-x', 'subscription_created
 select pg_temp.ok(public.rate_limit_hit('t:bucket', 2, 60) = 0 and public.rate_limit_hit('t:bucket', 2, 60) = 0 and public.rate_limit_hit('t:bucket', 2, 60) > 0, 'limiter blocks the third hit with Retry-After');
 
 -- 14. users cannot touch the money tables or functions directly (anon / authenticated roles)
+insert into public.user_assets (user_id, kind, bucket, path)
+values ('aaaaaaaa-0000-0000-0000-000000000001', 'image', 'user-generations', 'aaaaaaaa-0000-0000-0000-000000000001/t.png');
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'bbbbbbbb-0000-0000-0000-000000000002', false);
 select pg_temp.ok((select count(*) from public.generation_log) = (select count(*) from public.generation_log where user_id = 'bbbbbbbb-0000-0000-0000-000000000002'), 'B sees only own generation_log rows');
@@ -195,6 +197,8 @@ select pg_temp.denied_or_empty($$select * from public.credit_ledger$$);
 select pg_temp.denied_or_empty($$select * from public.security_events$$);
 select pg_temp.denied_or_empty($$select * from public.generation_reservations$$);
 select pg_temp.denied_or_empty($$select * from public.generation_blocks$$);
+select pg_temp.denied_or_empty($$select * from public.user_assets$$);
+select pg_temp.expect_error($$insert into public.user_assets (user_id, kind, bucket, path) values ('bbbbbbbb-0000-0000-0000-000000000002', 'image', 'user-generations', 'x.png')$$, 'permission denied|row-level security');
 select pg_temp.expect_error($$select public.reserve_generation_v2('bbbbbbbb-0000-0000-0000-000000000002', 'm', 'image', 0)$$, 'permission denied');
 select pg_temp.expect_error($$select public.grant_credits('bbbbbbbb-0000-0000-0000-000000000002', 'admin', 1000, 0, 'x', null)$$, 'permission denied');
 select pg_temp.expect_error($$select public.settle_generation(gen_random_uuid(), 'x', -100)$$, 'permission denied');
@@ -207,6 +211,7 @@ select pg_temp.ok((select value from public.app_settings where key = 'paid_gener
 set role anon;
 select pg_temp.expect_error($$select public.rate_limit_hit('x', 1, 1)$$, 'permission denied');
 select pg_temp.denied_or_empty($$select * from public.app_settings$$);
+select pg_temp.denied_or_empty($$select * from public.user_assets$$);
 reset role;
 select pg_temp.ok(true, 'anon/authenticated cannot reach money tables or functions');
 \echo ALL DB SECURITY TESTS PASSED

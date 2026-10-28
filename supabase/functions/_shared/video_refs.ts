@@ -78,17 +78,20 @@ async function removeRefs(paths: unknown): Promise<void> {
   if (error) console.error('reference cleanup failed', error);
 }
 
-// The stored references ride on the reservation (result.refs) until the job is over: settling
-// replaces result with the video URLs, so they are read before that.
-async function rememberRefs(reservation: string, paths: string[]): Promise<void> {
-  if (!paths.length) return;
-  const { error } = await supabaseAdmin.from('generation_reservations').update({ result: { refs: paths } }).eq('id', reservation);
-  if (error) console.error('remember references failed', error);
+// The stored references and what the asset row will say (result.refs, result.asset) ride on the
+// reservation until the job is over: settling replaces result with the video URLs, so they are
+// read before that.
+async function rememberJob(reservation: string, refs: string[], asset: AssetInfo): Promise<void> {
+  const { error } = await supabaseAdmin.from('generation_reservations').update({ result: { refs, asset } }).eq('id', reservation);
+  if (error) console.error('remember job failed', error);
 }
-async function takeRefs(reservation: string): Promise<string[]> {
-  const { data } = await supabaseAdmin.from('generation_reservations').select('result').eq('id', reservation).maybeSingle();
-  const refs = (data?.result as { refs?: unknown } | null)?.refs;
-  return Array.isArray(refs) ? refs.filter((p): p is string => typeof p === 'string') : [];
+async function takeJob(reservation: string): Promise<{ refs: string[]; asset: AssetInfo }> {
+  const { data } = await supabaseAdmin.from('generation_reservations').select('result, model').eq('id', reservation).maybeSingle();
+  const r = (data?.result ?? null) as { refs?: unknown; asset?: Partial<AssetInfo> } | null;
+  const refs = Array.isArray(r?.refs) ? r.refs.filter((p): p is string => typeof p === 'string') : [];
+  const a = r?.asset && typeof r.asset === 'object' ? r.asset : {};
+  const meta = a.meta && typeof a.meta === 'object' ? a.meta : {};
+  return { refs, asset: { model: String(a.model ?? data?.model ?? ''), prompt: String(a.prompt ?? ''), meta } };
 }
 
 // Submits; when the provider refuses the request (400) and it carried audio references, once more

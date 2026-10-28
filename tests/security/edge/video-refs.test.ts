@@ -59,6 +59,12 @@ fake.tables['generation_reservations'] = (method, url, body) => {
   return [{ id: j.id, status: j.status, provider_job_id: j.provider_job_id, amount_usd: j.amount_usd, result: j.result, model: j.model }];
 };
 
+const assetRows: unknown[] = [];
+fake.tables['user_assets'] = (method, _url, body) => {
+  if (method === 'POST') assetRows.push(body);
+  return [];
+};
+
 let providerState = 'in_progress';
 let refuseAudio = false;
 fake.provider = (url, init) => {
@@ -100,6 +106,9 @@ if (!PRO) {
   providerState = 'completed';
   r = await call(FN, { jobId: JOB }, { token: A });
   ok(r.status === 200 && jobs[JOB].status === 'settled', 'frames: owner gets the video');
+  const asset = assetRows[0] && (Array.isArray(assetRows[0]) ? assetRows[0][0] : assetRows[0]);
+  ok(asset?.user_id === 'aaaaaaaa-0000-0000-0000-000000000001' && asset.kind === 'video' && asset.bucket === 'ai-generated-videos' && /\.mp4$/.test(asset.path), 'video kept for its owner (user_assets row)');
+  ok(asset?.prompt === 'a dog' && asset.model === 'kwaivgi/kling-v3-video' && asset.meta?.aspectRatio === '9:16' && asset.meta?.duration === 5, 'the row carries what was asked at submit (prompt, model, format)');
   ok(removals().length === 1 && JSON.stringify(removals()[0].body).includes('refs/'), 'frames: reference files removed after the job');
 
   // 3. reference photos on a model that takes them (Seedance 2.0) → input_references, aspect ratio kept

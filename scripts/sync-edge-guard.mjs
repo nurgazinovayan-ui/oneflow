@@ -5,6 +5,8 @@
 //                                                «// ---- end of admin check»)
 //   supabase/functions/_shared/video_refs.ts  → the video functions («// ---- Video references» …
 //                                                «// ---- end of video references»)
+//   supabase/functions/_shared/user_assets.ts → the image and video functions («// ---- User assets» …
+//                                                «// ---- end of user assets»)
 //
 // Why a copy: the functions are deployed by pasting ONE file into Supabase Studio, so they cannot
 // import a shared module. The shared file is the only place to edit; this script keeps the copies
@@ -33,6 +35,8 @@ export const PAID_FUNCTIONS = [
 ];
 // reference media (input_references / frame_images) for the two video functions
 export const VIDEO_FUNCTIONS = ['generate-video', 'generate-video-pro'];
+// every finished picture and video is kept for its owner (user_assets)
+export const ASSET_FUNCTIONS = ['generate-image', 'generate-video', 'generate-video-pro'];
 export const ADMIN_FUNCTIONS = ['admin-list-online', 'admin-list-generations', 'admin-send-message', 'get-openrouter-balance', 'trendswatch-refresh'];
 const ADMIN_REPO_FUNCTIONS = ['admin-api', 'admin-send-message'];
 
@@ -47,6 +51,12 @@ const blocks = [
     start: /^\/\/ ---- Video references/,
     end: '// ---- end of video references',
     files: VIDEO_FUNCTIONS.map((n) => [n, join(fnDir, n, 'index.ts')]),
+  },
+  {
+    shared: 'user_assets.ts',
+    start: /^\/\/ ---- User assets/,
+    end: '// ---- end of user assets',
+    files: ASSET_FUNCTIONS.map((n) => [n, join(fnDir, n, 'index.ts')]),
   },
   {
     shared: 'admin_check.ts',
