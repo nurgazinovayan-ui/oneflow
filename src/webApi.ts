@@ -22,7 +22,7 @@ import { capture } from './analytics';
 import { useCredits } from './credits';
 import { LEGAL_VERSION } from './legalContent';
 import { rememberAccepted } from './legalConsent';
-import { fitPhoto, fitPhotos } from './photoRef';
+import { IMAGE_PHOTO_FIT, fitPhoto, fitPhotos } from './photoRef';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -455,7 +455,8 @@ export function installWebApi(): void {
     setApiKey: async () => true,
 
     generateImage: async (params) => {
-      const outputs = await callFunction<string[]>('generate-image', params);
+      // reference photos only: `image` is the original for background removal and upscaling
+      const outputs = await callFunction<string[]>('generate-image', { ...params, images: await fitPhotos(params.images, IMAGE_PHOTO_FIT) });
       const costUsd = estimateImageCost(params.model, params.resolution, outputs.length);
       logWebGeneration({
         timestamp: Date.now(),

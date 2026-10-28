@@ -557,6 +557,16 @@ async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Pro
 }
 // ---- end of spend guard
 
+// Reference photos per generation, and why one cannot go to the model (in words for the user;
+// null when it can). Kept in sync with IMAGE_REFERENCE_PHOTO_LIMIT in src/types.ts.
+const MAX_IMAGE_REFS = 8;
+function imageRefProblem(v: unknown): string | null {
+  if (typeof v !== 'string' || !v) return 'Фото не прочиталось — прикрепите файл ещё раз.';
+  if (v.length > MAX_IMAGE_REF_CHARS) return 'Фото больше 9 МБ — уменьшите файл и прикрепите снова.';
+  if (!v.startsWith('data:')) return isPublicHttpsUrl(v) ? null : 'Фото недоступно по ссылке — прикрепите файл.';
+  return /^data:image\/(png|jpeg|webp|gif)[;,]/i.test(v) ? null : 'Фото в этом формате модель не принимает — нужен JPG, PNG или WebP.';
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
@@ -581,8 +591,16 @@ Deno.serve(async (req) => {
       else throw badRequest('Unsupported resolution for this model.');
     }
     const prompt = clipText(params.prompt, 4000);
-    const image = isImageRef(params.image) ? params.image : undefined;
-    const images = Array.isArray(params.images) ? params.images.filter(isImageRef).slice(0, 8) : undefined;
+    // Every attached photo either reaches the model or is refused here, before any money is reserved.
+    const given = (v: unknown) => v !== undefined && v !== null && v !== '';
+    const attached = Array.isArray(params.images) ? params.images.filter(given) : [];
+    for (const v of given(params.image) ? [params.image, ...attached] : attached) {
+      const problem = imageRefProblem(v);
+      if (problem) throw badRequest(problem);
+    }
+    if (attached.length > MAX_IMAGE_REFS) throw badRequest(`Не больше ${MAX_IMAGE_REFS} фото-референсов.`);
+    const image: string | undefined = given(params.image) ? params.image : undefined;
+    const images: string[] | undefined = attached.length ? attached : undefined;
     const size = (v: unknown) => (Number.isFinite(v) ? Math.min(4096, Math.max(16, Number(v))) : undefined);
     const width = size(params.width);
     const height = size(params.height);
@@ -599,6 +617,8 @@ Deno.serve(async (req) => {
       urls = normalizeOutput(output);
     } else {
       const input = buildOpenRouterImageInput(model, prompt, aspectRatio, image, images, resolution, width, height);
+      const sent = Array.isArray(input.input_references) ? input.input_references.length : 0;
+      console.log('image submit', JSON.stringify({ model: input.model, references: sent }));
       const result = await callOpenRouterImage(input);
       urls = result.urls;
       realCostUsd = result.realCostUsd;

@@ -1,10 +1,17 @@
-// Photos attached to a video generation, made fit to send. The video functions refuse a photo over
-// ~9 MB or in a format the models do not take (HEIC from the iPad Files app), and a phone photo is
-// often both. A photo larger than PHOTO_MAX_SIDE, heavier than PHOTO_MAX_CHARS or not PNG/JPEG/WebP
-// is redrawn as a JPEG; links and anything the browser cannot decode pass unchanged (the function
-// then refuses them with the reason).
-const PHOTO_MAX_SIDE = 2048;
-const PHOTO_MAX_CHARS = 4_000_000;
+// Photos attached to a generation, made fit to send. The functions refuse a photo over ~9 MB or in
+// a format the models do not take (HEIC from the iPad Files app), and a phone photo or a generated
+// 4K picture is often one of those. A photo larger than maxSide, heavier than maxChars or not
+// PNG/JPEG/WebP is redrawn as a JPEG; links and anything the browser cannot decode pass unchanged
+// (the function then refuses them with the reason).
+export interface PhotoFit {
+  maxSide: number;
+  maxChars: number;
+}
+// video models take a reference as a frame or a guide: 2048 px is plenty
+export const VIDEO_PHOTO_FIT: PhotoFit = { maxSide: 2048, maxChars: 4_000_000 };
+// image models edit the photo itself, so they keep more detail; 8 photos of 5M chars stay under
+// the functions' 48 MB request ceiling
+export const IMAGE_PHOTO_FIT: PhotoFit = { maxSide: 3072, maxChars: 5_000_000 };
 const SENDABLE = /^data:image\/(png|jpeg|webp)[;,]/i;
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -16,7 +23,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-export async function fitPhoto(ref: string): Promise<string> {
+export async function fitPhoto(ref: string, fit: PhotoFit = VIDEO_PHOTO_FIT): Promise<string> {
   if (!ref.startsWith('data:image/')) return ref;
   let img: HTMLImageElement;
   try {
@@ -27,8 +34,8 @@ export async function fitPhoto(ref: string): Promise<string> {
   const w = img.naturalWidth;
   const h = img.naturalHeight;
   if (!w || !h) return ref;
-  if (SENDABLE.test(ref) && Math.max(w, h) <= PHOTO_MAX_SIDE && ref.length <= PHOTO_MAX_CHARS) return ref;
-  const k = Math.min(1, PHOTO_MAX_SIDE / Math.max(w, h));
+  if (SENDABLE.test(ref) && Math.max(w, h) <= fit.maxSide && ref.length <= fit.maxChars) return ref;
+  const k = Math.min(1, fit.maxSide / Math.max(w, h));
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.round(w * k));
   c.height = Math.max(1, Math.round(h * k));
@@ -40,6 +47,6 @@ export async function fitPhoto(ref: string): Promise<string> {
   return c.toDataURL('image/jpeg', 0.9);
 }
 
-export async function fitPhotos(refs: string[] | undefined): Promise<string[] | undefined> {
-  return refs ? await Promise.all(refs.map(fitPhoto)) : refs;
+export async function fitPhotos(refs: string[] | undefined, fit: PhotoFit = VIDEO_PHOTO_FIT): Promise<string[] | undefined> {
+  return refs ? await Promise.all(refs.map((r) => fitPhoto(r, fit))) : refs;
 }

@@ -1,4 +1,5 @@
-// generate-image: auth, server-side pricing, the gate's refusals, idempotency, internal URLs.
+// generate-image: auth, server-side pricing, the gate's refusals, idempotency, internal URLs,
+// attached photos that reach the model or are refused with the reason.
 import { call, done, fake, load, ok, providerCalls, reset, rpcCalls, token } from './harness.ts';
 
 const A = token('user-a');
@@ -43,14 +44,33 @@ reset();
 r = await call(fn, { ...okBody, model: 'evil/expensive-model' }, { token: A });
 ok(r.status === 400 && providerCalls().length === 0, 'model outside the allowlist refused');
 
-// 4. internal or credentialed reference URLs never reach the provider
+// 4. internal or credentialed reference URLs never reach the provider: the request is refused
+// before any money is reserved (not quietly forwarded without them)
+for (const bad of ['https://169.254.169.254/latest/meta-data', 'https://localhost/x.png', 'https://user:pw@example.com/a.png', 'http://example.com/a.png', 'https://10.0.0.5/a.png', 'https://metadata.google.internal/x']) {
+  reset();
+  r = await call(fn, { ...okBody, images: [bad, 'https://cdn.example.com/ok.png'] }, { token: A });
+  ok(r.status === 400 && providerCalls().length === 0 && rpcCalls('reserve_generation_v2').length === 0, `internal reference refused: ${bad}`);
+}
 reset();
-r = await call(fn, {
-  ...okBody,
-  images: ['https://169.254.169.254/latest/meta-data', 'https://localhost/x.png', 'https://user:pw@example.com/a.png', 'http://example.com/a.png', 'https://10.0.0.5/a.png', 'https://metadata.google.internal/x', 'https://cdn.example.com/ok.png'],
-}, { token: A });
-const refs = providerCalls()[0]?.body?.input_references ?? [];
-ok(refs.length === 1 && refs[0].image_url.url === 'https://cdn.example.com/ok.png', 'only the public https reference is forwarded');
+r = await call(fn, { ...okBody, images: ['https://cdn.example.com/ok.png'] }, { token: A });
+let refs = providerCalls()[0]?.body?.input_references ?? [];
+ok(r.status === 200 && refs.length === 1 && refs[0].image_url.url === 'https://cdn.example.com/ok.png', 'a public https reference is forwarded');
+
+// 4b. attached photos reach the model, or the request is refused with the reason before any spend
+const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+reset();
+r = await call(fn, { ...okBody, images: [PNG, PNG.replace('image/png', 'image/jpeg')] }, { token: A });
+refs = providerCalls()[0]?.body?.input_references ?? [];
+ok(r.status === 200 && refs.length === 2 && refs.every((x: any) => x.type === 'image_url' && x.image_url.url.startsWith('data:image/')), 'two attached photos sent as input_references');
+for (const [images, words, label] of [
+  [['data:image/png;base64,' + 'A'.repeat(12_000_001)], 'больше 9 МБ', 'photo over 9 MB refused, not dropped'],
+  [['data:image/heic;base64,AAAA'], 'JPG, PNG или WebP', 'HEIC photo refused with the formats'],
+  [Array(9).fill(PNG), 'Не больше 8', 'a ninth photo refused, not dropped'],
+] as const) {
+  reset();
+  r = await call(fn, { ...okBody, images }, { token: A });
+  ok(r.status === 400 && String(r.json.error).includes(words) && rpcCalls('reserve_generation_v2').length === 0 && providerCalls().length === 0, label);
+}
 
 // 5. the gate refuses → no provider call, stable code, Retry-After where it applies
 for (const [code, status] of [['service_paused', 503], ['account_blocked', 403], ['spend_limit', 429], ['quota_exceeded', 402], ['too_many_jobs', 429], ['email_not_confirmed', 403]] as const) {

@@ -19,6 +19,7 @@ import {
   IMAGE_MODEL_META,
   VIDEO_MODELS,
   VIDEO_MODEL_META,
+  IMAGE_REFERENCE_PHOTO_LIMIT,
   VIDEO_PRO_MODEL,
   VIDEO_PRO_REFERENCE_LIMITS,
   VIDEO_REFERENCE_MODELS,
@@ -133,9 +134,9 @@ export default function QuickGenPanel({
     }
   };
 
-  // what the video functions take per generation; a photo past it would be refused
+  // what the functions take per generation; a photo past it would be refused
   const refLimitFor = (m: string) =>
-    kind !== 'video' ? Infinity : m === VIDEO_PRO_MODEL ? VIDEO_PRO_REFERENCE_LIMITS.images : VIDEO_REFERENCE_PHOTO_LIMIT;
+    kind === 'image' ? IMAGE_REFERENCE_PHOTO_LIMIT : m === VIDEO_PRO_MODEL ? VIDEO_PRO_REFERENCE_LIMITS.images : VIDEO_REFERENCE_PHOTO_LIMIT;
 
   const handleModelChange = (nextModel: string) => {
     setModel(nextModel);
