@@ -20,7 +20,11 @@ import {
   VIDEO_MODELS,
   VIDEO_MODEL_META,
   VIDEO_PRO_MODEL,
+  clampVideoDuration,
+  estimateVideoCost,
+  estimateVideoProCost,
   modelShortName,
+  usdToCredits,
 } from '../types';
 import { useGenerationCounter } from '../store/generationCounter';
 import { formatGenerationError } from '../errorMessages';
@@ -87,6 +91,7 @@ export default function QuickGenPanel({
   const [model, setModel] = useState<string>(IMAGE_MODELS[0].value);
   const [aspectRatio, setAspectRatio] = useState<string>('1:1');
   const [resolution, setResolution] = useState<string>(IMAGE_MODEL_META[IMAGE_MODELS[0].value].resolutions[0].value);
+  const [duration, setDuration] = useState(5); // video only, kept within the model's range
   const [prompt, setPrompt] = useState('');
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [attachMode, setAttachMode] = useState<AttachMode>('none');
@@ -121,6 +126,7 @@ export default function QuickGenPanel({
       const first = VIDEO_MODELS[0].value;
       setModel(first);
       setResolution(VIDEO_MODEL_META[first].resolutions[0]);
+      setDuration((d) => clampVideoDuration(first, d));
     }
   };
 
@@ -130,6 +136,7 @@ export default function QuickGenPanel({
       setResolution(IMAGE_MODEL_META[nextModel].resolutions[0].value);
     } else {
       setResolution(VIDEO_MODEL_META[nextModel].resolutions[0]);
+      setDuration((d) => clampVideoDuration(nextModel, d));
       if (attachMode === 'videoRef' && nextModel !== VIDEO_PRO_MODEL) resetAttachments();
     }
   };
@@ -205,13 +212,7 @@ export default function QuickGenPanel({
     const trimmed = prompt.trim();
     if (!trimmed || generating) return;
 
-    const duration =
-      kind === 'video'
-        ? (() => {
-            const meta = VIDEO_MODEL_META[model];
-            return Math.min(Math.max(5, meta.minDuration ?? 1), meta.maxDuration);
-          })()
-        : undefined;
+    const videoDuration = clampVideoDuration(model, duration);
 
     const entryId = nextEntryId();
     const entry: QuickGenEntry = {
@@ -222,7 +223,7 @@ export default function QuickGenPanel({
       prompt: trimmed,
       model,
       resolution,
-      duration,
+      duration: kind === 'video' ? videoDuration : undefined,
       outputs: [],
     };
     setEntries((prev) => [entry, ...prev]);
@@ -242,8 +243,6 @@ export default function QuickGenPanel({
           category: 'image',
         });
       } else {
-        // duration is always set above when kind === 'video'.
-        const videoDuration = duration as number;
         if (model === VIDEO_PRO_MODEL) {
           const images = [...(startFrame ? [startFrame] : []), ...(endFrame ? [endFrame] : []), ...referenceImages];
           outputs = await window.api.generateVideoPro({
@@ -256,10 +255,14 @@ export default function QuickGenPanel({
             projectId,
           });
         } else {
+          // start/end photos are exact frames; reference photos only guide style and content
+          const frames = attachMode === 'startEnd';
           outputs = await window.api.generateVideo({
             model,
             prompt: trimmed,
-            image: startFrame || referenceImages[0] || undefined,
+            image: (frames && startFrame) || undefined,
+            lastImage: (frames && endFrame) || undefined,
+            references: !frames && referenceImages.length > 0 ? referenceImages : undefined,
             aspectRatio,
             duration: videoDuration,
             resolution,
@@ -297,8 +300,7 @@ export default function QuickGenPanel({
           category: 'image',
         });
       } else {
-        const meta = VIDEO_MODEL_META[source.model];
-        const duration = Math.min(Math.max(5, meta.minDuration ?? 1), meta.maxDuration);
+        const duration = clampVideoDuration(source.model, source.duration);
         outputs =
           source.model === VIDEO_PRO_MODEL
             ? await window.api.generateVideoPro({
@@ -354,6 +356,12 @@ export default function QuickGenPanel({
   const resolutionOptions =
     kind === 'image' ? IMAGE_MODEL_META[model]?.resolutions ?? [] : (VIDEO_MODEL_META[model]?.resolutions ?? []).map((r) => ({ label: r, value: r }));
   const showVideoRefOption = kind === 'video' && model === VIDEO_PRO_MODEL;
+  // video: the duration actually sent and its price in credits, as the server's balance check counts it
+  const videoMeta = kind === 'video' ? VIDEO_MODEL_META[model] : undefined;
+  const shownDuration = clampVideoDuration(model, duration);
+  const costCredits = videoMeta
+    ? usdToCredits(model === VIDEO_PRO_MODEL ? estimateVideoProCost(resolution, shownDuration) : estimateVideoCost(model, resolution, shownDuration))
+    : null;
   // Empty canvas → composer sits centered like a landing prompt; the moment the first
   // generation is kicked off (an entry exists) it animates down to a bottom-docked bar — see
   // .quick-gen-composer / .quick-gen-composer.docked in App.css for the actual transition.
@@ -500,11 +508,35 @@ export default function QuickGenPanel({
           ))}
         </div>
 
+        {videoMeta && (
+          <>
+            <div className="v2-lab">
+              <span>{t.nodes.videoGen.duration(shownDuration, videoMeta.minDuration ?? 1, videoMeta.maxDuration)}</span>
+            </div>
+            <input
+              type="range"
+              className="v2-range v2-duration"
+              min={videoMeta.minDuration ?? 1}
+              max={videoMeta.maxDuration}
+              step={1}
+              value={shownDuration}
+              style={{
+                ['--p' as string]: `${videoMeta.maxDuration > (videoMeta.minDuration ?? 1)
+                  ? ((shownDuration - (videoMeta.minDuration ?? 1)) / (videoMeta.maxDuration - (videoMeta.minDuration ?? 1))) * 100
+                  : 100}%`,
+              }}
+              onChange={(e) => setDuration(Number(e.target.value))}
+              aria-label={t.nodes.videoGen.duration(shownDuration, videoMeta.minDuration ?? 1, videoMeta.maxDuration)}
+            />
+          </>
+        )}
+
         <div className="v2-card-foot">
           <button type="button" className="v2-cta" onClick={() => void handleGenerate()} disabled={generating || !prompt.trim()}>
             <IconSparkles size={15} />
             {generating ? t.nodes.common.generating : t.nodes.common.generate}
           </button>
+          {costCredits !== null && <p className="v2-hint v2-center">{t.ux.costEstimate(t.credits.count(costCredits))}</p>}
           {!prompt.trim() && !generating && <p className="v2-hint v2-center">{t.ux.genNeedPrompt}</p>}
         </div>
       </section>

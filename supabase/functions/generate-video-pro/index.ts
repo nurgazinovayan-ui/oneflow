@@ -4,12 +4,8 @@
 // openrouter.ai/settings/keys).
 // SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY are normally already set automatically.
 //
-// Field names for Seedance 2.5's multimodal reference arrays ("images"/"videos"/"audios")
-// aren't published in an exact machine-readable schema by OpenRouter for this specific model —
-// if OpenRouter rejects these as unexpected properties, its error message names the actual
-// expected key (they map onto OpenRouter's general input_references field for other models, but
-// Seedance 2.5's own reference-array shape predates that and may differ — verify with a live
-// call and adjust buildVideoInput below).
+// References go in OpenRouter's input_references (images and videos by https URL, stored first
+// under refs/ in the video bucket; audio inline as input_audio) — see the «Video references» block.
 //
 // Funded by the shared OPENROUTER_API_KEY, within each user's monthly allowance (spend guard
 // below + supabase/migrations/202610010001_generation_guard.sql). Requires the generation_log
@@ -143,8 +139,10 @@ async function finishOrPending(caller: VideoCaller, reservation: string, provide
     if (state.status === 'failed' || state.status === 'cancelled' || state.status === 'expired') {
       console.error('video job ended', state.status, state.error);
       // the provider does not bill jobs that failed on its side
+      const refs = await takeRefs(reservation);
       const { error } = await supabaseAdmin.rpc('release_generation', { p_reservation: reservation });
       if (error) console.error('release_generation failed', error);
+      await removeRefs(refs);
       return jsonResponse({ error: 'Не удалось сгенерировать видео. Попробуйте ещё раз.', code: 'job_failed' }, 502);
     }
     if (Date.now() + POLL_INTERVAL_MS > deadline) return jsonResponse({ pending: true, jobId: reservation }, 202);
@@ -159,7 +157,9 @@ async function completeVideoJob(caller: VideoCaller, reservation: string, provid
   try {
     const url = await downloadAndStoreVideo(state.id ?? providerJobId);
     const realCostUsd = typeof state.usage?.cost === 'number' ? state.usage.cost : null;
+    const refs = await takeRefs(reservation); // read before settling replaces result
     await settleSpend(reservation, caller.email, realCostUsd, { urls: [url] });
+    await removeRefs(refs);
     return jsonResponse([url]);
   } catch (err) {
     // hand the job back, so the next poll retries the download instead of waiting ten minutes
@@ -283,6 +283,19 @@ function notifyAlert(kind: string, fn: string): void {
 
 const functionName = (req: Request) => new URL(req.url).pathname.split('/').filter(Boolean).pop() ?? 'unknown';
 
+// A refusal for money says how much: the request's price, what is free now and what running
+// generations hold (credits, 1 credit = $0.01 of model cost). Accounts with a monthly dollar
+// allowance (generation_overrides) hit that allowance instead: { limit: 'monthly' }.
+async function quotaDetails(userId: string, amountUsd: number): Promise<Record<string, unknown>> {
+  const needed = Math.max(0, Math.ceil(Math.max(0, Number(amountUsd) || 0) * 100 - 1e-9));
+  const { data, error } = await supabaseAdmin.rpc('credit_balance', { p_user: userId });
+  const b = Array.isArray(data) ? data[0] : data;
+  if (error || !b) return { needed };
+  if (b.unlimited) return { needed, limit: 'monthly' };
+  const reserved = Math.max(0, Number(b.reserved) || 0);
+  return { needed, available: Math.max(0, (Number(b.available) || 0) - reserved), reserved };
+}
+
 async function reserveSpend(req: Request, userId: string, model: string, category: string, amountUsd: number): Promise<string> {
   const fn = functionName(req);
   const { data, error } = await supabaseAdmin.rpc('reserve_generation_v2', {
@@ -302,7 +315,9 @@ async function reserveSpend(req: Request, userId: string, model: string, categor
   const r = data as { id?: string; replay?: boolean; status?: string; error?: string; retry_after?: number; alert?: string };
   if (r.error) {
     const [status, message] = GUARD_ERRORS[r.error] ?? [400, 'Bad request.'];
-    throw new GuardError(status, r.error, message, r.retry_after ? { retryAfter: r.retry_after } : {});
+    const extra: Record<string, unknown> = r.retry_after ? { retryAfter: r.retry_after } : {};
+    if (r.error === 'quota_exceeded') Object.assign(extra, await quotaDetails(userId, amountUsd));
+    throw new GuardError(status, r.error, message, extra);
   }
   if (r.replay) {
     throw new GuardError(409, 'duplicate_request', 'Этот запрос уже выполняется или выполнен.', { jobId: r.id, jobStatus: r.status });
@@ -414,10 +429,100 @@ async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Pro
 }
 // ---- end of spend guard
 
+// ---- Video references — generated from supabase/functions/_shared/video_refs.ts by
+// scripts/sync-edge-guard.mjs. Edit that file and re-run the script; do not edit this copy by hand.
+//
+// OpenRouter takes exact frames in frame_images ({ type: 'image_url', image_url: { url },
+// frame_type }) and guidance in input_references (the same entries without frame_type, plus
+// video_url / input_audio). Video references must be https URLs (data: URLs are refused), so every
+// image and video the app sends inline is first stored in the public video bucket under refs/ and
+// passed by URL; the files are removed once the job is over. Audio goes inline as input_audio; a
+// provider that refuses it gets the same request again without the audio.
+const REF_DIR = 'refs';
+const REF_TYPES: Record<string, string> = {
+  'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif',
+  'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov',
+};
+const AUDIO_FORMATS: Record<string, string> = {
+  'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/wave': 'wav',
+  'audio/ogg': 'ogg', 'audio/webm': 'webm', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/aac': 'aac', 'audio/flac': 'flac',
+};
+type VideoRefEntry =
+  | { type: 'image_url'; image_url: { url: string }; frame_type?: 'first_frame' | 'last_frame' }
+  | { type: 'video_url'; video_url: { url: string } }
+  | { type: 'input_audio'; input_audio: { data: string; format: string } };
+
+function splitDataUrl(v: string): { mime: string; base64: string } | null {
+  const comma = v.indexOf(',');
+  const m = /^data:([a-z0-9.+/-]+)(;[a-z0-9=.+-]+)*;base64$/i.exec(v.slice(0, comma));
+  return m && comma > 0 ? { mime: m[1].toLowerCase(), base64: v.slice(comma + 1) } : null;
+}
+
+// One image or video reference → the URL the provider fetches. An https URL (already checked by
+// isImageRef / isMediaRef) is passed as is; inline data is stored first and its path recorded.
+async function storeRef(v: string, stored: string[]): Promise<string> {
+  if (!v.startsWith('data:')) return v;
+  const d = splitDataUrl(v);
+  const ext = d ? REF_TYPES[d.mime] : undefined;
+  if (!d || !ext) throw badRequest('Этот файл нельзя использовать как референс.');
+  const bin = atob(d.base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const path = `${REF_DIR}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabaseAdmin.storage.from(VIDEO_BUCKET).upload(path, bytes, { contentType: d.mime, upsert: false });
+  if (error) throw error;
+  stored.push(path);
+  return supabaseAdmin.storage.from(VIDEO_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+// Audio travels inline (base64 + format); anything else is skipped.
+function audioRef(v: string): VideoRefEntry | null {
+  const d = splitDataUrl(v);
+  const format = d ? AUDIO_FORMATS[d.mime] : undefined;
+  return d && format ? { type: 'input_audio', input_audio: { data: d.base64, format } } : null;
+}
+
+async function removeRefs(paths: unknown): Promise<void> {
+  const list = Array.isArray(paths) ? paths.filter((p): p is string => typeof p === 'string' && p.startsWith(`${REF_DIR}/`)) : [];
+  if (!list.length) return;
+  const { error } = await supabaseAdmin.storage.from(VIDEO_BUCKET).remove(list);
+  if (error) console.error('reference cleanup failed', error);
+}
+
+// The stored references ride on the reservation (result.refs) until the job is over: settling
+// replaces result with the video URLs, so they are read before that.
+async function rememberRefs(reservation: string, paths: string[]): Promise<void> {
+  if (!paths.length) return;
+  const { error } = await supabaseAdmin.from('generation_reservations').update({ result: { refs: paths } }).eq('id', reservation);
+  if (error) console.error('remember references failed', error);
+}
+async function takeRefs(reservation: string): Promise<string[]> {
+  const { data } = await supabaseAdmin.from('generation_reservations').select('result').eq('id', reservation).maybeSingle();
+  const refs = (data?.result as { refs?: unknown } | null)?.refs;
+  return Array.isArray(refs) ? refs.filter((p): p is string => typeof p === 'string') : [];
+}
+
+// Submits; when the provider refuses the request (400) and it carried audio references, once more
+// without them, so an unsupported audio reference costs the audio, not the whole video.
+async function submitVideoWithRefs(input: Record<string, unknown>): Promise<{ id: string }> {
+  try {
+    return await submitOpenRouterVideoJob(input);
+  } catch (err) {
+    const refs = Array.isArray(input.input_references) ? (input.input_references as VideoRefEntry[]) : [];
+    if (!refs.some((r) => r.type === 'input_audio') || !/submit error 400/.test(String(err))) throw err;
+    console.error('audio references refused, retrying without them:', String(err).slice(0, 300));
+    const rest = refs.filter((r) => r.type !== 'input_audio');
+    const { input_references: _drop, ...base } = input;
+    return await submitOpenRouterVideoJob(rest.length ? { ...base, input_references: rest } : base);
+  }
+}
+// ---- end of video references
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders });
   let reservation: string | null = null;
+  const stored: string[] = []; // reference files this request put into storage
   try {
     const caller = await getCaller(req);
     if (!caller) return jsonResponse({ error: 'Not authenticated.' }, 401);
@@ -427,15 +532,23 @@ Deno.serve(async (req) => {
     const resolution = ['480p', '720p', '1080p'].includes(params.resolution) ? params.resolution : '720p';
     const requested = Number.isFinite(params.duration) && params.duration > 0 ? params.duration : 5;
     const duration = Math.min(30, Math.max(4, Math.round(requested)));
-    const media = (v: unknown, max: number) =>
-      Array.isArray(v) ? v.filter(isMediaRef).slice(0, max) : [];
-    const images = media(params.images, 9);
-    const videos = media(params.videos, 3);
-    const audios = media(params.audios, 3);
+    const media = (v: unknown, max: number, kind: 'image' | 'video' | 'audio') =>
+      Array.isArray(v) ? v.filter((x) => isMediaRef(x) && (!x.startsWith('data:') || x.startsWith(`data:${kind}/`))).slice(0, max) : [];
+    const images = media(params.images, 9, 'image');
+    const videos = media(params.videos, 3, 'video');
+    const audios = media(params.audios, 3, 'audio');
 
     const costUsd = estimateVideoCost(resolution, duration);
     reservation = await reserveSpend(req, caller.id, VIDEO_MODEL, 'video', costUsd);
 
+    // OpenRouter's input_references: images and videos by https URL, audio inline
+    const refs: VideoRefEntry[] = [];
+    for (const v of images) refs.push({ type: 'image_url', image_url: { url: await storeRef(v, stored) } });
+    for (const v of videos) refs.push({ type: 'video_url', video_url: { url: await storeRef(v, stored) } });
+    for (const v of audios) {
+      const a = audioRef(v);
+      if (a) refs.push(a);
+    }
     const input: Record<string, unknown> = {
       model: VIDEO_MODEL,
       prompt: clipText(params.prompt, 4000),
@@ -443,17 +556,18 @@ Deno.serve(async (req) => {
       duration,
       resolution,
     };
-    if (images.length) input.images = images;
-    if (videos.length) input.videos = videos;
-    if (audios.length) input.audios = audios;
+    if (refs.length) input.input_references = refs;
 
-    const job = await submitOpenRouterVideoJob(input);
+    const job = await submitVideoWithRefs(input);
     if (typeof job?.id !== 'string' || !job.id) throw new Error('OpenRouter video submit returned no job id');
+    await rememberRefs(reservation, stored); // before the job counts as running, so no poll can miss them
     await markSubmitted(reservation, job.id);
+    stored.length = 0; // from here the reservation owns them (removed when the job is over)
     const submitted = reservation;
     reservation = null; // the provider bills from here on: this budget is never released automatically
     return await finishOrPending(caller, submitted, job.id, Date.now() + SYNC_WAIT_MS);
   } catch (err) {
+    await removeRefs(stored);
     return failResponse(err, reservation, 'Не удалось сгенерировать видео. Попробуйте ещё раз.');
   }
 });

@@ -8,7 +8,7 @@ import {
   type NodeProps,
 } from '@xyflow/react';
 import { memo, useState } from 'react';
-import { ASPECT_RATIOS, VIDEO_MODEL_META, VIDEO_MODELS, modelShortName } from '../types';
+import { ASPECT_RATIOS, VIDEO_MODEL_META, VIDEO_MODELS, estimateVideoCost, modelShortName, usdToCredits } from '../types';
 import type { PromptNodeData } from './PromptNode';
 import type { ImageGenNodeData } from './ImageGenNode';
 import NodeOptionButtons from '../components/NodeOptionButtons';
@@ -273,6 +273,9 @@ function VideoGenNode({ id, data, selected }: NodeProps) {
           onChange={(e) => updateNodeData(id, { duration: Number(e.target.value) })}
           onKeyDown={(e) => e.stopPropagation()}
         />
+        <div className="connected-hint">
+          {t.ux.costEstimate(t.credits.count(usdToCredits(estimateVideoCost(nodeData.model, nodeData.resolution, nodeData.duration))))}
+        </div>
 
         <label className="field-label">{t.nodes.common.resolution}</label>
         <NodeOptionButtons

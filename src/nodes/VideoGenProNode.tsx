@@ -13,8 +13,11 @@ import {
   VIDEO_MODEL_META,
   VIDEO_PRO_MODEL,
   VIDEO_PRO_REFERENCE_LIMITS,
+  estimateVideoProCost,
+  usdToCredits,
 } from '../types';
 import type { PromptNodeData } from './PromptNode';
+import type { ImageGenNodeData } from './ImageGenNode';
 import NodeOptionButtons from '../components/NodeOptionButtons';
 import { useGenerationCounter } from '../store/generationCounter';
 import { useProjectId } from '../store/projectContext';
@@ -54,7 +57,7 @@ function buildRefSections(
 function VideoGenProNode({ id, data, selected }: NodeProps) {
   const t = useT();
   const REF_SECTIONS = buildRefSections(t);
-  const { updateNodeData } = useReactFlow();
+  const { updateNodeData, getNode } = useReactFlow();
   const nodeData = data as VideoGenProNodeData;
   const [saving, setSaving] = useState(false);
   const [pickingKind, setPickingKind] = useState<RefKind | null>(null);
@@ -69,6 +72,13 @@ function VideoGenProNode({ id, data, selected }: NodeProps) {
     ? ((promptSourceData?.data as PromptNodeData)?.value ?? '')
     : '';
   const effectivePrompt = connectedPrompt || nodeData.manualPrompt || '';
+
+  // photos wired into the «image» input (a photo node or a generated photo) join the reference images
+  const imageConnections = useNodeConnections({ handleType: 'target', handleId: 'image' });
+  const imageSources = useNodesData(imageConnections.map((c) => c.source));
+  const connectedImages = imageSources
+    .map((n) => (n?.data as ImageGenNodeData | undefined)?.outputs?.[0])
+    .filter((u): u is string => typeof u === 'string' && u.length > 0);
 
   const insertTag = async (tag: string) => {
     if (promptSourceId) {
@@ -117,7 +127,10 @@ function VideoGenProNode({ id, data, selected }: NodeProps) {
         aspectRatio: nodeData.aspectRatio,
         duration,
         resolution: nodeData.resolution,
-        images: nodeData.referenceImages.length ? nodeData.referenceImages : undefined,
+        images: (() => {
+          const all = [...connectedImages, ...nodeData.referenceImages].slice(0, VIDEO_PRO_REFERENCE_LIMITS.images);
+          return all.length ? all : undefined;
+        })(),
         videos: nodeData.referenceVideos.length ? nodeData.referenceVideos : undefined,
         audios: nodeData.referenceAudios.length ? nodeData.referenceAudios : undefined,
         projectId,
@@ -157,6 +170,15 @@ function VideoGenProNode({ id, data, selected }: NodeProps) {
           id="prompt"
           style={{ top: 34 }}
           title={t.nodes.videoGen.promptHandleTitle}
+          isValidConnection={(conn) => getNode(conn.source)?.type === 'prompt'}
+        />
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="image"
+          style={{ top: 96 }}
+          title={t.nodes.common.photoHandleTitle}
+          isValidConnection={(conn) => ['imageGen', 'imageInput'].includes(getNode(conn.source)?.type ?? '')}
         />
 
         <div className="connected-hint">{t.nodes.videoGenPro.modelLabel}</div>
@@ -177,6 +199,9 @@ function VideoGenProNode({ id, data, selected }: NodeProps) {
           <div className="connected-hint">
             {t.nodes.common.promptConnected(connectedPrompt || t.nodes.common.promptEmpty)}
           </div>
+        )}
+        {connectedImages.length > 0 && (
+          <div className="connected-hint">{t.nodes.videoGenPro.photosConnected(connectedImages.length)}</div>
         )}
 
         {REF_SECTIONS.map((section) => (
@@ -246,6 +271,9 @@ function VideoGenProNode({ id, data, selected }: NodeProps) {
           onChange={(e) => updateNodeData(id, { duration: Number(e.target.value) })}
           onKeyDown={(e) => e.stopPropagation()}
         />
+        <div className="connected-hint">
+          {t.ux.costEstimate(t.credits.count(usdToCredits(estimateVideoProCost(nodeData.resolution, nodeData.duration))))}
+        </div>
 
         <label className="field-label">{t.nodes.common.resolution}</label>
         <NodeOptionButtons

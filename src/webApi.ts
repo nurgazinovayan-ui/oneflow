@@ -176,7 +176,7 @@ async function callFunction<T>(name: string, body: unknown): Promise<T> {
         guard_unavailable: t().errors.serviceUnavailable,
         payload_too_large: t().errors.payloadTooLarge,
       };
-      throw new Error(byCode[data?.code] || data?.error || t().errors.generationError);
+      throw new Error(quotaMessage(data) || byCode[data?.code] || data?.error || t().errors.generationError);
     }
     if (kind) capture(`${kind}_succeeded`, { fn: name, model, ms: Date.now() - startedAt });
     if (kind) void useCredits.getState().refresh(); // a paid call just settled: show the new balance
@@ -194,6 +194,17 @@ async function callFunction<T>(name: string, body: unknown): Promise<T> {
     }
     throw err;
   }
+}
+
+// A refusal for money with the numbers the server sent (see quotaDetails in paid_guard): how much
+// this request needs, what is free, what unfinished generations hold.
+function quotaMessage(data: unknown): string | null {
+  const d = data as { code?: unknown; needed?: unknown; available?: unknown; reserved?: unknown; limit?: unknown } | null;
+  if (d?.code !== 'quota_exceeded') return null;
+  if (d.limit === 'monthly') return t().errors.quotaMonthly;
+  if (typeof d.needed !== 'number' || typeof d.available !== 'number') return null;
+  const reserved = typeof d.reserved === 'number' && d.reserved > 0 ? t().credits.count(d.reserved) : null;
+  return t().errors.quotaDetails(t().credits.count(d.needed), t().credits.count(d.available), reserved);
 }
 
 async function urlToDataUrl(url: string): Promise<string> {

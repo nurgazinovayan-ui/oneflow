@@ -1034,6 +1034,7 @@ export interface Translations {
     genRefHintImage: string;
     genRefHintVideo: string;
     genNeedPrompt: string;
+    costEstimate: (credits: string) => string;
     genResultsHint: string;
     genSteps: string[];
     variantN: (n: number) => string;
@@ -1062,6 +1063,8 @@ export interface Translations {
     userNotFound: string;
     // server spend guard (supabase/migrations/202610010001_generation_guard.sql)
     quotaExceeded: string;
+    quotaDetails: (needed: string, available: string, reserved: string | null) => string;
+    quotaMonthly: string;
     tooManyJobs: string;
     emailNotConfirmed: string;
     jobTooExpensive: string;
@@ -1133,6 +1136,7 @@ export interface Translations {
       refImages: string;
       refVideos: string;
       refAudios: string;
+      photosConnected: (n: number) => string;
       addRefTooltip: (label: string) => string;
       copyTagTooltip: string;
       insertTagTooltip: string;
@@ -2340,6 +2344,7 @@ export const ru: Translations = {
     genRefHintImage: 'Фото-референс: товар, стиль или композиция — модель будет на него опираться.',
     genRefHintVideo: 'Для видео: начальный и конечный кадр, референс-изображения или видео-референс.',
     genNeedPrompt: 'Напишите промпт, чтобы начать',
+    costEstimate: (credits) => `Стоимость ≈ ${credits}`,
     genResultsHint: 'нажмите на карточку — промпт, модель, «Перегенерировать», «Скачать»',
     genSteps: [
       'Опишите идею: товар, фон, настроение, текст на картинке',
@@ -2384,6 +2389,11 @@ export const ru: Translations = {
     sendFailed: 'Не удалось отправить.',
     userNotFound: 'Пользователь с таким email не найден.',
     quotaExceeded: 'Недостаточно кредитов. Пополните баланс, чтобы продолжить.',
+    quotaDetails: (needed, available, reserved) =>
+      `Не хватает кредитов: нужно ${needed}, свободно ${available}.` +
+      (reserved ? ` Ещё ${reserved} заняты незавершёнными генерациями — освободятся, когда они закончатся.` : '') +
+      ' Уменьшите длительность или разрешение либо пополните баланс.',
+    quotaMonthly: 'Исчерпан месячный лимит расходов этого аккаунта. Напишите в поддержку, чтобы его поднять.',
     tooManyJobs: 'Слишком много генераций одновременно — дождитесь завершения текущих.',
     emailNotConfirmed: 'Подтвердите email по ссылке из письма, чтобы пользоваться генерацией.',
     jobTooExpensive: 'Этот запрос слишком дорогой для одной генерации — уменьшите длительность или разрешение.',
@@ -2456,6 +2466,7 @@ export const ru: Translations = {
       refImages: 'Референс-фото',
       refVideos: 'Референс-видео',
       refAudios: 'Референс-аудио',
+      photosConnected: (n) => `Подключено фото: ${n} — они уйдут в модель как референсы`,
       addRefTooltip: (label) => `Добавить ${label.toLowerCase()}`,
       copyTagTooltip: 'Скопировать тег (промпт подключён снаружи)',
       insertTagTooltip: 'Вставить тег в промпт',
@@ -3652,6 +3663,7 @@ export const en: Translations = {
     genRefHintImage: 'Photo reference: product, style or composition — the model will build on it.',
     genRefHintVideo: 'For video: start and end frames, reference images or a reference video.',
     genNeedPrompt: 'Write a prompt to start',
+    costEstimate: (credits) => `Cost ≈ ${credits}`,
     genResultsHint: 'click a card — prompt, model, “Regenerate”, “Download”',
     genSteps: [
       'Describe the idea: product, background, mood, on-image text',
@@ -3695,6 +3707,11 @@ export const en: Translations = {
     sendFailed: 'Could not send.',
     userNotFound: 'No user found with that email.',
     quotaExceeded: 'Not enough credits. Top up your balance to continue.',
+    quotaDetails: (needed, available, reserved) =>
+      `Not enough credits: this needs ${needed}, ${available} free.` +
+      (reserved ? ` Another ${reserved} are held by unfinished generations and come back when they end.` : '') +
+      ' Lower the duration or resolution, or top up your balance.',
+    quotaMonthly: "This account's monthly spending limit is used up. Contact support to raise it.",
     tooManyJobs: 'Too many generations at once — wait for the current ones to finish.',
     emailNotConfirmed: 'Confirm your email via the link we sent you to use generation.',
     jobTooExpensive: 'This request is too expensive for a single generation — lower the duration or resolution.',
@@ -3767,6 +3784,7 @@ export const en: Translations = {
       refImages: 'Reference photos',
       refVideos: 'Reference videos',
       refAudios: 'Reference audio',
+      photosConnected: (n) => `Photos connected: ${n} — they go to the model as references`,
       addRefTooltip: (label) => `Add ${label.toLowerCase()}`,
       copyTagTooltip: 'Copy tag (prompt is connected externally)',
       insertTagTooltip: 'Insert tag into prompt',

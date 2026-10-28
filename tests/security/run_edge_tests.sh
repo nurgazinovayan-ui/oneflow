@@ -13,4 +13,7 @@ done
 for f in generate-chat generate-audio generate-vector generate-video-pro evaluate-creative marketing-ai motion-storyboard; do
   FN=$f run tests/security/edge/paid-functions.test.ts
 done
+for f in generate-video generate-video-pro; do
+  FN=$f run tests/security/edge/video-refs.test.ts
+done
 [ $fail = 0 ] && echo "EDGE SECURITY TESTS PASSED" || { echo "EDGE SECURITY TESTS FAILED"; exit 1; }

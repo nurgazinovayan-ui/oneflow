@@ -564,6 +564,19 @@ function notifyAlert(kind: string, fn: string): void {
 
 const functionName = (req: Request) => new URL(req.url).pathname.split('/').filter(Boolean).pop() ?? 'unknown';
 
+// A refusal for money says how much: the request's price, what is free now and what running
+// generations hold (credits, 1 credit = $0.01 of model cost). Accounts with a monthly dollar
+// allowance (generation_overrides) hit that allowance instead: { limit: 'monthly' }.
+async function quotaDetails(userId: string, amountUsd: number): Promise<Record<string, unknown>> {
+  const needed = Math.max(0, Math.ceil(Math.max(0, Number(amountUsd) || 0) * 100 - 1e-9));
+  const { data, error } = await supabaseAdmin.rpc('credit_balance', { p_user: userId });
+  const b = Array.isArray(data) ? data[0] : data;
+  if (error || !b) return { needed };
+  if (b.unlimited) return { needed, limit: 'monthly' };
+  const reserved = Math.max(0, Number(b.reserved) || 0);
+  return { needed, available: Math.max(0, (Number(b.available) || 0) - reserved), reserved };
+}
+
 async function reserveSpend(req: Request, userId: string, model: string, category: string, amountUsd: number): Promise<string> {
   const fn = functionName(req);
   const { data, error } = await supabaseAdmin.rpc('reserve_generation_v2', {
@@ -583,7 +596,9 @@ async function reserveSpend(req: Request, userId: string, model: string, categor
   const r = data as { id?: string; replay?: boolean; status?: string; error?: string; retry_after?: number; alert?: string };
   if (r.error) {
     const [status, message] = GUARD_ERRORS[r.error] ?? [400, 'Bad request.'];
-    throw new GuardError(status, r.error, message, r.retry_after ? { retryAfter: r.retry_after } : {});
+    const extra: Record<string, unknown> = r.retry_after ? { retryAfter: r.retry_after } : {};
+    if (r.error === 'quota_exceeded') Object.assign(extra, await quotaDetails(userId, amountUsd));
+    throw new GuardError(status, r.error, message, extra);
   }
   if (r.replay) {
     throw new GuardError(409, 'duplicate_request', 'Этот запрос уже выполняется или выполнен.', { jobId: r.id, jobStatus: r.status });

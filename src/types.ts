@@ -131,7 +131,12 @@ export const VECTOR_MODEL = 'recraft-ai/recraft-v4-svg';
 export interface VideoGenParams {
   model: string;
   prompt: string;
+  /** exact first frame (image-to-video) */
   image?: string;
+  /** exact last frame */
+  lastImage?: string;
+  /** images that guide style and content (used when no frames are given) */
+  references?: string[];
   aspectRatio: string;
   duration: number;
   resolution: string;
@@ -299,6 +304,28 @@ export function estimateVideoCost(model: string, resolution: string, duration: n
   if (!rates) return 0;
   const perSecond = rates[resolution] ?? Object.values(rates)[0];
   return perSecond * Math.max(1, duration);
+}
+
+// generate-video-pro reserves Seedance 2.5 at its own rates (SEEDANCE_25_RATES there); the price
+// shown before a PRO generation uses the same numbers, so it matches what the balance check asks.
+const VIDEO_PRO_PRICE_PER_SECOND_USD: Record<string, number> = { '480p': 0.11, '720p': 0.24, '1080p': 0.4 };
+
+export function estimateVideoProCost(resolution: string, duration: number): number {
+  return (VIDEO_PRO_PRICE_PER_SECOND_USD[resolution] ?? VIDEO_PRO_PRICE_PER_SECOND_USD['720p']) * Math.max(1, duration);
+}
+
+/** Credits for a dollar cost, as the server counts them (usd_to_credits: 1 credit = $0.01, rounded up). */
+export function usdToCredits(usd: number): number {
+  return Math.max(0, Math.ceil(usd * 100 - 1e-9));
+}
+
+/** A duration the model accepts: within its min/max, 5 s when nothing was chosen yet. */
+export function clampVideoDuration(model: string, duration?: number): number {
+  const meta = VIDEO_MODEL_META[model];
+  const min = meta?.minDuration ?? 1;
+  const max = meta?.maxDuration ?? 10;
+  const d = Number.isFinite(duration) ? Math.round(duration as number) : 5;
+  return Math.min(max, Math.max(min, d));
 }
 
 // google/lyria-3-pro-preview publishes a flat $0.08/song rate on OpenRouter, used directly.
