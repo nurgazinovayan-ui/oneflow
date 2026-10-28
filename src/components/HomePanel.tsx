@@ -172,6 +172,8 @@ export default function HomePanel({ active, modes, planLabel, onOpen }: HomePane
                 ),
               )}
             </div>
+            {/* texts are optional: without any, the banner is the bare picture or video, no shade */}
+            {(cur.tag || cur.title || cur.text || cur.link) && (
             <div className="home-banner-text">
               {cur.tag && <span className="home-tag">{cur.tag}</span>}
               {cur.title && <h2>{cur.title}</h2>}
@@ -194,6 +196,7 @@ export default function HomePanel({ active, modes, planLabel, onOpen }: HomePane
                 )
               )}
             </div>
+            )}
             {cur.mediaType === 'video' && (
               <span className="home-video-badge">
                 <i />

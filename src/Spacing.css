@@ -25,10 +25,6 @@
     gap: 12px;
   }
 
-  html:root:root .web-mode .home-banner {
-    height: clamp(250px, 36vh, 400px);
-  }
-
   html:root:root .web-mode .home-banner-text {
     padding: 34px 40px;
     width: min(600px, 60%);
@@ -193,10 +189,6 @@ html:root:root .web-mode .top-toolbar.is-home .app-header-title h1 {
   html:root:root .web-mode .home-inner {
     padding: 16px 48px 16px;
     gap: 18px;
-  }
-
-  html:root:root .web-mode .home-banner {
-    height: clamp(220px, 30vh, 300px);
   }
 
   html:root:root .web-mode .home-banner-text {

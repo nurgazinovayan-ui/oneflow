@@ -392,7 +392,7 @@ export function installMockApiIfNeeded(): void {
         costUsd,
       });
       mockAssets.unshift({
-        id: `demo-${Date.now()}`,
+        id: `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, // several start at once
         kind: 'image',
         url: placeholderImage,
         model: params.model,

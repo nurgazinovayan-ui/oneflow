@@ -656,13 +656,14 @@ dialog.doc { background: var(--card); } .sf input, .sf textarea { background: va
 .nw-row::-webkit-scrollbar { display: none; }
 /* centred while they fit; once the row scrolls, the auto margins collapse and it starts at the left edge */
 .nw-row > :first-child { margin-left: auto; } .nw-row > :last-child { margin-right: auto; }
-.nw-card { position: relative; flex: 1 1 0; min-width: 190px; max-width: 260px; aspect-ratio: 21 / 9; border-radius: 16px; scroll-snap-align: start; isolation: isolate;
+.nw-card { position: relative; flex: 1 1 0; min-width: 190px; max-width: 260px; aspect-ratio: 16 / 9; border-radius: 16px; scroll-snap-align: start; isolation: isolate;
   background: #cfcfcf; box-shadow: none; color: #fff; text-decoration: none; transition: transform .3s var(--e);
   --nw-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.1 0'/%3E%3C/filter%3E%3Crect width='80' height='80' filter='url(%23n)'/%3E%3C/svg%3E"); }
 a.nw-card:hover { transform: translateY(-3px); }
 /* no overflow clip on the card (the badge sticks out), so the media and the shade round their own corners */
 .nw-media, .nw-card video, .nw-card img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; background: center / cover no-repeat; }
 .nw-card::after { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: linear-gradient(180deg, rgba(0,0,0,0) 38%, rgba(0,0,0,.72)); }
+.nw-card.nw-bare::after { display: none; }  /* no title and no text: the bare picture, no shade */
 /* NEW: a scalloped sticker of matte blue glass (like the app's banner tag) over the top-left corner, no shadow:
    a light rim (::before) round frosted blue glass with grain, a glow from below and a sheen running across (::after) */
 .nw-new { position: absolute; left: -9px; top: -11px; z-index: 1; width: 40px; height: 40px; display: grid; place-items: center; isolation: isolate;
@@ -1151,7 +1152,7 @@ html[data-theme="dark"] .mb-strip, html[data-theme="dark"] .nw-card { background
   const en = document.documentElement.lang === 'en';
   const pick = (x, k) => { const a = (en ? x.en : x.ru) || {}, b = (en ? x.ru : x.en) || {}; return String(a[k] || b[k] || '').slice(0, 200); };
   const render = (items) => {
-    const cards = items.filter((x) => x && okMedia(x.media) && (pick(x, 'title'))).slice(0, 6).map((x) => {
+    const cards = items.filter((x) => x && okMedia(x.media)).slice(0, 6).map((x) => {  // title and text are optional
       const card = document.createElement(x.link && okLink(x.link) ? 'a' : 'article'); card.className = 'nw-card';
       if (card.tagName === 'A') { card.href = x.link; if (/^https:/i.test(x.link)) { card.target = '_blank'; card.rel = 'noopener'; } }
       let m;
@@ -1161,9 +1162,12 @@ html[data-theme="dark"] .mb-strip, html[data-theme="dark"] .nw-card { background
       else { m = document.createElement('img'); m.alt = ''; m.loading = 'lazy'; m.decoding = 'async'; }
       m.src = x.media; card.appendChild(m);
       if (x.isNew !== false) { const n = document.createElement('span'); n.className = 'nw-new'; n.textContent = 'NEW'; card.appendChild(n); }
-      const t = document.createElement('div'); t.className = 'nw-txt'; const b = document.createElement('b'); b.textContent = pick(x, 'title'); t.appendChild(b);
-      const s = pick(x, 'text'); if (s) { const sp = document.createElement('span'); sp.textContent = s; t.appendChild(sp); }
-      card.appendChild(t); return card; });
+      const ti = pick(x, 'title'), s = pick(x, 'text');
+      if (ti || s) { const t = document.createElement('div'); t.className = 'nw-txt';
+        if (ti) { const b = document.createElement('b'); b.textContent = ti; t.appendChild(b); }
+        if (s) { const sp = document.createElement('span'); sp.textContent = s; t.appendChild(sp); }
+        card.appendChild(t); } else card.classList.add('nw-bare');
+      return card; });
     if (cards.length) row.replaceChildren(...cards);
   };
   const use = (raw) => { try { const v = JSON.parse(raw); if (v && Array.isArray(v.items)) render(v.items); } catch (e) {} };

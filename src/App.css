@@ -13850,7 +13850,12 @@ h5.md-heading {
    always light). */
 .home-banner {
   position: relative;
-  height: clamp(260px, 36vh, 340px);
+  /* 16:9 like the pictures and videos uploaded for it (admin «Баннеры приложения») — nothing is cut off */
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  /* the whole banner stays on screen: on a wide but short window it gets narrower, not cut */
+  max-width: max(560px, calc((100vh - 120px) * 16 / 9));
+  margin-inline: auto;
   flex-shrink: 0;
   border-radius: 22px;
   overflow: hidden;
@@ -14143,19 +14148,34 @@ h5.md-heading {
   .home-tiles {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .home-banner {
-    height: auto;
-    min-height: 320px;
-  }
   .home-banner-text {
     width: 100%;
-    min-height: 320px;
     padding: 20px;
     justify-content: flex-end;
     background: linear-gradient(0deg, rgba(5, 8, 12, 0.88) 0%, rgba(5, 8, 12, 0.6) 55%, rgba(5, 8, 12, 0.1) 100%);
   }
   .home-more {
     margin-top: 16px;
+  }
+}
+
+/* phones: a 16:9 picture this small can't carry the text, so the text goes under it and the
+   picture stays whole */
+@media (max-width: 767px) {
+  .home-banner {
+    aspect-ratio: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .home-banner-media {
+    position: relative;
+    inset: auto;
+    aspect-ratio: 16 / 9;
+  }
+  .home-banner-text {
+    height: auto;
+    padding: 16px 18px 18px;
+    background: #0b0b0d;
   }
 }
 

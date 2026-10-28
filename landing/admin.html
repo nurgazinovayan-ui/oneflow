@@ -93,7 +93,7 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
 .tag.old { background: var(--warn); }
 /* app banners editor */
 .bn { display: grid; grid-template-columns: minmax(260px, 380px) minmax(0, 1fr); gap: 18px; }
-.bn-prev { position: relative; aspect-ratio: 16 / 7; border-radius: 12px; overflow: hidden; background: #0b0b0d; }
+.bn-prev { position: relative; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: #0b0b0d; }
 .bn-prev img, .bn-prev video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .bn-prev .ov { position: absolute; inset: 0 40% 0 0; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; color: #fff; background: linear-gradient(90deg, rgba(5,8,12,.82), rgba(5,8,12,.6) 62%, rgba(5,8,12,0)); }
 .bn-prev .ov small { align-self: flex-start; padding: 1px 6px; border-radius: 5px; background: rgba(155,232,255,.18); color: #9be8ff; font-size: 10px; font-weight: 700; }
@@ -109,7 +109,7 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
 /* landing news cards editor */
 .nw-prev { position: relative; aspect-ratio: 16 / 9; max-width: 340px; border-radius: 16px; overflow: hidden; background: #0b0b0d; color: #fff; }
 .nw-prev img, .nw-prev video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.nw-prev::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 38%, rgba(0,0,0,.72)); }
+.nw-prev::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 38%, rgba(0,0,0,.72)); } .nw-prev.bare::after { display: none; }
 .nw-prev .nb { position: absolute; z-index: 1; left: 8px; top: 8px; width: 40px; height: 40px; display: grid; place-items: center; isolation: isolate; color: #fff; font-size: 9.5px; font-weight: 800; letter-spacing: .05em; transform: rotate(-14deg); filter: drop-shadow(0 3px 8px rgba(10,40,120,.4)); }
 .nw-prev .nb::before { content: ''; position: absolute; inset: 0; z-index: -1; background: radial-gradient(110% 90% at 50% 110%, rgba(150,205,255,.8), rgba(60,140,255,.35) 45%, rgba(60,140,255,0) 75%), linear-gradient(165deg, rgba(42,111,230,.88), rgba(15,67,168,.92)); clip-path: path('M20.00 4.80 A5.07 5.07 0 0 1 28.93 7.70 A5.07 5.07 0 0 1 34.46 15.30 A5.07 5.07 0 0 1 34.46 24.70 A5.07 5.07 0 0 1 28.93 32.30 A5.07 5.07 0 0 1 20.00 35.20 A5.07 5.07 0 0 1 11.07 32.30 A5.07 5.07 0 0 1 5.54 24.70 A5.07 5.07 0 0 1 5.54 15.30 A5.07 5.07 0 0 1 11.07 7.70 A5.07 5.07 0 0 1 20.00 4.80 Z'); }
 .nw-prev .tx { position: absolute; z-index: 1; left: 12px; right: 12px; bottom: 10px; display: grid; gap: 2px; } .nw-prev .tx b { font-size: 14px; line-height: 1.25; } .nw-prev .tx span { font-size: 11.5px; opacity: .82; }
@@ -408,19 +408,21 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
         <input class="in ${isUrl ? '' : 'hide'}" data-k="url" type="url" inputmode="url" placeholder="https://…" value="${esc(isUrl ? v : '')}" aria-label="Адрес ссылки"></div>`; };
     const langBlock = (x, l, title) => `<div><h5>${title}</h5>
       <label class="field">Метка<input class="in" data-l="${l}" data-k="tag" maxlength="60" value="${esc(x[l].tag)}" placeholder="${l === 'ru' ? 'Новое · Motion Engine' : 'New · Motion Engine'}"></label>
-      <label class="field">Заголовок${l === 'ru' ? ' *' : ''}<input class="in" data-l="${l}" data-k="title" maxlength="140" value="${esc(x[l].title)}"></label>
+      <label class="field">Заголовок<input class="in" data-l="${l}" data-k="title" maxlength="140" value="${esc(x[l].title)}"></label>
       <label class="field">Текст<textarea class="in" data-l="${l}" data-k="text" maxlength="400">${esc(x[l].text)}</textarea></label>
       <label class="field">Текст кнопки<input class="in" data-l="${l}" data-k="button" maxlength="40" value="${esc(x[l].button)}" placeholder="${l === 'ru' ? 'Подробнее' : 'Learn more'}"></label></div>`;
     const prev = (x, i) => { const m = x.media ? (x.type === 'video' ? `<video src="${esc(x.media)}" ${x.poster ? `poster="${esc(x.poster)}"` : ''} muted loop playsinline autoplay></video>` : `<img src="${esc(x.media)}" alt="">`) : '<div class="none">Нет файла</div>';
       const t = x.ru.title || x.en.title, tag = x.ru.tag || x.en.tag, tx = x.ru.text || x.en.text, b = x.link ? (x.ru.button || x.en.button || 'Подробнее') : '';
-      return `<div class="bn-prev">${m}<div class="ov">${tag ? `<small>${esc(tag)}</small>` : ''}<b>${esc(t || 'Заголовок')}</b><span>${esc(tx)}</span>${b ? `<i>▸ ${esc(b)}</i>` : ''}</div><span class="bn-num">${i + 1}</span></div>`; };
+      // texts are optional: without any, the banner is the bare picture (no shade), as in the app
+      const ov = tag || t || tx || b ? `<div class="ov">${tag ? `<small>${esc(tag)}</small>` : ''}${t ? `<b>${esc(t)}</b>` : ''}${tx ? `<span>${esc(tx)}</span>` : ''}${b ? `<i>▸ ${esc(b)}</i>` : ''}</div>` : '';
+      return `<div class="bn-prev">${m}${ov}<span class="bn-num">${i + 1}</span></div>`; };
     el.innerHTML = `<div class="tools"><button class="btn a" id="bsave" type="button" ${bn.dirty && !bn.busy ? '' : 'disabled'}>Сохранить и опубликовать</button>
         <button class="btn s" id="badd" type="button" ${bn.slides.length >= 12 ? 'disabled' : ''}>+ Добавить баннер</button>
         ${bn.slides.length ? '' : '<button class="btn s" id="bdef" type="button">Вернуть стандартный баннер</button>'}
         <span class="${/Ошибка|Не удалось|должн|Недопуст|слишком|Поддерживаются|Ссылка|нет хранилища|не ответило/.test(bn.msg) ? 'err' : 'ok'}" id="bmsg" role="status">${esc(bn.msg)}</span>
         <a class="btn s" href="/app" target="_blank" rel="noopener" style="margin-left:auto">Открыть приложение ↗</a></div>
       <div class="note">${bn.published ? 'В приложении показываются эти баннеры.' : 'Сейчас в приложении стандартный баннер — он ниже. Измените его или добавьте свои и нажмите «Сохранить и опубликовать».'}
-        Фото до 10 МБ (JPG, PNG, WebP, GIF), видео до 50 МБ (MP4, WebM). Картинка растягивается на весь баннер, текст — слева на затемнении. Английский текст необязателен: если его нет, показывается русский.</div>
+        Баннер в формате 16:9 — загружайте горизонтальные фото и видео 16:9 (например, 1920×1080), иначе края обрежутся. Фото до 10 МБ (JPG, PNG, WebP, GIF), видео до 50 МБ (MP4, WebM). Текст необязателен: без него баннер — просто картинка или видео; с текстом он слева на затемнении (на телефоне — под картинкой). Английский текст необязателен: если его нет, показывается русский.</div>
       ${bn.slides.map((x, i) => `<div class="card" data-i="${i}"><div class="bn"><div>${prev(x, i)}
           <div class="row"><label class="btn s upl">${x.media ? 'Заменить фото / видео' : 'Загрузить фото / видео'}<input type="file" data-f="media" accept="${Object.keys(TYPES).join(',')}"></label>
           ${x.type === 'video' ? `<label class="btn s upl">${x.poster ? 'Заменить обложку' : 'Обложка видео'}<input type="file" data-f="poster" accept="image/jpeg,image/png,image/webp"></label>${x.poster ? '<button class="btn s" data-a="unposter" type="button">Убрать обложку</button>' : ''}` : ''}</div>
@@ -450,8 +452,8 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
         if (a === 'unposter') x.poster = '';
         touch(); vBanners(); })); });
     $('#bsave')?.addEventListener('click', async () => {
-      const bad = bn.slides.findIndex((x) => !x.media || !(x.ru.title.trim() || x.en.title.trim()));
-      if (bad >= 0) { bn.msg = `Баннер ${bad + 1}: должны быть файл и заголовок.`; return vBanners(); }
+      const bad = bn.slides.findIndex((x) => !x.media);
+      if (bad >= 0) { bn.msg = `Баннер ${bad + 1}: должно быть фото или видео.`; return vBanners(); }
       const badUrl = bn.slides.findIndex((x) => x.link && !x.link.startsWith('mode:') && !/^https:\/\/[^\s]+$/i.test(x.link));
       if (badUrl >= 0) { bn.msg = `Баннер ${badUrl + 1}: Ссылка должна начинаться с https://`; return vBanners(); }
       bn.busy = true; bn.msg = 'Сохраняю…'; vBanners();
@@ -498,16 +500,17 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
     if (!nw) nwLoad();
     const el = $('#v-news');
     const prev = (x) => { const m = x.media ? (x.type === 'video' ? `<video src="${esc(x.media)}" ${x.poster ? `poster="${esc(x.poster)}"` : ''} muted loop playsinline autoplay></video>` : `<img src="${esc(x.media)}" alt="">`) : '<div class="none">Нет файла</div>';
-      return `<div class="nw-prev">${m}${x.isNew ? '<span class="nb">NEW</span>' : ''}<div class="tx"><b>${esc(x.en.title || x.ru.title || 'Заголовок')}</b><span>${esc(x.en.text || x.ru.text)}</span></div></div>`; };
+      const t = x.en.title || x.ru.title, tx = x.en.text || x.ru.text;  // optional: without them, the bare picture
+      return `<div class="nw-prev${t || tx ? '' : ' bare'}">${m}${x.isNew ? '<span class="nb">NEW</span>' : ''}${t || tx ? `<div class="tx">${t ? `<b>${esc(t)}</b>` : ''}${tx ? `<span>${esc(tx)}</span>` : ''}</div>` : ''}</div>`; };
     const langBlock = (x, l, title) => `<div><h5>${title}</h5>
-      <label class="field">Заголовок${l === 'en' ? ' *' : ''}<input class="in" data-l="${l}" data-k="title" maxlength="80" value="${esc(x[l].title)}" placeholder="Nano Banana 2.1"></label>
+      <label class="field">Заголовок<input class="in" data-l="${l}" data-k="title" maxlength="80" value="${esc(x[l].title)}" placeholder="Nano Banana 2.1"></label>
       <label class="field">Текст (одна строка)<input class="in" data-l="${l}" data-k="text" maxlength="160" value="${esc(x[l].text)}"></label></div>`;
     el.innerHTML = `<div class="tools"><button class="btn a" id="nsave" type="button" ${nw.dirty && !nw.busy ? '' : 'disabled'}>Сохранить и опубликовать</button>
         <button class="btn s" id="nadd" type="button" ${nw.items.length >= 6 ? 'disabled' : ''}>+ Добавить карточку</button>
         <span class="${/Ошибка|Не удалось|должн|Недопуст|слишком|Поддерживаются|Ссылка|нет хранилища|не ответило/.test(nw.msg) ? 'err' : 'ok'}" id="nmsg" role="status">${esc(nw.msg)}</span>
         <a class="btn s" href="/" target="_blank" rel="noopener" style="margin-left:auto">Открыть сайт ↗</a></div>
-      <div class="note">Карточки под верхним меню сайта, над заголовком (формат 21:9, по центру): до 6 штук, листаются вбок. Заголовок — до ~22 символов, текст — до ~35, иначе обрежутся многоточием. ${nw.published ? 'Сейчас на сайте эти карточки.' : esc(DEFAULT_NEWS_NOTE)}
-        Фото до 10 МБ (JPG, PNG, WebP, GIF), видео до 50 МБ (MP4, WebM), лучше горизонтальное 16:9 — видео играет без звука по кругу. Сайт открывается на английском: заполните English; русский показывается на oneflow.art/ru (если его нет — английский).</div>
+      <div class="note">Карточки под верхним меню сайта, над заголовком (формат 16:9, по центру): до 6 штук, листаются вбок. Заголовок и текст необязательны: без них карточка — просто картинка или видео. Заголовок — до ~22 символов, текст — до ~35, иначе обрежутся многоточием. ${nw.published ? 'Сейчас на сайте эти карточки.' : esc(DEFAULT_NEWS_NOTE)}
+        Фото до 10 МБ (JPG, PNG, WebP, GIF), видео до 50 МБ (MP4, WebM), лучше горизонтальное 16:9 — видео играет без звука по кругу. Сайт открывается на английском: если пишете текст, заполните English; русский показывается на oneflow.art/ru (если его нет — английский).</div>
       ${nw.items.map((x, i) => `<div class="card" data-i="${i}"><div class="bn"><div>${prev(x)}
           <div class="row"><label class="btn s upl">${x.media ? 'Заменить фото / видео' : 'Загрузить фото / видео'}<input type="file" data-f="media" accept="${Object.keys(TYPES).join(',')}"></label>
           ${x.type === 'video' ? `<label class="btn s upl">${x.poster ? 'Заменить обложку' : 'Обложка видео'}<input type="file" data-f="poster" accept="image/jpeg,image/png,image/webp"></label>${x.poster ? '<button class="btn s" data-a="unposter" type="button">Убрать обложку</button>' : ''}` : ''}</div>
@@ -535,8 +538,8 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
         if (a === 'unposter') x.poster = '';
         touch(); vNews(); })); });
     $('#nsave')?.addEventListener('click', async () => {
-      const bad = nw.items.findIndex((x) => !x.media || !(x.ru.title.trim() || x.en.title.trim()));
-      if (bad >= 0) { nw.msg = `Карточка ${bad + 1}: должны быть файл и заголовок.`; return vNews(); }
+      const bad = nw.items.findIndex((x) => !x.media);
+      if (bad >= 0) { nw.msg = `Карточка ${bad + 1}: должно быть фото или видео.`; return vNews(); }
       const badUrl = nw.items.findIndex((x) => x.link && !/^https:\/\/[^\s]+$/i.test(x.link) && !/^\/[^\s/][^\s]*$|^\/$/.test(x.link));
       if (badUrl >= 0) { nw.msg = `Карточка ${badUrl + 1}: Ссылка должна начинаться с https:// или / (адрес на сайте).`; return vNews(); }
       nw.busy = true; nw.msg = 'Сохраняю…'; vNews();

@@ -111,6 +111,7 @@ export default function QuickGenPanel({
   const [aspectRatio, setAspectRatio] = useState<string>('1:1');
   const [resolution, setResolution] = useState<string>(IMAGE_MODEL_META[IMAGE_MODELS[0].value].resolutions[0].value);
   const [duration, setDuration] = useState(5); // video only, kept within the model's range
+  const [count, setCount] = useState(1); // how many variants one click starts, side by side
   const [prompt, setPrompt] = useState('');
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const [attachMode, setAttachMode] = useState<AttachMode>('none');
@@ -137,7 +138,8 @@ export default function QuickGenPanel({
   const [downloading, setDownloading] = useState(false);
   const [promptCopied, setPromptCopied] = useState(false);
 
-  const generating = entries.some((e) => e.status === 'loading');
+  // generations still running; the button stays active, so more can be started meanwhile
+  const running = entries.filter((e) => e.status === 'loading').length;
 
   const resetAttachments = () => {
     setAttachMode('none');
@@ -248,66 +250,31 @@ export default function QuickGenPanel({
       return;
     }
     const trimmed = prompt.trim();
-    if (!trimmed || generating) return;
+    if (!trimmed) return;
 
     const videoDuration = clampVideoDuration(model, duration);
 
-    const entryId = nextEntryId();
-    const entry: QuickGenEntry = {
-      id: entryId,
+    // `count` variants of the same request, each its own tile and its own paid call, all at once
+    const batch: QuickGenEntry[] = Array.from({ length: count }, () => ({
+      id: nextEntryId(),
       kind,
-      status: 'loading',
+      status: 'loading' as const,
       aspectRatio,
       prompt: trimmed,
       model,
       resolution,
       duration: kind === 'video' ? videoDuration : undefined,
       outputs: [],
-    };
-    setEntries((prev) => [entry, ...prev]);
-    setPrompt('');
+    }));
+    setEntries((prev) => [...batch, ...prev]);
+    // the prompt stays: the same request can be started again, or edited, while these still run
+    await Promise.all(batch.map((entry) => runEntry(entry.id, () => requestOutputs(trimmed, videoDuration))));
+  };
 
+  // One entry from loading to done or error.
+  const runEntry = async (entryId: string, request: () => Promise<string[]>) => {
     try {
-      let outputs: string[];
-      if (kind === 'image') {
-        const images = [...(startFrame ? [startFrame] : []), ...(endFrame ? [endFrame] : []), ...referenceImages];
-        outputs = await window.api.generateImage({
-          model,
-          prompt: trimmed,
-          aspectRatio,
-          resolution,
-          images: images.length > 0 ? images : undefined,
-          projectId,
-          category: 'image',
-        });
-      } else {
-        if (model === VIDEO_PRO_MODEL) {
-          const images = [...(startFrame ? [startFrame] : []), ...(endFrame ? [endFrame] : []), ...referenceImages];
-          outputs = await window.api.generateVideoPro({
-            prompt: trimmed,
-            aspectRatio,
-            duration: videoDuration,
-            resolution,
-            images: images.length > 0 ? images : undefined,
-            videos: videoRef ? [videoRef] : undefined,
-            projectId,
-          });
-        } else {
-          // start/end photos are exact frames; reference photos only guide style and content
-          const frames = attachMode === 'startEnd';
-          outputs = await window.api.generateVideo({
-            model,
-            prompt: trimmed,
-            image: (frames && startFrame) || undefined,
-            lastImage: (frames && endFrame) || undefined,
-            references: !frames && referenceImages.length > 0 ? referenceImages : undefined,
-            aspectRatio,
-            duration: videoDuration,
-            resolution,
-            projectId,
-          });
-        }
-      }
+      const outputs = await request();
       incrementGenerations();
       setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...e, status: 'done', outputs } : e)));
     } catch (err) {
@@ -315,6 +282,51 @@ export default function QuickGenPanel({
         prev.map((e) => (e.id === entryId ? { ...e, status: 'error', error: formatGenerationError(err) } : e))
       );
     }
+  };
+
+  // The call for what the composer holds at the moment of the click (model, format, attachments).
+  const requestOutputs = async (trimmed: string, videoDuration: number): Promise<string[]> => {
+    let outputs: string[];
+    if (kind === 'image') {
+      const images = [...(startFrame ? [startFrame] : []), ...(endFrame ? [endFrame] : []), ...referenceImages];
+      outputs = await window.api.generateImage({
+        model,
+        prompt: trimmed,
+        aspectRatio,
+        resolution,
+        images: images.length > 0 ? images : undefined,
+        projectId,
+        category: 'image',
+      });
+    } else {
+      if (model === VIDEO_PRO_MODEL) {
+        const images = [...(startFrame ? [startFrame] : []), ...(endFrame ? [endFrame] : []), ...referenceImages];
+        outputs = await window.api.generateVideoPro({
+          prompt: trimmed,
+          aspectRatio,
+          duration: videoDuration,
+          resolution,
+          images: images.length > 0 ? images : undefined,
+          videos: videoRef ? [videoRef] : undefined,
+          projectId,
+        });
+      } else {
+        // start/end photos are exact frames; reference photos only guide style and content
+        const frames = attachMode === 'startEnd';
+        outputs = await window.api.generateVideo({
+          model,
+          prompt: trimmed,
+          image: (frames && startFrame) || undefined,
+          lastImage: (frames && endFrame) || undefined,
+          references: !frames && referenceImages.length > 0 ? referenceImages : undefined,
+          aspectRatio,
+          duration: videoDuration,
+          resolution,
+          projectId,
+        });
+      }
+    }
+    return outputs;
   };
 
   const handleRegenerate = async (source: QuickGenEntry) => {
@@ -572,13 +584,31 @@ export default function QuickGenPanel({
           </>
         )}
 
+        <div className="v2-lab">
+          <span>{t.ux.countLabel}</span>
+        </div>
+        <div className="v2-chips">
+          {[1, 2, 3, 4].map((n) => (
+            <button key={n} type="button" className={`v2-chip${count === n ? ' on' : ''}`} onClick={() => setCount(n)} aria-pressed={count === n}>
+              {n}
+            </button>
+          ))}
+        </div>
+
         <div className="v2-card-foot">
-          <button type="button" className="v2-cta" onClick={() => void handleGenerate()} disabled={generating || !prompt.trim()}>
+          <button type="button" className="v2-cta" onClick={() => void handleGenerate()} disabled={!prompt.trim()}>
             <IconSparkles size={15} />
-            {generating ? t.nodes.common.generating : t.nodes.common.generate}
+            {count > 1 ? `${t.nodes.common.generate} × ${count}` : t.nodes.common.generate}
           </button>
-          {costCredits !== null && <p className="v2-hint v2-center">{t.ux.costEstimate(t.credits.count(costCredits))}</p>}
-          {!prompt.trim() && !generating && <p className="v2-hint v2-center">{t.ux.genNeedPrompt}</p>}
+          {costCredits !== null && (
+            <p className="v2-hint v2-center">
+              {count > 1
+                ? t.ux.costEstimateMany(t.credits.count(costCredits * count), count, t.credits.count(costCredits))
+                : t.ux.costEstimate(t.credits.count(costCredits))}
+            </p>
+          )}
+          {running > 0 && <p className="v2-hint v2-center">{t.ux.genRunning(running)}</p>}
+          {!prompt.trim() && running === 0 && <p className="v2-hint v2-center">{t.ux.genNeedPrompt}</p>}
         </div>
       </section>
 
