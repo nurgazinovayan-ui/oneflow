@@ -20,6 +20,9 @@ const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY') ?? '';
 const OPENROUTER_VIDEOS_URL = 'https://openrouter.ai/api/v1/videos';
 const VIDEO_BUCKET = 'ai-generated-videos';
 const VIDEO_MODEL = 'bytedance/seedance-2.5';
+// References per generation; kept in sync with VIDEO_PRO_REFERENCE_LIMITS in src/types.ts.
+const MAX_PRO_REFS = { image: 9, video: 3, audio: 3 };
+const MEDIA_COUNT_WORD = { image: 'фото', video: 'видео', audio: 'аудио' };
 
 const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -458,8 +461,28 @@ function splitDataUrl(v: string): { mime: string; base64: string } | null {
   return m && comma > 0 ? { mime: m[1].toLowerCase(), base64: v.slice(comma + 1) } : null;
 }
 
+// Why a reference cannot go to the model, in words for the user; null when it can. Checked before
+// any money is reserved, so a file the model would never see is refused with a reason instead of
+// being dropped on the way.
+const REF_PROBLEM = {
+  image: { what: 'Фото', formats: 'JPG, PNG или WebP' },
+  video: { what: 'Видео', formats: 'MP4, WebM или MOV' },
+  audio: { what: 'Аудио', formats: 'MP3, WAV, M4A, OGG или FLAC' },
+};
+function refProblem(v: unknown, kind: 'image' | 'video' | 'audio'): string | null {
+  const { what, formats } = REF_PROBLEM[kind];
+  if (typeof v !== 'string' || !v) return `${what} не прочиталось — прикрепите файл ещё раз.`;
+  if (v.length > MAX_IMAGE_REF_CHARS) return `${what} больше 9 МБ — уменьшите файл и прикрепите снова.`;
+  if (!v.startsWith('data:')) {
+    return kind !== 'audio' && isPublicHttpsUrl(v) ? null : `${what} недоступно по ссылке — прикрепите файл.`;
+  }
+  const d = splitDataUrl(v);
+  const known = d && (kind === 'audio' ? AUDIO_FORMATS[d.mime] : REF_TYPES[d.mime] && d.mime.startsWith(`${kind}/`));
+  return known ? null : `${what} в этом формате модель не принимает — нужен ${formats}.`;
+}
+
 // One image or video reference → the URL the provider fetches. An https URL (already checked by
-// isImageRef / isMediaRef) is passed as is; inline data is stored first and its path recorded.
+// refProblem) is passed as is; inline data is stored first and its path recorded.
 async function storeRef(v: string, stored: string[]): Promise<string> {
   if (!v.startsWith('data:')) return v;
   const d = splitDataUrl(v);
@@ -532,11 +555,19 @@ Deno.serve(async (req) => {
     const resolution = ['480p', '720p', '1080p'].includes(params.resolution) ? params.resolution : '720p';
     const requested = Number.isFinite(params.duration) && params.duration > 0 ? params.duration : 5;
     const duration = Math.min(30, Math.max(4, Math.round(requested)));
-    const media = (v: unknown, max: number, kind: 'image' | 'video' | 'audio') =>
-      Array.isArray(v) ? v.filter((x) => isMediaRef(x) && (!x.startsWith('data:') || x.startsWith(`data:${kind}/`))).slice(0, max) : [];
-    const images = media(params.images, 9, 'image');
-    const videos = media(params.videos, 3, 'video');
-    const audios = media(params.audios, 3, 'audio');
+    // Every attached file either reaches the model or is refused here, before any money is reserved.
+    const media = (v: unknown, max: number, kind: 'image' | 'video' | 'audio'): string[] => {
+      const list = Array.isArray(v) ? v.filter((x) => x !== undefined && x !== null && x !== '') : [];
+      for (const x of list) {
+        const problem = refProblem(x, kind);
+        if (problem) throw badRequest(problem);
+      }
+      if (list.length > max) throw badRequest(`Не больше ${max} ${MEDIA_COUNT_WORD[kind]} в одной генерации.`);
+      return list;
+    };
+    const images = media(params.images, MAX_PRO_REFS.image, 'image');
+    const videos = media(params.videos, MAX_PRO_REFS.video, 'video');
+    const audios = media(params.audios, MAX_PRO_REFS.audio, 'audio');
 
     const costUsd = estimateVideoCost(resolution, duration);
     reservation = await reserveSpend(req, caller.id, VIDEO_MODEL, 'video', costUsd);
@@ -557,6 +588,7 @@ Deno.serve(async (req) => {
       resolution,
     };
     if (refs.length) input.input_references = refs;
+    console.log('video submit', JSON.stringify({ model: VIDEO_MODEL, images: images.length, videos: videos.length, audios: audios.length }));
 
     const job = await submitVideoWithRefs(input);
     if (typeof job?.id !== 'string' || !job.id) throw new Error('OpenRouter video submit returned no job id');

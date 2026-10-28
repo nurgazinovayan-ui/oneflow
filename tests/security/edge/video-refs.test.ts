@@ -1,7 +1,8 @@
 // Video references (generate-video and generate-video-pro): frames go in frame_images, guiding media
-// in input_references; inline images and videos are stored under refs/ and passed by URL, then
-// removed when the job is over; audio goes inline and is dropped if the provider refuses it; a
-// refusal for money carries the numbers.
+// in input_references (on a model without them the first photo becomes the first frame); inline
+// images and videos are stored under refs/ and passed by URL, then removed when the job is over;
+// audio goes inline and is dropped if the provider refuses it; a file the model cannot take is
+// refused with the reason before any money is reserved; a refusal for money carries the numbers.
 //   FN=generate-video | generate-video-pro   deno run -A tests/security/edge/video-refs.test.ts
 import { call, done, fake, load, ok, providerCalls, reset, rpcCalls, token } from './harness.ts';
 
@@ -101,13 +102,31 @@ if (!PRO) {
   ok(r.status === 200 && jobs[JOB].status === 'settled', 'frames: owner gets the video');
   ok(removals().length === 1 && JSON.stringify(removals()[0].body).includes('refs/'), 'frames: reference files removed after the job');
 
-  // 3. reference photos (no frames) → input_references, aspect ratio kept
+  // 3. reference photos on a model that takes them (Seedance 2.0) → input_references, aspect ratio kept
   reset();
   providerState = 'in_progress';
-  r = await call(FN, { ...base, references: [PNG, JPG, 'data:text/plain;base64,aGk='] }, { token: A });
+  r = await call(FN, { ...base, model: 'bytedance/seedance-2.0', references: [PNG, JPG] }, { token: A });
   sent = submitted()[0] ?? {};
-  ok(sent.input_references?.length === 2 && sent.input_references.every((x: any) => x.type === 'image_url' && !x.frame_type), 'references: two image_url references (non-image dropped)');
+  ok(sent.input_references?.length === 2 && sent.input_references.every((x: any) => x.type === 'image_url' && !x.frame_type), 'references: two image_url references on Seedance');
   ok(!sent.frame_images && sent.aspect_ratio === '9:16', 'references: no frames, aspect ratio sent');
+
+  // 3b. the same photos on Kling, which drops references → the first photo becomes the first frame
+  reset();
+  r = await call(FN, { ...base, references: [PNG, JPG] }, { token: A });
+  sent = submitted()[0] ?? {};
+  ok(r.status === 202 && !sent.input_references, 'kling: no input_references (it would drop them)');
+  ok(sent.frame_images?.length === 1 && sent.frame_images[0].frame_type === 'first_frame' && uploads().length === 1, 'kling: first reference photo sent as the first frame');
+
+  // 3c. a photo the model cannot take is refused with the reason, before any money is reserved
+  const refused = async (body: Record<string, unknown>, words: string, label: string) => {
+    reset();
+    const res = await call(FN, body, { token: A });
+    ok(res.status === 400 && String(res.json.error).includes(words) && rpcCalls('reserve_generation_v2').length === 0 && providerCalls().length === 0, label);
+  };
+  await refused({ ...base, references: ['data:image/heic;base64,AAAA'] }, 'JPG, PNG или WebP', 'HEIC photo refused with the formats, no reservation');
+  await refused({ ...base, image: 'data:image/png;base64,' + 'A'.repeat(12_000_001) }, 'больше 9 МБ', 'photo over 9 MB refused, no reservation');
+  await refused({ ...base, references: [PNG, PNG, PNG, PNG, PNG] }, 'Не больше 4', 'a fifth reference photo refused, not dropped');
+  await refused({ ...base, references: ['data:text/plain;base64,aGk='] }, 'в этом формате', 'a non-image reference refused');
 
   // 4. the provider refuses → reservation released and the stored files removed
   reset();
@@ -141,11 +160,16 @@ if (!PRO) {
   ok(JSON.stringify(both[1]).includes('image_url') && !JSON.stringify(both[1]).includes('input_audio'), 'pro: second try keeps the photo, drops the audio');
   refuseAudio = false;
 
-  // 3. a reference of the wrong kind is not sent (a "video" that is really a photo)
-  reset();
-  r = await call(FN, { ...base, videos: [PNG] }, { token: A });
-  sent = submitted()[0] ?? {};
-  ok(!sent.input_references, 'pro: mislabelled reference dropped');
+  // 3. a reference the model cannot take is refused with the reason, before any money is reserved
+  for (const [body, words, label] of [
+    [{ ...base, videos: [PNG] }, 'Видео в этом формате', 'pro: a "video" that is really a photo refused'],
+    [{ ...base, images: Array(10).fill(PNG) }, 'Не больше 9 фото', 'pro: a tenth photo refused, not dropped'],
+    [{ ...base, audios: ['https://example.com/a.mp3'] }, 'Аудио недоступно по ссылке', 'pro: audio by link refused (it travels inline)'],
+  ] as const) {
+    reset();
+    r = await call(FN, body, { token: A });
+    ok(r.status === 400 && String(r.json.error).includes(words) && rpcCalls('reserve_generation_v2').length === 0, label);
+  }
 }
 
 // refusal for money: the price, what is free and what is held, in credits

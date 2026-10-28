@@ -22,6 +22,7 @@ import { capture } from './analytics';
 import { useCredits } from './credits';
 import { LEGAL_VERSION } from './legalContent';
 import { rememberAccepted } from './legalConsent';
+import { fitPhoto, fitPhotos } from './photoRef';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -466,14 +467,19 @@ export function installWebApi(): void {
       return outputs;
     },
     generateVideo: async (params) => {
-      const outputs = await callFunction<string[]>('generate-video', params);
+      const outputs = await callFunction<string[]>('generate-video', {
+        ...params,
+        image: params.image && (await fitPhoto(params.image)),
+        lastImage: params.lastImage && (await fitPhoto(params.lastImage)),
+        references: await fitPhotos(params.references),
+      });
       const costUsd = estimateVideoCost(params.model, params.resolution, params.duration);
       logWebGeneration({ timestamp: Date.now(), model: params.model, category: 'video', costUsd });
       backupToYandexDisk(outputs, 'video');
       return outputs;
     },
     generateVideoPro: async (params) => {
-      const outputs = await callFunction<string[]>('generate-video-pro', params);
+      const outputs = await callFunction<string[]>('generate-video-pro', { ...params, images: await fitPhotos(params.images) });
       const costUsd = estimateVideoCost('bytedance/seedance-2.5', params.resolution, params.duration);
       logWebGeneration({
         timestamp: Date.now(),

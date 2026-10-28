@@ -20,6 +20,9 @@ import {
   VIDEO_MODELS,
   VIDEO_MODEL_META,
   VIDEO_PRO_MODEL,
+  VIDEO_PRO_REFERENCE_LIMITS,
+  VIDEO_REFERENCE_MODELS,
+  VIDEO_REFERENCE_PHOTO_LIMIT,
   clampVideoDuration,
   estimateVideoCost,
   estimateVideoProCost,
@@ -130,6 +133,10 @@ export default function QuickGenPanel({
     }
   };
 
+  // what the video functions take per generation; a photo past it would be refused
+  const refLimitFor = (m: string) =>
+    kind !== 'video' ? Infinity : m === VIDEO_PRO_MODEL ? VIDEO_PRO_REFERENCE_LIMITS.images : VIDEO_REFERENCE_PHOTO_LIMIT;
+
   const handleModelChange = (nextModel: string) => {
     setModel(nextModel);
     if (kind === 'image') {
@@ -137,6 +144,7 @@ export default function QuickGenPanel({
     } else {
       setResolution(VIDEO_MODEL_META[nextModel].resolutions[0]);
       setDuration((d) => clampVideoDuration(nextModel, d));
+      setReferenceImages((prev) => prev.slice(0, refLimitFor(nextModel)));
       if (attachMode === 'videoRef' && nextModel !== VIDEO_PRO_MODEL) resetAttachments();
     }
   };
@@ -148,7 +156,7 @@ export default function QuickGenPanel({
 
   const addReferenceImage = async () => {
     const dataUrl = await window.api.pickImageFile();
-    if (dataUrl) setReferenceImages((prev) => [...prev, dataUrl]);
+    if (dataUrl) setReferenceImages((prev) => [...prev, dataUrl].slice(0, refLimitFor(model)));
   };
 
   const pickVideoRef = async () => {
@@ -201,7 +209,7 @@ export default function QuickGenPanel({
     if (imageFiles.length === 0) return;
     const dataUrls = await Promise.all(imageFiles.map(readFileAsDataUrl));
     setAttachMode('refImages');
-    setReferenceImages((prev) => [...prev, ...dataUrls]);
+    setReferenceImages((prev) => [...prev, ...dataUrls].slice(0, refLimitFor(model)));
   };
 
   const handleGenerate = async () => {
@@ -471,6 +479,9 @@ export default function QuickGenPanel({
           )}
         </div>
         <p className="v2-hint">{kind === 'image' ? t.ux.genRefHintImage : t.ux.genRefHintVideo}</p>
+        {kind === 'video' && attachMode === 'refImages' && model !== VIDEO_PRO_MODEL && !VIDEO_REFERENCE_MODELS.has(model) && (
+          <p className="v2-hint">{t.ux.refsAsFirstFrame}</p>
+        )}
 
         <div className="v2-lab">
           <span>{t.nodes.common.model}</span>

@@ -27,8 +27,28 @@ function splitDataUrl(v: string): { mime: string; base64: string } | null {
   return m && comma > 0 ? { mime: m[1].toLowerCase(), base64: v.slice(comma + 1) } : null;
 }
 
+// Why a reference cannot go to the model, in words for the user; null when it can. Checked before
+// any money is reserved, so a file the model would never see is refused with a reason instead of
+// being dropped on the way.
+const REF_PROBLEM = {
+  image: { what: 'Фото', formats: 'JPG, PNG или WebP' },
+  video: { what: 'Видео', formats: 'MP4, WebM или MOV' },
+  audio: { what: 'Аудио', formats: 'MP3, WAV, M4A, OGG или FLAC' },
+};
+function refProblem(v: unknown, kind: 'image' | 'video' | 'audio'): string | null {
+  const { what, formats } = REF_PROBLEM[kind];
+  if (typeof v !== 'string' || !v) return `${what} не прочиталось — прикрепите файл ещё раз.`;
+  if (v.length > MAX_IMAGE_REF_CHARS) return `${what} больше 9 МБ — уменьшите файл и прикрепите снова.`;
+  if (!v.startsWith('data:')) {
+    return kind !== 'audio' && isPublicHttpsUrl(v) ? null : `${what} недоступно по ссылке — прикрепите файл.`;
+  }
+  const d = splitDataUrl(v);
+  const known = d && (kind === 'audio' ? AUDIO_FORMATS[d.mime] : REF_TYPES[d.mime] && d.mime.startsWith(`${kind}/`));
+  return known ? null : `${what} в этом формате модель не принимает — нужен ${formats}.`;
+}
+
 // One image or video reference → the URL the provider fetches. An https URL (already checked by
-// isImageRef / isMediaRef) is passed as is; inline data is stored first and its path recorded.
+// refProblem) is passed as is; inline data is stored first and its path recorded.
 async function storeRef(v: string, stored: string[]): Promise<string> {
   if (!v.startsWith('data:')) return v;
   const d = splitDataUrl(v);

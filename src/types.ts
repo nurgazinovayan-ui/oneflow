@@ -146,7 +146,13 @@ export interface VideoGenParams {
 // "Генерация видео PRO" — Seedance 2.5 only, with multimodal @Image/@Video/@Audio references.
 // Limits per ByteDance's documented capacity for a single generation.
 export const VIDEO_PRO_MODEL = 'bytedance/seedance-2.5';
-export const VIDEO_PRO_REFERENCE_LIMITS = { images: 30, videos: 10, audios: 10 } as const;
+// References per PRO generation; kept in sync with MAX_PRO_REFS in generate-video-pro.
+export const VIDEO_PRO_REFERENCE_LIMITS = { images: 9, videos: 3, audios: 3 } as const;
+// Reference photos per generation on the other video models (MAX_VIDEO_REFS in generate-video).
+export const VIDEO_REFERENCE_PHOTO_LIMIT = 4;
+// Models that take guiding photos on OpenRouter; for the others the first reference photo becomes
+// the first frame. Kept in sync with VIDEO_REFERENCE_MODELS in generate-video.
+export const VIDEO_REFERENCE_MODELS: ReadonlySet<string> = new Set(['bytedance/seedance-2.0', 'bytedance/seedance-2.5']);
 
 export interface VideoGenProParams {
   prompt: string;

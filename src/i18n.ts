@@ -1035,6 +1035,7 @@ export interface Translations {
     genRefHintVideo: string;
     genNeedPrompt: string;
     costEstimate: (credits: string) => string;
+    refsAsFirstFrame: string;
     genResultsHint: string;
     genSteps: string[];
     variantN: (n: number) => string;
@@ -2345,6 +2346,8 @@ export const ru: Translations = {
     genRefHintVideo: 'Для видео: начальный и конечный кадр, референс-изображения или видео-референс.',
     genNeedPrompt: 'Напишите промпт, чтобы начать',
     costEstimate: (credits) => `Стоимость ≈ ${credits}`,
+    refsAsFirstFrame:
+      'Эта модель не принимает фото-референсы — первое фото станет первым кадром видео. Чтобы фото задавало стиль, выберите Seedance.',
     genResultsHint: 'нажмите на карточку — промпт, модель, «Перегенерировать», «Скачать»',
     genSteps: [
       'Опишите идею: товар, фон, настроение, текст на картинке',
@@ -3664,6 +3667,8 @@ export const en: Translations = {
     genRefHintVideo: 'For video: start and end frames, reference images or a reference video.',
     genNeedPrompt: 'Write a prompt to start',
     costEstimate: (credits) => `Cost ≈ ${credits}`,
+    refsAsFirstFrame:
+      'This model does not take reference photos — the first photo becomes the first frame of the video. For photos that set the style, pick Seedance.',
     genResultsHint: 'click a card — prompt, model, “Regenerate”, “Download”',
     genSteps: [
       'Describe the idea: product, background, mood, on-image text',
