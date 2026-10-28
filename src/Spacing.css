@@ -26,12 +26,17 @@
   }
 
   html:root:root .web-mode .home-banner-text {
-    padding: 34px 40px;
-    width: min(600px, 60%);
+    padding: 26px 30px;
+    width: min(520px, 64%);
+  }
+
+  /* the square banner beside it: text across its whole width, along the bottom */
+  html:root:root .web-mode .home-banner-side .home-banner-text {
+    width: 100%;
   }
 
   html:root:root .web-mode .home-banner-text h2 {
-    margin: 18px 0 12px;
+    margin: 12px 0 8px;
     line-height: 1.12;
   }
 
@@ -184,6 +189,14 @@ html:root:root .web-mode .top-toolbar.is-home .app-header-title h1 {
   }
 }
 
+/* tablets upright (768–900px): the banner text runs along the bottom across the whole banner (App.css),
+   so its scrim must not stop at the narrower desktop width */
+@media (min-width: 768px) and (max-width: 900px) {
+  html:root:root .web-mode .home-banner-text {
+    width: 100%;
+  }
+}
+
 /* short laptop screens (≈768–820px tall): tighter home so all the tiles still fit */
 @media (min-width: 768px) and (max-height: 820px) {
   html:root:root .web-mode .home-inner {
@@ -196,8 +209,7 @@ html:root:root .web-mode .top-toolbar.is-home .app-header-title h1 {
   }
 
   html:root:root .web-mode .home-banner-text h2 {
-    font-size: 28px;
-    margin: 12px 0 8px;
+    margin: 10px 0 6px;
   }
 
   html:root:root .web-mode .home-banner-text p {

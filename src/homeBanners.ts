@@ -1,7 +1,8 @@
 import type { AppView } from './modes';
 
 // Home-screen banner slides, edited in the admin panel (oneflow.art/admin → «Баннеры приложения»)
-// and stored as one JSON row in the public `site_content` table under BANNERS_KEY. Everything read
+// and stored as one JSON row in the public `site_content` table under BANNERS_KEY: `slides` for the
+// 16:9 banner and `side` for the square one next to it. Everything read
 // from there is treated as untrusted: media must live in our own public storage bucket (or be a
 // same-origin path), links are either one of the app's modes or a plain https:// URL, and texts are
 // rendered as text (never as HTML).
@@ -10,6 +11,7 @@ export const BANNERS_KEY = 'app.home.banners';
 const MEDIA_BUCKET = 'site-media';
 const CACHE_KEY = 'oneflow-home-banners';
 const MAX_SLIDES = 12;
+const MAX_SIDE = 6;
 const MAX_TEXT = 400;
 
 export type BannerLink = { kind: 'mode'; view: AppView } | { kind: 'url'; href: string };
@@ -81,17 +83,19 @@ function safeLink(v: unknown, views: readonly AppView[]): BannerLink | null {
   }
 }
 
-/** Parses the stored JSON into slides for one language; anything malformed is dropped. */
-export function parseBanners(raw: string, language: 'ru' | 'en', views: readonly AppView[]): BannerSlide[] {
-  let data: { slides?: unknown };
+/** Parses one list of the stored JSON (the 16:9 `slides` or the square `side`) into slides for one
+ * language; anything malformed is dropped. */
+export function parseBanners(raw: string, language: 'ru' | 'en', views: readonly AppView[], list: 'slides' | 'side' = 'slides'): BannerSlide[] {
+  let data: { slides?: unknown; side?: unknown };
   try {
-    data = JSON.parse(raw) as { slides?: unknown };
+    data = JSON.parse(raw) as { slides?: unknown; side?: unknown };
   } catch {
     return [];
   }
-  if (!data || !Array.isArray(data.slides)) return [];
+  const items = data?.[list];
+  if (!Array.isArray(items)) return [];
   const out: BannerSlide[] = [];
-  for (const item of data.slides.slice(0, MAX_SLIDES) as StoredSlide[]) {
+  for (const item of items.slice(0, list === 'side' ? MAX_SIDE : MAX_SLIDES) as StoredSlide[]) {
     if (!item || typeof item !== 'object') continue;
     const media = safeMedia(item.media);
     if (!media) continue;

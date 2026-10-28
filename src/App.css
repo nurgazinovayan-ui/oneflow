@@ -13845,6 +13845,19 @@ h5.md-heading {
   color: var(--c-text);
 }
 
+/* Banners row: the 16:9 banner and the square one beside it. Columns of 16fr and 9fr make a 16:9
+   box and a square box exactly as tall as each other, at any width. */
+.home-banners {
+  display: grid;
+  grid-template-columns: minmax(0, 16fr) minmax(0, 9fr);
+  gap: 14px;
+  width: 100%;
+  /* the row and the tiles under it stay on screen: on a short window the row gets narrower */
+  max-width: max(640px, calc((100vh - 300px) * 25 / 9));
+  margin-inline: auto;
+  flex-shrink: 0;
+}
+
 /* Banner: the slide's photo/video fills the whole banner; the text sits on the left over a dark
    scrim so it stays readable on any picture (both themes — the scrim is always dark, the text
    always light). */
@@ -13852,11 +13865,7 @@ h5.md-heading {
   position: relative;
   /* 16:9 like the pictures and videos uploaded for it (admin «Баннеры приложения») — nothing is cut off */
   aspect-ratio: 16 / 9;
-  width: 100%;
-  /* the whole banner stays on screen: on a wide but short window it gets narrower, not cut */
-  max-width: max(560px, calc((100vh - 120px) * 16 / 9));
-  margin-inline: auto;
-  flex-shrink: 0;
+  min-width: 0;
   border-radius: 22px;
   overflow: hidden;
   /* no frame: the media fills the banner edge to edge (the dark fill only shows while it loads) */
@@ -13893,13 +13902,45 @@ h5.md-heading {
   position: relative;
   z-index: 1;
   height: 100%;
-  width: min(560px, 62%);
-  padding: 26px 30px;
+  width: min(520px, 64%);
+  padding: 24px 28px;
   display: flex;
   flex-direction: column;
   min-width: 0;
   color: #fff;
   background: linear-gradient(90deg, rgba(5, 8, 12, 0.82) 0%, rgba(5, 8, 12, 0.66) 62%, rgba(5, 8, 12, 0) 100%);
+}
+
+/* the square banner: text along the bottom over a scrim that rises from below */
+.home-banner-side {
+  aspect-ratio: 1 / 1;
+}
+
+.home-banner-side .home-banner-text {
+  width: 100%;
+  justify-content: flex-end;
+  background: linear-gradient(0deg, rgba(5, 8, 12, 0.88) 0%, rgba(5, 8, 12, 0.55) 50%, rgba(5, 8, 12, 0) 100%);
+}
+
+.home-banner-side .home-banner-text h2 {
+  -webkit-line-clamp: 2;
+}
+
+.home-banner-side .home-more {
+  margin-top: 14px;
+}
+
+/* its dots go to the top left, clear of the text along the bottom */
+.home-banner-side .home-dots {
+  top: 18px;
+  bottom: auto;
+  left: 16px;
+  right: auto;
+}
+
+/* lines never squeeze into each other: a text too long for a small banner is cut at the bottom */
+.home-banner-text > * {
+  flex-shrink: 0;
 }
 
 .home-tag {
@@ -13913,7 +13954,12 @@ h5.md-heading {
 }
 
 .home-banner-text h2 {
-  margin: 14px 0 10px;
+  /* long texts are cut with «…» rather than pushed out of the banner */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  margin: 12px 0 8px;
   font-size: clamp(24px, 2.4vw, 34px);
   font-weight: 600;
   line-height: 1.15;
@@ -13923,6 +13969,10 @@ h5.md-heading {
 }
 
 .home-banner-text p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
   margin: 0;
   font-size: 14px;
   line-height: 1.5;
@@ -14159,8 +14209,54 @@ h5.md-heading {
   }
 }
 
-/* phones: a 16:9 picture this small can't carry the text, so the text goes under it and the
-   picture stays whole */
+/* narrow windows, tablets upright and phones: side by side the two banners would be too small to
+   read, so the square one goes under the big one — its picture on the left, the text beside it (a
+   full-width square would push everything down); a square without text stays a square. */
+@media (max-width: 1000px) {
+  .home-banners {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .home-banner-side:not(.has-text) {
+    width: 100%;
+    max-width: 420px;
+    justify-self: center;
+  }
+  .home-banner-side.has-text {
+    aspect-ratio: auto;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .home-banner-side.has-text .home-banner-media {
+    position: relative;
+    inset: auto;
+    width: 40%;
+    flex-shrink: 0;
+    aspect-ratio: 1 / 1;
+  }
+  .home-banner-side.has-text .home-banner-text {
+    flex: 1;
+    min-width: 0;
+    height: auto;
+    padding: 14px 16px;
+    justify-content: flex-start;
+    background: #0b0b0d;
+  }
+  .home-banner-side.has-text .home-banner-text h2 {
+    margin: 8px 0 6px;
+  }
+  .home-banner-side.has-text .home-more {
+    margin-top: 12px;
+  }
+  /* no room for arrows and the video badge beside the text; the dots stay on the picture */
+  .home-banner-side.has-text .home-arrows,
+  .home-banner-side.has-text .home-video-badge {
+    display: none;
+  }
+}
+
+/* phones: a 16:9 picture this small can't carry the text either, so it goes under the picture */
 @media (max-width: 767px) {
   .home-banner {
     aspect-ratio: auto;
@@ -14176,6 +14272,9 @@ h5.md-heading {
     height: auto;
     padding: 16px 18px 18px;
     background: #0b0b0d;
+  }
+  .home-banner-side .home-banner-media {
+    aspect-ratio: 1 / 1;
   }
 }
 

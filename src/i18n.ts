@@ -993,6 +993,8 @@ export interface Translations {
     slideN: (n: number) => string;
     video: string;
     slides: { tag: string; title: string; text: string }[];
+    /** the built-in square banner next to the 16:9 one (shown until the admin saves square banners) */
+    sideSlides: { tag: string; title: string; text: string }[];
     searchPlaceholder: string;
     searchEmpty: string;
     assets: string;
@@ -2300,6 +2302,7 @@ export const ru: Translations = {
       { tag: 'One Launch', title: 'Одно фото — целая кампания', text: 'Карточки под все форматы и тексты постов из одной фотографии товара.' },
       { tag: 'Creative Predictor', title: 'Узнайте, какой креатив сильнее — до запуска', text: 'Загрузите до 3 вариантов и получите оценку и советы, что улучшить.' },
     ],
+    sideSlides: [{ tag: 'Генерация', title: 'Фото и видео по описанию', text: 'Лучшие модели в одном окне.' }],
     searchPlaceholder: 'Поиск по режимам',
     searchEmpty: 'Ничего не нашлось',
     assets: 'Ассеты',
@@ -3629,6 +3632,7 @@ export const en: Translations = {
       { tag: 'One Launch', title: 'One photo — a whole campaign', text: 'Cards for every format and post copy from a single product photo.' },
       { tag: 'Creative Predictor', title: 'Know which creative wins — before launch', text: 'Upload up to 3 variants and get a score plus tips on what to improve.' },
     ],
+    sideSlides: [{ tag: 'Generation', title: 'Photo and video from a description', text: 'Top models in one place.' }],
     searchPlaceholder: 'Search modes',
     searchEmpty: 'Nothing found',
     assets: 'Assets',
