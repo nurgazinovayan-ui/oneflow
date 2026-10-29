@@ -1,8 +1,10 @@
 /* =============================================================================================
-   Light theme «Soft» (by request, from a reference): light-grey page, soft light cards with a faint
-   shadow, black pills for the active item and the main action, a flat blue accent (#0a6cff),
-   thin large headings, round icon buttons and more air. Web only (:has(.web-mode)); the dark
-   theme is untouched.
+   «Soft» design (by request, from a reference), both themes: soft cards with a faint shadow, a
+   contrasting pill for the active item and the main action, a flat blue accent (#0a6cff), thin
+   large headings, round icon buttons and more air. Web only (:has(.web-mode)).
+   The rules below are the same for both themes and take every colour from the --soft-* palette:
+   light — a light-grey page, light cards, black pills; dark — the same design inverted: a near-black
+   page, dark-grey cards a clear step lighter, white pills with dark text.
    ============================================================================================= */
 :root[data-theme='light']:has(.web-mode) {
   --soft-page: #e5e5e5;
@@ -13,8 +15,15 @@
   --soft-text: #2d2d2d;
   --soft-muted: #9a9a9a;
   --soft-accent: #0a6cff;
+  --soft-accent-text: var(--soft-accent); /* the accent as text, e.g. the greeting's accent words */
+  --soft-on-accent: #ffffff;
+  --soft-on-ink: #ffffff; /* text on the black pills */
+  --soft-hover: #ffffff; /* a pill or row under the pointer, the selected row */
+  --soft-disabled-bg: #dadada;
+  --soft-disabled-text: #9a9a9a;
   --soft-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 22px 44px -30px rgba(0, 0, 0, 0.22);
   --soft-shadow-sm: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 8px 18px -12px rgba(0, 0, 0, 0.22);
+  --soft-cta-shadow: 0 14px 28px -16px rgba(0, 0, 0, 0.55);
 
   --v2-shell: var(--soft-page);
   --v2-surface: var(--soft-page);
@@ -47,56 +56,112 @@
   --glow-text: #ffffff;
 }
 
+/* Dark: each layer a clear step lighter than the one under it (page → card → pill), a hairline
+   on cards and pills (shadows don't show on near-black), white pills with dark text for the active
+   item and the main action. Text contrast on a card: main 14:1, muted 8:1, dim 6:1 — and every
+   one of them at least 4.5:1 (WCAG AA) on every dark layer, the selected row included. */
+:root:not([data-theme='light']):has(.web-mode) {
+  color-scheme: dark; /* native controls (date pickers, scrollbars, selects) in light-on-dark */
+  --soft-page: #0c0d0f;
+  --soft-card: #1b1c20;
+  --soft-raised: #2a2b31;
+  --soft-field: #121316;
+  --soft-ink: #f2f2f4;
+  --soft-text: #ececef;
+  --soft-muted: #b1b2bb;
+  --soft-accent: #0a6cff;
+  --soft-accent-text: #5c9dff;
+  --soft-on-accent: #ffffff;
+  --soft-on-ink: #111214;
+  --soft-hover: #33343a;
+  --soft-disabled-bg: #2a2b31;
+  --soft-disabled-text: #8f909a;
+  --soft-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07) inset, 0 22px 44px -30px rgba(0, 0, 0, 0.9);
+  --soft-shadow-sm: 0 0 0 1px rgba(255, 255, 255, 0.06) inset, 0 8px 18px -12px rgba(0, 0, 0, 0.8);
+  --soft-cta-shadow: 0 14px 28px -16px rgba(0, 0, 0, 0.9);
+
+  --v2-shell: var(--soft-page);
+  --v2-surface: var(--soft-page);
+  --v2-card: var(--soft-card);
+  --v2-field: var(--soft-field);
+  --v2-line: transparent;
+  --v2-ghost: rgba(255, 255, 255, 0.04);
+  --v2-accent: var(--soft-accent);
+  --v2-accent-ink: #ffffff;
+  --v2-accent-strong: var(--soft-ink);
+  --v2-accent-soft: rgba(10, 108, 255, 0.24);
+  --v2-sep: rgba(255, 255, 255, 0.1);
+  --home-track: #2f3036;
+  --home-accent: var(--soft-ink);
+
+  --c-bg: var(--soft-page);
+  --c-text: var(--soft-text);
+  --c-text-muted: var(--soft-muted);
+  --c-text-dim: #9c9da6;
+  --c-panel: var(--soft-card);
+  --c-panel-2: var(--soft-field);
+  --c-panel-3: #24252a;
+  --c-card: var(--soft-card);
+  --c-card-hover: #222328;
+  --c-divider: rgba(255, 255, 255, 0.08);
+  --c-pink: var(--soft-accent);
+  --c-pink-hover: #2a80ff;
+  --c-pink-dim: rgba(10, 108, 255, 0.45);
+  --c-pink-text: #ffffff;
+  --glow-gradient: var(--soft-ink);
+  --glow-text: var(--soft-on-ink);
+}
+
 /* ---- more air ------------------------------------------------------------------------------- */
-:root[data-theme='light'] .web-mode :is(.v2-split, .evaluation-panel.v2-pred, .tw-panel.v2-mode) {
+:root[data-theme] .web-mode :is(.v2-split, .evaluation-panel.v2-pred, .tw-panel.v2-mode) {
   gap: 20px;
   padding: 20px 24px 24px;
 }
 
 @media (min-width: 768px) {
-  :root[data-theme='light'] .web-mode.app-shell {
+  :root[data-theme] .web-mode.app-shell {
     grid-template-columns: 88px minmax(0, 1fr);
     grid-template-rows: 76px minmax(0, 1fr);
   }
 
-  :root[data-theme='light'] .web-mode .app-rail {
+  :root[data-theme] .web-mode .app-rail {
     margin: 18px 0 18px 18px;
   }
 }
 
-:root[data-theme='light'] .web-mode .main-area,
-:root[data-theme='light'] .web-mode .canvas-area {
+:root[data-theme] .web-mode .main-area,
+:root[data-theme] .web-mode .canvas-area {
   background: var(--soft-page);
   border-radius: 0;
 }
 
 /* ---- cards ------------------------------------------------------------------------------------ */
-:root[data-theme='light'] .web-mode :is(.v2-card, .mk-col.v2-card, .tw-list.v2-card, .tw-detail.v2-card, .cw-sidebar, .cw-stage, .assets-sidebar, .assets-grid-area, .strategy-shell > :first-child, .strategy-main, .home-kpi) {
+:root[data-theme] .web-mode :is(.v2-card, .mk-col.v2-card, .tw-list.v2-card, .tw-detail.v2-card, .cw-sidebar, .cw-stage, .assets-sidebar, .assets-grid-area, .strategy-shell > :first-child, .strategy-main, .home-kpi) {
   background: var(--soft-card);
   border-color: transparent;
   border-radius: 28px;
   box-shadow: var(--soft-shadow);
 }
 
-:root[data-theme='light'] .web-mode :is(.v2-card, .mk-col.v2-card) {
+:root[data-theme] .web-mode :is(.v2-card, .mk-col.v2-card) {
   padding: 24px 26px;
 }
 
-:root[data-theme='light'] .web-mode .motion-panel.v2-mode .mk-board {
+:root[data-theme] .web-mode .motion-panel.v2-mode .mk-board {
   gap: 20px;
   padding: 20px 24px 24px;
 }
 
-:root[data-theme='light'] .web-mode .v2-card-head > b {
+:root[data-theme] .web-mode .v2-card-head > b {
   font-size: 19px;
   font-weight: 400;
   letter-spacing: -0.01em;
 }
 
 /* ---- labels: sentence case, quiet ---------------------------------------------------------- */
-:root[data-theme='light'] .web-mode .v2-lab,
-:root[data-theme='light'] .web-mode .v2-strategy .strategy-field-label,
-:root[data-theme='light'] .web-mode .cw-panel :is(.cw-group-label, .cw-projects-heading) {
+:root[data-theme] .web-mode .v2-lab,
+:root[data-theme] .web-mode .v2-strategy .strategy-field-label,
+:root[data-theme] .web-mode .cw-panel :is(.cw-group-label, .cw-projects-heading) {
   text-transform: none;
   letter-spacing: 0;
   font-size: 13px;
@@ -104,25 +169,30 @@
   color: var(--soft-muted);
 }
 
-:root[data-theme='light'] .web-mode .v2-lab {
+:root[data-theme] .web-mode .v2-lab {
   margin: 20px 0 9px;
 }
 
 /* ---- fields ---------------------------------------------------------------------------------- */
-:root[data-theme='light'] .web-mode :is(.v2-field, .v2-select, .v2-strategy .node-select, .v2-strategy .node-textarea, .motion-brief, .tw-search, .tw-select > button, .tw-select select) {
+:root[data-theme] .web-mode :is(.v2-field, .v2-select, .v2-strategy .node-select, .v2-strategy .node-textarea, .motion-brief, .tw-search, .tw-select > button, .tw-select select) {
   background: var(--soft-field);
   border-color: transparent;
   border-radius: 18px;
 }
 
-:root[data-theme='light'] .web-mode :is(.v2-field, .v2-select):focus-within,
-:root[data-theme='light'] .web-mode .v2-field:focus {
+/* dark: a field is a step darker than its card; a hairline keeps its edge visible */
+:root:not([data-theme='light']) .web-mode :is(.v2-field, .v2-select, .v2-strategy .node-select, .v2-strategy .node-textarea, .motion-brief, .tw-search, .tw-select > button, .tw-select select, .cw-nav-button, .cw-composer) {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme] .web-mode :is(.v2-field, .v2-select):focus-within,
+:root[data-theme] .web-mode .v2-field:focus {
   border-color: transparent;
   box-shadow: 0 0 0 2px var(--soft-ink);
 }
 
 /* ---- pills: chips, secondary buttons -------------------------------------------------------- */
-:root[data-theme='light'] .web-mode :is(.v2-chip, .v2-example, .v2-btn2, .motion-panel.v2-mode .mk-chip, .text-work-quickprompt-chip, .tw-settings-btn, .secondary-btn, .motion-secondary, .mk-add, .canvas-empty-actions button) {
+:root[data-theme] .web-mode :is(.v2-chip, .v2-example, .v2-btn2, .motion-panel.v2-mode .mk-chip, .text-work-quickprompt-chip, .tw-settings-btn, .secondary-btn, .motion-secondary, .mk-add, .canvas-empty-actions button) {
   border-radius: 999px;
   background: var(--soft-raised);
   color: var(--soft-text);
@@ -132,33 +202,33 @@
   border-color: transparent;
 }
 
-:root[data-theme='light'] .web-mode :is(.v2-chip, .v2-btn2, .v2-example):hover:not(:disabled) {
-  background: #ffffff;
+:root[data-theme] .web-mode :is(.v2-chip, .v2-btn2, .v2-example):hover:not(:disabled) {
+  background: var(--soft-hover);
 }
 
 /* selected = flat blue */
-:root[data-theme='light'] .web-mode :is(.v2-chip.on, .motion-panel.v2-mode .mk-chip.on, .react-flow__node .node-option-btn.active, .assets-sort-btn.active) {
+:root[data-theme] .web-mode :is(.v2-chip.on, .motion-panel.v2-mode .mk-chip.on, .react-flow__node .node-option-btn.active, .assets-sort-btn.active) {
   background: var(--soft-accent);
-  color: #ffffff;
+  color: var(--soft-on-accent);
   box-shadow: none;
 }
 
 /* ---- main action: black pill ------------------------------------------------------------------ */
-:root[data-theme='light'] .web-mode :is(.v2-cta, .tw-cta:not(.secondary), .mk-to-render, .mk-download, .v2-strategy .strategy-onboarding-actions .generate-btn, .react-flow__node .generate-btn) {
+:root[data-theme] .web-mode :is(.v2-cta, .tw-cta:not(.secondary), .mk-to-render, .mk-download, .v2-strategy .strategy-onboarding-actions .generate-btn, .react-flow__node .generate-btn) {
   background: var(--soft-ink);
-  color: #ffffff;
+  color: var(--soft-on-ink);
   border-radius: 999px;
   font-weight: 500;
-  box-shadow: 0 14px 28px -16px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--soft-cta-shadow);
 }
 
-:root[data-theme='light'] .web-mode :is(.v2-cta, .tw-cta, .v2-strategy .strategy-onboarding-actions .generate-btn):disabled {
-  background: #dadada;
-  color: #9a9a9a;
+:root[data-theme] .web-mode :is(.v2-cta, .tw-cta, .v2-strategy .strategy-onboarding-actions .generate-btn):disabled {
+  background: var(--soft-disabled-bg);
+  color: var(--soft-disabled-text);
   box-shadow: none;
 }
 
-:root[data-theme='light'] .web-mode .tw-cta.secondary {
+:root[data-theme] .web-mode .tw-cta.secondary {
   background: var(--soft-raised);
   color: var(--soft-text);
   border-radius: 999px;
@@ -166,21 +236,21 @@
 }
 
 /* ---- round icon buttons ---------------------------------------------------------------------- */
-:root[data-theme='light'] .web-mode :is(.v2-icon-btn, .toolbar-avatar-btn, .budget-ring, .home-arrows button) {
+:root[data-theme] .web-mode :is(.v2-icon-btn, .toolbar-avatar-btn, .budget-ring, .home-arrows button) {
   background: var(--soft-raised);
   color: var(--soft-text);
   box-shadow: var(--soft-shadow-sm);
 }
 
 /* ---- left rail: round buttons, the active one is a black circle ----------------------------- */
-:root[data-theme='light'] .web-mode .app-rail {
+:root[data-theme] .web-mode .app-rail {
   background: transparent;
   border-color: transparent;
   box-shadow: none;
   gap: 10px;
 }
 
-:root[data-theme='light'] .web-mode .app-rail-btn {
+:root[data-theme] .web-mode .app-rail-btn {
   width: 46px;
   height: 46px;
   border-radius: 50%;
@@ -189,24 +259,24 @@
   box-shadow: var(--soft-shadow-sm);
 }
 
-:root[data-theme='light'] .web-mode .app-rail-btn:hover {
-  background: #ffffff;
+:root[data-theme] .web-mode .app-rail-btn:hover {
+  background: var(--soft-hover);
 }
 
-:root[data-theme='light'] .web-mode .app-rail-btn.active {
+:root[data-theme] .web-mode .app-rail-btn.active {
   background: var(--soft-ink);
-  color: #ffffff;
+  color: var(--soft-on-ink);
 }
 
-:root[data-theme='light'] .web-mode .app-rail-btn.active::before {
+:root[data-theme] .web-mode .app-rail-btn.active::before {
   display: none;
 }
 
-:root[data-theme='light'] .web-mode .app-rail-group {
+:root[data-theme] .web-mode .app-rail-group {
   gap: 10px;
 }
 
-:root[data-theme='light'] .web-mode .app-rail-logo {
+:root[data-theme] .web-mode .app-rail-logo {
   width: 46px;
   height: 46px;
   border-radius: 50%;
@@ -215,56 +285,56 @@
 }
 
 /* ---- header: thin large title, white pills ------------------------------------------------- */
-:root[data-theme='light'] .web-mode .app-header-title h1 {
+:root[data-theme] .web-mode .app-header-title h1 {
   font-size: 30px;
   font-weight: 200;
   letter-spacing: -0.02em;
 }
 
-:root[data-theme='light'] .web-mode .mode-search {
+:root[data-theme] .web-mode .mode-search {
   background: var(--soft-raised);
   border-radius: 999px;
   box-shadow: var(--soft-shadow-sm);
 }
 
-:root[data-theme='light'] .web-mode .toolbar-subscription-btn {
+:root[data-theme] .web-mode .toolbar-subscription-btn {
   background: var(--soft-ink);
-  color: #ffffff;
+  color: var(--soft-on-ink);
   border-radius: 999px;
 }
 
 /* ---- home ------------------------------------------------------------------------------------- */
-:root[data-theme='light'] .web-mode .home-inner {
+:root[data-theme] .web-mode .home-inner {
   gap: 26px;
   padding: 12px 28px 36px 8px;
 }
 
-:root[data-theme='light'] .web-mode .home-hello h1 {
+:root[data-theme] .web-mode .home-hello h1 {
   font-size: 46px;
   font-weight: 200;
   letter-spacing: -0.03em;
   color: var(--soft-text);
 }
 
-:root[data-theme='light'] .web-mode .home-hello h1 em {
-  color: var(--soft-accent);
+:root[data-theme] .web-mode .home-hello h1 em {
+  color: var(--soft-accent-text);
   background: none;
   padding: 0;
 }
 
-:root[data-theme='light'] .web-mode .home-banner {
+:root[data-theme] .web-mode .home-banner {
   border-radius: 32px;
   box-shadow: none;
 }
 
-:root[data-theme='light'] .web-mode .home-tag {
+:root[data-theme] .web-mode .home-tag {
   background: var(--soft-accent);
-  color: #ffffff;
+  color: var(--soft-on-accent);
   border-radius: 999px;
   padding: 4px 11px;
 }
 
-:root[data-theme='light'] .web-mode .home-more {
+:root[data-theme] .web-mode .home-more {
   color: #ffffff;
   text-transform: none;
   letter-spacing: 0;
@@ -272,213 +342,243 @@
   font-size: 14px;
 }
 
-:root[data-theme='light'] .web-mode .home-more-icon {
+:root[data-theme] .web-mode .home-more-icon {
   background: var(--soft-accent);
-  color: #ffffff;
+  color: var(--soft-on-accent);
 }
 
-:root[data-theme='light'] .web-mode .home-tiles {
+:root[data-theme] .web-mode .home-tiles {
   gap: 14px;
 }
 
-:root[data-theme='light'] .web-mode .home-tile {
+:root[data-theme] .web-mode .home-tile {
   border-radius: 28px;
   padding: 20px 20px;
 }
 
-:root[data-theme='light'] .web-mode .home-tile:hover,
-:root[data-theme='light'] .web-mode .home-tile:focus-visible {
+:root[data-theme] .web-mode .home-tile:hover,
+:root[data-theme] .web-mode .home-tile:focus-visible {
   background: var(--soft-card);
   border-color: transparent;
   box-shadow: var(--soft-shadow);
 }
 
-:root[data-theme='light'] .web-mode .home-tile-icon {
+:root[data-theme] .web-mode .home-tile-icon {
   color: var(--soft-ink);
 }
 
-:root[data-theme='light'] .web-mode .home-tile-text b {
+:root[data-theme] .web-mode .home-tile-text b {
   font-weight: 500;
 }
 
-:root[data-theme='light'] .web-mode .home-tile-go {
+:root[data-theme] .web-mode .home-tile-go {
   background: var(--soft-ink);
-  color: #ffffff;
+  color: var(--soft-on-ink);
 }
 
-:root[data-theme='light'] .web-mode .home-chip.new {
+:root[data-theme] .web-mode .home-chip.new {
   background: var(--soft-accent);
-  color: #ffffff;
+  color: var(--soft-on-accent);
   border-radius: 999px;
 }
 
-:root[data-theme='light'] .web-mode .home-kpi {
+:root[data-theme] .web-mode .home-kpi {
   border-radius: 999px;
   padding: 8px 16px 8px 10px;
 }
 
 /* ---- empty states ---------------------------------------------------------------------------- */
-:root[data-theme='light'] .web-mode .v2-empty-icon {
+:root[data-theme] .web-mode .v2-empty-icon {
   border-radius: 50%;
   background: var(--soft-raised);
   color: var(--soft-ink);
   box-shadow: var(--soft-shadow-sm);
 }
 
-:root[data-theme='light'] .web-mode .v2-empty h2 {
+:root[data-theme] .web-mode .v2-empty h2 {
   font-size: 32px;
 }
 
-:root[data-theme='light'] .web-mode .v2-steps li {
+:root[data-theme] .web-mode .v2-steps li {
   background: var(--soft-raised);
   border-radius: 22px;
   box-shadow: var(--soft-shadow-sm);
 }
 
-:root[data-theme='light'] .web-mode :is(.v2-steps li::before, .v2-num.done, .v2-numlist li::before) {
+:root[data-theme] .web-mode :is(.v2-steps li::before, .v2-num.done, .v2-numlist li::before) {
   background: var(--soft-accent);
-  color: #ffffff;
+  color: var(--soft-on-accent);
 }
 
-:root[data-theme='light'] .web-mode .v2-num {
+:root[data-theme] .web-mode .v2-num {
   background: var(--soft-raised);
 }
 
 /* ---- lists, rows, tiles ------------------------------------------------------------------------ */
-:root[data-theme='light'] .web-mode :is(.tw-row, .v2-list .v2-row, .v2-numlist li, .v2-caption, .v2-note, .v2-audio-box, .v2-progress-note) {
+:root[data-theme] .web-mode :is(.tw-row, .v2-list .v2-row, .v2-numlist li, .v2-caption, .v2-note, .v2-audio-box, .v2-progress-note) {
   background: var(--soft-raised);
   border-radius: 20px;
 }
 
-:root[data-theme='light'] .web-mode .tw-row.selected {
+:root[data-theme] .web-mode .tw-row.selected {
   border-color: transparent;
-  background: #ffffff;
+  background: var(--soft-hover);
   box-shadow: 0 0 0 2px var(--soft-ink);
 }
 
-:root[data-theme='light'] .web-mode .tw-metric-value {
+:root[data-theme] .web-mode .tw-metric-value {
   color: var(--soft-text);
   font-weight: 300;
 }
 
-:root[data-theme='light'] .web-mode :is(.v2-tile, .v2-pred-card, .v2-launch-card, .v2-pred-thumb, .v2-launch-media) {
+:root[data-theme] .web-mode :is(.v2-tile, .v2-pred-card, .v2-launch-card, .v2-pred-thumb, .v2-launch-media) {
   border-radius: 22px;
 }
 
-:root[data-theme='light'] .web-mode .v2-pred-card.winner {
+:root[data-theme] .web-mode .v2-pred-card.winner {
   border-color: transparent;
   box-shadow: 0 0 0 2px var(--soft-ink);
 }
 
-:root[data-theme='light'] .web-mode .v2-pred-verdict {
+:root[data-theme] .web-mode .v2-pred-verdict {
   background: var(--soft-accent);
-  color: #ffffff;
+  color: var(--soft-on-accent);
 }
 
-:root[data-theme='light'] .web-mode .v2-pred-score b {
+:root[data-theme] .web-mode .v2-pred-score b {
   font-weight: 200;
   font-size: 40px;
 }
 
-:root[data-theme='light'] .web-mode .v2-pill-accent {
+:root[data-theme] .web-mode .v2-pill-accent {
   background: var(--soft-accent);
-  color: #ffffff;
+  color: var(--soft-on-accent);
 }
 
-:root[data-theme='light'] .web-mode .v2-wave i.on {
+:root[data-theme] .web-mode .v2-wave i.on {
   background: var(--soft-ink);
 }
 
-:root[data-theme='light'] .web-mode .v2-play {
+:root[data-theme] .web-mode .v2-play {
   background: var(--soft-ink);
-  color: #ffffff;
+  color: var(--soft-on-ink);
 }
 
 /* ---- nodes canvas: light dotted page, soft round nodes, a black ring on selection ----------- */
-:root[data-theme='light'] .web-mode .react-flow {
+:root[data-theme] .web-mode .react-flow {
   background: var(--soft-page);
 }
 
-:root[data-theme='light'] .web-mode .react-flow__node > .node {
+/* dark: React Flow paints its own #141414 under the dots — the canvas is the page, as in light */
+:root:not([data-theme='light']) .web-mode .react-flow {
+  --xy-background-color: var(--soft-page);
+}
+
+:root[data-theme] .web-mode .react-flow__node > .node {
   background: var(--soft-card);
   border-color: transparent;
   border-radius: 26px;
   box-shadow: var(--soft-shadow);
 }
 
-:root[data-theme='light'] .web-mode .react-flow__node.selected > .node {
+:root[data-theme] .web-mode .react-flow__node.selected > .node {
   box-shadow: 0 0 0 2px var(--soft-ink);
 }
 
-:root[data-theme='light'] .web-mode .canvas-toolbar {
+:root[data-theme] .web-mode .canvas-toolbar {
   background: var(--soft-card);
   border-radius: 999px;
   box-shadow: var(--soft-shadow);
 }
 
-:root[data-theme='light'] .web-mode .canvas-toolbar .toolbar-dock-icon-btn {
+:root[data-theme] .web-mode .canvas-toolbar .toolbar-dock-icon-btn {
   border-radius: 50%;
   background: var(--soft-raised);
 }
 
 /* logo: crop to the mark only */
-:root[data-theme='light'] .web-mode .app-rail-logo {
+:root[data-theme] .web-mode .app-rail-logo {
   width: 40px;
   height: 40px;
 }
 
 /* column / step titles in the same light weight as the card titles */
-:root[data-theme='light'] .web-mode .motion-panel.v2-mode .mk-col-head b {
+:root[data-theme] .web-mode .motion-panel.v2-mode .mk-col-head b {
   font-size: 19px;
   font-weight: 400;
 }
 
-:root[data-theme='light'] .web-mode .v2-strategy .strategy-onboarding-modal h2 {
+:root[data-theme] .web-mode .v2-strategy .strategy-onboarding-modal h2 {
   font-size: 28px;
   font-weight: 300;
   letter-spacing: -0.02em;
 }
 
-:root[data-theme='light'] .web-mode .v2-strategy .strategy-selection-card {
+:root[data-theme] .web-mode .v2-strategy .strategy-selection-card {
   background: var(--soft-raised);
   border-radius: 24px;
   box-shadow: var(--soft-shadow-sm);
 }
 
-:root[data-theme='light'] .web-mode .v2-strategy .strategy-selection-card.selected {
+:root[data-theme] .web-mode .v2-strategy .strategy-selection-card.selected {
   border-color: transparent;
   box-shadow: 0 0 0 2px var(--soft-ink);
 }
 
-:root[data-theme='light'] .web-mode .v2-strategy .strategy-onboarding-progress-fill {
+:root[data-theme] .web-mode .v2-strategy .strategy-onboarding-progress-fill {
   background: var(--soft-ink);
 }
 
-:root[data-theme='light'] .web-mode .motion-panel.v2-mode .mk-range input[type='range'] {
+:root[data-theme] .web-mode .motion-panel.v2-mode .mk-range input[type='range'] {
   accent-color: var(--soft-ink);
+}
+
+/* dark: the audio track is a field colour, which is lost on a dark card — one step lighter instead */
+:root:not([data-theme='light']) .web-mode .v2-track {
+  background: var(--soft-raised);
+}
+
+/* dark: «Экономия 20%» was blue on translucent blue (≈2:1) — solid accent with white text (4.6:1) */
+:root:not([data-theme='light']):has(.web-mode) .pricing-save-badge {
+  background: var(--soft-accent);
+  color: var(--soft-on-accent);
+}
+
+/* dark: where the banner text sits under or beside the picture (narrow screens), its panel is a
+   card — the near-black strip of the light theme would melt into the dark page */
+@media (max-width: 1000px) {
+  :root:not([data-theme='light']) .web-mode .home-banner-side.has-text .home-banner-text {
+    background: var(--soft-card);
+  }
+}
+
+@media (max-width: 767px) {
+  :root:not([data-theme='light']) .web-mode .home-banner-text:not(.bare) {
+    background: var(--soft-card);
+  }
 }
 
 /* phones: the horizontal rail keeps its own size; headings scale down */
 @media (max-width: 767px) {
-  :root[data-theme='light'] .web-mode .app-rail-btn {
+  :root[data-theme] .web-mode .app-rail-btn {
     width: 40px;
     height: 40px;
     flex-shrink: 0;
   }
 
-  :root[data-theme='light'] .web-mode .app-header-title h1 {
+  :root[data-theme] .web-mode .app-header-title h1 {
     font-size: 22px;
   }
 
-  :root[data-theme='light'] .web-mode .home-hello h1 {
+  :root[data-theme] .web-mode .home-hello h1 {
     font-size: 30px;
   }
 
-  :root[data-theme='light'] .web-mode .home-inner {
+  :root[data-theme] .web-mode .home-inner {
     padding: 8px 12px 24px;
   }
 
-  :root[data-theme='light'] .web-mode :is(.v2-split, .evaluation-panel.v2-pred, .tw-panel.v2-mode, .motion-panel.v2-mode .mk-board) {
+  :root[data-theme] .web-mode :is(.v2-split, .evaluation-panel.v2-pred, .tw-panel.v2-mode, .motion-panel.v2-mode .mk-board) {
     padding: 10px;
     gap: 12px;
   }
