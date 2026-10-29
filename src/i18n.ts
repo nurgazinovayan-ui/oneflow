@@ -777,6 +777,13 @@ export interface Translations {
     docCardDownload: string;
     docCardOtherFormat: string;
     fileError: string;
+    pdfNoTextError: string;
+    pdfPasswordError: string;
+    zipEmptyError: string;
+    dropTitle: string;
+    dropFormats: string;
+    truncatedBadge: string;
+    truncatedTooltip: string;
     legacyOfficeError: string;
     officeReadError: string;
     promptLimit: string;
@@ -1996,7 +2003,14 @@ export const ru: Translations = {
     docCardDownload: 'Скачать',
     docCardOtherFormat: 'Другой формат',
     fileError:
-      'До 4 файлов: PNG, JPG, WebP, TXT, MD, CSV, JSON, DOCX, XLSX, PPTX; до 4 МБ каждый, текст — до 30 000 символов.',
+      'До 4 файлов: PNG, JPG, WebP, TXT, MD, CSV, JSON, DOCX, XLSX, PPTX — до 4 МБ; PDF и ZIP — до 25 МБ. Из файла передаётся до 30 000 символов текста.',
+    pdfNoTextError: 'В этом PDF нет текста — похоже, это скан. Пришлите страницы картинками (PNG, JPG).',
+    pdfPasswordError: 'PDF защищён паролем. Снимите пароль и прикрепите файл снова.',
+    zipEmptyError: 'В архиве нет документов, которые можно прочитать (TXT, MD, CSV, JSON, DOCX, XLSX, PPTX, PDF).',
+    dropTitle: 'Отпустите, чтобы прикрепить',
+    dropFormats: 'Фото, PDF, Word, Excel, PowerPoint, ZIP и текстовые файлы',
+    truncatedBadge: 'часть',
+    truncatedTooltip: 'Файл длинный — модели передаётся только его начало (до 30 000 символов).',
     legacyOfficeError: 'Старый формат Office. Пересохраните файл как .docx, .xlsx или .pptx.',
     officeReadError: 'Не удалось прочитать файл — возможно, он повреждён или защищён паролем.',
     promptLimit: 'Запрос слишком длинный: максимум 30 000 символов.',
@@ -3328,7 +3342,14 @@ export const en: Translations = {
     docCardDownload: 'Download',
     docCardOtherFormat: 'Other format',
     fileError:
-      'Up to 4 files: PNG, JPG, WebP, TXT, MD, CSV, JSON, DOCX, XLSX, PPTX; 4 MB each, text up to 30,000 characters.',
+      'Up to 4 files: PNG, JPG, WebP, TXT, MD, CSV, JSON, DOCX, XLSX, PPTX — up to 4 MB; PDF and ZIP — up to 25 MB. Up to 30,000 characters of text are taken from a file.',
+    pdfNoTextError: 'This PDF has no text — it looks like a scan. Send the pages as pictures (PNG, JPG).',
+    pdfPasswordError: 'The PDF is password-protected. Remove the password and attach it again.',
+    zipEmptyError: 'The archive has no documents that can be read (TXT, MD, CSV, JSON, DOCX, XLSX, PPTX, PDF).',
+    dropTitle: 'Drop to attach',
+    dropFormats: 'Photos, PDF, Word, Excel, PowerPoint, ZIP and text files',
+    truncatedBadge: 'part',
+    truncatedTooltip: 'The file is long — only its beginning (up to 30,000 characters) is sent to the model.',
     legacyOfficeError: 'Legacy Office format. Re-save the file as .docx, .xlsx or .pptx.',
     officeReadError: 'Could not read the file — it may be damaged or password-protected.',
     promptLimit: 'Your message is too long: maximum 30,000 characters.',

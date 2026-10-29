@@ -33,6 +33,8 @@ import {
 } from '../deliverables';
 import { guessTitle, parseMarkdown } from '../markdown';
 import { isLegacyOfficeFile } from '../officeImport';
+import { PDF_NO_TEXT, PDF_PASSWORD } from '../pdfImport';
+import { ZIP_EMPTY } from '../zipImport';
 import { capture } from '../analytics';
 import { useT } from '../i18n';
 import { useWorkspace } from '../copywrite/useWorkspace';
@@ -91,6 +93,10 @@ export default function TextWorkPanel({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openThreadMenu, setOpenThreadMenu] = useState<string | null>(null);
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  // files dragged over the panel: a hint over it until they're dropped or dragged away (the
+  // counter rides out dragenter/dragleave from every child the pointer crosses)
+  const [dragActive, setDragActive] = useState(false);
+  const dragDepth = useRef(0);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [openProjectMenu, setOpenProjectMenu] = useState<string | null>(null);
   const [editIndex, setEditIndex] = useState<number>();
@@ -300,7 +306,17 @@ export default function TextWorkPanel({
       // "Wrong format" is unhelpful for a real .doc or a .docx we couldn't open — each of those
       // needs its own next step, so readAttachment throws them separately.
       const reason = err instanceof Error ? err.message : '';
-      toast(reason === 'unreadable' ? l.officeReadError : l.fileError);
+      toast(
+        reason === 'unreadable'
+          ? l.officeReadError
+          : reason === PDF_NO_TEXT
+            ? l.pdfNoTextError
+            : reason === PDF_PASSWORD
+              ? l.pdfPasswordError
+              : reason === ZIP_EMPTY
+                ? l.zipEmptyError
+                : l.fileError
+      );
     } finally {
       setAttaching(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -417,6 +433,15 @@ export default function TextWorkPanel({
   return (
     <div
       className={`cw-panel ${active ? '' : 'cw-hidden'} ${w.sidebarCollapsed ? 'cw-collapsed' : ''} ${mobileOpen ? 'cw-mobile-open' : ''}`}
+      onDragEnter={(e) => {
+        if (!e.dataTransfer.types.includes('Files')) return;
+        dragDepth.current += 1;
+        setDragActive(true);
+      }}
+      onDragLeave={() => {
+        dragDepth.current = Math.max(0, dragDepth.current - 1);
+        if (dragDepth.current === 0) setDragActive(false);
+      }}
       onDragOver={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -424,9 +449,20 @@ export default function TextWorkPanel({
       onDrop={(e) => {
         e.preventDefault();
         e.stopPropagation();
+        dragDepth.current = 0;
+        setDragActive(false);
         void attachFiles(e.dataTransfer.files);
       }}
     >
+      {dragActive && (
+        <div className="cw-drop-overlay" aria-hidden="true">
+          <div className="cw-drop-card">
+            <IconAttach size={22} />
+            <b>{l.dropTitle}</b>
+            <span>{l.dropFormats}</span>
+          </div>
+        </div>
+      )}
       {mobileOpen && <button className="cw-mobile-backdrop" onClick={() => setMobileOpen(false)} aria-label={l.closeLabel} />}
       <aside className="cw-sidebar">
         <div className="cw-sidebar-header">
@@ -567,7 +603,10 @@ export default function TextWorkPanel({
                             {a.kind === 'image' ? (
                               <img className="cw-message-image" src={a.data} alt={a.name} />
                             ) : (
-                              <span className="cw-message-doc-chip">{a.name}</span>
+                              <span className="cw-message-doc-chip" title={a.truncated ? l.truncatedTooltip : undefined}>
+                                {a.name}
+                                {a.truncated && ` · ${l.truncatedBadge}`}
+                              </span>
                             )}
                           </div>
                         ))}
@@ -783,7 +822,12 @@ export default function TextWorkPanel({
                       <div key={a.id} className="cw-attachment">
                         {a.kind === 'image' ? <img src={a.data} alt="" className="cw-thumb" /> : <IconNews size={14} />}
                         <span className="cw-attachment-name">{a.name}</span>
-                        {a.office && <span className="cw-attachment-badge">{a.office.slice(1).toUpperCase()}</span>}
+                        {(a.office || a.format) && <span className="cw-attachment-badge">{(a.office?.slice(1) ?? a.format ?? '').toUpperCase()}</span>}
+                        {a.truncated && (
+                          <span className="cw-attachment-badge" title={l.truncatedTooltip}>
+                            {l.truncatedBadge}
+                          </span>
+                        )}
                         <button
                           className="cw-attachment-remove"
                           title={`${l.removeLabel}: ${a.name}`}
@@ -830,7 +874,7 @@ export default function TextWorkPanel({
                       type="file"
                       hidden
                       multiple
-                      accept="image/png,image/jpeg,image/webp,.txt,.md,.csv,.json,.docx,.xlsx,.pptx"
+                      accept="image/png,image/jpeg,image/webp,.txt,.md,.csv,.json,.docx,.xlsx,.pptx,.pdf,application/pdf,.zip,application/zip"
                       onChange={(e) => {
                         if (e.target.files) void attachFiles(e.target.files);
                       }}

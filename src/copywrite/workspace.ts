@@ -1,6 +1,8 @@
 import type { ChatMessage } from '../types';
 import type { ParsedDeliverable } from '../deliverables';
 import { officeExtension, officeFileToMarkdown } from '../officeImport';
+import { pdfFileToText } from '../pdfImport';
+import { zipFileToText } from '../zipImport';
 
 // Data model for the Copywrite engine redesign (see CLAUDE_COPYWRITE.md for the full spec this
 // ports). Deliberately plain objects + localStorage instead of the IndexedDB workspace the
@@ -8,6 +10,8 @@ import { officeExtension, officeFileToMarkdown } from '../officeImport';
 
 export const MAX_ATTACHMENTS = 4;
 export const MAX_ATTACHMENT_BYTES = 4 * 1024 * 1024;
+// a PDF or a ZIP may be bigger: only the text read from it is kept and sent
+export const MAX_DOCUMENT_FILE_BYTES = 25 * 1024 * 1024;
 export const MAX_TEXT_LENGTH = 30_000;
 
 const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
@@ -22,6 +26,10 @@ export interface Attachment {
   data: string;
   // Set on an Office upload so the UI can label it and the request can say what it came from.
   office?: '.docx' | '.xlsx' | '.pptx';
+  // A PDF (its text layer) or a ZIP (its documents, one after another); see pdfImport/zipImport.
+  format?: 'pdf' | 'zip';
+  // The text was longer than MAX_TEXT_LENGTH: only its beginning is kept and sent.
+  truncated?: boolean;
 }
 
 export interface CwMessage extends ChatMessage {
@@ -119,14 +127,27 @@ function isAllowedTextFile(name: string): boolean {
   return ALLOWED_TEXT_EXTENSIONS.some((ext) => lower.endsWith(ext));
 }
 
+function documentFormat(file: File): 'pdf' | 'zip' | null {
+  const lower = file.name.toLowerCase();
+  if (lower.endsWith('.pdf') || file.type === 'application/pdf') return 'pdf';
+  if (lower.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed') return 'zip';
+  return null;
+}
+
 export function isAttachable(file: File): boolean {
-  return ALLOWED_IMAGE_TYPES.includes(file.type) || isAllowedTextFile(file.name) || officeExtension(file.name) !== null;
+  return ALLOWED_IMAGE_TYPES.includes(file.type) || isAllowedTextFile(file.name) || officeExtension(file.name) !== null || documentFormat(file) !== null;
 }
 
 // Throws on an unsupported type or an oversized file — callers show the caller-facing
 // fileError copy on catch, matching every other attachment surface in this app. 'unreadable'
 // (from officeImport) is thrown separately because it needs its own advice, not "wrong format".
 export async function readAttachment(file: File): Promise<Attachment> {
+  const format = documentFormat(file);
+  if (format) {
+    if (file.size > MAX_DOCUMENT_FILE_BYTES) throw new Error('too-large');
+    const { text, truncated } = format === 'pdf' ? await pdfFileToText(file, MAX_TEXT_LENGTH) : await zipFileToText(file, file.name, MAX_TEXT_LENGTH);
+    return { id: id(), name: file.name, kind: 'document', data: text.slice(0, MAX_TEXT_LENGTH), format, truncated };
+  }
   if (file.size > MAX_ATTACHMENT_BYTES) throw new Error('too-large');
   if (ALLOWED_IMAGE_TYPES.includes(file.type)) {
     const data = await readFileAsDataUrl(file);
@@ -135,11 +156,11 @@ export async function readAttachment(file: File): Promise<Attachment> {
   const office = officeExtension(file.name);
   if (office) {
     const markdown = await officeFileToMarkdown(file);
-    return { id: id(), name: file.name, kind: 'document', data: markdown.slice(0, MAX_TEXT_LENGTH), office };
+    return { id: id(), name: file.name, kind: 'document', data: markdown.slice(0, MAX_TEXT_LENGTH), office, truncated: markdown.length > MAX_TEXT_LENGTH };
   }
   if (isAllowedTextFile(file.name)) {
     const text = await readFileAsText(file);
-    return { id: id(), name: file.name, kind: 'document', data: text.slice(0, MAX_TEXT_LENGTH) };
+    return { id: id(), name: file.name, kind: 'document', data: text.slice(0, MAX_TEXT_LENGTH), truncated: text.length > MAX_TEXT_LENGTH };
   }
   throw new Error('unsupported');
 }

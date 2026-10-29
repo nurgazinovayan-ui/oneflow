@@ -47,7 +47,10 @@ function withDocuments(m: CwMessage): string {
   const docs = (m.attachments ?? []).filter((a) => a.kind === 'document');
   if (docs.length === 0) return m.content;
   const files = docs.map(
-    (a) => `--- Прикреплённый файл: ${a.name} ---\n${a.data}\n--- конец файла: ${a.name} ---`
+    (a) =>
+      `--- Прикреплённый файл: ${a.name} ---\n${a.data}\n` +
+      (a.truncated ? '[файл длинный: передана только его начальная часть]\n' : '') +
+      `--- конец файла: ${a.name} ---`
   );
   return [m.content, ...files].filter(Boolean).join('\n\n');
 }
