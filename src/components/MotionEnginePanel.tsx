@@ -4,6 +4,7 @@ import { formatGenerationError } from '../errorMessages';
 import { useT } from '../i18n';
 import { drawFrame, drawStill, frameSize, prepareFrame, sceneIndexAt, type MotionSource, type MotionSources } from '../motion/render';
 import { canEncodeMp4, canRecordWebm, renderVideo } from '../motion/export';
+import { checkComposition, describeError, renderComposition, startPlayer, type Player } from '../motion/composition';
 import { fileToAsset, framesForModel, loadSource, newId } from '../motion/media';
 import { analyzeImageReference, analyzeVideoReference, motionLevel } from '../motion/reference';
 import { loadMotionState, saveMotionState, type MotionState } from '../motion/store';
@@ -18,6 +19,7 @@ import {
   MOTION_MAX_ASSETS,
   MOTION_QUALITIES,
   type MotionAsset,
+  type MotionComposition,
   type MotionScene,
   type MotionStoryboard,
   type MotionStyleDirection,
@@ -79,6 +81,8 @@ const DRAG_TYPE = 'application/x-oneflow-variant';
 const fmtTime = (s: number) => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
 const fmtUsd = (v: number) => `$${v.toFixed(v < 1 ? 3 : 2)}`;
 const fmtMb = (bytes: number) => `${(bytes / 1048576).toFixed(1)} МБ`;
+const titleOf = (v: MotionVariant) => v.composition?.title ?? v.storyboard?.title ?? '';
+const conceptOf = (v: MotionVariant) => v.composition?.concept ?? v.storyboard?.concept ?? '';
 const evenClamp = (v: number) => Math.round(Math.min(MOTION_CUSTOM_MAX, Math.max(MOTION_CUSTOM_MIN, Number(v) || MOTION_CUSTOM_MIN)) / 2) * 2;
 const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
 
@@ -94,6 +98,9 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
   const [loaded, setLoaded] = useState(false);
   const [sources, setSources] = useState<Record<string, MotionSource>>({});
   const [generating, setGenerating] = useState(false);
+  // what the current «Создать ролик» is doing: Opus writes the code → the browser checks it → Opus fixes it
+  const [phase, setPhase] = useState<'writing' | 'checking' | 'fixing'>('writing');
+  const [fixingId, setFixingId] = useState<string | null>(null);
   const [styling, setStyling] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState('');
@@ -161,12 +168,12 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
   useEffect(() => () => rendersRef.current.forEach((r) => URL.revokeObjectURL(r.url)), []);
 
   useEffect(() => {
-    if (!generating && !styling) return;
+    if (!generating && !styling && !fixingId) return;
     const t0 = Date.now();
     setElapsed(0);
     const id = setInterval(() => setElapsed((Date.now() - t0) / 1000), 500);
     return () => clearInterval(id);
-  }, [generating, styling]);
+  }, [generating, styling, fixingId, phase]);
 
   const update = (patch: Partial<MotionState>) => setState((s) => ({ ...s, ...patch }));
   const assetById = useMemo(() => new Map(state.assets.map((a) => [a.id, a])), [state.assets]);
@@ -311,6 +318,48 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
     ? motionLevel(state.reference.shots.reduce((a, s) => a + s.motion * s.dur, 0) / Math.max(0.01, state.reference.shots.reduce((a, s) => a + s.dur, 0)))
     : null;
 
+  // Own <video> elements for checking a composition, so the board's previews are not seeked meanwhile.
+  const loadOwn = async (list: MotionAsset[]) => Promise.all(list.map((a) => loadSource(a).catch(() => null)));
+
+  // Opus writes the animation (2–4 minutes) → the browser runs it on a few moments at a small size →
+  // if it fails (an exception, a frame that hangs, blank frames) Opus gets the error back once.
+  const writeComposition = async (
+    first: () => Promise<{ composition: MotionComposition; costUsd: number }>,
+    list: MotionAsset[],
+    aspect: string,
+    brief: string
+  ): Promise<{ composition: MotionComposition; costUsd: number; posters: string[] }> => {
+    setPhase('writing');
+    let { composition, costUsd } = await first();
+    const own = await loadOwn(list);
+    try {
+      const srcs = own.map((o) => o?.source ?? null);
+      const names = list.map((a) => a.name);
+      const box = frameSize(aspect, 360);
+      setPhase('checking');
+      let check = await checkComposition(composition, srcs, names, box.width, box.height);
+      if (!check.ok) {
+        setPhase('fixing');
+        const fixed = await window.api.fixMotionComposition({
+          brief,
+          duration: composition.duration,
+          aspect,
+          assets: list.map((a) => ({ kind: a.kind, name: a.name, duration: a.duration })),
+          composition,
+          error: check.error,
+        });
+        composition = fixed.composition;
+        costUsd += fixed.costUsd;
+        setPhase('checking');
+        check = await checkComposition(composition, srcs, names, box.width, box.height);
+        if (!check.ok) throw new Error(tm.codeBroken(check.error));
+      }
+      return { composition, costUsd, posters: check.posters };
+    } finally {
+      own.forEach((o) => o?.release());
+    }
+  };
+
   const generate = async () => {
     if (!state.brief.trim() && !materials.length) {
       setError(tm.errorNoInput);
@@ -319,21 +368,31 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
     setError('');
     setGenerating(true);
     try {
-      const { storyboard, costUsd } = await window.api.createMotionStoryboard({
-        brief: state.brief.trim(),
-        duration: state.duration,
-        aspect: state.aspect,
-        assets: await materialsForModel(),
-        previous: state.variants.map((v) => `${v.storyboard.title}: ${v.storyboard.concept}`),
-        style: state.style,
-        reference: state.reference,
-      });
+      const list = materials;
+      const assets = await materialsForModel();
+      const brief = state.brief.trim();
+      const { composition, costUsd, posters } = await writeComposition(
+        () =>
+          window.api.createMotionComposition({
+            brief,
+            duration: state.duration,
+            aspect: state.aspect,
+            assets,
+            previous: state.variants.map((v) => `${titleOf(v)}: ${conceptOf(v)}`),
+            style: state.style,
+            reference: state.reference,
+          }),
+        list,
+        state.aspect,
+        brief
+      );
       const v: MotionVariant = {
         id: newId(),
         createdAt: new Date().toISOString(),
-        storyboard,
+        composition,
+        posters,
         aspect: state.aspect,
-        assetIds: materials.map((a) => a.id),
+        assetIds: list.map((a) => a.id),
         costUsd,
         styleName: state.style?.name ?? (state.reference ? tm.likeReference : undefined),
         fromReference: Boolean(state.reference),
@@ -343,6 +402,38 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
       setError(formatGenerationError(e));
     } finally {
       setGenerating(false);
+    }
+  };
+
+  // A variant whose preview stopped with an error: Opus gets the error and the code back.
+  const fixVariant = async (v: MotionVariant, error: string) => {
+    if (!v.composition || fixingId) return;
+    const list = v.assetIds.map((id) => assetById.get(id)).filter((a): a is MotionAsset => Boolean(a));
+    setFixingId(v.id);
+    try {
+      const comp = v.composition;
+      const out = await writeComposition(
+        () =>
+          window.api.fixMotionComposition({
+            brief: state.brief.trim(),
+            duration: comp.duration,
+            aspect: v.aspect,
+            assets: list.map((a) => ({ kind: a.kind, name: a.name, duration: a.duration })),
+            composition: comp,
+            error,
+          }),
+        list,
+        v.aspect,
+        state.brief.trim()
+      );
+      setState((s) => ({
+        ...s,
+        variants: s.variants.map((x) => (x.id === v.id ? { ...x, composition: out.composition, posters: out.posters, costUsd: x.costUsd + out.costUsd } : x)),
+      }));
+    } catch (e) {
+      setError(formatGenerationError(e));
+    } finally {
+      setFixingId(null);
     }
   };
 
@@ -383,18 +474,23 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
         return a ? loadSource(a).catch(() => null) : Promise.resolve(null);
       }));
       try {
-        const { blob, ext, codec } = await renderVideo({
-          board: variant.storyboard,
-          sources: own.map((o) => o?.source ?? null),
-          width: job.width,
-          height: job.height,
-          fps: job.fps,
-          signal: abort.signal,
-          onProgress: (p) => setJobs((list) => list.map((j) => (j.id === job.id ? { ...j, progress: p } : j))),
-        });
+        const onProgress = (p: number) => setJobs((list) => list.map((j) => (j.id === job.id ? { ...j, progress: p } : j)));
+        const srcs = own.map((o) => o?.source ?? null);
+        const { blob, ext, codec } = variant.composition
+          ? await renderComposition({
+              comp: variant.composition,
+              sources: srcs,
+              names: variant.assetIds.map((id) => assetById.get(id)?.name ?? ''),
+              width: job.width,
+              height: job.height,
+              fps: job.fps,
+              signal: abort.signal,
+              onProgress,
+            })
+          : await renderVideo({ board: variant.storyboard!, sources: srcs, width: job.width, height: job.height, fps: job.fps, signal: abort.signal, onProgress });
         const url = URL.createObjectURL(blob);
         setRenders((list) => [
-          { id: newId(), variantId: variant.id, title: variant.storyboard.title, url, ext, codec, aspect: job.aspect, width: job.width, height: job.height, fps: job.fps, size: blob.size },
+          { id: newId(), variantId: variant.id, title: titleOf(variant), url, ext, codec, aspect: job.aspect, width: job.width, height: job.height, fps: job.fps, size: blob.size },
           ...list,
         ]);
         setJobs((list) => list.filter((j) => j.id !== job.id));
@@ -428,8 +524,11 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
 
   const variantTitle = (id: string) => {
     const i = state.variants.findIndex((v) => v.id === id);
-    return i < 0 ? '' : `${tm.variantN(i + 1)} · ${state.variants[i].storyboard.title}`;
+    return i < 0 ? '' : `${tm.variantN(i + 1)} · ${titleOf(state.variants[i])}`;
   };
+
+  const phaseText =
+    phase === 'checking' ? tm.checkingCode : phase === 'fixing' ? tm.fixingCode(fmtTime(elapsed)) : tm.writingCode(fmtTime(elapsed));
 
   const renderLabel = custom ? `${size.width}×${size.height}` : `${state.renderAspect} · ${size.width}×${size.height}`;
 
@@ -660,7 +759,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
 
           <div className="v2-card-foot">
             <button type="button" className="v2-cta" onClick={generate} disabled={generating || !loaded}>
-              {generating ? tm.generating(fmtTime(elapsed)) : state.variants.length ? tm.moreVariant : tm.makeBoard}
+              {generating ? phaseText : state.variants.length ? tm.moreVariant : tm.makeVideo}
             </button>
             <span className="v2-hint v2-center">{tm.costHint}</span>
             {error && <div className="error-text">{error}</div>}
@@ -701,17 +800,25 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
                 }}
                 onClick={() => setOpenId(v.id)}
               >
-                <div className="mk-strip">
-                  {v.storyboard.scenes.slice(0, 6).map((_, k) => (
-                    <SceneStill key={k} board={v.storyboard} sources={sourcesFor(v)} index={k} aspect={v.aspect} fontsReady={fontsReady} short={140} />
-                  ))}
+                <div className={`mk-strip${v.composition ? ' posters' : ''}`}>
+                  {v.composition
+                    ? (v.posters ?? []).map((src, k) => <img key={k} src={src} alt="" className="motion-still" />)
+                    : v.storyboard?.scenes.slice(0, 6).map((_, k) => (
+                        <SceneStill key={k} board={v.storyboard!} sources={sourcesFor(v)} index={k} aspect={v.aspect} fontsReady={fontsReady} short={140} />
+                      ))}
                 </div>
                 <b className="mk-variant-title">
-                  {tm.variantN(i + 1)} · {v.storyboard.title}
+                  {tm.variantN(i + 1)} · {titleOf(v)}
                 </b>
                 <div className="mk-tags">
+                  {v.composition && <span className="mk-tag violet">{tm.animTag}</span>}
                   <span className="mk-tag blue">{v.styleName ?? tm.styleAutoShort}</span>
-                  <span className="mk-tag green">{tm.scenesDur(v.storyboard.scenes.length, v.storyboard.duration)}</span>
+                  {v.composition ? (
+                    <span className="mk-tag green">{tm.scenesDur(v.composition.beats.length, v.composition.duration)}</span>
+                  ) : (
+                    v.storyboard && <span className="mk-tag green">{tm.scenesDur(v.storyboard.scenes.length, v.storyboard.duration)}</span>
+                  )}
+                  {fixingId === v.id && <span className="mk-tag orange">{tm.fixingTag}</span>}
                   <span className="mk-tag">{v.aspect}</span>
                   {queuedCount > 0 && <span className="mk-tag orange">{tm.inQueue(queuedCount)}</span>}
                 </div>
@@ -749,7 +856,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
                 ))}
               </div>
               <b>{tm.variantN(state.variants.length + 1)}</b>
-              <span className="motion-hint">{tm.generating(fmtTime(elapsed))}</span>
+              <span className="motion-hint">{phaseText}</span>
             </div>
           )}
           {state.variants.length > 0 && !generating && (
@@ -842,7 +949,25 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
 
       </div>
 
-      {opened && (
+      {opened?.composition && (
+        <CodeDrawer
+          key={`${opened.id}:${opened.composition.code.length}`}
+          variant={opened}
+          composition={opened.composition}
+          index={state.variants.indexOf(opened)}
+          assetById={assetById}
+          aspect={renderAspect}
+          active={active}
+          renderLabel={renderLabel}
+          canRender={qualityOk(quality.id, state.fps)}
+          fixing={fixingId === opened.id}
+          onFix={(err) => void fixVariant(opened, err)}
+          onRender={() => enqueue(opened.id)}
+          onDelete={() => deleteVariant(opened.id)}
+          onClose={() => setOpenId(null)}
+        />
+      )}
+      {opened?.storyboard && !opened.composition && (
         <VariantDrawer
           key={opened.id}
           variant={opened}
@@ -878,7 +1003,7 @@ function VariantDrawer({ variant, index, sources, aspect, fontsReady, active, re
   onClose: () => void;
 }) {
   const tm = useT().motion;
-  const board = variant.storyboard;
+  const board = variant.storyboard!; // only opened for storyboard variants
   const canvas = useRef<HTMLCanvasElement>(null);
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState(0);
@@ -975,6 +1100,173 @@ function VariantDrawer({ variant, index, sources, aspect, fontsReady, active, re
             </div>
           ))}
         </div>
+
+        <footer className="mk-drawer-foot">
+          <button type="button" className="motion-secondary" onClick={onDelete}>
+            {tm.deleteVariant}
+          </button>
+          <button
+            type="button"
+            className="generate-btn mk-render-now"
+            disabled={!canRender}
+            onClick={() => {
+              onRender();
+              onClose();
+            }}
+          >
+            <IconVideo size={14} /> {tm.renderThis(renderLabel)}
+          </button>
+        </footer>
+      </aside>
+    </div>
+  );
+}
+
+// Opus's animation of one variant: the live preview runs its code in the sandbox (own <video>
+// elements, so the board is not seeked meanwhile), scrubbing, its scenes, and the same «В рендер».
+// A preview that stops with an error can go back to Opus to be fixed.
+function CodeDrawer({ variant, composition, index, assetById, aspect, active, renderLabel, canRender, fixing, onFix, onRender, onDelete, onClose }: {
+  variant: MotionVariant;
+  composition: MotionComposition;
+  index: number;
+  assetById: Map<string, MotionAsset>;
+  aspect: string;
+  active: boolean;
+  renderLabel: string;
+  canRender: boolean;
+  fixing: boolean;
+  onFix: (error: string) => void;
+  onRender: () => void;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  const tm = useT().motion;
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const player = useRef<Player | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [time, setTime] = useState(0);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState('');
+  const previewSize = useMemo(() => frameSize(aspect, 540), [aspect]);
+  const assets = useMemo(() => variant.assetIds.map((id) => assetById.get(id) ?? null), [variant.assetIds, assetById]);
+
+  useEffect(() => {
+    const cv = canvas.current;
+    if (!cv) return;
+    let cancelled = false;
+    let own: ({ source: MotionSource; release: () => void } | null)[] = [];
+    let p: Player | null = null;
+    setReady(false);
+    setError('');
+    setTime(0);
+    void (async () => {
+      own = await Promise.all(assets.map((a) => (a ? loadSource(a).catch(() => null) : Promise.resolve(null))));
+      if (cancelled) return;
+      try {
+        p = await startPlayer(cv, composition, own.map((o) => o?.source ?? null), assets.map((a) => a?.name ?? ''), {
+          time: setTime,
+          playing: setPlaying,
+          error: setError,
+        });
+        if (cancelled) {
+          p.destroy();
+          return;
+        }
+        player.current = p;
+        setReady(true);
+      } catch (e) {
+        if (!cancelled) setError(describeError(e));
+      }
+    })();
+    return () => {
+      cancelled = true;
+      p?.destroy();
+      player.current = null;
+      own.forEach((o) => o?.release());
+    };
+  }, [composition, assets, previewSize.width, previewSize.height]);
+  useEffect(() => {
+    if (!active) player.current?.pause();
+  }, [active]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="mk-drawer-shade" onClick={onClose}>
+      <aside className="mk-drawer" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <header className="mk-drawer-head">
+          <div>
+            <span className="mk-label">
+              {tm.variantN(index + 1)} · {tm.animTag}
+              {variant.styleName ? ` · ${variant.styleName}` : ''}
+            </span>
+            <h3>{composition.title}</h3>
+            {composition.concept && <p>{composition.concept}</p>}
+            <span className="motion-meta">
+              {tm.scenesDur(composition.beats.length, composition.duration)} · {tm.composedForShort(variant.aspect)}
+              {variant.costUsd > 0 && ` · ${fmtUsd(variant.costUsd)}`}
+            </span>
+          </div>
+          <button type="button" className="motion-icon-btn" onClick={onClose} title={tm.close} aria-label={tm.close}>
+            <IconClose size={13} />
+          </button>
+        </header>
+
+        <div className="motion-preview" style={{ aspectRatio: `${previewSize.width} / ${previewSize.height}` }}>
+          <canvas ref={canvas} width={previewSize.width} height={previewSize.height} />
+          {!ready && !error && <span className="motion-preview-wait">{tm.preparingPreview}</span>}
+        </div>
+        <div className="motion-preview-bar">
+          <button type="button" className="motion-play" disabled={!ready} onClick={() => (playing ? player.current?.pause() : player.current?.play())} aria-label={playing ? tm.pauseLabel : tm.playLabel}>
+            {playing ? <IconPause size={14} /> : <IconPlay size={14} />}
+          </button>
+          <input
+            type="range"
+            className="motion-scrub"
+            min={0}
+            max={composition.duration}
+            step={0.01}
+            value={Math.min(time, composition.duration)}
+            disabled={!ready}
+            onChange={(e) => player.current?.seekTo(Number(e.target.value))}
+            aria-label={tm.scrub}
+          />
+          <span className="motion-time">
+            {fmtTime(time)} / {fmtTime(composition.duration)}
+          </span>
+        </div>
+        {error && (
+          <div className="motion-code-error">
+            <span className="error-text">
+              {tm.playerError}: {error}
+            </span>
+            <button type="button" className="motion-secondary" disabled={fixing} onClick={() => onFix(error)}>
+              {fixing ? tm.fixingTag : tm.fixNow}
+            </button>
+          </div>
+        )}
+        {variant.aspect !== aspect && <span className="motion-hint">{tm.composedFor(variant.aspect)}</span>}
+
+        {composition.beats.length > 0 && (
+          <>
+            <span className="mk-label">{tm.beatsTitle}</span>
+            <ol className="motion-beats">
+              {composition.beats.map((b, i) => (
+                <li key={i}>
+                  <button type="button" onClick={() => player.current?.seekTo(b.start + 0.05)} disabled={!ready}>
+                    <span className="motion-scene-time">
+                      {b.start.toFixed(1)}–{b.end.toFixed(1)} с
+                    </span>
+                    <span className="motion-scene-note">{b.text}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
 
         <footer className="mk-drawer-foot">
           <button type="button" className="motion-secondary" onClick={onDelete}>

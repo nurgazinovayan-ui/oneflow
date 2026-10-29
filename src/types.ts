@@ -1,4 +1,4 @@
-import type { MotionStoryboard, MotionStoryboardRequest, MotionStyleDirection, MotionStylesRequest } from './motion/types';
+import type { MotionComposition, MotionFixRequest, MotionStoryboard, MotionStoryboardRequest, MotionStyleDirection, MotionStylesRequest } from './motion/types';
 
 export interface ImageGenParams {
   model: string;
@@ -502,6 +502,10 @@ export interface NodeApi {
   evaluateCreative: (images: string[], platform?: string) => Promise<CreativeEvaluationResult>;
   // Motion Engine — Claude Opus 5.5 turns materials + brief into a storyboard (motion-storyboard).
   createMotionStoryboard: (req: MotionStoryboardRequest) => Promise<{ storyboard: MotionStoryboard; costUsd: number }>;
+  // The same function in mode 'code': Opus writes the animation itself (src/motion/sandbox.ts runs it),
+  // and in mode 'fix': Opus corrects its code after the browser found an error in it.
+  createMotionComposition: (req: MotionStoryboardRequest) => Promise<{ composition: MotionComposition; costUsd: number }>;
+  fixMotionComposition: (req: MotionFixRequest) => Promise<{ composition: MotionComposition; costUsd: number }>;
   // «Предложи стили» — the same function in mode 'styles': 4 style directions for this brief.
   suggestMotionStyles: (req: MotionStylesRequest) => Promise<{ styles: MotionStyleDirection[]; costUsd: number }>;
   generateAudio: (params: AudioGenParams) => Promise<string>;

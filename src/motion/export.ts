@@ -17,6 +17,19 @@ export interface RenderOptions {
   signal?: AbortSignal;
 }
 
+// Any source of frames: the storyboard renderer below, or Opus's animation code in the sandbox
+// (src/motion/composition.ts). frame(t) gives the picture at time t; release() frees it once encoded.
+export interface FrameJob {
+  duration: number;
+  width: number;
+  height: number;
+  fps: number;
+  frame: (t: number) => Promise<CanvasImageSource>;
+  release?: (img: CanvasImageSource) => void;
+  onProgress?: (p: number) => void;
+  signal?: AbortSignal;
+}
+
 export interface RenderResult {
   blob: Blob;
   ext: 'mp4' | 'webm';
@@ -84,17 +97,34 @@ function abortError() {
 }
 
 export async function renderVideo(o: RenderOptions): Promise<RenderResult> {
-  const choice = await chooseCodec(o.width, o.height, o.fps);
-  if (choice) return { blob: await renderMp4(o, choice), ext: 'mp4', codec: choice.label };
-  if (canRecordWebm()) return { blob: await recordWebm(o), ext: 'webm', codec: 'WebM' };
+  const canvas = document.createElement('canvas');
+  canvas.width = o.width;
+  canvas.height = o.height;
+  const ctx = canvas.getContext('2d', { alpha: false })!;
+  return encodeFrames({
+    duration: o.board.duration,
+    width: o.width,
+    height: o.height,
+    fps: o.fps,
+    onProgress: o.onProgress,
+    signal: o.signal,
+    frame: async (t) => {
+      await prepareFrame(o.board, o.sources, t);
+      drawFrame(ctx, o.width, o.height, o.board, o.sources, t);
+      return canvas;
+    },
+  });
+}
+
+// Encodes whatever a FrameJob draws: MP4 through WebCodecs, else a real-time WebM recording.
+export async function encodeFrames(job: FrameJob): Promise<RenderResult> {
+  const choice = await chooseCodec(job.width, job.height, job.fps);
+  if (choice) return { blob: await renderMp4(job, choice), ext: 'mp4', codec: choice.label };
+  if (canRecordWebm()) return { blob: await recordWebm(job), ext: 'webm', codec: 'WebM' };
   throw new Error('Этот браузер не умеет кодировать видео. Откройте ONEFLOW в свежем Chrome, Edge или Safari 17+.');
 }
 
-async function renderMp4({ board, sources, width, height, fps, onProgress, signal }: RenderOptions, choice: Choice): Promise<Blob> {
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d', { alpha: false })!;
+async function renderMp4({ duration, width, height, fps, frame: draw, release, onProgress, signal }: FrameJob, choice: Choice): Promise<Blob> {
   const muxer = new Muxer({ target: new ArrayBufferTarget(), video: { codec: choice.mux, width, height, frameRate: fps }, fastStart: 'in-memory' });
   let failure: Error | null = null;
   const encoder = new VideoEncoder({
@@ -111,15 +141,15 @@ async function renderMp4({ board, sources, width, height, fps, onProgress, signa
     bitrate: bitrateFor(width, height, fps),
     ...(choice.mux === 'avc' ? { avc: { format: 'avc' as const } } : {}),
   });
-  const total = Math.max(1, Math.round(board.duration * fps));
+  const total = Math.max(1, Math.round(duration * fps));
   try {
     for (let n = 0; n < total; n++) {
       if (signal?.aborted) throw abortError();
       if (failure) throw failure;
       const t = n / fps;
-      await prepareFrame(board, sources, t);
-      drawFrame(ctx, width, height, board, sources, t);
-      const frame = new VideoFrame(canvas, { timestamp: Math.round((n * 1e6) / fps), duration: Math.round(1e6 / fps) });
+      const img = await draw(t);
+      const frame = new VideoFrame(img, { timestamp: Math.round((n * 1e6) / fps), duration: Math.round(1e6 / fps) });
+      release?.(img);
       encoder.encode(frame, { keyFrame: n % (fps * 2) === 0 });
       frame.close();
       while (encoder.encodeQueueSize > 6) await new Promise((r) => setTimeout(r, 4));
@@ -137,7 +167,7 @@ async function renderMp4({ board, sources, width, height, fps, onProgress, signa
 
 // Fallback: real-time canvas recording. Frames are drawn on a timer, so on a busy machine the
 // result can stutter — only used where WebCodecs is missing.
-async function recordWebm({ board, sources, width, height, fps, onProgress, signal }: RenderOptions): Promise<Blob> {
+async function recordWebm({ duration, width, height, fps, frame: draw, release, onProgress, signal }: FrameJob): Promise<Blob> {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -148,18 +178,21 @@ async function recordWebm({ board, sources, width, height, fps, onProgress, sign
   const chunks: Blob[] = [];
   rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
   const stopped = new Promise<void>((r) => (rec.onstop = () => r()));
-  await prepareFrame(board, sources, 0);
-  drawFrame(ctx, width, height, board, sources, 0);
+  const paint = async (t: number) => {
+    const img = await draw(t);
+    if (img !== canvas) ctx.drawImage(img, 0, 0, width, height);
+    release?.(img);
+  };
+  await paint(0);
   rec.start(250);
   const t0 = performance.now();
   try {
     for (;;) {
       if (signal?.aborted) throw abortError();
       const t = (performance.now() - t0) / 1000;
-      if (t >= board.duration) break;
-      await prepareFrame(board, sources, t);
-      drawFrame(ctx, width, height, board, sources, t);
-      onProgress?.(t / board.duration);
+      if (t >= duration) break;
+      await paint(t);
+      onProgress?.(t / duration);
       await new Promise((r) => setTimeout(r, 1000 / fps / 2));
     }
   } finally {

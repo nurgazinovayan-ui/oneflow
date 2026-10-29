@@ -637,6 +637,21 @@ export interface Translations {
     refWithStyle: (style: string) => string;
     likeReference: string;
     likeReferenceHint: string;
+    makeVideo: string;
+    writingCode: (time: string) => string;
+    checkingCode: string;
+    fixingCode: (time: string) => string;
+    codeBroken: (error: string) => string;
+    animTag: string;
+    fixingTag: string;
+    fixNow: string;
+    playerError: string;
+    preparingPreview: string;
+    beatsTitle: string;
+    composedForShort: (aspect: string) => string;
+    playLabel: string;
+    pauseLabel: string;
+    scrub: string;
   };
   musicAudio: {
     title: string;
@@ -1770,7 +1785,7 @@ export const ru: Translations = {
     makeBoard: 'Сделать раскадровку',
     moreVariant: 'Ещё вариант',
     generating: (time) => `ONEFLOW делает раскадровку… ${time}`,
-    costHint: 'Раскадровка ≈ $0.05–0.20 за вариант. Рендер видео бесплатный — идёт прямо в браузере.',
+    costHint: 'Ролик ≈ $0.2–0.5 за вариант: Opus сам пишет анимацию, это 1–4 минуты. Рендер видео бесплатный — прямо в браузере.',
     errorNoInput: 'Добавьте материалы или опишите задачу.',
     variantN: (n) => `Вариант ${n}`,
     deleteVariant: 'Удалить вариант',
@@ -1813,7 +1828,7 @@ export const ru: Translations = {
     fontLabels: { sans: 'Гротеск', display: 'Жирный гротеск', serif: 'Антиква', mono: 'Моноширинный' },
     fxLabels: { grain: 'Зерно', glow: 'Свечение', vignette: 'Виньетка', letterbox: 'Кинополосы', duotone: 'Дуотон' },
     colBrief: 'Бриф',
-    colBoards: 'Раскадровки',
+    colBoards: 'Варианты',
     colRender: 'Рендер',
     colDone: 'Готово',
     styleLabel: 'Стиль видео',
@@ -1829,7 +1844,7 @@ export const ru: Translations = {
     willRender: (w, h, fps) => `Получится MP4 ${w}×${h}, ${fps} кадров в секунду. Рендер бесплатный.`,
     queued: 'В очереди',
     remove: 'Убрать',
-    dropHere: 'Перетащите раскадровку сюда или нажмите «В рендер» на карточке',
+    dropHere: 'Перетащите вариант сюда или нажмите «В рендер» на карточке',
     doneHint: 'Готовые видео хранятся до перезагрузки страницы — скачайте нужные.',
     close: 'Закрыть',
     previewAt: (aspect) => `Кадры в формате ${aspect} — так будет в видео`,
@@ -1853,6 +1868,21 @@ export const ru: Translations = {
     refWithStyle: (style) => `Выбран стиль «${style}»: внешний вид возьмём из него, от референса — ритм и структуру сцен.`,
     likeReference: 'Как в референсе',
     likeReferenceHint: 'Цвета, шрифт и эффекты — по референсу',
+    makeVideo: 'Создать ролик',
+    writingCode: (time) => `Opus пишет анимацию… ${time}`,
+    checkingCode: 'Проверяю анимацию…',
+    fixingCode: (time) => `Opus исправляет ошибку в анимации… ${time}`,
+    codeBroken: (error) => `Opus написал анимацию с ошибкой и не смог её исправить (${error}). Попробуйте ещё вариант.`,
+    animTag: 'Анимация Opus',
+    fixingTag: 'Исправляется…',
+    fixNow: 'Исправить через Opus',
+    playerError: 'Анимация остановилась с ошибкой',
+    preparingPreview: 'Готовлю превью…',
+    beatsTitle: 'Сцены',
+    composedForShort: (aspect) => `под ${aspect}`,
+    playLabel: 'Смотреть',
+    pauseLabel: 'Пауза',
+    scrub: 'Перемотка',
   },
   musicAudio: {
     title: 'Музыка и аудио',
@@ -2397,12 +2427,12 @@ export const ru: Translations = {
     strategyEmptyText:
       'Ответьте на 2 вопроса — ONEFLOW разберёт бизнес и соберёт маркетинговую стратегию: аудитория, оффер, сообщение, каналы и креативы. Потом её можно одной кнопкой превратить в схему в нодах.',
     strategySections: ['Ваш бизнес', 'Кому продавать', 'Что предложить', 'Что говорить', 'Где продвигаться', 'Что создавать'],
-    motionEmptyTitle: 'Здесь появятся раскадровки',
-    motionEmptyText: 'Заполните бриф слева и нажмите «Сделать раскадровку» — ONEFLOW предложит варианты ролика. Лучший отправьте в рендер.',
+    motionEmptyTitle: 'Здесь появятся ролики',
+    motionEmptyText: 'Заполните бриф слева и нажмите «Создать ролик» — Opus сам напишет анимацию под вашу задачу: движение, типографику и переходы. Лучший вариант отправьте в рендер.',
     motionSteps: [
-      'Загрузите фото товара и опишите задачу',
-      'Получите раскадровки — откройте и посмотрите превью',
-      'Перетащите лучшую в «Рендер» и скачайте MP4',
+      'Загрузите фото или видео и опишите задачу',
+      'Opus пишет анимацию ролика — откройте вариант и посмотрите превью',
+      'Перетащите лучший в «Рендер» и скачайте MP4',
     ],
   },
   errors: {
@@ -3116,7 +3146,7 @@ export const en: Translations = {
     makeBoard: 'Create storyboard',
     moreVariant: 'Another variant',
     generating: (time) => `ONEFLOW is storyboarding… ${time}`,
-    costHint: 'A storyboard costs ≈ $0.05–0.20 per variant. Video rendering is free — it runs in your browser.',
+    costHint: 'A video costs ≈ $0.2–0.5 per variant: Opus writes the animation itself, it takes 1–4 minutes. Rendering is free — it runs in your browser.',
     errorNoInput: 'Add materials or describe the task.',
     variantN: (n) => `Variant ${n}`,
     deleteVariant: 'Delete variant',
@@ -3159,7 +3189,7 @@ export const en: Translations = {
     fontLabels: { sans: 'Grotesque', display: 'Bold grotesque', serif: 'Serif', mono: 'Monospace' },
     fxLabels: { grain: 'Grain', glow: 'Glow', vignette: 'Vignette', letterbox: 'Letterbox', duotone: 'Duotone' },
     colBrief: 'Brief',
-    colBoards: 'Storyboards',
+    colBoards: 'Variants',
     colRender: 'Render',
     colDone: 'Done',
     styleLabel: 'Video style',
@@ -3175,7 +3205,7 @@ export const en: Translations = {
     willRender: (w, h, fps) => `You’ll get an MP4 ${w}×${h} at ${fps} fps. Rendering is free.`,
     queued: 'Queued',
     remove: 'Remove',
-    dropHere: 'Drag a storyboard here or press “Render” on its card',
+    dropHere: 'Drag a variant here or press “Render” on its card',
     doneHint: 'Finished videos are kept until the page reloads — download the ones you need.',
     close: 'Close',
     previewAt: (aspect) => `Frames in ${aspect} — as they’ll look in the video`,
@@ -3194,6 +3224,21 @@ export const en: Translations = {
     refWithStyle: (style) => `Style “${style}” is selected: the look comes from it, the rhythm and scene structure from the reference.`,
     likeReference: 'Like the reference',
     likeReferenceHint: 'Colours, type and effects follow the reference',
+    makeVideo: 'Create video',
+    writingCode: (time) => `Opus is writing the animation… ${time}`,
+    checkingCode: 'Checking the animation…',
+    fixingCode: (time) => `Opus is fixing an error in the animation… ${time}`,
+    codeBroken: (error) => `Opus wrote an animation with an error and could not fix it (${error}). Try another variant.`,
+    animTag: 'Opus animation',
+    fixingTag: 'Fixing…',
+    fixNow: 'Fix with Opus',
+    playerError: 'The animation stopped with an error',
+    preparingPreview: 'Preparing the preview…',
+    beatsTitle: 'Scenes',
+    composedForShort: (aspect) => `for ${aspect}`,
+    playLabel: 'Play',
+    pauseLabel: 'Pause',
+    scrub: 'Scrub',
   },
   musicAudio: {
     title: 'Music & audio',
@@ -3734,11 +3779,11 @@ export const en: Translations = {
     strategyEmptyText:
       'Answer 2 questions — ONEFLOW will break down the business and build a marketing strategy: audience, offer, message, channels and creatives. Then turn it into a node flow in one click.',
     strategySections: ['Your business', 'Who to sell to', 'What to offer', 'What to say', 'Where to promote', 'What to create'],
-    motionEmptyTitle: 'Storyboards will appear here',
-    motionEmptyText: 'Fill in the brief on the left and press “Make storyboard” — ONEFLOW will suggest video variants. Send the best one to render.',
+    motionEmptyTitle: 'Your videos will appear here',
+    motionEmptyText: 'Fill in the brief on the left and press “Create video” — Opus writes the animation for your task itself: motion, typography and transitions. Send the best variant to render.',
     motionSteps: [
-      'Upload product photos and describe the task',
-      'Get storyboards — open one to watch the preview',
+      'Upload photos or videos and describe the task',
+      'Opus writes the animation — open a variant to watch the preview',
       'Drag the best one to “Render” and download the MP4',
     ],
   },

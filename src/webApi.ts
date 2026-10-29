@@ -165,7 +165,8 @@ async function callFunction<T>(name: string, body: unknown): Promise<T> {
       ? (typeof data?.jobId === 'string' ? data.jobId : null)
       : null;
     if (jobId) ({ res, data } = await pollJob(name, jobId));
-    if (!res.ok) {
+    // a long answer streamed with status 200 that failed after it started (motion-storyboard 'code')
+    if (!res.ok || data?.failed === true) {
       // limits from the server's spend guard come with a code → a message in the user's language
       const byCode: Record<string, string> = {
         quota_exceeded: t().errors.quotaExceeded,
@@ -657,6 +658,8 @@ export function installWebApi(): void {
     evaluateCreative: (images, platform) =>
       callFunction<CreativeEvaluationResult>('evaluate-creative', { images, platform }),
     createMotionStoryboard: (req) => callFunction('motion-storyboard', req),
+    createMotionComposition: (req) => callFunction('motion-storyboard', { ...req, mode: 'code' }),
+    fixMotionComposition: (req) => callFunction('motion-storyboard', { ...req, mode: 'fix' }),
     suggestMotionStyles: (req) => callFunction('motion-storyboard', { ...req, mode: 'styles' }),
     generateAudio: async (params: AudioGenParams) => {
       const { url } = await callFunction<{ url: string }>('generate-audio', params);

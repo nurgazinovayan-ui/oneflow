@@ -58,6 +58,33 @@ export interface MotionStoryboard {
   scenes: MotionScene[];
 }
 
+// The animation Claude Opus writes itself (motion-storyboard, mode 'code'): JavaScript that draws
+// any moment of the video on a Canvas 2D, run in src/motion/sandbox.ts. beats describe the scenes to
+// the user; clips say when and from which second each video material plays.
+export interface MotionBeat {
+  start: number;
+  end: number;
+  text: string;
+}
+
+export interface MotionClip {
+  asset: number;
+  start: number;
+  end: number;
+  from: number;
+}
+
+export interface MotionComposition {
+  title: string;
+  concept: string;
+  duration: number;
+  background: string;
+  palette: string[];
+  beats: MotionBeat[];
+  clips: MotionClip[];
+  code: string;
+}
+
 export interface MotionAsset {
   id: string;
   kind: 'image' | 'video';
@@ -71,7 +98,11 @@ export interface MotionAsset {
 export interface MotionVariant {
   id: string;
   createdAt: string;
-  storyboard: MotionStoryboard;
+  // one of the two: a storyboard for the template renderer (variants made before Opus wrote the
+  // animation itself) or Opus's own animation code
+  storyboard?: MotionStoryboard;
+  composition?: MotionComposition;
+  posters?: string[]; // composition: small JPEG frames from the check, for the card
   aspect: string; // the frame the board was composed for; rendering may pick another
   assetIds: string[]; // storyboard asset indexes → these assets, frozen at generation time
   costUsd: number;
@@ -106,6 +137,16 @@ export interface MotionStoryboardRequest {
   previous: string[];
   style?: MotionStyleDirection | null;
   reference?: MotionReferenceInfo | null;
+}
+
+// The browser ran a composition and it failed: Opus gets it back with the error.
+export interface MotionFixRequest {
+  brief: string;
+  duration: number;
+  aspect: string;
+  assets: { kind: 'image' | 'video'; name: string; duration?: number }[];
+  composition: MotionComposition;
+  error: string;
 }
 
 export interface MotionStylesRequest {

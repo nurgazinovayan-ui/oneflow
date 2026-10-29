@@ -3,6 +3,7 @@ import type { MotionScene, MotionStoryboard, MotionStoryboardRequest, MotionStyl
 import { estimateImageCost, estimateVideoCost, DSP_URL, ADMIN_EMAIL } from './types';
 import { useLanguageStore, ru, en } from './i18n';
 import { downloadFile } from './fileDownload';
+import { demoComposition } from './motion/demoComposition';
 
 // Fallback implementation used only when running the renderer in a plain
 // browser (e.g. `vite` dev preview) without the Electron preload bridge.
@@ -737,6 +738,18 @@ export function installMockApiIfNeeded(): void {
       bumpMockUsage(costUsd);
       logMockGeneration({ timestamp: Date.now(), model: 'ONEFLOW Motion Engine', category: 'motion', costUsd });
       return { storyboard: mockMotionStoryboard(req), costUsd };
+    },
+    // the demo's animation is hand-written in Opus's format (src/motion/demoComposition.ts)
+    createMotionComposition: async (req) => {
+      await new Promise((r) => setTimeout(r, 1500));
+      const costUsd = 0.3;
+      bumpMockUsage(costUsd);
+      logMockGeneration({ timestamp: Date.now(), model: 'ONEFLOW Motion Engine', category: 'motion', costUsd });
+      return { composition: demoComposition(req), costUsd };
+    },
+    fixMotionComposition: async (req) => {
+      await new Promise((r) => setTimeout(r, 800));
+      return { composition: demoComposition({ ...req, assets: req.assets.map((a) => ({ ...a, frames: [] })), previous: [] }), costUsd: 0.2 };
     },
     suggestMotionStyles: async (req) => {
       await new Promise((r) => setTimeout(r, 1000));
