@@ -14,7 +14,7 @@ const MIN_SHOT = 0.35;
 const SW = 48;
 const SH = 27;
 
-function seek(v: HTMLVideoElement, t: number): Promise<void> {
+export function seek(v: HTMLVideoElement, t: number): Promise<void> {
   return new Promise((resolve) => {
     const done = () => {
       v.removeEventListener('seeked', done);
@@ -27,7 +27,7 @@ function seek(v: HTMLVideoElement, t: number): Promise<void> {
   });
 }
 
-function gray(ctx: CanvasRenderingContext2D, el: CanvasImageSource): Float32Array {
+export function gray(ctx: CanvasRenderingContext2D, el: CanvasImageSource): Float32Array {
   ctx.drawImage(el, 0, 0, SW, SH);
   const d = ctx.getImageData(0, 0, SW, SH).data;
   const out = new Float32Array(SW * SH);
@@ -35,13 +35,13 @@ function gray(ctx: CanvasRenderingContext2D, el: CanvasImageSource): Float32Arra
   return out;
 }
 
-function diff(a: Float32Array, b: Float32Array): number {
+export function diff(a: Float32Array, b: Float32Array): number {
   let s = 0;
   for (let i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]);
   return s / a.length;
 }
 
-function jpeg(el: CanvasImageSource, w: number, h: number, max = 512): string {
+export function jpeg(el: CanvasImageSource, w: number, h: number, max = 512): string {
   const k = Math.min(1, max / Math.max(w, h));
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.round(w * k));
@@ -80,6 +80,46 @@ function palette(sources: { el: CanvasImageSource }[]): string[] {
   return out.map((rgb) => '#' + rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join(''));
 }
 
+// Shots from frame-to-frame differences sampled at `fps`: a cut is a local spike — above this
+// video's own normal change AND well above its neighbourhood, so soft screen-to-screen edits count
+// while a fast camera move (high but even change) doesn't. Shorter shots are merged into a neighbour
+// until at most maxShots remain.
+export function findShots(diffs: number[], fps: number, duration: number, maxShots: number): MotionReferenceShot[] {
+  const body = diffs.slice(1);
+  const mean = body.reduce((a, b) => a + b, 0) / Math.max(1, body.length);
+  const sd = Math.sqrt(body.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, body.length));
+  const threshold = Math.max(0.008, mean + 1.5 * sd);
+  const cuts = [0];
+  for (let i = 1; i < diffs.length; i++) {
+    const t = i / fps;
+    const d = diffs[i];
+    const around: number[] = [];
+    for (let j = i - 5; j <= i + 5; j++) if (j > 0 && j < diffs.length && Math.abs(j - i) > 1) around.push(diffs[j]);
+    around.sort((a, b) => a - b);
+    const median = around[Math.floor(around.length / 2)] ?? 0;
+    const peak = d >= diffs[i - 1] && d >= (diffs[i + 1] ?? 0);
+    if (peak && d > threshold && d > 3 * median + 0.004 && t - cuts[cuts.length - 1] >= MIN_SHOT) cuts.push(t);
+  }
+  let shots: MotionReferenceShot[] = cuts.map((start, k) => {
+    const end = k + 1 < cuts.length ? cuts[k + 1] : duration;
+    const a = Math.round(start * fps) + 1;
+    const b = Math.max(a, Math.round(end * fps) - 1);
+    const inner = diffs.slice(a, b);
+    const motion = inner.length ? inner.reduce((x, y) => x + y, 0) / inner.length : 0;
+    return { start: Math.round(start * 100) / 100, dur: Math.round((end - start) * 100) / 100, motion: Math.round(motion * 1000) / 1000 };
+  });
+  while (shots.length > maxShots) {
+    let k = 0;
+    shots.forEach((s, i) => (s.dur < shots[k].dur ? (k = i) : null));
+    const j = k === 0 ? 1 : k - 1;
+    const a = shots[Math.min(j, k)];
+    const b = shots[Math.max(j, k)];
+    const merged = { start: a.start, dur: Math.round((a.dur + b.dur) * 100) / 100, motion: Math.round(((a.motion * a.dur + b.motion * b.dur) / (a.dur + b.dur)) * 1000) / 1000 };
+    shots = [...shots.slice(0, Math.min(j, k)), merged, ...shots.slice(Math.max(j, k) + 1)];
+  }
+  return shots;
+}
+
 // A video reference: shots (cuts), their rhythm and motion, palette, one keyframe per shot.
 export async function analyzeVideoReference(src: MotionSource, onProgress?: (p: number) => void): Promise<MotionReferenceInfo> {
   const v = src.video!;
@@ -98,41 +138,7 @@ export async function analyzeVideoReference(src: MotionSource, onProgress?: (p: 
     prev = g;
     if (i % 5 === 0) onProgress?.((i / n) * 0.8);
   }
-  // cut = a local spike: above this video's own normal change AND well above its neighbourhood, so
-  // soft screen-to-screen edits count while a fast camera move (high but even change) doesn't
-  const body = diffs.slice(1);
-  const mean = body.reduce((a, b) => a + b, 0) / Math.max(1, body.length);
-  const sd = Math.sqrt(body.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, body.length));
-  const threshold = Math.max(0.008, mean + 1.5 * sd);
-  const cuts = [0];
-  for (let i = 1; i < diffs.length; i++) {
-    const t = i / SAMPLE_FPS;
-    const d = diffs[i];
-    const around: number[] = [];
-    for (let j = i - 5; j <= i + 5; j++) if (j > 0 && j < diffs.length && Math.abs(j - i) > 1) around.push(diffs[j]);
-    around.sort((a, b) => a - b);
-    const median = around[Math.floor(around.length / 2)] ?? 0;
-    const peak = d >= diffs[i - 1] && d >= (diffs[i + 1] ?? 0);
-    if (peak && d > threshold && d > 3 * median + 0.004 && t - cuts[cuts.length - 1] >= MIN_SHOT) cuts.push(t);
-  }
-  let shots: MotionReferenceShot[] = cuts.map((start, k) => {
-    const end = k + 1 < cuts.length ? cuts[k + 1] : duration;
-    const a = Math.round(start * SAMPLE_FPS) + 1;
-    const b = Math.max(a, Math.round(end * SAMPLE_FPS) - 1);
-    const inner = diffs.slice(a, b);
-    const motion = inner.length ? inner.reduce((x, y) => x + y, 0) / inner.length : 0;
-    return { start: Math.round(start * 100) / 100, dur: Math.round((end - start) * 100) / 100, motion: Math.round(motion * 1000) / 1000 };
-  });
-  // too many shots for the engine → merge the shortest into their neighbour
-  while (shots.length > MAX_SHOTS) {
-    let k = 0;
-    shots.forEach((s, i) => (s.dur < shots[k].dur ? (k = i) : null));
-    const j = k === 0 ? 1 : k - 1;
-    const a = shots[Math.min(j, k)];
-    const b = shots[Math.max(j, k)];
-    const merged = { start: a.start, dur: Math.round((a.dur + b.dur) * 100) / 100, motion: Math.round(((a.motion * a.dur + b.motion * b.dur) / (a.dur + b.dur)) * 1000) / 1000 };
-    shots = [...shots.slice(0, Math.min(j, k)), merged, ...shots.slice(Math.max(j, k) + 1)];
-  }
+  const shots = findShots(diffs, SAMPLE_FPS, duration, MAX_SHOTS);
   // keyframes: the middle of each shot (evenly thinned to MAX_FRAMES)
   const pick = shots.length <= MAX_FRAMES ? shots.map((_, i) => i) : Array.from({ length: MAX_FRAMES }, (_, i) => Math.round((i * (shots.length - 1)) / (MAX_FRAMES - 1)));
   const frames: string[] = [];

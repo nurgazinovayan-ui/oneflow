@@ -652,6 +652,14 @@ export interface Translations {
     playLabel: string;
     pauseLabel: string;
     scrub: string;
+    analyzingVideo: (pct: number) => string;
+    analyzingFootage: (pct: number) => string;
+    montageReady: string;
+    noSoundNote: string;
+    warningsTitle: string;
+    warningsTag: (n: number) => string;
+    opusSays: (first: string, n: number) => string;
+    soundSummary: (clips: number, music: string | null) => string;
   };
   musicAudio: {
     title: string;
@@ -1773,9 +1781,9 @@ export const ru: Translations = {
   },
   motion: {
     materials: 'Материалы',
-    addMaterials: 'Фото или видео',
+    addMaterials: 'Фото, видео, музыка',
     addMore: 'Добавить',
-    materialsHint: 'До 8 файлов. Можно перетащить сюда.',
+    materialsHint: 'До 8 файлов: фото, видео до 5 минут (Opus смонтирует), музыка. Можно перетащить сюда.',
     removeAsset: 'Убрать',
     maxAssets: (n) => `Можно добавить не больше ${n} материалов.`,
     brief: 'Задача и тексты',
@@ -1884,6 +1892,15 @@ export const ru: Translations = {
     playLabel: 'Смотреть',
     pauseLabel: 'Пауза',
     scrub: 'Перемотка',
+    analyzingVideo: (pct) => `Разбираю ${pct}%`,
+    analyzingFootage: (pct) => `Разбираю видео для монтажа… ${pct}%`,
+    montageReady: 'Видео разобрано для монтажа: сцены, кадры и звук',
+    noSoundNote: 'Без звука: этот браузер не умеет записывать звук в видео. Откройте в свежем Chrome или Safari.',
+    warningsTitle: 'Opus предупреждает',
+    warningsTag: (n) => (n === 1 ? '1 замечание' : n < 5 ? `${n} замечания` : `${n} замечаний`),
+    opusSays: (first, n) => `Opus: ${first}${n > 1 ? ` (ещё ${n - 1} — в карточке варианта)` : ''}`,
+    soundSummary: (clips, music) =>
+      [clips ? `звук из видео: ${clips} ${clips === 1 ? 'кусок' : clips < 5 ? 'куска' : 'кусков'}` : '', music ? `музыка: ${music}` : ''].filter(Boolean).join(' · ').replace(/^./, (c) => c.toUpperCase()),
   },
   musicAudio: {
     title: 'Музыка и аудио',
@@ -3135,9 +3152,9 @@ export const en: Translations = {
   },
   motion: {
     materials: 'Materials',
-    addMaterials: 'Photo or video',
+    addMaterials: 'Photo, video, music',
     addMore: 'Add',
-    materialsHint: 'Up to 8 files. You can drop them here.',
+    materialsHint: 'Up to 8 files: photos, videos up to 5 minutes (Opus edits them), music. You can drop them here.',
     removeAsset: 'Remove',
     maxAssets: (n) => `You can add up to ${n} materials.`,
     brief: 'Brief and copy',
@@ -3241,6 +3258,15 @@ export const en: Translations = {
     playLabel: 'Play',
     pauseLabel: 'Pause',
     scrub: 'Scrub',
+    analyzingVideo: (pct) => `Analysing ${pct}%`,
+    analyzingFootage: (pct) => `Taking the video apart for the edit… ${pct}%`,
+    montageReady: 'Ready for the edit: shots, frames and sound found',
+    noSoundNote: 'No sound: this browser cannot write sound into a video. Open it in a recent Chrome or Safari.',
+    warningsTitle: 'Opus notes',
+    warningsTag: (n) => (n === 1 ? '1 note' : `${n} notes`),
+    opusSays: (first, n) => `Opus: ${first}${n > 1 ? ` (${n - 1} more on the variant card)` : ''}`,
+    soundSummary: (clips, music) =>
+      [clips ? `sound from the videos: ${clips} ${clips === 1 ? 'cut' : 'cuts'}` : '', music ? `music: ${music}` : ''].filter(Boolean).join(' · ').replace(/^./, (c) => c.toUpperCase()),
   },
   musicAudio: {
     title: 'Music & audio',

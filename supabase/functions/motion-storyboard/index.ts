@@ -163,7 +163,7 @@ const RUNTIME_API = `КАК УСТРОЕН КОД
 ЧТО ДОСТУПНО (переменные уже объявлены):
 — W, H — размер кадра в пикселях. Один и тот же код рендерится в разных размерах и пропорциях (9:16, 1:1, 4:5, 16:9 и др.), поэтому все размеры считай от W и H (например, const u = Math.min(W, H) / 100), раскладку выбирай по соотношению W/H. Никаких абсолютных пикселей.
 — duration, fps.
-— assets[i] — материалы пользователя в порядке «Материал N»: { kind: 'image' | 'video', w, h, name, image }. image рисуй через cover() или ctx.drawImage. У видео image — уже нужный кадр в момент t (по meta.clips), просто рисуй его.
+— assets[i] — материалы пользователя в порядке «Материал N»: { kind: 'image' | 'video' | 'audio', w, h, name, image }. image рисуй через cover() или ctx.drawImage. У видео image — уже нужный кадр в момент t (по meta.clips), просто рисуй его. У аудио image нет — его не рисуют, оно звучит через meta.music.
 — Шрифты (все с кириллицей, вес 100–900): 'sans' — Inter, универсальный гротеск; 'geist' — Geist, технологичный; 'display' — Unbounded, широкий акцидентный для крупных заголовков; 'serif' — Playfair Display, премиальная антиква; 'mono' — JetBrains Mono. Указывай их в text({ font: 'display' }); для ctx.font есть строки семейств fonts.sans, fonts.display и т. д.
 — Помощники:
   clamp(x, a = 0, b = 1); lerp(a, b, p); map(x, a, b, c, d) — с ограничением; prog(t, start, dur) → 0…1; pulse(t, start, dur) → 0…1…0
@@ -188,6 +188,15 @@ ${RUNTIME_API}
 — Типографика: крупные контрастные заголовки и ясная иерархия; кинетика — побуквенное или пословное появление со сдвигом (stagger 0.02–0.06 с), маски-проявления, трекинг, смена начертаний. Текст никогда не выходит за кадр: меряй через measure() или maxWidth и уменьшай кегль для узкого кадра.
 — Движение: только плавные кривые (outExpo, inOutCubic; outBack для акцентов; spring для «живых» элементов), никакой линейной анимации позиций. У каждого элемента есть вход, жизнь (лёгкий дрейф, параллакс) и выход.
 — Материалы пользователя — герои ролика: используй каждый и красиво кадрируй (cover с медленным наездом или панорамой, маски-фигуры, карточки со скруглением и тенью, сплит-экраны, коллажи). Видео-материалы показывай как видео.
+
+МОНТАЖ ВИДЕО-МАТЕРИАЛОВ (если пользователь дал видео):
+— Ты и моушн-дизайнер, и монтажёр. У каждого видео ниже есть длительность, сцены (склейки внутри видео) с динамикой, кадры с точным временем и где в нём явно слышен звук (речь или музыка). По ним выбери лучшие моменты и смонтируй их в ритм ролика.
+— Видео — главный материал: показывай его крупно, на весь кадр или почти; графику и текст клади поверх, не закрывая главное.
+— Каждый кусок — отдельная запись meta.clips: {"asset": номер, "start": с, "end": с, "from": с, "volume": 0…1}. start–end — когда кусок идёт в ролике; from — с какой секунды самого видео он начинается. Одно видео можно резать на сколько угодно кусков и ставить в любом порядке. from + (end − start) не больше длительности видео. Куски без пауз покрывают ролик там, где видно видео.
+— В коде рисуй assets[номер].image в моменты его кусков: движок сам подставит нужный кадр.
+— Звук: volume 1 — оставить живой звук видео (речь, атмосферу), 0 — без звука (под музыку), 0.3–0.6 — тихо под музыку. Не режь фразу посередине: границы кусков со звуком ставь в паузах, вне участков «слышно».
+— Музыка: если есть аудио-материал, положи его под ролик — meta.music = {"asset": номер, "from": с какой секунды трека, "volume": 0.5–0.9}. Движок сам приглушит её под речью и сделает затухание в конце. Склейки ставь в ритм музыки.
+— Если материалов больше, чем помещается в ролик заданной длины, выбери главное. О том, что пришлось сократить или что нельзя сделать как просили (видео намного длиннее ролика, материал плохого качества, нет логотипа или нужного текста), коротко напиши пользователю в meta.warnings — по-русски, одна-две фразы на пункт.
 — Переходы авторские: шторки и маски из фигур, зум насквозь, свайп со следом движения (несколько полупрозрачных копий), вспышки, заливка цветом. Не просто растворение.
 — Графика: геометрия, линии, сетки, градиентные пятна, частицы, свечение, зерно — осмысленно и под настроение бренда. Палитра 2–4 цвета из материалов или бренда. Текст всегда читается: контраст, подложки.
 — Безопасные поля: важное держи в 6–8% от краёв кадра.
@@ -215,12 +224,12 @@ function frame(ctx, t) {
 
 ФОРМАТ ОТВЕТА — строго два блока, без markdown и пояснений:
 <meta>
-{"title": "название идеи", "concept": "1–2 предложения: идея и почему сработает", "background": "#RRGGBB", "palette": ["#RRGGBB"], "beats": [{"start": 0, "end": 2.5, "text": "что происходит в кадре"}], "clips": [{"asset": 1, "start": 2.5, "end": 6, "from": 0}]}
+{"title": "название идеи", "concept": "1–2 предложения: идея и почему сработает", "background": "#RRGGBB", "palette": ["#RRGGBB"], "beats": [{"start": 0, "end": 2.5, "text": "что происходит в кадре"}], "clips": [{"asset": 1, "start": 2.5, "end": 6, "from": 12.4, "volume": 1}], "music": {"asset": 2, "from": 0, "volume": 0.7}, "warnings": ["что пользователю стоит знать"]}
 </meta>
 <code>
 function frame(ctx, t, env) { … }
 </code>
-beats — понятное пользователю описание сцен по времени, покрывают весь ролик. clips — когда и с какой секунды самого видео проигрывается каждый видео-материал (для фото не нужны). Код компактный и аккуратный: 200–400 строк, без длинных комментариев — ответ длиннее лимита обрезается и не заработает.`;
+beats — понятное пользователю описание сцен по времени, покрывают весь ролик. clips — куски видео-материалов (для фото не нужны). music и warnings — только если нужны. Код компактный и аккуратный: 200–400 строк, без длинных комментариев — ответ длиннее лимита обрезается и не заработает.`;
 
 const FIX_PROMPT = `Ты — креативный кодер. Ниже код анимации рекламного ролика для Canvas 2D (движок ONEFLOW Motion Engine) и ошибка, которую он выдал при проверке. Исправь код, чтобы он работал во всех кадрах, сохранив идею, тексты, стиль и тайминг. Если ошибка — пустые или одноцветные кадры, сделай, чтобы во всех сценах было видно содержимое.
 
@@ -236,13 +245,16 @@ interface Composition {
   background: string;
   palette: string[];
   beats: { start: number; end: number; text: string }[];
-  clips: { asset: number; start: number; end: number; from: number }[];
+  clips: { asset: number; start: number; end: number; from: number; volume: number }[];
+  music: { asset: number; from: number; volume: number } | null;
+  warnings: string[];
   code: string;
 }
 
 // The model's <meta> and <code> blocks → a composition the client can run. A cut-off answer (no
 // closing </code>) is refused: half a function would only fail later in the browser.
-function parseComposition(text: string, duration: number, kinds: ('image' | 'video')[], truncated: boolean): Composition {
+function parseComposition(text: string, duration: number, materials: { kind: 'image' | 'video' | 'audio'; duration?: number }[], truncated: boolean): Composition {
+  const kinds = materials.map((m) => m.kind);
   const metaText = /<meta>([\s\S]*?)<\/meta>/i.exec(text)?.[1] ?? '';
   const codeMatch = /<code>([\s\S]*?)<\/code>/i.exec(text);
   if (!codeMatch) {
@@ -262,10 +274,23 @@ function parseComposition(text: string, duration: number, kinds: ('image' | 'vid
     .slice(0, 24)
     .map((b: any) => ({ start: time(b?.start), end: time(b?.end), text: str(b?.text, 200) }))
     .filter((b: { start: number; end: number; text: string }) => b.text && b.end > b.start);
+  const volume = (v: unknown, def: number) => (Number.isFinite(Number(v)) && v !== null && v !== '' ? Math.round(Math.max(0, Math.min(1, Number(v))) * 100) / 100 : def);
+  // a cut starting past the end of its video starts at its last second instead
+  const within = (asset: number, from: number) => {
+    const d = materials[asset]?.duration;
+    return Math.round((d && d > 0.2 ? Math.min(from, Math.max(0, d - 0.2)) : from) * 100) / 100;
+  };
   const clips = (Array.isArray(meta?.clips) ? meta.clips : [])
-    .slice(0, 32)
-    .map((c: any) => ({ asset: Number(c?.asset), start: time(c?.start), end: time(c?.end), from: Math.max(0, Math.min(3600, Number(c?.from) || 0)) }))
-    .filter((c: { asset: number; start: number; end: number }) => Number.isInteger(c.asset) && kinds[c.asset] === 'video' && c.end > c.start);
+    .slice(0, 64)
+    .map((c: any) => ({ asset: Number(c?.asset), start: time(c?.start), end: time(c?.end), from: Math.max(0, Math.min(3600, Number(c?.from) || 0)), volume: volume(c?.volume, 1) }))
+    .filter((c: { asset: number; start: number; end: number }) => Number.isInteger(c.asset) && kinds[c.asset] === 'video' && c.end > c.start)
+    .map((c: { asset: number; from: number }) => ({ ...c, from: within(c.asset, c.from) }));
+  const m = meta?.music;
+  const musicAsset = Number(m?.asset);
+  const music = m && Number.isInteger(musicAsset) && kinds[musicAsset] === 'audio'
+    ? { asset: musicAsset, from: within(musicAsset, Math.max(0, Number(m.from) || 0)), volume: volume(m.volume, 0.8) }
+    : null;
+  const warnings = (Array.isArray(meta?.warnings) ? meta.warnings : []).map((w: unknown) => str(w, 240)).filter(Boolean).slice(0, 6);
   return {
     title: str(meta?.title, 80) || 'Ролик',
     concept: str(meta?.concept, 400),
@@ -274,12 +299,51 @@ function parseComposition(text: string, duration: number, kinds: ('image' | 'vid
     palette: (Array.isArray(meta?.palette) ? meta.palette : []).map((c: unknown) => hex(c, '')).filter(Boolean).slice(0, 6),
     beats,
     clips,
+    music,
+    warnings,
     code,
   };
 }
 
-type AssetIn = { kind: 'image' | 'video'; name: string; duration?: number; frames: string[] };
+type Shot = { start: number; dur: number; motion: number };
+type AssetIn = {
+  kind: 'image' | 'video' | 'audio';
+  name: string;
+  duration?: number;
+  frames: string[];
+  // video materials, as the browser found them (src/motion/footage.ts): when each frame is, the
+  // shots, where the sound is clearly audible
+  frameTimes?: number[];
+  width?: number;
+  height?: number;
+  shots?: Shot[];
+  audio?: { has: boolean; loud: [number, number][] };
+};
 type Reference = { kind: 'video' | 'images'; duration: number; shots: { start: number; dur: number; motion: number }[]; palette: string[]; frames: string[]; frameShots: number[] };
+
+function normAsset(a: any, maxFrames: number): AssetIn {
+  const num = (v: unknown, max: number) => Math.round(Math.max(0, Math.min(max, Number(v) || 0)) * 100) / 100;
+  const kind = a?.kind === 'video' ? 'video' : a?.kind === 'audio' ? 'audio' : 'image';
+  const frames: string[] = [];
+  const frameTimes: number[] = [];
+  (Array.isArray(a?.frames) ? a.frames : []).forEach((f: unknown, i: number) => {
+    if (kind === 'audio' || frames.length >= maxFrames || typeof f !== 'string' || !f.startsWith('data:image/') || f.length > MAX_FRAME_CHARS) return;
+    frames.push(f);
+    frameTimes.push(Array.isArray(a?.frameTimes) ? num(a.frameTimes[i], 3600) : NaN);
+  });
+  const out: AssetIn = { kind, name: String(a?.name ?? '').slice(0, 80), duration: Number(a?.duration) || undefined, frames };
+  if (Number(a?.width) > 0 && Number(a?.height) > 0) Object.assign(out, { width: Math.round(Number(a.width)), height: Math.round(Number(a.height)) });
+  if (kind !== 'video') return out;
+  if (frameTimes.some((t) => Number.isFinite(t))) out.frameTimes = frameTimes;
+  if (Array.isArray(a?.shots)) out.shots = a.shots.slice(0, 30).map((x: any) => ({ start: num(x?.start, 3600), dur: num(x?.dur, 3600), motion: num(x?.motion, 1) }));
+  if (a?.audio && typeof a.audio === 'object') {
+    out.audio = {
+      has: Boolean(a.audio.has),
+      loud: (Array.isArray(a.audio.loud) ? a.audio.loud : []).slice(0, 40).map((r: any) => [num(r?.[0], 3600), num(r?.[1], 3600)] as [number, number]).filter(([x, y]: [number, number]) => y > x),
+    };
+  }
+  return out;
+}
 
 function normReference(raw: any): Reference | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -607,15 +671,15 @@ async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Pro
 
 // ---- mode 'code' / 'fix'
 // Claude Opus 5.5 always thinks first (adaptive thinking, it cannot be turned off) and max_tokens
-// caps thinking + answer together, so the limit must hold both; effort 'medium' keeps the thinking
-// short. 14k was not enough: the code was cut off.
-const CODE_MAX_TOKENS = 40_000;
-const CODE_EFFORT = 'medium';
-const CODE_RESERVE_USD = 0.9; // a typical answer costs $0.3–0.6; settled with the real cost
-const FIX_RESERVE_USD = 0.8;
-// Writing a whole animation takes Opus a few minutes; deploy/selfhost/functions-main gives a worker
-// 12 minutes of wall clock.
-const CODE_DEADLINE_MS = 600_000;
+// caps thinking + answer together. A new video is written at effort 'high' (the owner's choice: think
+// it through), with the 64k Anthropic advises for that; at 'medium' an answer took ~20k of thinking
+// + ~15–20k of code in 5–6 minutes. A fix is narrower: 'medium'.
+const CODE_SETTINGS = { effort: 'high', maxTokens: 64_000, deadlineMs: 900_000 };
+const FIX_SETTINGS = { effort: 'medium', maxTokens: 40_000, deadlineMs: 600_000 };
+const CODE_RESERVE_USD = 1.6; // worst case 64k out + pictures in; settled with the real cost
+const FIX_RESERVE_USD = 0.9;
+// pictures Opus gets of the materials: up to 8 keyframes per video, 1 per photo
+const CODE_MAX_FRAMES = 40;
 
 const FONT_NAMES: Record<string, string> = { sans: 'Inter', display: 'Unbounded', serif: 'Playfair Display', mono: 'JetBrains Mono' };
 const PACE_NAMES: Record<string, string> = { calm: 'спокойный', medium: 'средний', fast: 'быстрый' };
@@ -625,7 +689,9 @@ const PACE_NAMES: Record<string, string> = { calm: 'спокойный', medium:
 // empty answer. So the call starts the job and answers 202 at once; the job keeps the worker alive
 // (EdgeRuntime.waitUntil) and leaves its outcome on the reservation: the composition (code gzipped,
 // settle_generation keeps up to 64 KB) or the reason it failed. Polls read it from there.
-const JOB_STALE_MS = 13 * 60_000; // past the 10-minute deadline: the worker that ran it is gone
+// past the 15-minute deadline, before the database's own 20-minute expiry: the worker is gone
+// (deploy/selfhost/functions-main gives this function's worker 17 minutes)
+const JOB_STALE_MS = 18 * 60_000;
 const MAX_RESULT_CHARS = 60_000;
 
 function inBackground(job: Promise<unknown>): void {
@@ -699,8 +765,10 @@ async function resumeCodeJob(caller: { id: string }, jobId: unknown): Promise<Re
   return json({ pending: true, jobId: job.id }, 202);
 }
 
+type Materials = { kind: 'image' | 'video' | 'audio'; duration?: number }[];
+
 // No temperature: with thinking on, Anthropic only takes the default.
-async function askForCode(system: string, content: unknown, kinds: ('image' | 'video')[], duration: number) {
+async function askForCode(system: string, content: unknown, materials: Materials, duration: number, settings: typeof CODE_SETTINGS) {
   const started = Date.now();
   const res = await fetchWithTimeout(OPENROUTER_CHAT_URL, {
     method: 'POST',
@@ -708,13 +776,18 @@ async function askForCode(system: string, content: unknown, kinds: ('image' | 'v
     body: JSON.stringify({
       model: MODEL,
       messages: [{ role: 'system', content: system }, { role: 'user', content }],
-      max_tokens: CODE_MAX_TOKENS,
-      reasoning: { effort: CODE_EFFORT, exclude: true },
+      max_tokens: settings.maxTokens,
+      reasoning: { effort: settings.effort, exclude: true },
       usage: { include: true },
     }),
-  }, CODE_DEADLINE_MS);
+  }, settings.deadlineMs);
   if (!res.ok) {
-    console.error('OpenRouter error', res.status, (await res.text()).slice(0, 500));
+    // links in OpenRouter's errors point at the account's key: not for the logs
+    console.error('OpenRouter error', res.status, (await res.text()).replace(/https?:\/\/\S+/g, '[link]').slice(0, 500));
+    if (res.status === 402) {
+      notifyAlert('openrouter_balance_empty', 'motion-storyboard');
+      throw new GuardError(503, 'provider_unavailable', 'Генерация временно недоступна. Попробуйте позже — деньги не списаны.');
+    }
     throw new GuardError(502, 'provider_error', 'Не удалось получить ответ от модели. Попробуйте ещё раз.');
   }
   const data = await res.json();
@@ -731,8 +804,33 @@ async function askForCode(system: string, content: unknown, kinds: ('image' | 'v
     chars: text.length,
     cost: Number(usage.cost) || null,
   }));
-  const composition = parseComposition(text, duration, kinds, finish === 'length');
+  const composition = parseComposition(text, duration, materials, finish === 'length');
   return { composition, costUsd };
+}
+
+const mmss = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+const span = ([a, b]: [number, number]) => `${a.toFixed(1)}–${b.toFixed(1)} с`;
+
+// One material in words for the prompt: what it is, and for a video everything needed to edit it.
+function describeMaterial(a: AssetIn, i: number): string {
+  const size = a.width && a.height ? `, ${a.width}×${a.height} (${a.width > a.height ? 'горизонтальное' : a.width < a.height ? 'вертикальное' : 'квадратное'})` : '';
+  if (a.kind === 'audio') return `Материал ${i}: аудио «${a.name}»${a.duration ? `, ${mmss(a.duration)}` : ''} — музыка или звук: можно положить под ролик через meta.music.`;
+  if (a.kind === 'image') return `Материал ${i}: фото «${a.name}»${size}.`;
+  const parts = [`Материал ${i}: видео «${a.name}»${a.duration ? `, ${mmss(a.duration)} (${a.duration.toFixed(1)} с)` : ''}${size}.`];
+  if (a.audio) {
+    parts.push(
+      !a.audio.has
+        ? 'Звука нет.'
+        : a.audio.loud.length
+          ? `Звук есть; явно слышно (речь или музыка): ${a.audio.loud.map(span).join(', ')}.`
+          : 'Звук есть, но тихий.'
+    );
+  }
+  if (a.shots?.length) {
+    parts.push(`Сцены внутри видео: ${a.shots.map((x, k) => `${k + 1}) ${x.start.toFixed(1)}–${(x.start + x.dur).toFixed(1)} с, динамика ${pace(x.motion)}`).join('; ')}.`);
+  }
+  if (a.frames.length) parts.push(`Кадры этого видео ниже${a.frameTimes?.some((t) => Number.isFinite(t)) ? ', у каждого — его секунда' : ''}.`);
+  return parts.join(' ');
 }
 
 type Pinned = ReturnType<typeof normDirection> | null;
@@ -744,12 +842,14 @@ async function composeCode(
 ): Promise<Response> {
   const [w, h] = o.aspect.split(':').map(Number);
   const orientation = w > h ? 'горизонтальный' : w < h ? 'вертикальный' : 'квадратный';
+  const footage = o.assets.filter((a) => a.kind === 'video').reduce((sum, a) => sum + (a.duration ?? 0), 0);
   const lines = [
     `Задача пользователя: ${o.brief || '(не указана — придумай по материалам)'}`,
     `Длительность ролика: ${o.duration} с. Основной формат кадра: ${o.aspect} (${orientation}); код должен хорошо выглядеть и в других пропорциях.`,
     o.assets.length
-      ? `Материалов: ${o.assets.length} — ${o.assets.map((a, i) => `${i}: ${a.kind === 'video' ? `видео${a.duration ? ` ${a.duration.toFixed(1)} с` : ''}` : 'фото'}`).join(', ')}.`
+      ? `Материалов: ${o.assets.length} — ${o.assets.map((a, i) => `${i}: ${a.kind === 'video' ? 'видео' : a.kind === 'audio' ? 'аудио' : 'фото'}`).join(', ')}.`
       : 'Материалов нет — ролик только из типографики и графики.',
+    footage > o.duration * 1.5 ? `Видео в сумме ${mmss(footage)} — намного больше ролика: смонтируй лучшие моменты и напиши в meta.warnings, что взял.` : '',
   ];
   if (o.pinned) {
     const p = o.pinned;
@@ -770,10 +870,15 @@ async function composeCode(
   if (o.previous.length) lines.push(`Уже сделанные варианты (придумай заметно другой ролик):\n- ${o.previous.join('\n- ')}`);
 
   const content: ({ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } })[] = [{ type: 'text', text: lines.filter(Boolean).join('\n') }];
-  let budget = MAX_FRAMES_TOTAL;
+  let budget = CODE_MAX_FRAMES;
   o.assets.forEach((a, i) => {
-    content.push({ type: 'text', text: `Материал ${i}: ${a.kind === 'video' ? `видео${a.duration ? `, ${a.duration.toFixed(1)} с` : ''}${a.frames.length > 1 ? `, ${a.frames.length} кадра (начало, середина, конец)` : ''}` : 'фото'} «${a.name}»` });
-    for (const f of a.frames) if (budget-- > 0) content.push({ type: 'image_url', image_url: { url: f } });
+    content.push({ type: 'text', text: describeMaterial(a, i) });
+    a.frames.forEach((f, k) => {
+      if (budget-- <= 0) return;
+      const t = a.frameTimes?.[k];
+      if (a.kind === 'video' && Number.isFinite(t)) content.push({ type: 'text', text: `Материал ${i}, кадр на ${(t as number).toFixed(1)} с:` });
+      content.push({ type: 'image_url', image_url: { url: f } });
+    });
   });
   ref?.frames.forEach((f, i) => {
     const k = ref.frameShots[i];
@@ -783,8 +888,8 @@ async function composeCode(
   });
 
   const reservation = await reserveSpend(req, caller.id, MODEL_LABEL, 'motion', CODE_RESERVE_USD);
-  const kinds = o.assets.map((a) => a.kind);
-  return startCodeJob(reservation, caller.email, () => askForCode(CODE_PROMPT, content, kinds, o.duration));
+  const materials = o.assets.map((a) => ({ kind: a.kind, duration: a.duration }));
+  return startCodeJob(reservation, caller.email, () => askForCode(CODE_PROMPT, content, materials, o.duration, CODE_SETTINGS));
 }
 
 // The browser ran the code and it failed (an exception, a frame that never came back, blank frames):
@@ -797,7 +902,7 @@ async function fixCode(req: Request, caller: { id: string; email: string }, body
   const duration = Math.min(MAX_DURATION, Math.max(MIN_DURATION, Math.round(Number(body.duration) || Number(c.duration) || 15)));
   const aspect = validRatio(body.aspect, '16:9');
   const assets = (Array.isArray(body.assets) ? body.assets : []).slice(0, MAX_ASSETS).map((a: any) => ({
-    kind: a?.kind === 'video' ? ('video' as const) : ('image' as const),
+    kind: a?.kind === 'video' ? ('video' as const) : a?.kind === 'audio' ? ('audio' as const) : ('image' as const),
     name: String(a?.name ?? '').slice(0, 80),
     duration: Number(a?.duration) || undefined,
   }));
@@ -807,19 +912,23 @@ async function fixCode(req: Request, caller: { id: string; email: string }, body
     background: hex(c.background, '#0b0b0f'),
     palette: (Array.isArray(c.palette) ? c.palette : []).map((x: unknown) => hex(x, '')).filter(Boolean).slice(0, 6),
     beats: (Array.isArray(c.beats) ? c.beats : []).slice(0, 24),
-    clips: (Array.isArray(c.clips) ? c.clips : []).slice(0, 32),
+    clips: (Array.isArray(c.clips) ? c.clips : []).slice(0, 64),
+    music: c.music && typeof c.music === 'object' ? c.music : null,
+    warnings: (Array.isArray(c.warnings) ? c.warnings : []).slice(0, 6),
   };
   const text = [
     `Задача пользователя: ${clipText(body.brief, MAX_BRIEF) || '(не указана)'}`,
     `Длительность: ${duration} с. Формат кадра: ${aspect}.`,
-    assets.length ? `Материалы: ${assets.map((a: { kind: string; duration?: number }, i: number) => `${i}: ${a.kind === 'video' ? `видео${a.duration ? ` ${a.duration.toFixed(1)} с` : ''}` : 'фото'}`).join(', ')}.` : 'Материалов нет.',
+    assets.length
+      ? `Материалы: ${assets.map((a: { kind: string; duration?: number }, i: number) => `${i}: ${a.kind === 'video' ? 'видео' : a.kind === 'audio' ? 'аудио' : 'фото'}${a.duration ? ` ${a.duration.toFixed(1)} с` : ''}`).join(', ')}.`
+      : 'Материалов нет.',
     `Ошибка при проверке: ${error}`,
     '',
     `<meta>${JSON.stringify(meta)}</meta>`,
     `<code>\n${code}\n</code>`,
   ].join('\n');
   const reservation = await reserveSpend(req, caller.id, MODEL_LABEL, 'motion', FIX_RESERVE_USD);
-  return startCodeJob(reservation, caller.email, () => askForCode(FIX_PROMPT, text, assets.map((a: { kind: 'image' | 'video' }) => a.kind), duration));
+  return startCodeJob(reservation, caller.email, () => askForCode(FIX_PROMPT, text, assets, duration, FIX_SETTINGS));
 }
 
 Deno.serve(async (req) => {
@@ -838,16 +947,9 @@ Deno.serve(async (req) => {
     const brief = typeof body.brief === 'string' ? body.brief.trim().slice(0, MAX_BRIEF) : '';
     const duration = Math.min(MAX_DURATION, Math.max(MIN_DURATION, Math.round(Number(body.duration) || 15)));
     const aspect = typeof body.aspect === 'string' && /^\d{1,2}:\d{1,2}$/.test(body.aspect) ? body.aspect : '16:9';
-    const assets: AssetIn[] = (Array.isArray(body.assets) ? body.assets : []).slice(0, MAX_ASSETS).map((a: any) => ({
-      kind: a?.kind === 'video' ? 'video' : 'image',
-      name: String(a?.name ?? '').slice(0, 80),
-      duration: Number(a?.duration) || undefined,
-      frames: (Array.isArray(a?.frames) ? a.frames : [])
-        .filter((f: unknown) => typeof f === 'string' && f.startsWith('data:image/') && f.length <= MAX_FRAME_CHARS)
-        .slice(0, 3),
-    }));
+    const assets: AssetIn[] = (Array.isArray(body.assets) ? body.assets : []).slice(0, MAX_ASSETS).map((a: any) => normAsset(a, mode === 'code' ? 8 : 3));
     const previous: string[] = (Array.isArray(body.previous) ? body.previous : []).filter((p: unknown) => typeof p === 'string').slice(-12).map((p: string) => p.slice(0, 300));
-    const pinned = mode === 'storyboard' && body.style && typeof body.style === 'object' ? normDirection(body.style, 0) : null;
+    const pinned = (mode === 'storyboard' || mode === 'code') && body.style && typeof body.style === 'object' ? normDirection(body.style, 0) : null;
     if (pinned) pinned.name = str(body.style.name, 40) || pinned.name;
     const reference = normReference(body.reference);
     if (!brief && !assets.length) return json({ error: 'Добавьте материалы или опишите задачу.' }, 400);

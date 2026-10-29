@@ -26,6 +26,7 @@ export interface FrameJob {
   fps: number;
   frame: (t: number) => Promise<CanvasImageSource>;
   release?: (img: CanvasImageSource) => void;
+  audio?: AudioBuffer | null; // the mixed soundtrack (src/motion/audioMix.ts), MP4 only
   onProgress?: (p: number) => void;
   signal?: AbortSignal;
 }
@@ -34,6 +35,58 @@ export interface RenderResult {
   blob: Blob;
   ext: 'mp4' | 'webm';
   codec: string;
+  // the sound written into the file; null when there was sound but this browser cannot encode it
+  audio?: 'AAC' | 'Opus' | null;
+}
+
+interface AudioChoice {
+  codec: string;
+  mux: 'aac' | 'opus';
+  label: 'AAC' | 'Opus';
+}
+
+// AAC first (every player and ad platform), Opus where the browser has no AAC encoder (Chrome on
+// Linux); null when neither can be encoded here.
+async function chooseAudio(buffer: AudioBuffer): Promise<AudioChoice | null> {
+  if (typeof AudioEncoder === 'undefined') return null;
+  for (const c of [{ codec: 'mp4a.40.2', mux: 'aac', label: 'AAC' }, { codec: 'opus', mux: 'opus', label: 'Opus' }] as const) {
+    try {
+      const r = await AudioEncoder.isConfigSupported({ codec: c.codec, sampleRate: buffer.sampleRate, numberOfChannels: buffer.numberOfChannels, bitrate: 160_000 });
+      if (r.supported) return c;
+    } catch {
+      // not this one
+    }
+  }
+  return null;
+}
+
+async function encodeAudio(muxer: Muxer<ArrayBufferTarget>, buffer: AudioBuffer, choice: AudioChoice): Promise<void> {
+  let failure: Error | null = null;
+  const encoder = new AudioEncoder({
+    output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+    error: (e) => {
+      failure = e instanceof Error ? e : new Error(String(e));
+    },
+  });
+  encoder.configure({ codec: choice.codec, sampleRate: buffer.sampleRate, numberOfChannels: buffer.numberOfChannels, bitrate: 160_000 });
+  const block = 4800; // 0.1 s at 48 kHz
+  const channels = Array.from({ length: buffer.numberOfChannels }, (_, c) => buffer.getChannelData(c));
+  try {
+    for (let at = 0; at < buffer.length; at += block) {
+      if (failure) throw failure;
+      const n = Math.min(block, buffer.length - at);
+      const planar = new Float32Array(n * channels.length);
+      channels.forEach((ch, c) => planar.set(ch.subarray(at, at + n), c * n));
+      const data = new AudioData({ format: 'f32-planar', sampleRate: buffer.sampleRate, numberOfFrames: n, numberOfChannels: channels.length, timestamp: Math.round((at / buffer.sampleRate) * 1e6), data: planar });
+      encoder.encode(data);
+      data.close();
+      while (encoder.encodeQueueSize > 20) await new Promise((r) => setTimeout(r, 2));
+    }
+    await encoder.flush();
+    if (failure) throw failure;
+  } finally {
+    if (encoder.state !== 'closed') encoder.close();
+  }
 }
 
 interface Choice {
@@ -119,13 +172,22 @@ export async function renderVideo(o: RenderOptions): Promise<RenderResult> {
 // Encodes whatever a FrameJob draws: MP4 through WebCodecs, else a real-time WebM recording.
 export async function encodeFrames(job: FrameJob): Promise<RenderResult> {
   const choice = await chooseCodec(job.width, job.height, job.fps);
-  if (choice) return { blob: await renderMp4(job, choice), ext: 'mp4', codec: choice.label };
-  if (canRecordWebm()) return { blob: await recordWebm(job), ext: 'webm', codec: 'WebM' };
+  if (choice) {
+    const audio = job.audio ? await chooseAudio(job.audio) : null;
+    const blob = await renderMp4(job, choice, audio);
+    return { blob, ext: 'mp4', codec: audio ? `${choice.label} + ${audio.label}` : choice.label, audio: job.audio ? audio?.label ?? null : undefined };
+  }
+  if (canRecordWebm()) return { blob: await recordWebm(job), ext: 'webm', codec: 'WebM', audio: job.audio ? null : undefined };
   throw new Error('Этот браузер не умеет кодировать видео. Откройте ONEFLOW в свежем Chrome, Edge или Safari 17+.');
 }
 
-async function renderMp4({ duration, width, height, fps, frame: draw, release, onProgress, signal }: FrameJob, choice: Choice): Promise<Blob> {
-  const muxer = new Muxer({ target: new ArrayBufferTarget(), video: { codec: choice.mux, width, height, frameRate: fps }, fastStart: 'in-memory' });
+async function renderMp4({ duration, width, height, fps, frame: draw, release, audio, onProgress, signal }: FrameJob, choice: Choice, audioChoice: AudioChoice | null): Promise<Blob> {
+  const muxer = new Muxer({
+    target: new ArrayBufferTarget(),
+    video: { codec: choice.mux, width, height, frameRate: fps },
+    ...(audio && audioChoice ? { audio: { codec: audioChoice.mux, numberOfChannels: audio.numberOfChannels, sampleRate: audio.sampleRate } } : {}),
+    fastStart: 'in-memory',
+  });
   let failure: Error | null = null;
   const encoder = new VideoEncoder({
     output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
@@ -160,6 +222,7 @@ async function renderMp4({ duration, width, height, fps, frame: draw, release, o
   } finally {
     if (encoder.state !== 'closed') encoder.close();
   }
+  if (audio && audioChoice) await encodeAudio(muxer, audio, audioChoice);
   muxer.finalize();
   onProgress?.(1);
   return new Blob([muxer.target.buffer], { type: 'video/mp4' });

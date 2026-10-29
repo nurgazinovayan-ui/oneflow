@@ -67,11 +67,22 @@ export interface MotionBeat {
   text: string;
 }
 
+// One cut of a video material: shown from `start` to `end` of the clip, starting at second `from`
+// of the video itself; several clips of one video make a montage. volume: its own sound, 0…1.
 export interface MotionClip {
   asset: number;
   start: number;
   end: number;
   from: number;
+  volume?: number; // absent on compositions made before sound was mixed: 1
+}
+
+// An audio material under the whole video, from second `from` of the track; the engine lowers it
+// under clips that keep their sound and fades it out at the end.
+export interface MotionMusic {
+  asset: number;
+  from: number;
+  volume: number;
 }
 
 export interface MotionComposition {
@@ -82,17 +93,28 @@ export interface MotionComposition {
   palette: string[];
   beats: MotionBeat[];
   clips: MotionClip[];
+  music?: MotionMusic | null;
+  warnings?: string[]; // what Opus wants the user to know (a video too long for the clip, etc.)
   code: string;
+}
+
+// What the browser found in a video material (src/motion/footage.ts), so Opus can edit it: its
+// shots, a keyframe per notable shot with its time, and where there is sound.
+export interface MotionFootage {
+  shots: { start: number; dur: number; motion: number }[];
+  keyframes: { t: number; jpeg: string }[];
+  audio: { has: boolean; loud: [number, number][] }; // seconds with clear sound (speech, music)
 }
 
 export interface MotionAsset {
   id: string;
-  kind: 'image' | 'video';
+  kind: 'image' | 'video' | 'audio';
   name: string;
   blob: Blob;
-  width: number;
+  width: number; // 0 for audio
   height: number;
-  duration?: number; // video only, seconds
+  duration?: number; // video and audio, seconds
+  footage?: MotionFootage; // video, once analysed
 }
 
 export interface MotionVariant {
@@ -129,11 +151,25 @@ export interface MotionReferenceInfo {
   frameShots: number[]; // frames[i] belongs to shots[frameShots[i]]
 }
 
+// What Opus gets of one material: pictures (a photo; a video's keyframes, frameTimes saying where
+// each is) and, for a video, its shots and sound; for audio just its length.
+export interface MotionAssetForModel {
+  kind: 'image' | 'video' | 'audio';
+  name: string;
+  duration?: number;
+  frames: string[];
+  frameTimes?: number[];
+  width?: number;
+  height?: number;
+  shots?: MotionFootage['shots'];
+  audio?: MotionFootage['audio'];
+}
+
 export interface MotionStoryboardRequest {
   brief: string;
   duration: number;
   aspect: string;
-  assets: { kind: 'image' | 'video'; name: string; duration?: number; frames: string[] }[];
+  assets: MotionAssetForModel[];
   previous: string[];
   style?: MotionStyleDirection | null;
   reference?: MotionReferenceInfo | null;
@@ -144,7 +180,7 @@ export interface MotionFixRequest {
   brief: string;
   duration: number;
   aspect: string;
-  assets: { kind: 'image' | 'video'; name: string; duration?: number }[];
+  assets: { kind: 'image' | 'video' | 'audio'; name: string; duration?: number }[];
   composition: MotionComposition;
   error: string;
 }
@@ -173,3 +209,9 @@ export const MOTION_QUALITIES = [
 ] as const;
 export const MOTION_FPS = [24, 30, 60] as const;
 export const MOTION_MAX_ASSETS = 8;
+// Montage material limits: the browser decodes a whole file to cut its sound, so longer or heavier
+// files are refused with a message rather than crashing the tab (an iPad above all).
+export const MOTION_MAX_VIDEO_SECONDS = 300;
+export const MOTION_MAX_VIDEO_BYTES = 500 * 1024 * 1024;
+export const MOTION_MAX_AUDIO_SECONDS = 600;
+export const MOTION_MAX_AUDIO_BYTES = 100 * 1024 * 1024;

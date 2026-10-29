@@ -5,10 +5,11 @@
 // - renderComposition: every frame at the export size → src/motion/export.ts encodeFrames → MP4.
 // - startPlayer: the live preview in the variant drawer.
 // Video materials: the sandbox gets the frame of each video for the moment it draws, by meta.clips.
+import { mixComposition } from './audioMix';
 import { encodeFrames, type RenderResult } from './export';
 import { createSandbox, MotionSandboxError, type MotionSandbox, type SandboxAsset } from './sandbox';
 import type { MotionSources } from './render';
-import type { MotionComposition } from './types';
+import type { MotionAsset, MotionComposition } from './types';
 
 // Where in its own video a material is at time t of the clip: inside a clip it plays from `from`;
 // between clips it holds the nearest clip's edge frame; a video with no clips plays from the start.
@@ -64,6 +65,7 @@ async function sandboxAssets(sources: MotionSources, names: string[], maxSide: n
   return Promise.all(
     sources.map(async (s, i) => {
       if (!s) return { kind: 'image' as const, name: names[i] ?? '', width: 1, height: 1 };
+      if (s.audio) return { kind: 'audio' as const, name: names[i] ?? '', width: 0, height: 0 };
       if (s.video) return { kind: 'video' as const, name: names[i] ?? '', width: s.width, height: s.height };
       return { kind: 'image' as const, name: names[i] ?? '', width: s.width, height: s.height, image: await bitmapOf(s.el, s.width, s.height, maxSide) };
     })
@@ -91,27 +93,58 @@ class ExactVideos {
   }
 }
 
-// Frames of the video materials while previewing in real time: the videos play, and are only
-// nudged when they drift from where the clip says they should be.
+const volumeOf = (v: number | undefined) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v as number)) : 1);
+
+// A media element playing, with sound if the browser allows it now (else muted, still in motion).
+function playWithSound(el: HTMLMediaElement, audible: boolean) {
+  el.muted = !audible;
+  if (!el.paused) return;
+  el.play().catch(() => {
+    el.muted = true;
+    void el.play().catch(() => undefined);
+  });
+}
+
+// The video materials and the music while previewing in real time: they play, are only nudged when
+// they drift from where the clips say they should be, and are heard roughly as in the export — the
+// clip on screen at its volume, the music lowered under it.
 class LiveVideos {
   constructor(private comp: MotionComposition, private sources: MotionSources, private maxSide: number) {}
   async at(t: number, playing: boolean): Promise<Map<number, ImageBitmap>> {
     const out = new Map<number, ImageBitmap>();
+    let speaking = false;
     for (let i = 0; i < this.sources.length; i++) {
       const v = this.sources[i]?.video;
       if (!v) continue;
       const time = clipTime(this.comp, i, t, v.duration);
+      const active = this.comp.clips.find((c) => c.asset === i && t >= c.start && t < c.end);
+      const volume = active ? volumeOf(active.volume) : 0;
+      if (volume >= 0.3) speaking = true;
       if (!playing) await seek(v, time);
       else {
         if (Math.abs(v.currentTime - time) > 0.3) v.currentTime = time;
-        if (v.paused) void v.play().catch(() => undefined);
+        v.volume = volume;
+        playWithSound(v, volume > 0.01);
       }
       if (v.readyState >= 2) out.set(i, await bitmapOf(v, v.videoWidth, v.videoHeight, this.maxSide));
+    }
+    const m = this.comp.music;
+    const a = m ? this.sources[m.asset]?.audio : undefined;
+    if (m && a) {
+      if (!playing) a.pause();
+      else if (m.from + t < (a.duration || Infinity)) {
+        if (Math.abs(a.currentTime - (m.from + t)) > 0.3) a.currentTime = m.from + t;
+        a.volume = volumeOf(m.volume) * (speaking ? 0.3 : 1);
+        playWithSound(a, true);
+      } else a.pause();
     }
     return out;
   }
   pause() {
-    for (const s of this.sources) s?.video?.pause();
+    for (const s of this.sources) {
+      s?.video?.pause();
+      s?.audio?.pause();
+    }
   }
 }
 
@@ -180,6 +213,7 @@ export async function checkComposition(comp: MotionComposition, sources: MotionS
 export interface CompositionRenderOptions {
   comp: MotionComposition;
   sources: MotionSources;
+  assets: (MotionAsset | null)[]; // the files, for the soundtrack
   names: string[];
   width: number;
   height: number;
@@ -194,7 +228,9 @@ export async function renderComposition(o: CompositionRenderOptions): Promise<Re
   const box = await createSandbox({ code: o.comp.code, width: o.width, height: o.height, duration: o.comp.duration, fps: o.fps, assets, background: o.comp.background });
   const videos = new ExactVideos(o.comp, o.sources, long, o.fps);
   try {
+    const mix = await mixComposition(o.comp, o.assets).catch(() => null);
     return await encodeFrames({
+      audio: mix?.buffer ?? null,
       duration: o.comp.duration,
       width: o.width,
       height: o.height,

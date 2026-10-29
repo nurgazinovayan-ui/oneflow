@@ -238,6 +238,21 @@ export function demoComposition(req: MotionStoryboardRequest): MotionComposition
   const D = req.duration;
   const r = (x: number) => Math.round(x * 100) / 100;
   const video = req.assets.findIndex((a) => a.kind === 'video');
+  const audio = req.assets.findIndex((a) => a.kind === 'audio');
+  const footage = req.assets.filter((a) => a.kind === 'video').reduce((sum, a) => sum + (a.duration ?? 0), 0);
+  // a montage the way Opus writes one: two cuts of the video (the second from further in), its own
+  // sound quiet under the music when there is music
+  const half = r(D * 0.5);
+  const v = video >= 0 ? req.assets[video] : null;
+  const later = v?.duration ? r(Math.max(0, Math.min(v.duration - (D * 0.26 + 0.2), v.duration * 0.6))) : 0;
+  const clips =
+    video >= 0
+      ? [
+          { asset: video, start: r(D * 0.24), end: half, from: 0, volume: audio >= 0 ? 0.3 : 1 },
+          { asset: video, start: half, end: r(D * 0.76), from: later, volume: audio >= 0 ? 0.3 : 1 },
+        ]
+      : [];
+  const warnings = footage > D * 1.5 ? [`Видео в сумме длиннее ролика: взяты два фрагмента по ${(D * 0.26).toFixed(1)} с.`] : [];
   return {
     title: 'Продукт в движении',
     concept: 'Демо-пример анимации в формате Opus: заголовок из маски, материал раскрывается из круга, коллаж карточек и финал с призывом.',
@@ -250,7 +265,9 @@ export function demoComposition(req: MotionStoryboardRequest): MotionComposition
       { start: r(D * 0.5), end: r(D * 0.76), text: 'Коллаж карточек с материалами на фоне контурного слова' },
       { start: r(D * 0.76), end: D, text: 'Финал: призыв и кнопка на градиенте, летящие частицы' },
     ],
-    clips: video >= 0 ? [{ asset: video, start: r(D * 0.24), end: r(D * 0.76), from: 0 }] : [],
+    clips,
+    music: audio >= 0 ? { asset: audio, from: 0, volume: 0.7 } : null,
+    warnings,
     code: CODE.trim(),
   };
 }

@@ -9,6 +9,7 @@ export interface MotionSource {
   width: number;
   height: number;
   video?: HTMLVideoElement;
+  audio?: HTMLAudioElement; // an audio material: el is only a picture of a note for its tile
 }
 export type MotionSources = (MotionSource | null | undefined)[];
 

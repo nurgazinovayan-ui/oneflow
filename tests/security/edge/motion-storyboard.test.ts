@@ -112,7 +112,7 @@ const comp = r.json?.composition;
 ok(r.status === 200 && comp?.code === code, `code: the poll returns the composition, fences stripped (${r.status} ${JSON.stringify(r.json).slice(0, 160)})`);
 ok(typeof (jobs[job.first.json.jobId].result as any)?.composition?.codeGz === 'string' && !JSON.stringify(jobs[job.first.json.jobId].result).includes('cover(ctx'), 'code: kept on the reservation gzipped');
 ok(sent()?.messages?.[0]?.content?.includes('function frame(ctx, t, env)') && images() === 4, 'code: Opus gets the runtime contract and all 4 pictures');
-ok(sent()?.max_tokens >= 32000 && sent()?.reasoning?.effort === 'medium', `code: room for the thinking and a whole animation (max_tokens ${sent()?.max_tokens}, effort ${sent()?.reasoning?.effort})`);
+ok(sent()?.max_tokens >= 64000 && sent()?.reasoning?.effort === 'high', `code: thinks it through, with room for it (max_tokens ${sent()?.max_tokens}, effort ${sent()?.reasoning?.effort})`);
 ok(comp?.clips?.length === 1 && comp.clips[0].asset === 1, 'code: a clip for a photo is dropped, the video clip kept');
 ok(comp?.palette?.length === 2 && comp?.beats?.length === 2 && comp?.duration === 15, 'code: palette, beats and duration normalized');
 ok(rpcCalls('settle_generation')[0]?.body?.p_cost === 0.21 && Number(rpcCalls('reserve_generation_v2')[0]?.body?.p_amount) > 0.35, 'code: reserved for the long answer, charged the real cost');
@@ -148,6 +148,50 @@ reset();
 r = await call('motion-storyboard', { mode: 'fix', composition: {} }, { token: A });
 ok(r.status === 400 && rpcCalls('reserve_generation_v2').length === 0, 'fix without code: refused before any spend');
 
+// ---- montage: what Opus learns about a video, and what comes back
+reset();
+const montageBody = {
+  mode: 'code',
+  brief: 'Смонтируй ролик из моего видео под музыку',
+  duration: 15,
+  aspect: '9:16',
+  assets: [
+    {
+      kind: 'video', name: 'interview.mov', duration: 92.4, width: 1080, height: 1920,
+      frames: Array.from({ length: 10 }, () => jpeg), frameTimes: [2, 9.5, 18, 27, 40, 51, 63, 77, 85, 90],
+      shots: [{ start: 0, dur: 12.5, motion: 0.01 }, { start: 12.5, dur: 30, motion: 0.06 }],
+      audio: { has: true, loud: [[0, 12.4], [14, 40.2]] },
+    },
+    { kind: 'audio', name: 'track.mp3', duration: 151, frames: [jpeg] },
+  ],
+};
+const montageMeta = { ...meta, clips: [{ asset: 0, start: 0, end: 6, from: 14, volume: 1 }, { asset: 0, start: 6, end: 15, from: 120, volume: 0.4 }, { asset: 1, start: 0, end: 5, from: 0 }], music: { asset: 1, from: 30, volume: 0.65 }, warnings: ['Видео 1:32 — взяты два лучших фрагмента.', '', 42] };
+reply = `<meta>${JSON.stringify(montageMeta)}</meta><code>${code}</code>`;
+job = await viaJob(montageBody);
+const userParts = sent()?.messages?.[1]?.content ?? [];
+const texts = userParts.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n');
+ok(userParts.filter((c: any) => c.type === 'image_url').length === 8, 'montage: up to 8 keyframes of a video, no picture of the audio');
+ok(texts.includes('кадр на 18.0 с') && texts.includes('1:32') && texts.includes('явно слышно') && texts.includes('0.0–12.4 с') && texts.includes('Сцены внутри видео'), 'montage: Opus sees the length, the frame times, the shots and where the sound is');
+ok(texts.includes('аудио «track.mp3»') && texts.includes('meta.music'), 'montage: the music material is offered for meta.music');
+ok(texts.includes('намного больше ролика') && texts.includes('meta.warnings'), 'montage: told to say what it cut when the footage is much longer');
+const mc = job.poll.json?.composition;
+ok(mc?.clips?.length === 2 && mc.clips[0].volume === 1 && mc.clips[1].volume === 0.4, 'montage: clips keep their volume, a clip of the audio material is dropped');
+ok(mc?.clips?.[1]?.from === 92.2, `montage: a cut past the end of its video starts at its last second (${mc?.clips?.[1]?.from})`);
+ok(mc?.music?.asset === 1 && mc.music.from === 30 && mc.music.volume === 0.65, 'montage: the music comes back');
+ok(JSON.stringify(mc?.warnings) === JSON.stringify(['Видео 1:32 — взяты два лучших фрагмента.']), 'montage: warnings for the user, empty and non-text ones dropped');
+
+// ---- the OpenRouter balance ran out: a plain message, nothing charged, no key link in the logs
+reset();
+const logged: string[] = [];
+const origError = console.error;
+console.error = (...a: unknown[]) => logged.push(a.map(String).join(' '));
+fake.provider = () => new Response('{"error":{"message":"This request requires more credits. To increase, visit https://openrouter.ai/workspaces/default/keys/abc123secret"}}', { status: 402 });
+r = (await viaJob({ ...body, mode: 'code' })).poll;
+console.error = origError;
+ok(r.status === 502 && r.json?.code === 'provider_unavailable' && rpcCalls('release_generation').length === 1, `empty OpenRouter balance → «временно недоступна», released (${r.json?.code})`);
+ok(logged.some((l) => l.includes('402')) && !logged.some((l) => l.includes('abc123secret')), 'the logs keep the status but not the link to the key');
+fake.provider = realProvider;
+
 // ---- polls: only the owner, a job still running, a job whose worker is gone
 reset();
 let release: () => void = () => {};
@@ -170,7 +214,7 @@ fake.provider = realProvider;
 reset();
 fake.provider = () => new Promise<Response>(() => {}); // never answers: the worker died with it
 const lost = await call('motion-storyboard', { ...body, mode: 'code' }, { token: A });
-jobs[lost.json.jobId].created_at = new Date(Date.now() - 14 * 60_000).toISOString();
+jobs[lost.json.jobId].created_at = new Date(Date.now() - 19 * 60_000).toISOString();
 r = await call('motion-storyboard', { jobId: lost.json.jobId }, { token: A });
 ok(r.status === 502 && r.json?.code === 'job_lost' && jobs[lost.json.jobId].status === 'released', 'a job pending past its deadline → job_lost, reservation released');
 fake.provider = realProvider;

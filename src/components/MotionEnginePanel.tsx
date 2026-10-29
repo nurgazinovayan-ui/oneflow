@@ -5,7 +5,8 @@ import { useT } from '../i18n';
 import { drawFrame, drawStill, frameSize, prepareFrame, sceneIndexAt, type MotionSource, type MotionSources } from '../motion/render';
 import { canEncodeMp4, canRecordWebm, renderVideo } from '../motion/export';
 import { checkComposition, describeError, renderComposition, startPlayer, type Player } from '../motion/composition';
-import { fileToAsset, framesForModel, loadSource, newId } from '../motion/media';
+import { assetForModel, fileToAsset, loadSource, newId } from '../motion/media';
+import { analyzeFootage } from '../motion/footage';
 import { analyzeImageReference, analyzeVideoReference, motionLevel } from '../motion/reference';
 import { loadMotionState, saveMotionState, type MotionState } from '../motion/store';
 import {
@@ -45,6 +46,7 @@ interface RenderJob {
 }
 
 interface RenderedVideo {
+  audio?: 'AAC' | 'Opus' | null; // null: the video had sound, this browser could not encode it
   id: string;
   variantId: string;
   title: string;
@@ -104,6 +106,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
   const [styling, setStyling] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState(''); // what Opus wanted the user to know about the last variant
   const [supported, setSupported] = useState<Record<string, boolean>>({});
   const [jobs, setJobs] = useState<RenderJob[]>([]);
   const [renders, setRenders] = useState<RenderedVideo[]>([]);
@@ -224,30 +227,51 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
   const addFiles = async (files: FileList | File[]) => {
     setError('');
     const room = MOTION_MAX_ASSETS - materials.length;
-    const list = [...files].filter((f) => f.type.startsWith('image/') || f.type.startsWith('video/')).slice(0, Math.max(0, room));
+    const list = [...files].filter((f) => /^(image|video|audio)\//.test(f.type)).slice(0, Math.max(0, room));
     if (!list.length) {
       if (room <= 0) setError(tm.maxAssets(MOTION_MAX_ASSETS));
       return;
     }
     const added: MotionAsset[] = [];
+    const problems: string[] = [];
     for (const f of list) {
       try {
         added.push(await fileToAsset(f));
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        problems.push(e instanceof Error ? e.message : String(e)); // too long / too heavy / unreadable, in words
       }
     }
+    if (problems.length) setError(problems.join(' '));
     setState((s) => ({ ...s, assets: [...s.assets, ...added], materialIds: [...s.materialIds, ...added.map((a) => a.id)] }));
   };
 
+  // Every new video material is taken apart once for the montage (shots, keyframes, sound), one at a
+  // time; the result is kept with the asset. A video it fails on still works with three frames.
+  const [analyzing, setAnalyzing] = useState<Record<string, number>>({});
+  const footageTried = useRef(new Set<string>());
+  useEffect(() => {
+    if (!loaded || Object.keys(analyzing).length) return;
+    const next = state.assets.find((a) => a.kind === 'video' && !a.footage && !footageTried.current.has(a.id));
+    if (!next) return;
+    footageTried.current.add(next.id);
+    setAnalyzing({ [next.id]: 0 });
+    void analyzeFootage(next, (p) => setAnalyzing({ [next.id]: p }))
+      .then((footage) => setState((s) => ({ ...s, assets: s.assets.map((a) => (a.id === next.id ? { ...a, footage } : a)) })))
+      .catch(() => undefined)
+      .finally(() => setAnalyzing({}));
+  }, [state.assets, loaded, analyzing]);
+  const pendingFootage = materials.some((a) => a.kind === 'video' && !a.footage && !footageTried.current.has(a.id)) || materials.some((a) => a.id in analyzing);
+  const analyzingPct = Math.round((Object.values(analyzing)[0] ?? 0) * 100);
+
   const removeMaterial = (id: string) => setState((s) => pruneAssets({ ...s, materialIds: s.materialIds.filter((m) => m !== id) }));
 
-  // what Claude gets to see of the materials: downscaled photos, 3 keyframes per video
+  // what Claude gets to see of the materials: downscaled photos; a video's keyframes, shots and sound;
+  // an audio's length
   const materialsForModel = async () => {
     const assets = [];
     for (const a of materials) {
       const src = sources[a.id] ?? (await loadSource(a)).source;
-      assets.push({ kind: a.kind, name: a.name, duration: a.duration, frames: await framesForModel(a, src) });
+      assets.push(await assetForModel(a, src));
     }
     return assets;
   };
@@ -366,6 +390,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
       return;
     }
     setError('');
+    setNotice('');
     setGenerating(true);
     try {
       const list = materials;
@@ -398,6 +423,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
         fromReference: Boolean(state.reference),
       };
       setState((s) => ({ ...s, variants: [...s.variants, v], selectedId: v.id }));
+      if (composition.warnings?.length) setNotice(tm.opusSays(composition.warnings[0], composition.warnings.length));
     } catch (e) {
       setError(formatGenerationError(e));
     } finally {
@@ -476,10 +502,11 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
       try {
         const onProgress = (p: number) => setJobs((list) => list.map((j) => (j.id === job.id ? { ...j, progress: p } : j)));
         const srcs = own.map((o) => o?.source ?? null);
-        const { blob, ext, codec } = variant.composition
+        const { blob, ext, codec, audio } = variant.composition
           ? await renderComposition({
               comp: variant.composition,
               sources: srcs,
+              assets: variant.assetIds.map((id) => assetById.get(id) ?? null),
               names: variant.assetIds.map((id) => assetById.get(id)?.name ?? ''),
               width: job.width,
               height: job.height,
@@ -490,7 +517,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
           : await renderVideo({ board: variant.storyboard!, sources: srcs, width: job.width, height: job.height, fps: job.fps, signal: abort.signal, onProgress });
         const url = URL.createObjectURL(blob);
         setRenders((list) => [
-          { id: newId(), variantId: variant.id, title: titleOf(variant), url, ext, codec, aspect: job.aspect, width: job.width, height: job.height, fps: job.fps, size: blob.size },
+          { id: newId(), variantId: variant.id, title: titleOf(variant), url, ext, codec, audio, aspect: job.aspect, width: job.width, height: job.height, fps: job.fps, size: blob.size },
           ...list,
         ]);
         setJobs((list) => list.filter((j) => j.id !== job.id));
@@ -558,7 +585,16 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
               }}
             >
               {materials.map((a) => (
-                <AssetThumb key={a.id} asset={a} source={sources[a.id]} onRemove={() => removeMaterial(a.id)} removeLabel={tm.removeAsset} />
+                <AssetThumb
+                  key={a.id}
+                  asset={a}
+                  source={sources[a.id]}
+                  progress={a.id in analyzing ? analyzing[a.id] : undefined}
+                  onRemove={() => removeMaterial(a.id)}
+                  removeLabel={tm.removeAsset}
+                  analyzingLabel={tm.analyzingVideo}
+                  montageLabel={tm.montageReady}
+                />
               ))}
               {materials.length < MOTION_MAX_ASSETS && (
                 <button type="button" className="motion-asset-add" onClick={() => fileInput.current?.click()} title={tm.addMaterials}>
@@ -569,7 +605,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
               <input
                 ref={fileInput}
                 type="file"
-                accept="image/*,video/*"
+                accept="image/*,video/*,audio/*"
                 multiple
                 hidden
                 onChange={(e) => {
@@ -758,11 +794,12 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
           </div>
 
           <div className="v2-card-foot">
-            <button type="button" className="v2-cta" onClick={generate} disabled={generating || !loaded}>
-              {generating ? phaseText : state.variants.length ? tm.moreVariant : tm.makeVideo}
+            <button type="button" className="v2-cta" onClick={generate} disabled={generating || !loaded || pendingFootage}>
+              {generating ? phaseText : pendingFootage ? tm.analyzingFootage(analyzingPct) : state.variants.length ? tm.moreVariant : tm.makeVideo}
             </button>
             <span className="v2-hint v2-center">{tm.costHint}</span>
             {error && <div className="error-text">{error}</div>}
+            {notice && <div className="motion-notice">{notice}</div>}
           </div>
         </section>
 
@@ -819,6 +856,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
                     v.storyboard && <span className="mk-tag green">{tm.scenesDur(v.storyboard.scenes.length, v.storyboard.duration)}</span>
                   )}
                   {fixingId === v.id && <span className="mk-tag orange">{tm.fixingTag}</span>}
+                  {(v.composition?.warnings?.length ?? 0) > 0 && <span className="mk-tag orange">{tm.warningsTag(v.composition!.warnings!.length)}</span>}
                   <span className="mk-tag">{v.aspect}</span>
                   {queuedCount > 0 && <span className="mk-tag orange">{tm.inQueue(queuedCount)}</span>}
                 </div>
@@ -934,6 +972,7 @@ export default function MotionEnginePanel({ active, authEmail }: MotionEnginePan
                 {r.aspect} · {r.width}×{r.height} · {r.fps} fps · {r.ext.toUpperCase()} ({r.codec}) · {fmtMb(r.size)}
               </span>
               {r.ext === 'webm' && <span className="motion-hint">{tm.webmNote}</span>}
+              {r.audio === null && <span className="motion-hint">{tm.noSoundNote}</span>}
               <div className="mk-variant-actions">
                 <button type="button" className="mk-download" onClick={() => download(r)}>
                   <IconDownload size={13} /> {tm.download}
@@ -1149,6 +1188,13 @@ function CodeDrawer({ variant, composition, index, assetById, aspect, active, re
   const [error, setError] = useState('');
   const previewSize = useMemo(() => frameSize(aspect, 540), [aspect]);
   const assets = useMemo(() => variant.assetIds.map((id) => assetById.get(id) ?? null), [variant.assetIds, assetById]);
+  // what will be heard: the clips that keep their sound, the music under them
+  const soundLine = useMemo(() => {
+    const withSound = composition.clips.filter((c) => (c.volume ?? 1) > 0.01 && assets[c.asset]?.footage?.audio.has !== false).length;
+    const music = composition.music ? assets[composition.music.asset] : null;
+    if (!withSound && !music) return '';
+    return tm.soundSummary(withSound, music?.name ?? null);
+  }, [composition, assets, tm]);
 
   useEffect(() => {
     const cv = canvas.current;
@@ -1249,6 +1295,17 @@ function CodeDrawer({ variant, composition, index, assetById, aspect, active, re
           </div>
         )}
         {variant.aspect !== aspect && <span className="motion-hint">{tm.composedFor(variant.aspect)}</span>}
+        {soundLine && <span className="motion-sound">{soundLine}</span>}
+        {(composition.warnings?.length ?? 0) > 0 && (
+          <>
+            <span className="mk-label">{tm.warningsTitle}</span>
+            <ul className="motion-warnings">
+              {composition.warnings!.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          </>
+        )}
 
         {composition.beats.length > 0 && (
           <>
@@ -1362,7 +1419,17 @@ function AspectIcon({ aspect }: { aspect: string }) {
   return <i className="motion-aspect-icon" style={{ width: Math.max(4, a * k), height: Math.max(4, b * k) }} />;
 }
 
-function AssetThumb({ asset, source, onRemove, removeLabel }: { asset: MotionAsset; source?: MotionSource; onRemove: () => void; removeLabel: string }) {
+// A material's tile: the picture (a note for audio), its length, and for a video whether it has been
+// taken apart for the montage yet.
+function AssetThumb({ asset, source, progress, onRemove, removeLabel, analyzingLabel, montageLabel }: {
+  asset: MotionAsset;
+  source?: MotionSource;
+  progress?: number;
+  onRemove: () => void;
+  removeLabel: string;
+  analyzingLabel: (pct: number) => string;
+  montageLabel: string;
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const cv = ref.current;
@@ -1376,9 +1443,21 @@ function AssetThumb({ asset, source, onRemove, removeLabel }: { asset: MotionAss
     else draw();
   }, [source]);
   return (
-    <div className="motion-asset" title={asset.name}>
+    <div className={`motion-asset${asset.kind === 'audio' ? ' audio' : ''}`} title={asset.name}>
       <canvas ref={ref} width={144} height={144} />
-      {asset.kind === 'video' && <span className="motion-asset-badge">{fmtTime(asset.duration ?? 0)}</span>}
+      {asset.kind !== 'image' && progress === undefined && <span className="motion-asset-badge">{fmtTime(asset.duration ?? 0)}</span>}
+      {asset.kind === 'audio' && <span className="motion-asset-name">{asset.name}</span>}
+      {progress !== undefined && (
+        <span className="motion-asset-progress" aria-live="polite">
+          <i style={{ width: `${Math.round(progress * 100)}%` }} />
+          <b>{analyzingLabel(Math.round(progress * 100))}</b>
+        </span>
+      )}
+      {asset.kind === 'video' && asset.footage && progress === undefined && (
+        <span className="motion-asset-ready" title={montageLabel}>
+          ✂
+        </span>
+      )}
       <button type="button" className="motion-asset-remove" onClick={onRemove} title={removeLabel} aria-label={removeLabel}>
         <IconClose size={10} />
       </button>

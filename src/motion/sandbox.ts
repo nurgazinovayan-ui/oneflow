@@ -19,7 +19,7 @@ import monoLatin from '@fontsource-variable/jetbrains-mono/files/jetbrains-mono-
 import monoCyrillic from '@fontsource-variable/jetbrains-mono/files/jetbrains-mono-cyrillic-wght-normal.woff2?url';
 
 export interface SandboxAsset {
-  kind: 'image' | 'video';
+  kind: 'image' | 'video' | 'audio';
   name: string;
   width: number;
   height: number;

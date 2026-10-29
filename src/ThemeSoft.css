@@ -539,6 +539,12 @@
 }
 
 /* dark: «Экономия 20%» was blue on translucent blue (≈2:1) — solid accent with white text (4.6:1) */
+/* Motion: Opus's notes stay readable on the dark card */
+:root:not([data-theme='light']):has(.web-mode) :is(.motion-notice, .motion-warnings) {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f6bd72;
+}
+
 :root:not([data-theme='light']):has(.web-mode) .pricing-save-badge {
   background: var(--soft-accent);
   color: var(--soft-on-accent);

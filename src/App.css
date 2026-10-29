@@ -7482,6 +7482,89 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* an audio material: its name over the note */
+.motion-asset-name {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 4px;
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* a video being taken apart for the montage */
+.motion-asset-progress {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.motion-asset-progress i {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--c-pink);
+  transition: width 0.2s linear;
+}
+
+.motion-asset-progress b {
+  width: 100%;
+  padding: 0 4px;
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* a video ready for the montage */
+.motion-asset-ready {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 9px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.motion-warnings {
+  margin: 0;
+  padding: 10px 12px 10px 28px;
+  border-radius: var(--radius-sm);
+  background: rgba(234, 88, 12, 0.1);
+  color: #b45309;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.motion-notice {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(234, 88, 12, 0.1);
+  color: #b45309;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.motion-sound {
+  font-size: 11.5px;
+  color: var(--c-text-muted);
+}
+
 .motion-asset-remove {
   position: absolute;
   top: 3px;
