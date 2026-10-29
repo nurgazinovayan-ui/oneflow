@@ -89,6 +89,6 @@ const listedIds = (rel: string, start: string, end: string) => {
 };
 const serverIds = listedIds(path, 'const COPYWRITE_MODELS', '};');
 const appIds = listedIds('../../../src/chatModels.ts', 'export const COPYWRITE_MODELS', '];');
-ok(serverIds.length === 4 && JSON.stringify(appIds) === JSON.stringify(serverIds), `app and server list the same models (${appIds.join(', ')})`);
+ok(serverIds.length === 8 && JSON.stringify(appIds) === JSON.stringify(serverIds), `app and server list the same models (${appIds.join(', ')})`);
 
 done('generate-chat models');

@@ -16,8 +16,12 @@ const CHAT_MODEL = 'openai/gpt-5.6-terra';
 // be read — only where the price is the vendor's own published one (Anthropic's list prices); a
 // model without one is refused while its price is unknown. The real cost is settled either way.
 const COPYWRITE_MODELS: Record<string, [number, number] | null> = {
+  'openai/gpt-6-astra': null,
   'openai/gpt-6.1-sol': null,
   'openai/gpt-6.1-sol-pro': null,
+  'openai/gpt-6.1-terra': null,
+  'openai/gpt-6.1-terra-pro': null,
+  'openai/gpt-6-luna': null,
   'anthropic/claude-opus-5.5': [4, 20],
   'anthropic/claude-sonnet-5.5': [2, 10],
 };

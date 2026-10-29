@@ -8,8 +8,6 @@ export type DropdownMenuItem =
       label: string;
       icon?: ComponentType<{ size?: number }>;
       danger?: boolean;
-      /** a second, quieter line under the label */
-      hint?: string;
       /** a choice list (e.g. the Copywrite model): the chosen item gets a check mark */
       checked?: boolean;
       onClick: () => void;
@@ -67,14 +65,7 @@ export default function DropdownMenu({ items, onClose, align = 'left', direction
               onClose();
             }}
           >
-            {item.hint ? (
-              <span className="dropdown-menu-text">
-                {item.label}
-                <small>{item.hint}</small>
-              </span>
-            ) : (
-              <span>{item.label}</span>
-            )}
+            <span>{item.label}</span>
             {item.checked ? <IconCheck size={14} /> : Icon && <Icon size={14} />}
           </button>
         );

@@ -9,13 +9,17 @@ export interface CopywriteModel {
 }
 
 export const COPYWRITE_MODELS: CopywriteModel[] = [
+  { id: 'openai/gpt-6-astra', label: 'GPT-6 Astra', vendor: 'ChatGPT' },
   { id: 'openai/gpt-6.1-sol', label: 'GPT-6.1 Sol', vendor: 'ChatGPT' },
   { id: 'openai/gpt-6.1-sol-pro', label: 'GPT-6.1 Sol Pro', vendor: 'ChatGPT' },
+  { id: 'openai/gpt-6.1-terra', label: 'GPT-6.1 Terra', vendor: 'ChatGPT' },
+  { id: 'openai/gpt-6.1-terra-pro', label: 'GPT-6.1 Terra Pro', vendor: 'ChatGPT' },
+  { id: 'openai/gpt-6-luna', label: 'GPT-6 Luna', vendor: 'ChatGPT' },
   { id: 'anthropic/claude-opus-5.5', label: 'Claude Opus 5.5', vendor: 'Claude' },
   { id: 'anthropic/claude-sonnet-5.5', label: 'Claude Sonnet 5.5', vendor: 'Claude' },
 ];
 
-export const DEFAULT_COPYWRITE_MODEL = COPYWRITE_MODELS[0].id;
+export const DEFAULT_COPYWRITE_MODEL = 'openai/gpt-6.1-sol';
 
 const STORAGE_KEY = 'oneflow-copywrite-model';
 

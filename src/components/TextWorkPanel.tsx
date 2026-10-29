@@ -861,7 +861,6 @@ export default function TextWorkPanel({
                             { type: 'header' as const, label: vendor },
                             ...COPYWRITE_MODELS.filter((m) => m.vendor === vendor).map((m) => ({
                               label: m.label,
-                              hint: l.modelNotes[m.id],
                               checked: m.id === model,
                               onClick: () => setModel(m.id),
                             })),
