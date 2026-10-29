@@ -4284,6 +4284,31 @@
   right: 0;
 }
 
+/* opens above the trigger (a button near the bottom of the screen) */
+.dropdown-menu.dropdown-up {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+/* an item with a second line: the label over a quieter hint that may wrap */
+.dropdown-menu-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dropdown-menu-text small {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--c-text-muted);
+  white-space: normal;
+}
+
+.dropdown-menu-item.checked {
+  font-weight: 600;
+}
+
 /* Label-left/icon-right + a left accent bar on hover — matches the reference kit's
    Browse/Pricing/Billing… menu rather than the earlier icon-left plain-highlight item. */
 .dropdown-menu-item {
@@ -11257,55 +11282,19 @@ h5.md-heading {
   gap: 4px;
 }
 
-/* the model picker (Copywrite → model button): one row per model, the chosen one ringed */
-.cw-model-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 14px;
+/* the model list opens above the button (the composer sits at the bottom) */
+.cw-model-wrap {
+  position: relative;
 }
 
-.cw-model-option {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  width: 100%;
-  padding: 12px 14px;
-  border: none;
-  border-radius: 16px;
-  background: var(--c-panel-2);
-  color: var(--c-text);
-  text-align: left;
-  cursor: pointer;
-}
-
-.cw-model-option:hover {
+.cw-model-btn.open {
   background: var(--c-panel-3);
+  color: var(--c-text);
 }
 
-.cw-model-option.on {
-  box-shadow: 0 0 0 2px var(--v2-accent);
-}
-
-.cw-model-option-name {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.cw-model-option-name small {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--c-text-muted);
-}
-
-.cw-model-option-note {
-  font-size: 12.5px;
-  line-height: 1.4;
-  color: var(--c-text-muted);
+.dropdown-menu.cw-model-menu {
+  width: 290px;
+  max-width: calc(100vw - 32px);
 }
 
 .cw-send {

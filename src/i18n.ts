@@ -788,7 +788,6 @@ export interface Translations {
     academicLabel: string;
     developerLabel: string;
     unavailableWebSearch: string;
-    modelHelp: string;
     modelPickerTitle: string;
     /** a line under each Copywrite model in the picker, by model id (src/chatModels.ts) */
     modelNotes: Record<string, string>;
@@ -2012,7 +2011,6 @@ export const ru: Translations = {
     developerLabel: 'Код',
     unavailableWebSearch:
       'Веб-поиск ещё не подключён в ONEFLOW. Можно прикрепить текст источников для анализа.',
-    modelHelp: 'Выберите нейросеть для ответов. Списывается фактическая цена каждого ответа — она зависит от модели и длины текста.',
     modelPickerTitle: 'Модель',
     modelNotes: {
       'openai/gpt-6.1-sol': 'Универсальная модель, выбрана по умолчанию.',
@@ -3350,7 +3348,6 @@ export const en: Translations = {
     academicLabel: 'Academic',
     developerLabel: 'Developer',
     unavailableWebSearch: 'Web search is not connected in ONEFLOW yet. Attach source text for analysis.',
-    modelHelp: 'Choose the model for replies. Each reply is billed at its actual price, which depends on the model and the length of the text.',
     modelPickerTitle: 'Model',
     modelNotes: {
       'openai/gpt-6.1-sol': 'A general-purpose model, the default.',

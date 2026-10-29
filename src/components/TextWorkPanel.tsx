@@ -64,7 +64,7 @@ interface TextWorkPanelProps {
 }
 
 type Modal =
-  | { kind: 'search' | 'archive' | 'share' | 'unavailable' | 'model' }
+  | { kind: 'search' | 'archive' | 'share' | 'unavailable' }
   | {
       kind: 'project-new' | 'project-rename' | 'thread-rename' | 'delete-project' | 'delete-thread' | 'move';
       target?: string;
@@ -90,6 +90,7 @@ export default function TextWorkPanel({
   const [expandedProjects, setExpandedProjects] = useState<string[]>([]);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openThreadMenu, setOpenThreadMenu] = useState<string | null>(null);
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [openProjectMenu, setOpenProjectMenu] = useState<string | null>(null);
   const [editIndex, setEditIndex] = useState<number>();
@@ -836,10 +837,38 @@ export default function TextWorkPanel({
                     />
                   </div>
                   <div className="cw-composer-footer-right">
-                    <button className="cw-model-btn" title={l.modelPickerTitle} onClick={() => openModal({ kind: 'model' })}>
-                      {copywriteModelLabel(model) ?? 'ONEFLOW AI'}
-                      <IconChevronDown size={12} />
-                    </button>
+                    <div className="cw-model-wrap">
+                      <button
+                        className={`cw-model-btn${modelMenuOpen ? ' open' : ''}`}
+                        title={l.modelPickerTitle}
+                        aria-haspopup="menu"
+                        aria-expanded={modelMenuOpen}
+                        // a click on the open button closes the list (instead of the outside-click
+                        // closing it and the same click opening it again)
+                        onMouseDown={(e) => modelMenuOpen && e.nativeEvent.stopPropagation()}
+                        onClick={() => setModelMenuOpen((open) => !open)}
+                      >
+                        {copywriteModelLabel(model) ?? 'ONEFLOW AI'}
+                        <IconChevronDown size={12} />
+                      </button>
+                      {modelMenuOpen && (
+                        <DropdownMenu
+                          align="right"
+                          direction="up"
+                          className="cw-model-menu"
+                          onClose={() => setModelMenuOpen(false)}
+                          items={(['ChatGPT', 'Claude'] as const).flatMap((vendor) => [
+                            { type: 'header' as const, label: vendor },
+                            ...COPYWRITE_MODELS.filter((m) => m.vendor === vendor).map((m) => ({
+                              label: m.label,
+                              hint: l.modelNotes[m.id],
+                              checked: m.id === model,
+                              onClick: () => setModel(m.id),
+                            })),
+                          ])}
+                        />
+                      )}
+                    </div>
                     <button
                       className="cw-send"
                       title={l.sendTooltip}
@@ -887,11 +916,9 @@ export default function TextWorkPanel({
                           ? l.deleteChatTitle
                           : modal.kind === 'move'
                             ? l.moveToProject
-                            : modal.kind === 'model'
-                              ? l.modelPickerTitle
-                              : modal.kind === 'unavailable'
-                                ? l.deepSearchLabel
-                                : l.renameLabel}
+                            : modal.kind === 'unavailable'
+                              ? l.deepSearchLabel
+                              : l.renameLabel}
             </h2>
 
             {modal.kind === 'search' || modal.kind === 'archive' ? (
@@ -955,31 +982,6 @@ export default function TextWorkPanel({
                   </button>
                 ))}
               </div>
-            ) : modal.kind === 'model' ? (
-              <>
-                <p className="modal-hint">{l.modelHelp}</p>
-                <div className="cw-model-list" role="radiogroup" aria-label={l.modelPickerTitle}>
-                  {COPYWRITE_MODELS.map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={m.id === model}
-                      className={`cw-model-option${m.id === model ? ' on' : ''}`}
-                      onClick={() => {
-                        setModel(m.id);
-                        setModal(null);
-                      }}
-                    >
-                      <span className="cw-model-option-name">
-                        {m.label}
-                        <small>{m.vendor}</small>
-                      </span>
-                      <span className="cw-model-option-note">{l.modelNotes[m.id] ?? ''}</span>
-                    </button>
-                  ))}
-                </div>
-              </>
             ) : modal.kind === 'unavailable' ? (
               <p className="modal-hint">{l.unavailableWebSearch}</p>
             ) : (
