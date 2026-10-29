@@ -5323,6 +5323,8 @@
   word-break: break-word;
   box-shadow: 0 0 0 1px var(--c-divider);
   animation: admin-toast-in 0.3s var(--ease);
+  /* a notice only: it must not block the tiles or buttons it floats over */
+  pointer-events: none;
 }
 
 .save-toast.ok {

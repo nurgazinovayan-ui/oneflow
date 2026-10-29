@@ -21,6 +21,7 @@ import { getWebSession, setWebSession, type WebSession } from './webAuthSession'
 import { useLanguageStore, ru, en } from './i18n';
 import { capture } from './analytics';
 import { useCredits } from './credits';
+import { downloadFile } from './fileDownload';
 import { LEGAL_VERSION } from './legalContent';
 import { rememberAccepted } from './legalConsent';
 import { IMAGE_PHOTO_FIT, fitPhoto, fitPhotos } from './photoRef';
@@ -219,15 +220,6 @@ async function urlToDataUrl(url: string): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
-}
-
-function downloadDataUrl(dataUrl: string, suggestedName: string): void {
-  const a = document.createElement('a');
-  a.href = dataUrl;
-  a.download = suggestedName;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
 }
 
 async function pickFile(accept: string): Promise<string | null> {
@@ -509,16 +501,9 @@ export function installWebApi(): void {
     marketingAI: async (task, context, mock) =>
       callFunction<MarketingAIResponse>('marketing-ai', { task, context, mock }),
 
-    saveFile: async (url, suggestedName) => {
-      const dataUrl = await urlToDataUrl(url);
-      downloadDataUrl(dataUrl, suggestedName);
-      return suggestedName;
-    },
+    saveFile: async (url, suggestedName) => downloadFile(url, suggestedName),
     saveManyFiles: async (files) => {
-      for (const f of files) {
-        const dataUrl = await urlToDataUrl(f.url);
-        downloadDataUrl(dataUrl, f.name);
-      }
+      for (const f of files) await downloadFile(f.url, f.name);
       return files.length > 0 ? files[0].name : null;
     },
     fetchImageAsDataUrl: async (url) => urlToDataUrl(url),
@@ -529,16 +514,14 @@ export function installWebApi(): void {
       const json = JSON.stringify(project, null, 2);
       const dataUrl = `data:application/json;base64,${btoa(unescape(encodeURIComponent(json)))}`;
       const fileName = `${project.name || 'project'}.aystudio.json`;
-      downloadDataUrl(dataUrl, fileName);
-      return fileName;
+      return downloadFile(dataUrl, fileName);
     },
     openProjectFile: async () => pickJsonFile<ProjectFile>(),
     saveWorkspaceFile: async (workspace) => {
       const json = JSON.stringify(workspace, null, 2);
       const dataUrl = `data:application/json;base64,${btoa(unescape(encodeURIComponent(json)))}`;
       const fileName = 'workspace.aystudio.json';
-      downloadDataUrl(dataUrl, fileName);
-      return fileName;
+      return downloadFile(dataUrl, fileName);
     },
     openWorkspaceFile: async () => pickJsonFile<WorkspaceFile>(),
 

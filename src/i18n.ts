@@ -973,6 +973,7 @@ export interface Translations {
     endFrameLabel: string;
     regenerate: string;
     download: string;
+    downloadError: string;
     durationSeconds: (n: number) => string;
     promptLabel: string;
   };
@@ -2286,6 +2287,7 @@ export const ru: Translations = {
     endFrameLabel: 'Конечный кадр',
     regenerate: 'Перегенерировать',
     download: 'Скачать',
+    downloadError: 'Не удалось скачать файл. Обновите страницу и попробуйте ещё раз.',
     durationSeconds: (n) => `${n} сек`,
     promptLabel: 'Промпт',
   },
@@ -3622,6 +3624,7 @@ export const en: Translations = {
     endFrameLabel: 'End frame',
     regenerate: 'Regenerate',
     download: 'Download',
+    downloadError: "Couldn't download the file. Reload the page and try again.",
     durationSeconds: (n) => `${n}s`,
     promptLabel: 'Prompt',
   },

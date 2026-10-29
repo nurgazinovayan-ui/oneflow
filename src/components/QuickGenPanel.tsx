@@ -135,7 +135,10 @@ export default function QuickGenPanel({
       });
   }, [active]);
   const [openEntry, setOpenEntry] = useState<QuickGenEntry | null>(null);
-  const [downloading, setDownloading] = useState(false);
+  // the entry being saved (its tile button and the window's button wait for it), and what went wrong
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [notice, setNotice] = useState('');
+  const noticeTimer = useRef<ReturnType<typeof setTimeout>>();
   const [promptCopied, setPromptCopied] = useState(false);
 
   // generations still running; the button stays active, so more can be started meanwhile
@@ -380,13 +383,18 @@ export default function QuickGenPanel({
 
   const handleDownload = async (entry: QuickGenEntry) => {
     const url = entry.outputs[0];
-    if (!url) return;
-    setDownloading(true);
+    if (!url || downloadingId) return;
+    setDownloadingId(entry.id);
     try {
+      // saved with the extension of what the model actually returned (a JPEG is not named .png)
       const ext = entry.kind === 'video' ? 'mp4' : 'png';
-      await window.api.saveFile(url, `${entry.kind}-${entry.id}.${ext}`);
+      await window.api.saveFile(url, `oneflow-${entry.kind}-${entry.id.replace(/^asset-/, '').slice(0, 12)}.${ext}`);
+    } catch {
+      setNotice(t.quickGen.downloadError);
+      clearTimeout(noticeTimer.current);
+      noticeTimer.current = setTimeout(() => setNotice(''), 5000);
     } finally {
-      setDownloading(false);
+      setDownloadingId(null);
     }
   };
 
@@ -621,43 +629,57 @@ export default function QuickGenPanel({
             </div>
             <div className="v2-tile-grid">
               {entries.map((entry) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  className={`v2-tile ${entry.status}`}
-                  style={{ aspectRatio: toCssAspectRatio(entry.aspectRatio) }}
-                  onClick={() => {
-                    if (entry.status !== 'done') return;
-                    setPromptCopied(false);
-                    setOpenEntry(entry);
-                  }}
-                  disabled={entry.status !== 'done'}
-                  title={entry.prompt}
-                >
-                  {entry.status === 'loading' && (
-                    <span className="v2-tile-loading">
-                      <GenerationLoader className="quick-gen-tile-loader" size={40} />
-                      <span>{entryModelLabel(entry)} · {t.nodes.common.generating}</span>
-                    </span>
-                  )}
+                <div key={entry.id} className="v2-tile-cell">
+                  <button
+                    type="button"
+                    className={`v2-tile ${entry.status}`}
+                    style={{ aspectRatio: toCssAspectRatio(entry.aspectRatio) }}
+                    onClick={() => {
+                      if (entry.status !== 'done') return;
+                      setPromptCopied(false);
+                      setOpenEntry(entry);
+                    }}
+                    disabled={entry.status !== 'done'}
+                    title={entry.prompt}
+                  >
+                    {entry.status === 'loading' && (
+                      <span className="v2-tile-loading">
+                        <GenerationLoader className="quick-gen-tile-loader" size={40} />
+                        <span>{entryModelLabel(entry)} · {t.nodes.common.generating}</span>
+                      </span>
+                    )}
+                    {entry.status === 'done' && (
+                      <>
+                        {entry.kind === 'image' ? (
+                          <img src={entry.outputs[0]} alt="" className="v2-tile-media" />
+                        ) : (
+                          <video src={entry.outputs[0]} className="v2-tile-media" muted />
+                        )}
+                        <span className="v2-tile-res">{resolutionTierFromModelValue(entry.resolution)}</span>
+                        <span className="v2-tile-tag">{entryModelLabel(entry)}</span>
+                      </>
+                    )}
+                    {entry.status === 'error' && (
+                      <span className="v2-tile-error" title={entry.error}>
+                        <b>!</b>
+                        <span>{entry.error}</span>
+                      </span>
+                    )}
+                  </button>
+                  {/* beside the tile, not inside it: a button cannot hold another button */}
                   {entry.status === 'done' && (
-                    <>
-                      {entry.kind === 'image' ? (
-                        <img src={entry.outputs[0]} alt="" className="v2-tile-media" />
-                      ) : (
-                        <video src={entry.outputs[0]} className="v2-tile-media" muted />
-                      )}
-                      <span className="v2-tile-res">{resolutionTierFromModelValue(entry.resolution)}</span>
-                      <span className="v2-tile-tag">{entryModelLabel(entry)}</span>
-                    </>
+                    <button
+                      type="button"
+                      className="v2-tile-download"
+                      onClick={() => void handleDownload(entry)}
+                      disabled={downloadingId === entry.id}
+                      title={t.quickGen.download}
+                      aria-label={t.quickGen.download}
+                    >
+                      <IconDownload size={15} />
+                    </button>
                   )}
-                  {entry.status === 'error' && (
-                    <span className="v2-tile-error" title={entry.error}>
-                      <b>!</b>
-                      <span>{entry.error}</span>
-                    </span>
-                  )}
-                </button>
+                </div>
               ))}
             </div>
           </>
@@ -717,11 +739,17 @@ export default function QuickGenPanel({
               <button className="secondary-btn" onClick={() => void handleRegenerate(openEntry)}>
                 <IconRefresh size={14} /> {t.quickGen.regenerate}
               </button>
-              <button className="generate-btn" onClick={() => void handleDownload(openEntry)} disabled={downloading}>
+              <button className="generate-btn" onClick={() => void handleDownload(openEntry)} disabled={downloadingId === openEntry.id}>
                 <IconDownload size={14} /> {t.quickGen.download}
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {notice && (
+        <div className="save-toast error" role="status">
+          {notice}
         </div>
       )}
     </div>

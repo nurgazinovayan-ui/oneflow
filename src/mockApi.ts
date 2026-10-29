@@ -2,6 +2,7 @@ import type { NodeApi, GenerationLogEntry, AdminMessage, CreativeEvaluationResul
 import type { MotionScene, MotionStoryboard, MotionStoryboardRequest, MotionStyle, MotionStyleDirection, MotionStylesRequest } from './motion/types';
 import { estimateImageCost, estimateVideoCost, DSP_URL, ADMIN_EMAIL } from './types';
 import { useLanguageStore, ru, en } from './i18n';
+import { downloadFile } from './fileDownload';
 
 // Fallback implementation used only when running the renderer in a plain
 // browser (e.g. `vite` dev preview) without the Electron preload bridge.
@@ -442,8 +443,11 @@ export function installMockApiIfNeeded(): void {
         );
       return [placeholderSvg];
     },
-    saveFile: async () => null,
-    saveManyFiles: async () => null,
+    saveFile: async (url, suggestedName) => downloadFile(url, suggestedName),
+    saveManyFiles: async (files) => {
+      for (const f of files) await downloadFile(f.url, f.name);
+      return files.length > 0 ? files[0].name : null;
+    },
     fetchImageAsDataUrl: async (url: string) => {
       if (url.startsWith('data:')) return url;
       const res = await fetch(url);

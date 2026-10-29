@@ -133,10 +133,11 @@ function ImageGenNode({ id, data, selected }: NodeProps) {
     setSaving(true);
     try {
       const format = nodeData.saveFormat || 'png';
-      const dataUrl = await window.api.fetchImageAsDataUrl(url);
-      const converted = format === 'png' ? dataUrl : await convertImageFormat(dataUrl, format);
+      // PNG (the default) is saved as the model returned it, straight from the click: Safari drops a
+      // download started after a wait. Another format needs the picture converted first.
+      const file = format === 'png' ? url : await convertImageFormat(await window.api.fetchImageAsDataUrl(url), format);
       const suffix = nodeData.outputs.length > 1 ? `-${index + 1}` : '';
-      await window.api.saveFile(converted, `image-${id}${suffix}.${format === 'jpeg' ? 'jpg' : format}`);
+      await window.api.saveFile(file, `image-${id}${suffix}.${format === 'jpeg' ? 'jpg' : format}`);
     } finally {
       setSaving(false);
     }
