@@ -991,7 +991,6 @@ export interface Translations {
     prevSlide: string;
     nextSlide: string;
     slideN: (n: number) => string;
-    video: string;
     slides: { tag: string; title: string; text: string }[];
     /** the built-in square banner next to the 16:9 one (shown until the admin saves square banners) */
     sideSlides: { tag: string; title: string; text: string }[];
@@ -2296,7 +2295,6 @@ export const ru: Translations = {
     prevSlide: 'Предыдущий слайд',
     nextSlide: 'Следующий слайд',
     slideN: (n) => `Слайд ${n}`,
-    video: 'Видео',
     slides: [
       { tag: 'Новое · Motion Engine', title: 'Ролик из ваших фото за пару минут', text: 'Загрузите фото товара и бриф — ONEFLOW предложит раскадровки, а вы выберете лучшую и отправите в рендер.' },
       { tag: 'One Launch', title: 'Одно фото — целая кампания', text: 'Карточки под все форматы и тексты постов из одной фотографии товара.' },
@@ -3626,7 +3624,6 @@ export const en: Translations = {
     prevSlide: 'Previous slide',
     nextSlide: 'Next slide',
     slideN: (n) => `Slide ${n}`,
-    video: 'Video',
     slides: [
       { tag: 'New · Motion Engine', title: 'A video from your photos in minutes', text: 'Upload product photos and a brief — ONEFLOW proposes storyboards, you pick the best and send it to render.' },
       { tag: 'One Launch', title: 'One photo — a whole campaign', text: 'Cards for every format and post copy from a single product photo.' },

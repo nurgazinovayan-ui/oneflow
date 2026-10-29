@@ -211,8 +211,10 @@ function BannerCarousel({ slides, active, interval, onOpen, square = false }: Ba
 
   const cur = slides[current];
   if (!cur) return null;
-  // texts are optional: without any, the banner is the bare picture or video, no shade
-  const hasText = Boolean(cur.tag || cur.title || cur.text || cur.link);
+  // texts are optional: the dark shade is there only for them, so without any the picture or video
+  // stays clean and a button (if set) sits in its corner
+  const hasText = Boolean(cur.tag || cur.title || cur.text);
+  const hasButton = Boolean(cur.link && (cur.button || cur.link.kind === 'mode'));
 
   return (
     <div
@@ -244,12 +246,12 @@ function BannerCarousel({ slides, active, interval, onOpen, square = false }: Ba
           ),
         )}
       </div>
-      {hasText && (
-        <div className="home-banner-text">
+      {(hasText || hasButton) && (
+        <div className={`home-banner-text${hasText ? '' : ' bare'}`}>
           {cur.tag && <span className="home-tag">{cur.tag}</span>}
           {cur.title && <h2>{cur.title}</h2>}
           {cur.text && <p>{cur.text}</p>}
-          {cur.link && (cur.button || cur.link.kind === 'mode') && (
+          {hasButton && cur.link && (
             cur.link.kind === 'mode' ? (
               <button type="button" className="home-more" onClick={() => cur.link?.kind === 'mode' && onOpen(cur.link.view)}>
                 <span className="home-more-icon">
@@ -267,12 +269,6 @@ function BannerCarousel({ slides, active, interval, onOpen, square = false }: Ba
             )
           )}
         </div>
-      )}
-      {cur.mediaType === 'video' && (
-        <span className="home-video-badge">
-          <i />
-          {t.home.video}
-        </span>
       )}
       {count > 1 && (
         <>

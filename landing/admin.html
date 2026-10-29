@@ -102,6 +102,8 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
 .bn.sq { grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); }
 .bn-prev.sq { aspect-ratio: 1 / 1; }
 .bn-prev.sq .ov { inset: auto 0 0 0; padding-top: 34px; background: linear-gradient(0deg, rgba(5,8,12,.86), rgba(5,8,12,.55) 60%, rgba(5,8,12,0)); }
+.bn-prev .ov.bare, .bn-prev.sq .ov.bare { inset: auto auto 0 0; padding: 10px; background: none; }
+.bn-prev .ov.bare i { padding: 3px 9px; border-radius: 999px; background: rgba(5,8,12,.6); }
 .bn-h { margin: 26px 0 10px; font-size: 16px; }
 .bn-num { position: absolute; right: 8px; top: 8px; padding: 2px 8px; border-radius: 6px; background: rgba(0,0,0,.65); color: #fff; font-size: 11px; font-weight: 700; }
 .bn-langs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -427,8 +429,9 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
       <label class="field">Текст кнопки<input class="in" data-l="${l}" data-k="button" maxlength="40" value="${esc(x[l].button)}" placeholder="${l === 'ru' ? 'Подробнее' : 'Learn more'}"></label></div>`;
     const prev = (x, i, sq) => { const m = x.media ? (x.type === 'video' ? `<video src="${esc(x.media)}" ${x.poster ? `poster="${esc(x.poster)}"` : ''} muted loop playsinline autoplay></video>` : `<img src="${esc(x.media)}" alt="">`) : '<div class="none">Нет файла</div>';
       const t = x.ru.title || x.en.title, tag = x.ru.tag || x.en.tag, tx = x.ru.text || x.en.text, b = x.link ? (x.ru.button || x.en.button || 'Подробнее') : '';
-      // texts are optional: without any, the banner is the bare picture (no shade), as in the app
-      const ov = tag || t || tx || b ? `<div class="ov">${tag ? `<small>${esc(tag)}</small>` : ''}${t ? `<b>${esc(t)}</b>` : ''}${tx ? `<span>${esc(tx)}</span>` : ''}${b ? `<i>▸ ${esc(b)}</i>` : ''}</div>` : '';
+      // texts are optional: the shade is only for them, as in the app; a button alone sits on the bare picture
+      const ov = tag || t || tx ? `<div class="ov">${tag ? `<small>${esc(tag)}</small>` : ''}${t ? `<b>${esc(t)}</b>` : ''}${tx ? `<span>${esc(tx)}</span>` : ''}${b ? `<i>▸ ${esc(b)}</i>` : ''}</div>`
+        : b ? `<div class="ov bare"><i>▸ ${esc(b)}</i></div>` : '';
       return `<div class="bn-prev${sq ? ' sq' : ''}">${m}${ov}<span class="bn-num">${i + 1}</span></div>`; };
     const card = (k, x, i) => `<div class="card" data-list="${k}" data-i="${i}"><div class="bn${k === 'side' ? ' sq' : ''}"><div>${prev(x, i, k === 'side')}
           <div class="row"><label class="btn s upl">${x.media ? 'Заменить фото / видео' : 'Загрузить фото / видео'}<input type="file" data-f="media" accept="${Object.keys(TYPES).join(',')}"></label>
@@ -439,7 +442,7 @@ tbody tr.cl { cursor: pointer; } tbody tr.cl:hover td { background: var(--soft);
     el.innerHTML = `<div class="tools"><button class="btn a" id="bsave" type="button" ${bn.dirty && !bn.busy ? '' : 'disabled'}>Сохранить и опубликовать</button>
         <span class="${/Ошибка|Не удалось|должн|Недопуст|слишком|Поддерживаются|Ссылка|нет хранилища|не ответило|Не больше/.test(bn.msg) ? 'err' : 'ok'}" id="bmsg" role="status">${esc(bn.msg)}</span>
         <a class="btn s" href="/app" target="_blank" rel="noopener" style="margin-left:auto">Открыть приложение ↗</a></div>
-      <div class="note">На главной приложения два баннера в один ряд, одной высоты: большой 16:9 слева и квадратный справа. Каждый может состоять из нескольких слайдов — они листаются по очереди. Фото до 10 МБ (JPG, PNG, WebP, GIF), видео до 50 МБ (MP4, WebM). Текст необязателен: без него баннер — просто картинка или видео. Английский текст необязателен: если его нет, показывается русский. Кнопка «Сохранить и опубликовать» сохраняет оба баннера.</div>
+      <div class="note">На главной приложения два баннера в один ряд, одной высоты: большой 16:9 слева и квадратный справа. Каждый может состоять из нескольких слайдов — они листаются по очереди. Фото до 10 МБ (JPG, PNG, WebP, GIF), видео до 50 МБ (MP4, WebM). Текст необязателен: без него баннер — просто картинка или видео, без затемнения (кнопка, если выбрана, — в углу). Английский текст необязателен: если его нет, показывается русский. Кнопка «Сохранить и опубликовать» сохраняет оба баннера.</div>
       <h4 class="bn-h">Большой баннер 16:9</h4>
       <div class="tools"><button class="btn s" id="badd" type="button" ${bn.slides.length >= LISTS.slides.max ? 'disabled' : ''}>+ Добавить слайд</button>
         ${bn.slides.length ? '' : '<button class="btn s" id="bdef" type="button">Вернуть стандартный баннер</button>'}</div>

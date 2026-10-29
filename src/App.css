@@ -13938,6 +13938,24 @@ h5.md-heading {
   right: auto;
 }
 
+/* a button without any text: no shade over the picture, just the button in the bottom corner on
+   its own small dark pill so it reads on any picture */
+.home-banner-text.bare {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: auto;
+  height: auto;
+  background: none;
+}
+
+.home-banner-text.bare .home-more {
+  margin-top: 0;
+  padding: 5px 14px 5px 5px;
+  border-radius: 999px;
+  background: rgba(5, 8, 12, 0.6);
+}
+
 /* lines never squeeze into each other: a text too long for a small banner is cut at the bottom */
 .home-banner-text > * {
   flex-shrink: 0;
@@ -14013,29 +14031,6 @@ h5.md-heading {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.home-video-badge {
-  position: absolute;
-  z-index: 2;
-  right: 96px;
-  top: 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(0, 0, 0, 0.62);
-  color: #fff;
-  border-radius: 999px;
-  padding: 5px 11px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.home-video-badge i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #ff4d4d;
 }
 
 .home-arrows {
@@ -14249,9 +14244,8 @@ h5.md-heading {
   .home-banner-side.has-text .home-more {
     margin-top: 12px;
   }
-  /* no room for arrows and the video badge beside the text; the dots stay on the picture */
-  .home-banner-side.has-text .home-arrows,
-  .home-banner-side.has-text .home-video-badge {
+  /* no room for arrows beside the text; the dots stay on the picture */
+  .home-banner-side.has-text .home-arrows {
     display: none;
   }
 }
