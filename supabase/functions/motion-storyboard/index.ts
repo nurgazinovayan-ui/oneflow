@@ -8,10 +8,11 @@
 // brief go to Claude Opus 5.5. Modes:
 //   mode 'code' → Opus writes the animation itself: { composition: { title, concept, background,
 //     palette, beats, clips, code } }, where code is `function frame(ctx, t, env)` for a Canvas 2D
-//     that the browser runs in a sandbox and records to MP4 (src/motion/sandbox.ts). Streamed with
-//     keep-alive spaces because writing it takes minutes (see streamed()).
+//     that the browser runs in a sandbox and records to MP4 (src/motion/sandbox.ts). Writing it takes
+//     Opus minutes, so it is a background job: the call answers 202 { pending, jobId } at once and
+//     the app polls with { jobId } (src/webApi.ts pollJob) until the composition is ready.
 //   mode 'fix' → { composition, error }: the browser found an error in that code; Opus returns the
-//     corrected composition.
+//     corrected composition (a job the same way).
 // The older template modes stay for storyboards made before (and for «Предложи стили»):
 //   mode 'storyboard' (default) → a storyboard as JSON — scenes with timing, layout, which asset
 //     each scene uses, on-screen text, camera move, transition — plus the video's look (palette,
@@ -619,46 +620,83 @@ const CODE_DEADLINE_MS = 600_000;
 const FONT_NAMES: Record<string, string> = { sans: 'Inter', display: 'Unbounded', serif: 'Playfair Display', mono: 'JetBrains Mono' };
 const PACE_NAMES: Record<string, string> = { calm: 'спокойный', medium: 'средний', fast: 'быстрый' };
 
-// A response that starts at once and sends a space every few seconds while Opus writes, so no proxy
-// or the runtime's idle timeout (150 s) closes a request that is simply long; then the JSON (leading
-// whitespace is valid JSON). A failure after the start can no longer change the status, so it comes
-// as { error, code, failed: true } — src/webApi.ts callFunction treats that as an error.
-function streamed(reservation: string, email: string, work: () => Promise<{ costUsd: number; [k: string]: unknown }>): Response {
-  const enc = new TextEncoder();
-  const body = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const send = (s: string) => {
-        try {
-          controller.enqueue(enc.encode(s));
-        } catch {
-          // the client went away; the work still settles or releases its reservation
-        }
-      };
-      send(' ');
-      const tick = setInterval(() => send(' '), 10_000);
-      let out: unknown;
-      try {
-        const result = await work();
-        await settleSpend(reservation, email, result.costUsd);
-        out = result;
-      } catch (err) {
-        const failed = await failResponse(err, reservation, 'Не удалось выполнить запрос. Попробуйте ещё раз.');
-        out = { ...((await failed.json().catch(() => null)) ?? { error: 'Не удалось выполнить запрос. Попробуйте ещё раз.' }), failed: true };
-      } finally {
-        clearInterval(tick);
-      }
-      send(JSON.stringify(out));
-      try {
-        controller.close();
-      } catch {
-        // already closed by the client
-      }
-    },
-  });
-  return new Response(body, {
-    status: 200,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no' },
-  });
+// ---- background jobs. Opus writes for minutes; a request held open that long was cut somewhere on
+// the way (the runtime's 150 s idle timeout, a proxy, a browser tab put to sleep) and the app got an
+// empty answer. So the call starts the job and answers 202 at once; the job keeps the worker alive
+// (EdgeRuntime.waitUntil) and leaves its outcome on the reservation: the composition (code gzipped,
+// settle_generation keeps up to 64 KB) or the reason it failed. Polls read it from there.
+const JOB_STALE_MS = 13 * 60_000; // past the 10-minute deadline: the worker that ran it is gone
+const MAX_RESULT_CHARS = 60_000;
+
+function inBackground(job: Promise<unknown>): void {
+  const rt = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime;
+  if (typeof rt?.waitUntil === 'function') rt.waitUntil(job);
+  else job.catch(() => undefined);
+}
+
+async function gzipBase64(text: string): Promise<string> {
+  const bytes = new Uint8Array(await new Response(new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+async function gunzipBase64(b64: string): Promise<string> {
+  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  return await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+}
+
+// The reason a job failed, kept on its reservation for the poller, then the reservation released.
+async function failJob(reservation: string, err: unknown): Promise<void> {
+  const reason = err instanceof GuardError
+    ? { error: err.message, code: err.code }
+    : { error: 'Не удалось создать анимацию. Попробуйте ещё раз — деньги не списаны.', code: 'job_failed' };
+  if (!(err instanceof GuardError)) console.error(err);
+  const { error } = await supabaseAdmin.from('generation_reservations').update({ result: reason }).eq('id', reservation).eq('status', 'pending');
+  if (error) console.error('job reason not kept', error);
+  const { error: releaseError } = await supabaseAdmin.rpc('release_generation', { p_reservation: reservation });
+  if (releaseError) console.error('release_generation failed', releaseError);
+}
+
+async function runCodeJob(reservation: string, email: string, work: () => Promise<{ composition: Composition; costUsd: number }>): Promise<void> {
+  try {
+    const { composition, costUsd } = await work();
+    const { code, ...rest } = composition;
+    const result = { composition: { ...rest, codeGz: await gzipBase64(code) }, costUsd };
+    if (JSON.stringify(result).length > MAX_RESULT_CHARS) throw new GuardError(502, 'too_long', 'Opus написал слишком большой код. Попробуйте ещё раз — деньги за эту попытку не списаны.');
+    await settleSpend(reservation, email, costUsd, result);
+  } catch (err) {
+    await failJob(reservation, err);
+  }
+}
+
+function startCodeJob(reservation: string, email: string, work: () => Promise<{ composition: Composition; costUsd: number }>): Response {
+  inBackground(runCodeJob(reservation, email, work));
+  return json({ pending: true, jobId: reservation }, 202);
+}
+
+// A poll: { jobId } of a job this account started.
+async function resumeCodeJob(caller: { id: string }, jobId: unknown): Promise<Response> {
+  await rateLimit(`motion-poll:${caller.id}`, 120, 60, false);
+  const job = await loadOwnedJob(caller.id, jobId);
+  if (!job || job.model !== MODEL_LABEL) return json({ error: 'Задача не найдена.', code: 'not_found' }, 404);
+  const r = (job.result ?? {}) as { composition?: Record<string, unknown> & { codeGz?: string }; costUsd?: number; error?: string; code?: string };
+  if (job.status === 'settled') {
+    if (!r.composition || typeof r.composition.codeGz !== 'string') return json({ error: 'Результат больше недоступен. Создайте ролик ещё раз.', code: 'job_gone' }, 410);
+    const { codeGz, ...rest } = r.composition;
+    return json({ composition: { ...rest, code: await gunzipBase64(codeGz) }, costUsd: Number(r.costUsd) || 0 });
+  }
+  if (job.status === 'released' || job.status === 'expired') {
+    return json({ error: r.error ?? 'Не удалось создать анимацию. Попробуйте ещё раз — деньги не списаны.', code: r.code ?? 'job_failed' }, 502);
+  }
+  const { data } = await supabaseAdmin.from('generation_reservations').select('created_at').eq('id', job.id).maybeSingle();
+  const created = Date.parse(String((data as { created_at?: string } | null)?.created_at ?? ''));
+  if (Number.isFinite(created) && Date.now() - created > JOB_STALE_MS) {
+    const lost = new GuardError(502, 'job_lost', 'Сервер прервал работу над анимацией. Попробуйте ещё раз — деньги не списаны.');
+    await failJob(job.id, lost);
+    return json({ error: lost.message, code: lost.code }, 502);
+  }
+  return json({ pending: true, jobId: job.id }, 202);
 }
 
 // No temperature: with thinking on, Anthropic only takes the default.
@@ -746,7 +784,7 @@ async function composeCode(
 
   const reservation = await reserveSpend(req, caller.id, MODEL_LABEL, 'motion', CODE_RESERVE_USD);
   const kinds = o.assets.map((a) => a.kind);
-  return streamed(reservation, caller.email, () => askForCode(CODE_PROMPT, content, kinds, o.duration));
+  return startCodeJob(reservation, caller.email, () => askForCode(CODE_PROMPT, content, kinds, o.duration));
 }
 
 // The browser ran the code and it failed (an exception, a frame that never came back, blank frames):
@@ -781,7 +819,7 @@ async function fixCode(req: Request, caller: { id: string; email: string }, body
     `<code>\n${code}\n</code>`,
   ].join('\n');
   const reservation = await reserveSpend(req, caller.id, MODEL_LABEL, 'motion', FIX_RESERVE_USD);
-  return streamed(reservation, caller.email, () => askForCode(FIX_PROMPT, text, assets.map((a: { kind: 'image' | 'video' }) => a.kind), duration));
+  return startCodeJob(reservation, caller.email, () => askForCode(FIX_PROMPT, text, assets.map((a: { kind: 'image' | 'video' }) => a.kind), duration));
 }
 
 Deno.serve(async (req) => {
@@ -794,6 +832,7 @@ Deno.serve(async (req) => {
     if (!OPENROUTER_API_KEY) return json({ error: 'OPENROUTER_API_KEY is not configured.' }, 500);
 
     const body = await readJsonBody(req);
+    if (body.jobId !== undefined) return await resumeCodeJob(caller, body.jobId);
     if (body.mode === 'fix') return await fixCode(req, caller, body);
     const mode = body.mode === 'styles' ? 'styles' : body.mode === 'code' ? 'code' : 'storyboard';
     const brief = typeof body.brief === 'string' ? body.brief.trim().slice(0, MAX_BRIEF) : '';

@@ -6,8 +6,9 @@
 //   2. 512 MB per worker instead of 150: generate-* accept 48 MB JSON bodies with base64
 //      images, and the video functions hold the downloaded file in memory before storing it.
 //   3. Function names are restricted to [a-z0-9-] before they are used in a filesystem path.
-//   4. 12 minutes of wall clock per worker instead of 400 s: motion-storyboard waits for Claude Opus
-//      to write a whole animation.
+//   4. 12 minutes of wall clock per worker instead of 400 s: motion-storyboard has Claude Opus write a
+//      whole animation in the background (EdgeRuntime.waitUntil) while the app polls; its worker is
+//      also not retired for lack of requests while that job runs.
 import * as jose from 'jsr:@panva/jose@6'
 
 console.log('main function started')
@@ -354,10 +355,9 @@ Deno.serve(async (req: Request) => {
 
   const memoryLimitMb = 512 // ONEFLOW: see the header comment
   // ONEFLOW: keep the wall clock above the 150s request idle timeout configured in Compose, and long
-  // enough for motion-storyboard, where Claude Opus writes a whole animation (several minutes; it streams
-  // keep-alive bytes meanwhile, see that function).
+  // enough for motion-storyboard's background job (Claude Opus writing a whole animation, minutes).
   const workerTimeoutMs = 720_000
-  const requestAbsentTimeoutMs = 60_000
+  const requestAbsentTimeoutMs = service_name === 'motion-storyboard' ? workerTimeoutMs : 60_000
   const noModuleCache = false
   // Using a common Import Map for all functions 
   // to use a scope 'deno.json' it must be dinamically resolved base on the 'service_name'

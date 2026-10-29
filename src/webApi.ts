@@ -165,7 +165,9 @@ async function callFunction<T>(name: string, body: unknown): Promise<T> {
       ? (typeof data?.jobId === 'string' ? data.jobId : null)
       : null;
     if (jobId) ({ res, data } = await pollJob(name, jobId));
-    // a long answer streamed with status 200 that failed after it started (motion-storyboard 'code')
+    // a paid call always answers JSON: none means the body never arrived whole (the connection
+    // dropped while it was being read) — say so instead of handing the caller nothing
+    if (kind && res.ok && data == null) throw new Error(t().errors.connectionLost);
     if (!res.ok || data?.failed === true) {
       // limits from the server's spend guard come with a code → a message in the user's language
       const byCode: Record<string, string> = {
