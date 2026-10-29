@@ -219,7 +219,7 @@ function frame(ctx, t) {
 <code>
 function frame(ctx, t, env) { … }
 </code>
-beats — понятное пользователю описание сцен по времени, покрывают весь ролик. clips — когда и с какой секунды самого видео проигрывается каждый видео-материал (для фото не нужны). Код компактный и аккуратный: 200–450 строк.`;
+beats — понятное пользователю описание сцен по времени, покрывают весь ролик. clips — когда и с какой секунды самого видео проигрывается каждый видео-материал (для фото не нужны). Код компактный и аккуратный: 200–400 строк, без длинных комментариев — ответ длиннее лимита обрезается и не заработает.`;
 
 const FIX_PROMPT = `Ты — креативный кодер. Ниже код анимации рекламного ролика для Canvas 2D (движок ONEFLOW Motion Engine) и ошибка, которую он выдал при проверке. Исправь код, чтобы он работал во всех кадрах, сохранив идею, тексты, стиль и тайминг. Если ошибка — пустые или одноцветные кадры, сделай, чтобы во всех сценах было видно содержимое.
 
@@ -245,7 +245,7 @@ function parseComposition(text: string, duration: number, kinds: ('image' | 'vid
   const metaText = /<meta>([\s\S]*?)<\/meta>/i.exec(text)?.[1] ?? '';
   const codeMatch = /<code>([\s\S]*?)<\/code>/i.exec(text);
   if (!codeMatch) {
-    throw new GuardError(502, truncated ? 'too_long' : 'bad_answer', truncated ? 'Opus не уложился в лимит длины ответа. Попробуйте ещё раз — или сократите задачу.' : 'Модель ответила не в том формате. Попробуйте ещё раз.');
+    throw new GuardError(502, truncated ? 'too_long' : 'bad_answer', truncated ? 'Opus написал слишком длинный ответ и не уложился в лимит. Попробуйте ещё раз — деньги за эту попытку не списаны.' : 'Модель ответила не в том формате. Попробуйте ещё раз.');
   }
   const code = codeMatch[1].replace(/^\s*```[a-z]*\s*\n/i, '').replace(/\n\s*```\s*$/, '').trim();
   if (!/\bfunction\s+frame\s*\(|\bframe\s*=\s*(?:function\b|\()/.test(code)) throw new GuardError(502, 'bad_answer', 'В ответе модели нет функции кадра. Попробуйте ещё раз.');
@@ -605,11 +605,16 @@ async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Pro
 // ---- end of spend guard
 
 // ---- mode 'code' / 'fix'
-const CODE_MAX_TOKENS = 14_000;
-const CODE_RESERVE_USD = 0.6; // worst case: ~45k tokens of pictures and text in, 14k out; settled with the real cost
-const FIX_RESERVE_USD = 0.45;
-// Writing a whole animation takes Opus a few minutes; the platform kills a worker at 400 s.
-const CODE_DEADLINE_MS = 330_000;
+// Claude Opus 5.5 always thinks first (adaptive thinking, it cannot be turned off) and max_tokens
+// caps thinking + answer together, so the limit must hold both; effort 'medium' keeps the thinking
+// short. 14k was not enough: the code was cut off.
+const CODE_MAX_TOKENS = 40_000;
+const CODE_EFFORT = 'medium';
+const CODE_RESERVE_USD = 0.9; // a typical answer costs $0.3–0.6; settled with the real cost
+const FIX_RESERVE_USD = 0.8;
+// Writing a whole animation takes Opus a few minutes; deploy/selfhost/functions-main gives a worker
+// 12 minutes of wall clock.
+const CODE_DEADLINE_MS = 600_000;
 
 const FONT_NAMES: Record<string, string> = { sans: 'Inter', display: 'Unbounded', serif: 'Playfair Display', mono: 'JetBrains Mono' };
 const PACE_NAMES: Record<string, string> = { calm: 'спокойный', medium: 'средний', fast: 'быстрый' };
@@ -656,7 +661,9 @@ function streamed(reservation: string, email: string, work: () => Promise<{ cost
   });
 }
 
-async function askForCode(system: string, content: unknown, temperature: number, kinds: ('image' | 'video')[], duration: number) {
+// No temperature: with thinking on, Anthropic only takes the default.
+async function askForCode(system: string, content: unknown, kinds: ('image' | 'video')[], duration: number) {
+  const started = Date.now();
   const res = await fetchWithTimeout(OPENROUTER_CHAT_URL, {
     method: 'POST',
     headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, 'Content-Type': 'application/json' },
@@ -664,7 +671,7 @@ async function askForCode(system: string, content: unknown, temperature: number,
       model: MODEL,
       messages: [{ role: 'system', content: system }, { role: 'user', content }],
       max_tokens: CODE_MAX_TOKENS,
-      temperature,
+      reasoning: { effort: CODE_EFFORT, exclude: true },
       usage: { include: true },
     }),
   }, CODE_DEADLINE_MS);
@@ -676,7 +683,17 @@ async function askForCode(system: string, content: unknown, temperature: number,
   const text: string = data.choices?.[0]?.message?.content ?? '';
   const usage = data.usage ?? {};
   const costUsd = Number(usage.cost) || (Number(usage.prompt_tokens) || 0) * PRICE_IN + (Number(usage.completion_tokens) || 0) * PRICE_OUT;
-  const composition = parseComposition(text, duration, kinds, data.choices?.[0]?.finish_reason === 'length');
+  const finish = data.choices?.[0]?.finish_reason ?? null;
+  // sizes and timing only (no content): what to look at when an answer comes back cut off or slow
+  console.log('motion code', JSON.stringify({
+    finish,
+    seconds: Math.round((Date.now() - started) / 1000),
+    completion: usage.completion_tokens ?? null,
+    reasoning: usage.completion_tokens_details?.reasoning_tokens ?? null,
+    chars: text.length,
+    cost: Number(usage.cost) || null,
+  }));
+  const composition = parseComposition(text, duration, kinds, finish === 'length');
   return { composition, costUsd };
 }
 
@@ -729,7 +746,7 @@ async function composeCode(
 
   const reservation = await reserveSpend(req, caller.id, MODEL_LABEL, 'motion', CODE_RESERVE_USD);
   const kinds = o.assets.map((a) => a.kind);
-  return streamed(reservation, caller.email, () => askForCode(CODE_PROMPT, content, o.previous.length ? 1 : 0.9, kinds, o.duration));
+  return streamed(reservation, caller.email, () => askForCode(CODE_PROMPT, content, kinds, o.duration));
 }
 
 // The browser ran the code and it failed (an exception, a frame that never came back, blank frames):
@@ -764,7 +781,7 @@ async function fixCode(req: Request, caller: { id: string; email: string }, body
     `<code>\n${code}\n</code>`,
   ].join('\n');
   const reservation = await reserveSpend(req, caller.id, MODEL_LABEL, 'motion', FIX_RESERVE_USD);
-  return streamed(reservation, caller.email, () => askForCode(FIX_PROMPT, text, 0.3, assets.map((a: { kind: 'image' | 'video' }) => a.kind), duration));
+  return streamed(reservation, caller.email, () => askForCode(FIX_PROMPT, text, assets.map((a: { kind: 'image' | 'video' }) => a.kind), duration));
 }
 
 Deno.serve(async (req) => {
@@ -852,8 +869,10 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: MODEL,
         messages: [{ role: 'system', content: mode === 'styles' ? STYLES_PROMPT : STORYBOARD_PROMPT }, { role: 'user', content }],
-        max_tokens: mode === 'styles' ? 3000 : 6000,
+        // Opus 5.5 always thinks first and the limit covers the thinking too
+        max_tokens: mode === 'styles' ? 12_000 : 16_000,
         temperature: mode === 'styles' || previous.length ? 1 : 0.8,
+        reasoning: { effort: 'low', exclude: true },
         usage: { include: true },
       }),
     });

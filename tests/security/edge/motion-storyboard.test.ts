@@ -70,7 +70,7 @@ r = await call('motion-storyboard', { ...body, mode: 'code' }, { token: A });
 const comp = r.json?.composition;
 ok(r.status === 200 && comp?.code === code, `code: the composition comes back, fences stripped (${r.status} ${JSON.stringify(r.json).slice(0, 160)})`);
 ok(sent()?.messages?.[0]?.content?.includes('function frame(ctx, t, env)') && images() === 4, 'code: Opus gets the runtime contract and all 4 pictures');
-ok(sent()?.max_tokens >= 12000, `code: room for a whole animation (max_tokens ${sent()?.max_tokens})`);
+ok(sent()?.max_tokens >= 32000 && sent()?.reasoning?.effort === 'medium', `code: room for the thinking and a whole animation (max_tokens ${sent()?.max_tokens}, effort ${sent()?.reasoning?.effort})`);
 ok(comp?.clips?.length === 1 && comp.clips[0].asset === 1, 'code: a clip for a photo is dropped, the video clip kept');
 ok(comp?.palette?.length === 2 && comp?.beats?.length === 2 && comp?.duration === 15, 'code: palette, beats and duration normalized');
 ok(rpcCalls('settle_generation')[0]?.body?.p_cost === 0.21 && Number(rpcCalls('reserve_generation_v2')[0]?.body?.p_amount) > 0.35, 'code: reserved for the long answer, charged the real cost');
