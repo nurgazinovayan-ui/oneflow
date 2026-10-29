@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   IconArchive,
   IconArrowUp,
+  IconChevronDown,
   IconAttach,
   IconClose,
   IconCopy,
@@ -35,6 +36,7 @@ import { isLegacyOfficeFile } from '../officeImport';
 import { capture } from '../analytics';
 import { useT } from '../i18n';
 import { useWorkspace } from '../copywrite/useWorkspace';
+import { COPYWRITE_MODELS, copywriteModelLabel } from '../chatModels';
 import {
   exportMarkdown,
   id,
@@ -76,7 +78,7 @@ export default function TextWorkPanel({
 }: TextWorkPanelProps) {
   const t = useT();
   const l = t.textWork;
-  const { workspace: w, update, storageError, pending, errors, send, regenerate, invalidate } = useWorkspace(
+  const { workspace: w, update, storageError, pending, errors, send, regenerate, invalidate, model, setModel } = useWorkspace(
     storageScope,
     l.newChat
   );
@@ -556,7 +558,7 @@ export default function TextWorkPanel({
               <div className="cw-message-column">
                 {thread.messages.map((m, index) => (
                   <div key={m.id} className={`cw-message cw-message-${m.role}`}>
-                    {m.role === 'assistant' && <div className="cw-assistant-label">ONEFLOW AI</div>}
+                    {m.role === 'assistant' && <div className="cw-assistant-label">{copywriteModelLabel(m.model) ?? 'ONEFLOW AI'}</div>}
                     {!!m.attachments?.length && (
                       <div className="cw-message-attachments">
                         {m.attachments.map((a) => (
@@ -834,8 +836,9 @@ export default function TextWorkPanel({
                     />
                   </div>
                   <div className="cw-composer-footer-right">
-                    <button className="cw-model-btn" onClick={() => openModal({ kind: 'model' })}>
-                      ONEFLOW AI
+                    <button className="cw-model-btn" title={l.modelPickerTitle} onClick={() => openModal({ kind: 'model' })}>
+                      {copywriteModelLabel(model) ?? 'ONEFLOW AI'}
+                      <IconChevronDown size={12} />
                     </button>
                     <button
                       className="cw-send"
@@ -885,7 +888,7 @@ export default function TextWorkPanel({
                           : modal.kind === 'move'
                             ? l.moveToProject
                             : modal.kind === 'model'
-                              ? 'ONEFLOW AI'
+                              ? l.modelPickerTitle
                               : modal.kind === 'unavailable'
                                 ? l.deepSearchLabel
                                 : l.renameLabel}
@@ -952,8 +955,33 @@ export default function TextWorkPanel({
                   </button>
                 ))}
               </div>
-            ) : modal.kind === 'unavailable' || modal.kind === 'model' ? (
-              <p className="modal-hint">{modal.kind === 'model' ? l.modelHelp : l.unavailableWebSearch}</p>
+            ) : modal.kind === 'model' ? (
+              <>
+                <p className="modal-hint">{l.modelHelp}</p>
+                <div className="cw-model-list" role="radiogroup" aria-label={l.modelPickerTitle}>
+                  {COPYWRITE_MODELS.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={m.id === model}
+                      className={`cw-model-option${m.id === model ? ' on' : ''}`}
+                      onClick={() => {
+                        setModel(m.id);
+                        setModal(null);
+                      }}
+                    >
+                      <span className="cw-model-option-name">
+                        {m.label}
+                        <small>{m.vendor}</small>
+                      </span>
+                      <span className="cw-model-option-note">{l.modelNotes[m.id] ?? ''}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : modal.kind === 'unavailable' ? (
+              <p className="modal-hint">{l.unavailableWebSearch}</p>
             ) : (
               <>
                 {modal.kind.startsWith('delete-') ? (

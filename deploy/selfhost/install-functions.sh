@@ -224,10 +224,36 @@ smoke_test() {
   r=$(probe POST /functions/v1/no-such-function "$anon"); code=${r%% *}
   [[ "$code" == 404 ]] && ok "Несуществующая функция: 404" || { warn "несуществующая функция: $code"; fail=1; }
 
+  copywrite_models
+
   if [[ $fail -ne 0 ]]; then
     echo; (cd "$APP_DIR" && docker compose logs --tail 60 functions 2>/dev/null | grep -vE 'serving the request|Legacy token' | tail -25) || true
     die "Есть проблемы — пришлите скриншот всего окна (секретов в нём нет)."
   fi
+}
+
+# Copywrite's models (COPYWRITE_MODELS in generate-chat) must be in OpenRouter's public catalogue;
+# a missing one only breaks that choice in Copywrite, so it is a warning, not a failed install.
+copywrite_models() {
+  local models json m price
+  models=$(sed -n '/^const COPYWRITE_MODELS/,/^};/p' "$HERE/functions/generate-chat/index.ts" | grep -oE "'(openai|anthropic)/[A-Za-z0-9._-]+'" | tr -d "'")
+  json=$(mktemp)
+  if ! curl -s -m 20 -o "$json" https://openrouter.ai/api/v1/models; then
+    warn "Каталог OpenRouter не ответил — модели Copywrite не проверены"
+    rm -f "$json"; return 0
+  fi
+  for m in $models; do
+    price=$(python3 -I -c '
+import json, sys
+for x in json.load(open(sys.argv[1])).get("data", []):
+    if x.get("id") == sys.argv[2]:
+        p = x.get("pricing", {})
+        print("$%g / $%g за 1 млн токенов" % (float(p.get("prompt", 0)) * 1e6, float(p.get("completion", 0)) * 1e6))
+' "$json" "$m" 2>/dev/null) || price=""
+    [[ -n "$price" ]] && ok "Copywrite: $m есть в OpenRouter ($price)" \
+      || warn "Copywrite: модели $m нет в OpenRouter — в Copywrite она выдаст ошибку. Пришлите скриншот."
+  done
+  rm -f "$json"
 }
 
 main() {

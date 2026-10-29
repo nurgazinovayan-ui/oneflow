@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { parseSuggestions } from '../chatSuggestions';
 import { parseDeliverable } from '../deliverables';
 import { formatGenerationError } from '../errorMessages';
+import { loadCopywriteModel, saveCopywriteModel } from '../chatModels';
 import { id, newWorkspace, type CwMessage, type Workspace } from './workspace';
 
 const STORAGE_PREFIX = 'oneflow-copywrite:';
@@ -59,6 +60,15 @@ export function useWorkspace(scope: string, defaultTitle: string) {
   const [pending, setPending] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const cancelledRef = useRef<Set<string>>(new Set());
+  // the chosen model (src/chatModels.ts): one for every chat, kept across visits; a request uses
+  // the one chosen when it was sent
+  const [model, setModelState] = useState(loadCopywriteModel);
+  const modelRef = useRef(model);
+  const setModel = useCallback((next: string) => {
+    modelRef.current = next;
+    setModelState(next);
+    saveCopywriteModel(next);
+  }, []);
 
   useEffect(() => {
     try {
@@ -87,9 +97,10 @@ export function useWorkspace(scope: string, defaultTitle: string) {
         .filter((a) => a.kind === 'image')
         .map((a) => a.data)
         .slice(0, 4);
+      const model = modelRef.current;
       try {
         const plain = messages.map((m) => ({ role: m.role, content: withDocuments(m) }));
-        const reply = await window.api.generateChat(plain, lastUserImages.length > 0 ? lastUserImages : undefined, 'text');
+        const reply = await window.api.generateChat(plain, lastUserImages.length > 0 ? lastUserImages : undefined, 'text', model);
         if (cancelledRef.current.has(threadId)) return;
         const { cleanedText: afterSuggestions, suggestions } = parseSuggestions(reply);
         const { cleanedText, deliverable } = parseDeliverable(afterSuggestions);
@@ -98,6 +109,7 @@ export function useWorkspace(scope: string, defaultTitle: string) {
           role: 'assistant',
           content: cleanedText || reply,
           deliverable: deliverable ?? undefined,
+          model,
         };
         update((s) => ({
           ...s,
@@ -174,5 +186,5 @@ export function useWorkspace(scope: string, defaultTitle: string) {
     [workspace.threads, runRequest]
   );
 
-  return { workspace, update, ready: true, storageError, pending, errors, send, regenerate, invalidate };
+  return { workspace, update, ready: true, storageError, pending, errors, send, regenerate, invalidate, model, setModel };
 }

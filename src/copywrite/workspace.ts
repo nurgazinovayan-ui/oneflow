@@ -29,6 +29,8 @@ export interface CwMessage extends ChatMessage {
   attachments?: Attachment[];
   deliverable?: ParsedDeliverable;
   feedback?: 'up' | 'down';
+  /** which Copywrite model wrote the reply (src/chatModels.ts); older replies have none */
+  model?: string;
 }
 
 export interface Thread {

@@ -504,8 +504,8 @@ export function installWebApi(): void {
       backupToYandexDisk(outputs, 'vector');
       return outputs;
     },
-    generateChat: async (messages, images, mode) =>
-      callFunction<string>('generate-chat', { messages, images, mode }),
+    generateChat: async (messages, images, mode, model) =>
+      callFunction<string>('generate-chat', { messages, images, mode, model }),
     marketingAI: async (task, context, mock) =>
       callFunction<MarketingAIResponse>('marketing-ai', { task, context, mock }),
 

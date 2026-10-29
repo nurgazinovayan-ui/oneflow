@@ -789,6 +789,9 @@ export interface Translations {
     developerLabel: string;
     unavailableWebSearch: string;
     modelHelp: string;
+    modelPickerTitle: string;
+    /** a line under each Copywrite model in the picker, by model id (src/chatModels.ts) */
+    modelNotes: Record<string, string>;
     writePrompt: string;
     researchPrompt: string;
     codePrompt: string;
@@ -2009,7 +2012,14 @@ export const ru: Translations = {
     developerLabel: 'Код',
     unavailableWebSearch:
       'Веб-поиск ещё не подключён в ONEFLOW. Можно прикрепить текст источников для анализа.',
-    modelHelp: 'Сейчас в ONEFLOW подключена одна модель. Другие появятся после подключения на сервере.',
+    modelHelp: 'Выберите нейросеть для ответов. Списывается фактическая цена каждого ответа — она зависит от модели и длины текста.',
+    modelPickerTitle: 'Модель',
+    modelNotes: {
+      'openai/gpt-6.1-sol': 'Универсальная модель, выбрана по умолчанию.',
+      'openai/gpt-6.1-sol-pro': 'Старшая версия Sol для сложных задач — дороже и медленнее.',
+      'anthropic/claude-opus-5.5': 'Самая сильная модель Claude.',
+      'anthropic/claude-sonnet-5.5': 'Быстрее и вдвое дешевле Opus.',
+    },
     writePrompt: 'Помоги написать текст. Сначала уточни продукт, аудиторию, площадку и цель.',
     researchPrompt:
       'Помоги проанализировать материалы. Я прикреплю источники. Отделяй факты от предположений и ссылайся на приложенные материалы.',
@@ -3340,7 +3350,14 @@ export const en: Translations = {
     academicLabel: 'Academic',
     developerLabel: 'Developer',
     unavailableWebSearch: 'Web search is not connected in ONEFLOW yet. Attach source text for analysis.',
-    modelHelp: 'ONEFLOW currently has one connected model. More models require server integration.',
+    modelHelp: 'Choose the model for replies. Each reply is billed at its actual price, which depends on the model and the length of the text.',
+    modelPickerTitle: 'Model',
+    modelNotes: {
+      'openai/gpt-6.1-sol': 'A general-purpose model, the default.',
+      'openai/gpt-6.1-sol-pro': 'The senior Sol for hard tasks — slower and more expensive.',
+      'anthropic/claude-opus-5.5': 'The most capable Claude model.',
+      'anthropic/claude-sonnet-5.5': 'Faster and half the price of Opus.',
+    },
     writePrompt: 'Help me write a text. First ask about the product, audience, channel and goal.',
     researchPrompt:
       'Help me analyze materials. I will attach sources. Separate facts from assumptions and cite the attached materials.',

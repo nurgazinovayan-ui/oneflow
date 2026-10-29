@@ -7,7 +7,7 @@ DENO=${DENO:-deno}
 node scripts/sync-edge-guard.mjs --check || { echo "shared blocks out of sync: run node scripts/sync-edge-guard.mjs"; exit 1; }
 fail=0
 run() { "$DENO" run -A --no-config "$@" 2>&1 | grep -E "ok - |FAILED|passed" || true; "$DENO" run -A --no-config "$@" >/dev/null 2>&1 || fail=1; }
-for t in generate-image generate-video lemonsqueezy-webhook admin-access messenger messenger-send messenger-list user-assets; do
+for t in generate-image generate-video generate-chat-models lemonsqueezy-webhook admin-access messenger messenger-send messenger-list user-assets; do
   run "tests/security/edge/$t.test.ts"
 done
 for f in generate-chat generate-audio generate-vector generate-video-pro evaluate-creative marketing-ai motion-storyboard; do

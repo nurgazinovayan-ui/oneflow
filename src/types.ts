@@ -453,7 +453,8 @@ export interface NodeApi {
   saveWorkspaceFile: (workspace: WorkspaceFile) => Promise<string | null>;
   openWorkspaceFile: () => Promise<WorkspaceFile | null>;
   getAdaptPreset: (key: string) => Promise<AdaptPresetFormat[]>;
-  generateChat: (messages: ChatMessage[], images?: string[], mode?: ChatMode) => Promise<string>;
+  /** model: Copywrite's choice (src/chatModels.ts); other callers send none and get the server's default */
+  generateChat: (messages: ChatMessage[], images?: string[], mode?: ChatMode, model?: string) => Promise<string>;
   // Server-side OpenAI Structured-Outputs provider for Strategy mode (Marketing Intelligence
   // Master Spec v4, §80-104). `context` is the minimal per-task package built by
   // src/strategy/services/contextBuilder.ts, never the whole strategy. `mock` forces the

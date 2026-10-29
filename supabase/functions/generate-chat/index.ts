@@ -10,6 +10,17 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY') ?? '';
 const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const CHAT_MODEL = 'openai/gpt-5.6-terra';
+// Copywrite lets the person choose the model; every other caller (the node assistant, One Launch)
+// sends none and gets CHAT_MODEL. Nothing outside this list reaches OpenRouter. The value is the
+// fallback [input, output] $ per 1M tokens for the reservation when OpenRouter's catalogue can't
+// be read — only where the price is the vendor's own published one (Anthropic's list prices); a
+// model without one is refused while its price is unknown. The real cost is settled either way.
+const COPYWRITE_MODELS: Record<string, [number, number] | null> = {
+  'openai/gpt-6.1-sol': null,
+  'openai/gpt-6.1-sol-pro': null,
+  'anthropic/claude-opus-5.5': [4, 20],
+  'anthropic/claude-sonnet-5.5': [2, 10],
+};
 
 const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -169,16 +180,24 @@ function buildOpenRouterMessages(
   return messages;
 }
 
-async function callOpenRouterChat(messages: { role: string; content: unknown }[]): Promise<{ reply: string; realCostUsd: number | null }> {
+async function callOpenRouterChat(messages: { role: string; content: unknown }[], model: string): Promise<{ reply: string; realCostUsd: number | null }> {
   const res = await fetch(OPENROUTER_CHAT_URL, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ model: CHAT_MODEL, messages, max_tokens: MAX_REPLY_TOKENS, usage: { include: true } }),
+    body: JSON.stringify({ model, messages, max_tokens: MAX_REPLY_TOKENS, usage: { include: true } }),
   });
-  if (!res.ok) throw new Error(`OpenRouter chat error ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const text = await res.text();
+    // a model OpenRouter doesn't serve (renamed, withdrawn): say so, so another one can be picked
+    if ((res.status === 400 || res.status === 404) && /model/i.test(text)) {
+      console.error('openrouter model refused', model, res.status, text.slice(0, 300));
+      throw new GuardError(502, 'model_unavailable', 'Эта модель сейчас недоступна — выберите другую.');
+    }
+    throw new Error(`OpenRouter chat error ${res.status}: ${text}`);
+  }
   const data = await res.json();
   const realCostUsd = typeof data.usage?.cost === 'number' ? data.usage.cost : null;
   return { reply: data.choices?.[0]?.message?.content ?? '', realCostUsd };
@@ -411,13 +430,62 @@ async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Pro
 }
 // ---- end of spend guard
 
+// ---- Copywrite reservations: priced from OpenRouter's public catalogue ($ per token for every
+// model), read at most once an hour per instance; a failed read is retried after a minute.
+const OPENROUTER_MODELS_URL = 'https://openrouter.ai/api/v1/models';
+const catalogue = { readAt: 0, triedAt: 0, prices: new Map<string, [number, number]>() };
+
+async function modelPricePerToken(model: string): Promise<[number, number] | null> {
+  const now = Date.now();
+  if (now - catalogue.readAt > 3_600_000 && now - catalogue.triedAt > 60_000) {
+    catalogue.triedAt = now;
+    try {
+      const res = await fetchWithTimeout(OPENROUTER_MODELS_URL, {}, 10_000);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const prices = new Map<string, [number, number]>();
+      for (const m of Array.isArray(data?.data) ? data.data : []) {
+        const p = Number(m?.pricing?.prompt);
+        const c = Number(m?.pricing?.completion);
+        if (typeof m?.id === 'string' && Number.isFinite(p) && Number.isFinite(c) && p >= 0 && c >= 0) prices.set(m.id, [p, c]);
+      }
+      if (prices.size) {
+        catalogue.prices = prices;
+        catalogue.readAt = now;
+      }
+    } catch (err) {
+      console.error('openrouter catalogue unavailable', String(err).slice(0, 200));
+    }
+  }
+  const live = catalogue.prices.get(model);
+  if (live) return live;
+  const fallback = COPYWRITE_MODELS[model];
+  return fallback ? [fallback[0] / 1e6, fallback[1] / 1e6] : null;
+}
+
+// The most this request can cost on the model: ~2.5 characters per token (Russian runs denser than
+// English), ~1600 tokens per image and the full reply cap.
+async function copywriteReserveUsd(
+  model: string,
+  systemPrompt: string,
+  history: { content: string }[],
+  images: string[] | undefined
+): Promise<number> {
+  const price = await modelPricePerToken(model);
+  if (!price) throw new GuardError(503, 'model_unavailable', 'Цена этой модели сейчас неизвестна — выберите другую или попробуйте позже.');
+  const chars = systemPrompt.length + history.reduce((n, m) => n + m.content.length, 0);
+  const inputTokens = Math.ceil(chars / 2.5) + (images?.length ?? 0) * 1600;
+  const usd = inputTokens * price[0] + MAX_REPLY_TOKENS * price[1];
+  return Math.max(0.01, Math.ceil(usd * 10_000) / 10_000);
+}
+
 // Audit M-1: bounded conversations. Roles other than user/assistant are dropped, so a client can't
 // slip its own "system" message in; attached files arrive inside messages (≤ 30 000 chars each).
 const MAX_MESSAGES = 40;
 const MAX_MESSAGE_CHARS = 40_000;
 const MAX_TOTAL_CHARS = 120_000;
 const MAX_REPLY_TOKENS = 8000;
-const CHAT_RESERVE_USD = 0.1;  // settled with OpenRouter's real cost of the call
+const CHAT_RESERVE_USD = 0.1;  // CHAT_MODEL; settled with OpenRouter's real cost of the call
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -439,9 +507,14 @@ Deno.serve(async (req) => {
     if (!messages.length) throw badRequest('No messages.');
     const images = Array.isArray(body.images) ? body.images.filter(isImageRef).slice(0, 4) : undefined;
     const systemPrompt = body.mode === 'text' ? TEXT_CHAT_SYSTEM_PROMPT : NODE_ASSISTANT_SYSTEM_PROMPT;
+    // Copywrite names its model (one of COPYWRITE_MODELS); everyone else gets CHAT_MODEL
+    const picked = body.mode === 'text' && body.model != null ? String(body.model) : null;
+    if (picked !== null && !Object.hasOwn(COPYWRITE_MODELS, picked)) throw badRequest('Unknown model.');
+    const model = picked ?? CHAT_MODEL;
+    const reserveUsd = picked ? await copywriteReserveUsd(picked, systemPrompt, messages, images) : CHAT_RESERVE_USD;
 
-    reservation = await reserveSpend(req, caller.id, CHAT_MODEL, 'text', CHAT_RESERVE_USD);
-    const { reply, realCostUsd } = await callOpenRouterChat(buildOpenRouterMessages(systemPrompt, messages, images));
+    reservation = await reserveSpend(req, caller.id, model, 'text', reserveUsd);
+    const { reply, realCostUsd } = await callOpenRouterChat(buildOpenRouterMessages(systemPrompt, messages, images), model);
     await settleSpend(reservation, caller.email, realCostUsd ?? CHAT_RESERVE_USD);
     reservation = null;
     return jsonResponse(reply);

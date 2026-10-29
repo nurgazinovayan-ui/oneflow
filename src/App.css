@@ -11251,6 +11251,63 @@ h5.md-heading {
   color: var(--c-text);
 }
 
+.cw-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* the model picker (Copywrite → model button): one row per model, the chosen one ringed */
+.cw-model-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.cw-model-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 16px;
+  background: var(--c-panel-2);
+  color: var(--c-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.cw-model-option:hover {
+  background: var(--c-panel-3);
+}
+
+.cw-model-option.on {
+  box-shadow: 0 0 0 2px var(--v2-accent);
+}
+
+.cw-model-option-name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cw-model-option-name small {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-text-muted);
+}
+
+.cw-model-option-note {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--c-text-muted);
+}
+
 .cw-send {
   display: flex;
   align-items: center;
